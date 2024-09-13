@@ -1,6 +1,7 @@
+const axios = require('axios');
 const tldts = require('tldts');
 const dbService = require('../services/db');
-const {isProdApp, isIPAddress, isLocalHost} = require("../services/shared");
+const {isProdApp, isIPAddress, isLocalHost, getURL, timeNow} = require("../services/shared");
 
 module.exports = {
     getNetworks: function (req, res) {
@@ -108,6 +109,55 @@ module.exports = {
             } catch(e) {
                 console.error(e);
             }
+
+            //ping network before adding to known
+            try {
+                let r = await axios.get(getURL(data.api_domain, 'happy-connect'));
+
+                if(!('happiness' in r.data)) {
+                    res.json({
+                        message: "Missing happiness in network-add"
+                    }, 400);
+
+                    return resolve();
+                }
+
+                let network_data = {
+                    network_token: data.network_token,
+                    network_name: data.network_name,
+                    network_logo: data.network_logo || null,
+                    base_domain: base.hostname,
+                    api_domain: api.hostname,
+                    is_network_known: true,
+                    is_self: false,
+                    is_befriend: false,
+                    is_trusted: false,
+                    is_blocked: false,
+                    is_online: true,
+                    last_online: timeNow(),
+                    admin_name: data.admin_name || null,
+                    admin_email: data.admin_email || null,
+                    created: timeNow(),
+                    updated: timeNow()
+                };
+
+                await conn('networks')
+                    .insert(network_data);
+
+                res.json({
+                    message: "Network added successfully"
+                }, 201);
+            } catch(e) {
+                console.error(e);
+
+                res.json({
+                    message: "Error pinging api_domain during network-add"
+                }, 400);
+
+                return resolve();
+            }
+
+            return resolve();
         });
     }
 }

@@ -229,6 +229,7 @@ module.exports = {
                     });
 
                     if(r.status === 201) {
+                        await module.exports.setSelfKnown();
                         break;
                     } else {
 
