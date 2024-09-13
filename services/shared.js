@@ -327,6 +327,18 @@ function getURL(raw_domain, endpoint) {
     return joinPaths(`https://${raw_domain}`, endpoint);
 }
 
+function hasPort(domain) {
+    if(!domain) {
+        return false;
+    }
+
+    let pure_domain = getCleanDomain(domain);
+
+    let split = pure_domain.split(':');
+
+    return split.length > 1;
+}
+
 function isIPAddress(address) {
     if(!address || typeof address !== 'string') {
         return false;
@@ -586,6 +598,7 @@ module.exports = {
     getStatesList: getStatesList,
     getSessionKey: getSessionKey,
     getURL: getURL,
+    hasPort: hasPort,
     isLocalApp: isLocalApp,
     isNumeric: isNumeric,
     isProdApp: isProdApp,

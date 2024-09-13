@@ -2,7 +2,7 @@ const axios = require('axios');
 const dbService = require('../services/db');
 
 const {joinPaths, getRepoRoot, readFile, generateToken, writeFile, isProdApp, timeNow, getCleanDomain,
-    isIPAddress, getURL
+    isIPAddress, getURL, hasPort
 } = require("./shared");
 
 
@@ -93,6 +93,7 @@ module.exports = {
                 if(!network_qry) {
                     //check for all required values before creating record
                     let missing = [];
+                    let invalid = [];
 
                     let network_data = {
                         network_token: network_token,
@@ -125,22 +126,48 @@ module.exports = {
                     if(!network_data.admin_email) {
                         // missing.push('ADMIN_EMAIL');
                     }
+                    
+                    if(network_data.network_name && network_data.network_name.startsWith('<')) {
+                        invalid.push("NETWORK_NAME");
+                    }
 
-                    if(missing.length) {
-                        console.error({
-                            message: '.env keys needed',
-                            required: missing
-                        });
+                    if(network_data.network_logo && network_data.network_logo.startsWith('<')) {
+                        invalid.push("NETWORK_LOGO");
+                    }
+
+                    if(network_data.api_domain && network_data.api_domain.startsWith('<')) {
+                        invalid.push("NETWORK_API_DOMAIN");
+                    }
+
+                    if(missing.length || invalid.length) {
+                        if(missing.length) {
+                            console.error({
+                                message: '.env keys needed',
+                                required: missing
+                            });    
+                        }
+                        
+                        if(invalid.length) {
+                            console.error({
+                                message: 'invalid .env key values',
+                                invalid: invalid
+                            });
+                        }
 
                         process.exit();
                     }
 
-                    //local ip's: dev only
+                    //Do not allow ip's and ports in prod
                     if(isProdApp()) {
                         let is_ip_domain = isIPAddress(network_data.api_domain);
 
                         if(is_ip_domain) {
                             console.error("IP domain not allowed in production");
+                            process.exit();
+                        }
+
+                        if(hasPort(network_data.api_domain)) {
+                            console.error("Domain with port not allowed in production");
                             process.exit();
                         }
                     }
@@ -168,7 +195,7 @@ module.exports = {
                     try {
                         await module.exports.onSelfCreated(network_data);
                     } catch(e) {
-
+                        console.error(e);
                     }
                 }
             } catch(e) {
