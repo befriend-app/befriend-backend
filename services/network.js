@@ -221,7 +221,7 @@ module.exports = {
             for(let domain of home_domains) {
                 try {
                     let r = await axios.post(getURL(domain, `network-add`), {
-                        network_data
+                        network: network_data
                     });
 
                     if(r.status === 201) {
