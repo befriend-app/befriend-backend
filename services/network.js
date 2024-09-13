@@ -111,7 +111,7 @@ module.exports = {
                             process.exit();
                         }
                     } catch(e) {
-
+                        console.error(e);
                     }
 
                     //create network record
@@ -135,6 +135,8 @@ module.exports = {
             } catch(e) {
                 console.error(e);
             }
+
+            resolve();
         });
     }
 };
