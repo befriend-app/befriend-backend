@@ -159,13 +159,20 @@ function getCityState(zip, blnUSA = true) {
     });
 }
 
-function getCleanDomain(domain, remove_subdomain) {
+function getCleanDomain(domain, remove_subdomain, allow_local) {
     if(!domain) {
         return null;
     }
 
     if(typeof domain !== "string") {
         throw Error("Domain should be a string");
+    }
+
+    if(!isProdApp() && allow_local) {
+        //do not alter ip/localhost addresses in dev
+        if(isIPAddress(domain) || isLocalHost(domain)) {
+            return domain;
+        }
     }
 
     //lowercase
@@ -320,7 +327,28 @@ function getSessionKey(session) {
 }
 
 function getURL(raw_domain, endpoint) {
-    if(isIPAddress(raw_domain)) {
+    if(!raw_domain) {
+        throw new Error("Domain required");
+    }
+
+    if(typeof endpoint === 'undefined') {
+        throw new Error("No endpoint provided");
+    }
+
+    //use provided protocol for dev
+    if(!isProdApp()) {
+        if(isIPAddress(raw_domain) || isLocalHost(raw_domain)) {
+            // use http if only ip/localhost string
+            if(raw_domain.startsWith('http')) {
+                return joinPaths(raw_domain, endpoint);
+            }
+
+
+            return joinPaths(`http://${raw_domain}`, endpoint);
+        }
+    }
+
+    if(raw_domain.startsWith('http')) {
         return joinPaths(raw_domain, endpoint);
     }
 
@@ -352,6 +380,24 @@ function isIPAddress(address) {
     let ip_re = /^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
 
     return !!domain_no_port.match(ip_re);
+}
+
+function isLocalHost(address) {
+    if(!address) {
+        return false;
+    }
+
+    if(typeof address !== 'string') {
+        throw "Address is not a string";
+    }
+
+    let domain = address.toLowerCase();
+
+    domain = domain.replace('https://', '').replace('http://', '');
+
+    let parsed = tldts.parse(domain);
+
+    return parsed.publicSuffix && parsed.publicSuffix === 'localhost';
 }
 
 function isLocalApp() {

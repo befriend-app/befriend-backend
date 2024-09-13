@@ -28,7 +28,7 @@ module.exports = {
 
                     if(_alt_domains && Array.isArray(_alt_domains) && _alt_domains.length) {
                         for(let domain of _alt_domains) {
-                            domain = getCleanDomain(domain, true);
+                            domain = getCleanDomain(domain, true, true);
 
                             if(domain) {
                                 module.exports.domains.alt.push(domain);
