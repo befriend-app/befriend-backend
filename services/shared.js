@@ -544,12 +544,12 @@ function slugName(name) {
     });
 }
 
-function timeNow(ms) {
-    if(ms) {
-        return Date.now();
+function timeNow(seconds) {
+    if(seconds) {
+        return Number.parseInt(Date.now() / 1000);
     }
 
-    return Number.parseInt(Date.now() / 1000);
+    return Date.now();
 }
 
 function timeoutAwait(ms, f) {

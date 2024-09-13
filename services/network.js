@@ -17,10 +17,14 @@ module.exports = {
     },
     init: function () {
         return new Promise(async (resolve, reject) => {
+            let conn;
+            let alt_domains_key = 'ALT_BEFRIEND_DOMAINS';
+            let env_network_key = `NETWORK_TOKEN`;
+
             //check for alt befriend domains
-            if(process.env.ALT_BEFRIEND_DOMAINS) {
+            if(process.env[alt_domains_key]) {
                 try {
-                    let _alt_domains = JSON.parse(process.env.ALT_BEFRIEND_DOMAINS);
+                    let _alt_domains = JSON.parse(process.env[alt_domains_key]);
 
                     if(_alt_domains && Array.isArray(_alt_domains) && _alt_domains.length) {
                         for(let domain of _alt_domains) {
@@ -33,17 +37,13 @@ module.exports = {
                     }
                 } catch(e) {
                     console.error({
-                        env_format_invalid: "ALT_BEFRIEND_DOMAINS",
-                        format: `ALT_BEFRIEND_DOMAINS=["api.domain.com"]`
+                        env_format_invalid: alt_domains_key,
+                        format: `${alt_domains_key}=["api.domain.com"]`
                     });
 
                     process.exit();
                 }
             }
-
-            let env_network_key = `NETWORK_TOKEN`;
-
-            let conn;
 
             try {
                 conn = await dbService.conn();
@@ -197,6 +197,15 @@ module.exports = {
                     } catch(e) {
                         console.error(e);
                     }
+                } else {
+                    //network not registered with other networks previously
+                    if(!network_qry.is_network_known) {
+                        try {
+                            await module.exports.onSelfCreated(network_qry);
+                        } catch(e) {
+                            console.error(e);
+                        }
+                    }
                 }
             } catch(e) {
                 console.error(e);
@@ -214,9 +223,44 @@ module.exports = {
                     let r = await axios.post(getURL(domain, `network-add`), {
                         network_data
                     });
+
+                    if(r.status === 201) {
+                        break;
+                    } else {
+
+                    }
                 } catch(e) {
                     console.error(e);
                 }
+            }
+        });
+    },
+    setSelfKnown: function () {
+        return new Promise(async (resolve, reject) => {
+            try {
+                 let conn = await dbService.conn();
+
+                 let qry = await conn('networks')
+                     .where('network_token', module.exports.token)
+                     .where('is_self', true)
+                     .first();
+
+                if(!qry) {
+                    return reject("Self network not found");
+                }
+
+                 if(qry && qry.is_network_known) {
+                     return reject("Network already known");
+                 }
+
+                 await conn('networks')
+                     .where('id', qry.id)
+                     .update({
+                         is_network_known: true,
+                         updated: timeNow()
+                     });
+            } catch(e) {
+                return reject(e);
             }
         });
     }
