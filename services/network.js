@@ -233,6 +233,8 @@ module.exports = {
                     console.error(e);
                 }
             }
+
+            resolve();
         });
     },
     setSelfKnown: function () {
