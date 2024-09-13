@@ -15,13 +15,13 @@ let serverService = require('./services/server');
     }
 
     try {
-        await networkService.init();
+        await serverService.init();
     } catch(e) {
         console.error(e);
     }
 
     try {
-        await serverService.init();
+        await networkService.init();
     } catch(e) {
         console.error(e);
     }
