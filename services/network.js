@@ -5,8 +5,31 @@ const {joinPaths, getRepoRoot, readFile, generateToken, writeFile, isLocalApp, i
 
 module.exports = {
     token: null, //this network's token
+    alt_domains: [],
     init: function () {
         return new Promise(async (resolve, reject) => {
+            //check for alt befriend domains
+            if(process.env.ALT_BEFRIEND_DOMAINS) {
+                try {
+                    let _alt_domains = JSON.parse(process.env.ALT_BEFRIEND_DOMAINS);
+
+                    for(let domain of _alt_domains) {
+                        domain = getCleanDomain(domain, true);
+
+                        if(domain) {
+                            module.exports.alt_domains.push(domain);
+                        }
+                    }
+                } catch(e) {
+                    console.error({
+                        env_format_invalid: "ALT_BEFRIEND_DOMAINS",
+                        format: `ALT_BEFRIEND_DOMAINS=["api.domain.com"]`
+                    });
+
+                    process.exit();
+                }
+            }
+
             let env_network_key = `NETWORK_TOKEN`;
 
             let conn;

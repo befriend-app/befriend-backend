@@ -6,7 +6,7 @@ const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
 const geoip = require('geoip-lite');
 const geolib = require('geolib');
-const psl = require('psl');
+const tldts = require('tldts');
 const process = require("process");
 const sgMail = require("@sendgrid/mail");
 
@@ -168,18 +168,18 @@ function getCleanDomain(domain, remove_subdomain) {
     }
 
     //lowercase
-    domain = domain.toLowerCase();
+    let clean_domain = domain.toLowerCase();
 
     //remove http, https
-    domain.replace('https://', '').replace('http://', '');
+    clean_domain = clean_domain.replace('https://', '').replace('http://', '');
 
     if(remove_subdomain) {
-        if(!isIPAddress(domain)) {
-            domain = psl.parse(domain).domain;
+        if(!isIPAddress(clean_domain)) {
+            clean_domain = tldts.parse(clean_domain).domain;
         }
     }
 
-    return domain;
+    return clean_domain;
 }
 
 function getDateDiff(date_1, date_2, unit) {
