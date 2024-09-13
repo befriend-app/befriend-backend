@@ -14,6 +14,16 @@ router.get('/', function (req, res, next) {
     });
 });
 
+router.get('/happy-connect', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        res.json({
+            happiness: 'unlimited'
+        });
+
+        resolve();
+    });
+});
+
 router.get('/networks', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
