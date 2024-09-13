@@ -2,7 +2,7 @@ const axios = require('axios');
 const dbService = require('../services/db');
 
 const {joinPaths, getRepoRoot, readFile, generateToken, writeFile, isProdApp, timeNow, getCleanDomain,
-    isIPAddress, getURL, hasPort
+    isIPAddress, getURL, hasPort, isLocalHost
 } = require("./shared");
 
 
@@ -137,6 +137,10 @@ module.exports = {
 
                     if(network_data.api_domain && network_data.api_domain.startsWith('<')) {
                         invalid.push("NETWORK_API_DOMAIN");
+                    }
+
+                    if(hasPort(network_data.api_domain) && !isIPAddress(network_data.api_domain) && !isLocalHost(network_data.api_domain)) {
+                        invalid.push("Port not allowed in domain");
                     }
 
                     if(missing.length || invalid.length) {

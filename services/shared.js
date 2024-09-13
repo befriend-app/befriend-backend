@@ -646,6 +646,7 @@ module.exports = {
     getURL: getURL,
     hasPort: hasPort,
     isLocalApp: isLocalApp,
+    isLocalHost: isLocalHost,
     isNumeric: isNumeric,
     isProdApp: isProdApp,
     isIPAddress: isIPAddress,
