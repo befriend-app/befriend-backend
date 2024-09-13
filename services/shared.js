@@ -616,5 +616,4 @@ module.exports = {
     timeNow: timeNow,
     timeoutAwait: timeoutAwait,
     writeFile: writeFile
-
 }
