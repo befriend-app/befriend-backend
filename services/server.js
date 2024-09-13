@@ -1,14 +1,13 @@
 const {getRepoRoot, joinPaths, normalizePort} = require("../services/shared");
 
-
 let cookieParser = require('cookie-parser');
 let createError = require('http-errors');
 let express = require('express');
-let expressLayouts = require('express-ejs-layouts');
 const http = require("http");
 let logger = require('morgan');
 let sessionMid = require('../middleware/session');
 let webRouter = require('../routes/api');
+const {timeNow} = require("./shared");
 
 let httpServer;
 
@@ -16,8 +15,7 @@ let port = normalizePort(process.env.PORT || '3000');
 
 let server = express();
 
-server.set('views', joinPaths(getRepoRoot(), 'views'));
-server.set('view engine', 'ejs');
+// server.set('view engine', 'ejs');
 server.set('trust proxy', true)
 
 server.disable('x-powered-by');
@@ -26,8 +24,6 @@ server.use(function (req, res, next) {
     req.start_req_time = timeNow(true);
     next();
 });
-
-server.use(expressLayouts);
 
 server.use(logger('dev'));
 
