@@ -1,11 +1,20 @@
+const axios = require('axios');
 const dbService = require('../services/db');
-const {joinPaths, getRepoRoot, readFile, generateToken, writeFile, isLocalApp, isProdApp, timeNow, getCleanDomain,
-    isIPAddress
+
+const {joinPaths, getRepoRoot, readFile, generateToken, writeFile, isProdApp, timeNow, getCleanDomain,
+    isIPAddress, getURL
 } = require("./shared");
 
+
 module.exports = {
-    token: null, //this network's token
-    alt_domains: [],
+    token: null, //network token for self
+    domains: {
+        befriend: [`api.befriend.app`],
+        alt: []
+    },
+    homeDomains: function () {
+        return module.exports.domains.befriend.concat(module.exports.domains.alt);
+    },
     init: function () {
         return new Promise(async (resolve, reject) => {
             //check for alt befriend domains
@@ -13,11 +22,13 @@ module.exports = {
                 try {
                     let _alt_domains = JSON.parse(process.env.ALT_BEFRIEND_DOMAINS);
 
-                    for(let domain of _alt_domains) {
-                        domain = getCleanDomain(domain, true);
+                    if(_alt_domains && Array.isArray(_alt_domains) && _alt_domains.length) {
+                        for(let domain of _alt_domains) {
+                            domain = getCleanDomain(domain, true);
 
-                        if(domain) {
-                            module.exports.alt_domains.push(domain);
+                            if(domain) {
+                                module.exports.domains.alt.push(domain);
+                            }
                         }
                     }
                 } catch(e) {
@@ -135,6 +146,7 @@ module.exports = {
                     }
 
                     //prevent duplicate domains
+                    //rare: networks table should be empty
                     try {
                         let domain_qry = await conn('networks')
                             .where('base_domain', network_data.base_domain)
@@ -151,12 +163,34 @@ module.exports = {
                     //create network record
                     await conn('networks')
                         .insert(network_data);
+
+                    //notify befriend server(s) of your network
+                    try {
+                        await module.exports.onSelfCreated(network_data);
+                    } catch(e) {
+
+                    }
                 }
             } catch(e) {
                 console.error(e);
             }
 
             resolve();
+        });
+    },
+    onSelfCreated: function(network_data) {
+        return new Promise(async (resolve, reject) => {
+            let home_domains = module.exports.homeDomains();
+
+            for(let domain of home_domains) {
+                try {
+                    let r = await axios.post(getURL(domain, `network-add`), {
+                        network_data
+                    });
+                } catch(e) {
+                    console.error(e);
+                }
+            }
         });
     }
 };

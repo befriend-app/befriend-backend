@@ -9,6 +9,7 @@ const geolib = require('geolib');
 const tldts = require('tldts');
 const process = require("process");
 const sgMail = require("@sendgrid/mail");
+const {getDomain} = require("tldts");
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -171,7 +172,9 @@ function getCleanDomain(domain, remove_subdomain) {
     let clean_domain = domain.toLowerCase();
 
     //remove http, https
-    clean_domain = clean_domain.replace('https://', '').replace('http://', '');
+    if(!isIPAddress(clean_domain)) {
+        clean_domain = clean_domain.replace('https://', '').replace('http://', '');
+    }
 
     if(remove_subdomain) {
         if(!isIPAddress(clean_domain)) {
@@ -316,10 +319,21 @@ function getSessionKey(session) {
     return `session:api:${session}`;
 }
 
+function getURL(raw_domain, endpoint) {
+    if(isIPAddress(raw_domain)) {
+        return joinPaths(raw_domain, endpoint);
+    }
+
+    return joinPaths(`https://${raw_domain}`, endpoint);
+}
+
 function isIPAddress(address) {
     if(!address || typeof address !== 'string') {
         return false;
     }
+
+    //remove https, http
+    address = address.replace('https://', '').replace('http://', '');
 
     //remove port
     let domain_no_port = address.split(':')[0];
@@ -571,6 +585,7 @@ module.exports = {
     getRepoRoot: getRepoRoot,
     getStatesList: getStatesList,
     getSessionKey: getSessionKey,
+    getURL: getURL,
     isLocalApp: isLocalApp,
     isNumeric: isNumeric,
     isProdApp: isProdApp,
