@@ -14,6 +14,6 @@ https://drawsql.app/teams/befriend/diagrams/befriend-backend
 
 `cp .env.example .env`
 
-`knex migrate:up`
+`npx knex migrate:up`
 
 `node server.js`
