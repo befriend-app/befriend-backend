@@ -19,6 +19,10 @@ module.exports = {
                     database: db_name
                 };
 
+                if(process.env.DB_PORT) {
+                    connection.port = parseInt(process.env.DB_PORT);
+                }
+
                 knex = require('knex')({
                     client: process.env.DB_CLIENT,
                     connection: connection

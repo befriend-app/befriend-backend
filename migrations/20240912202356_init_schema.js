@@ -3,6 +3,7 @@
  * @returns { Promise<void> }
  */
 exports.up = async function(knex) {
+    //create database if not exists
     return knex.schema.createTable('networks', table => {
         table.bigIncrements('id').unsigned().primary();
         table.string('network_token', 255).notNullable();
