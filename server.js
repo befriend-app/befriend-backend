@@ -2,15 +2,20 @@
 
 require('dotenv').config();
 
-require('./services/shared');
-
 let cacheService = require('./services/cache');
+let networkService = require('./services/network');
 let serverService = require('./services/server');
 
 
 (async function() {
     try {
         await cacheService.init();
+    } catch(e) {
+        console.error(e);
+    }
+
+    try {
+        await networkService.init();
     } catch(e) {
         console.error(e);
     }

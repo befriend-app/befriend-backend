@@ -387,6 +387,30 @@ function numberWithCommas(x, to_integer) {
     return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
+function readFile(p, json) {
+    return new Promise((resolve, reject) => {
+        require('fs').readFile(p, function (err, data) {
+            if(err) {
+                return reject(err);
+            }
+
+            if(data) {
+                data = data.toString();
+            }
+
+            if(json) {
+                try {
+                    data = JSON.parse(data);
+                } catch (e) {
+                    return reject(e);
+                }
+            }
+
+            return resolve(data);
+        });
+    })
+}
+
 function sendEmail(subject, html, email, from, cc, attachment_alt) {
     return new Promise(async(resolve, reject) => {
         if(!from) {
@@ -477,6 +501,18 @@ function timeoutAwait(ms, f) {
     });
 }
 
+function writeFile(file_path, data) {
+    return new Promise(async (resolve, reject) => {
+        fs.writeFile(file_path, data, (err) => {
+            if (err) {
+                console.error(err);
+                return reject(err);
+            } else {
+                resolve();
+            }
+        });
+    });
+}
 
 module.exports = {
     changeTimezone: changeTimezone,
@@ -506,9 +542,12 @@ module.exports = {
     loadScriptEnv: loadScriptEnv,
     normalizePort: normalizePort,
     numberWithCommas: numberWithCommas,
+    readFile: readFile,
     sendEmail: sendEmail,
     shuffleFunc: shuffleFunc,
     slugName: slugName,
     timeNow: timeNow,
     timeoutAwait: timeoutAwait,
+    writeFile: writeFile
+
 }

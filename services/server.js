@@ -1,3 +1,6 @@
+const {getRepoRoot, joinPaths, normalizePort} = require("../services/shared");
+
+
 let cookieParser = require('cookie-parser');
 let createError = require('http-errors');
 let express = require('express');
@@ -5,7 +8,7 @@ let expressLayouts = require('express-ejs-layouts');
 const http = require("http");
 let logger = require('morgan');
 let sessionMid = require('../middleware/session');
-let webRouter = require('../routes/web');
+let webRouter = require('../routes/api');
 
 let httpServer;
 
