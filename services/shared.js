@@ -6,6 +6,7 @@ const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
 const geoip = require('geoip-lite');
 const geolib = require('geolib');
+const psl = require('psl');
 const process = require("process");
 const sgMail = require("@sendgrid/mail");
 
@@ -157,6 +158,30 @@ function getCityState(zip, blnUSA = true) {
     });
 }
 
+function getCleanDomain(domain, remove_subdomain) {
+    if(!domain) {
+        return null;
+    }
+
+    if(typeof domain !== "string") {
+        throw Error("Domain should be a string");
+    }
+
+    //lowercase
+    domain = domain.toLowerCase();
+
+    //remove http, https
+    domain.replace('https://', '').replace('http://', '');
+
+    if(remove_subdomain) {
+        if(!isIPAddress(domain)) {
+            domain = psl.parse(domain).domain;
+        }
+    }
+
+    return domain;
+}
+
 function getDateDiff(date_1, date_2, unit) {
     let dayjs = require('dayjs');
 
@@ -289,6 +314,18 @@ function getStatesList() {
 
 function getSessionKey(session) {
     return `session:api:${session}`;
+}
+
+function isIPAddress(address) {
+    if(!address || typeof address !== 'string') {
+        return false;
+    }
+
+    //remove port
+    let domain_no_port = address.split(':')[0];
+    let ip_re = /^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+
+    return !!domain_no_port.match(ip_re);
 }
 
 function isLocalApp() {
@@ -522,6 +559,7 @@ module.exports = {
     formatNumberLength: formatNumberLength,
     generateToken: generateToken,
     getCityState: getCityState,
+    getCleanDomain: getCleanDomain,
     getDateDiff: getDateDiff,
     getDateStr: getDateStr,
     getDateTimeStr: getDateTimeStr,
@@ -536,6 +574,7 @@ module.exports = {
     isLocalApp: isLocalApp,
     isNumeric: isNumeric,
     isProdApp: isProdApp,
+    isIPAddress: isIPAddress,
     isValidEmail: isValidEmail,
     isValidUserName: isValidUserName,
     joinPaths: joinPaths,
