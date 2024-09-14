@@ -277,7 +277,7 @@ module.exports = {
 
                 let secret_key_me = generateToken(60);
 
-                await axios.post(getURL(network_qry.api_domain, `keys/home/to`), {
+                await axios.post(getURL(befriend_network.api_domain, `keys/home/to`), {
                     network_token: networkService.token,
                     secret_key_from: secret_key_me,
                     keys_exchange_token: {
@@ -286,7 +286,7 @@ module.exports = {
                     }
                 });
             } catch(e) {
-
+                console.error(e);
             }
 
             resolve();
