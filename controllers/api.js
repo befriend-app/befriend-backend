@@ -206,7 +206,6 @@ module.exports = {
 
             //saved to secret_key_from
             let befriend_network = req.body.network;
-            let network_token = req.body.network_token;
             let secret_key_to = req.body.secret_key_from;
             let keys_exchange_token = req.body.keys_exchange_token;
 
@@ -252,6 +251,25 @@ module.exports = {
                     });
             } catch(e) {
                 console.error(e);
+
+                res.json({
+                    message: "Error adding befriend network"
+                }, 400);
+
+                return resolve();
+            }
+
+            //set ourselves to known
+            try {
+                await conn('networks')
+                    .where('network_token', networkService.token)
+                    .where('is_self', true)
+                    .update({
+                        is_network_known: true,
+                        updated: timeNow()
+                    });
+            } catch(e) {
+
             }
 
             try {
