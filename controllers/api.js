@@ -340,7 +340,7 @@ module.exports = {
             }
 
             try {
-                await axios.post(getURL(network_qry.api_domain, `keys/home/save`), {
+                let r = await axios.post(getURL(network_qry.api_domain, `keys/home/save`), {
                     network_token: networkService.token,
                     secret_key_from: secret_key_me,
                     keys_exchange_token: {
@@ -348,8 +348,20 @@ module.exports = {
                         me: keys_exchange_token.you
                     }
                 });
-            } catch(e) {
 
+                if(r.status === 201) {
+                    await conn('networks_secret_keys')
+                        .insert({
+                            network_id: network_qry.id,
+                            is_active: true,
+                            secret_key_from: secret_key_other_network,
+                            secret_key_to: secret_key_me,
+                            created: timeNow(),
+                            updated: timeNow()
+                        });
+                }
+            } catch(e) {
+                console.error(e);
             }
 
             resolve();
@@ -399,22 +411,23 @@ module.exports = {
 
                     return resolve();
                 }
+
+                await conn('networks_secret_keys')
+                    .insert({
+                        network_id: network_qry.id,
+                        is_active: true,
+                        secret_key_from: secret_key_other_network,
+                        secret_key_to: secret_key_me,
+                        created: timeNow(),
+                        updated: timeNow()
+                    });
             } catch(e) {
                 console.error(e);
             }
 
-            try {
-                await axios.post(getURL(network_qry.api_domain, `keys/home/to`), {
-                    network_token: networkService.token,
-                    secret_key_from: secret_key_me,
-                    keys_exchange_token: {
-                        you: keys_exchange_token.me,
-                        me: keys_exchange_token.you
-                    }
-                });
-            } catch(e) {
-
-            }
+            res.json({
+                message: "Keys exchanged successfully"
+            }, 201);
 
             resolve();
         });
