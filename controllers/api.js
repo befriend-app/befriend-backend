@@ -273,7 +273,7 @@ module.exports = {
             }
 
             try {
-                networkService.keys.oneTime[keys_exchange_token.new_network] = secret_key_befriend;
+                networkService.keys.oneTime[keys_exchange_token.befriend] = secret_key_befriend;
 
                 let secret_key_new_network = generateToken(60);
 
