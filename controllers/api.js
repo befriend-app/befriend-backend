@@ -340,7 +340,7 @@ module.exports = {
             }
 
             try {
-                await axios.post(getURL(network_qry.api_domain, `keys/home/to`), {
+                await axios.post(getURL(network_qry.api_domain, `keys/home/save`), {
                     network_token: networkService.token,
                     secret_key_from: secret_key_me,
                     keys_exchange_token: {
