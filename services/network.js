@@ -220,6 +220,8 @@ module.exports = {
     },
     onSelfCreated: function(network_data) {
         return new Promise(async (resolve, reject) => {
+            delete network_data.id;
+
             let home_domains = module.exports.homeDomains();
 
             for(let domain of home_domains) {
