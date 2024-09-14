@@ -175,7 +175,7 @@ module.exports = {
 
                 let r2 = await axios.post(exchange_key_url, {
                     network: befriend_network,
-                    secret_key_from: secret_key_me,
+                    secret_key_befriend: secret_key_me,
                     keys_exchange_token: {
                         befriend: keys_exchange_token_me,
                         new_network: keys_new_network_token
@@ -202,11 +202,11 @@ module.exports = {
         return new Promise(async (resolve, reject) => {
             //network n
 
-            let conn, network_qry;
+            let conn;
 
             //saved to secret_key_from
             let befriend_network = req.body.network;
-            let secret_key_befriend = req.body.secret_key_from;
+            let secret_key_befriend = req.body.secret_key_befriend;
             let keys_exchange_token = req.body.keys_exchange_token;
 
             if(!(keys_exchange_token) || !(keys_exchange_token.new_network) || !(keys_exchange_token.new_network in networkService.keys.oneTime)) {
