@@ -8,6 +8,9 @@ const {joinPaths, getRepoRoot, readFile, generateToken, writeFile, isProdApp, ti
 
 module.exports = {
     token: null, //network token for self
+    keys: {
+        oneTime: {}
+    },
     domains: {
         befriend: [`api.befriend.app`],
         alt: []
@@ -225,9 +228,14 @@ module.exports = {
             let home_domains = module.exports.homeDomains();
 
             for(let domain of home_domains) {
+                let keys_exchange_token_self = generateToken(30);
+
+                module.exports.keys.oneTime[keys_exchange_token_self] = null;
+
                 try {
                     let r = await axios.post(getURL(domain, `network-add`), {
-                        network: network_data
+                        network: network_data,
+                        keys_exchange_token: keys_exchange_token_self
                     });
 
                     if(r.status === 201) {

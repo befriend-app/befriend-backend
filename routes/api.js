@@ -48,5 +48,41 @@ router.post('/network-add', function (req, res, next) {
     });
 });
 
+router.post('/keys/home/from', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await apiController.exchangeKeysHomeFrom(req, res);
+        } catch(e) {
+            console.error(e);
+        }
+
+        resolve();
+    });
+});
+
+router.post('/keys/home/to', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await apiController.exchangeKeysHomeTo(req, res);
+        } catch(e) {
+            console.error(e);
+        }
+
+        resolve();
+    });
+});
+
+router.post('/keys/home/save', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await apiController.exchangeKeysHomeSave(req, res);
+        } catch(e) {
+            console.error(e);
+        }
+
+        resolve();
+    });
+});
+
 
 module.exports = router;
