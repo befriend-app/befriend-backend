@@ -36,7 +36,7 @@ module.exports = {
 
             let data = req.body.network;
 
-            let keys_exchange_token_other_network = req.body.keys_exchange_token;
+            let keys_new_network_token = req.body.keys_exchange_token;
 
             let required_props = [
                 'network_token',
@@ -53,7 +53,7 @@ module.exports = {
                 }
             }
 
-            if(!keys_exchange_token_other_network) {
+            if(!keys_new_network_token) {
                 missing.push("keys_exchange_token");
             }
 
@@ -177,8 +177,8 @@ module.exports = {
                     network: befriend_network,
                     secret_key_from: secret_key_me,
                     keys_exchange_token: {
-                        from_befriend: keys_exchange_token_me,
-                        from_my_network: keys_exchange_token_other_network
+                        befriend: keys_exchange_token_me,
+                        new_network: keys_new_network_token
                     },
                 });
 
@@ -209,7 +209,7 @@ module.exports = {
             let secret_key_to = req.body.secret_key_from;
             let keys_exchange_token = req.body.keys_exchange_token;
 
-            if(!(keys_exchange_token) || !(keys_exchange_token.you) || !(keys_exchange_token.you in networkService.keys.oneTime)) {
+            if(!(keys_exchange_token) || !(keys_exchange_token.new_network) || !(keys_exchange_token.new_network in networkService.keys.oneTime)) {
                 res.json({
                     message: "Invalid one time token"
                 }, 400);
@@ -273,7 +273,7 @@ module.exports = {
             }
 
             try {
-                networkService.keys.oneTime[keys_exchange_token.you] = secret_key_to;
+                networkService.keys.oneTime[keys_exchange_token.new_network] = secret_key_to;
 
                 let secret_key_me = generateToken(60);
 
@@ -281,8 +281,8 @@ module.exports = {
                     network_token: networkService.token,
                     secret_key_from: secret_key_me,
                     keys_exchange_token: {
-                        you: keys_exchange_token.me,
-                        me: keys_exchange_token.you
+                        befriend: keys_exchange_token.befriend,
+                        new_network: keys_exchange_token.new_network
                     }
                 });
             } catch(e) {
