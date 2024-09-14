@@ -21,7 +21,7 @@ exports.up = async function(knex) {
         table.index('network_token', 'networks_network_token_index');
     })
     .createTable('networks_secret_keys', table => {
-        table.bigInteger('id').unsigned().primary();
+        table.bigIncrements('id').unsigned().primary();
         table.bigInteger('network_id').unsigned().notNullable();
         table.string('secret_key', 255).notNullable();
         table.boolean('is_active').notNullable().defaultTo(0);

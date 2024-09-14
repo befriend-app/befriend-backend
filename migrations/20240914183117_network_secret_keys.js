@@ -9,7 +9,7 @@ exports.up = function(knex) {
 
         table.string('secret_key_to', 255).notNullable()
             .after('secret_key_from').alter();
-    })
+    });
 };
 
 /**
