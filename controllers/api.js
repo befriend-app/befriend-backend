@@ -206,7 +206,7 @@ module.exports = {
 
             //saved to secret_key_from
             let befriend_network = req.body.network;
-            let secret_key_to = req.body.secret_key_from;
+            let secret_key_befriend = req.body.secret_key_from;
             let keys_exchange_token = req.body.keys_exchange_token;
 
             if(!(keys_exchange_token) || !(keys_exchange_token.new_network) || !(keys_exchange_token.new_network in networkService.keys.oneTime)) {
@@ -273,13 +273,13 @@ module.exports = {
             }
 
             try {
-                networkService.keys.oneTime[keys_exchange_token.new_network] = secret_key_to;
+                networkService.keys.oneTime[keys_exchange_token.new_network] = secret_key_befriend;
 
-                let secret_key_me = generateToken(60);
+                let secret_key_new_network = generateToken(60);
 
                 await axios.post(getURL(befriend_network.api_domain, `keys/home/to`), {
                     network_token: networkService.token,
-                    secret_key_from: secret_key_me,
+                    secret_key_new_network: secret_key_new_network,
                     keys_exchange_token: {
                         befriend: keys_exchange_token.befriend,
                         new_network: keys_exchange_token.new_network
@@ -299,10 +299,10 @@ module.exports = {
 
             //saved to secret_key_from
             let network_token = req.body.network_token;
-            let secret_key_other_network = req.body.secret_key_from;
+            let secret_key_new_network = req.body.secret_key_new_network;
             let keys_exchange_token = req.body.keys_exchange_token;
 
-            if(!(keys_exchange_token) || !(keys_exchange_token.you) || !(keys_exchange_token.you in networkService.keys.oneTime)) {
+            if(!(keys_exchange_token) || !(keys_exchange_token.befriend) || !(keys_exchange_token.befriend in networkService.keys.oneTime)) {
                 res.json({
                     message: "Invalid one time token"
                 }, 400);
@@ -310,11 +310,19 @@ module.exports = {
                 return resolve();
             }
 
-            let secret_key_me = networkService.keys.oneTime[keys_exchange_token.you];
+            let secret_key_befriend = networkService.keys.oneTime[keys_exchange_token.befriend];
 
-            if(!secret_key_me) {
+            if(!secret_key_befriend) {
                 res.json({
                     message: "Secret key does not exist",
+                }, 400);
+
+                return resolve();
+            }
+
+            if(!secret_key_new_network) {
+                res.json({
+                    message: "New network secret key required",
                 }, 400);
 
                 return resolve();
@@ -342,10 +350,10 @@ module.exports = {
             try {
                 let r = await axios.post(getURL(network_qry.api_domain, `keys/home/save`), {
                     network_token: networkService.token,
-                    secret_key_from: secret_key_me,
+                    secret_key_befriend: secret_key_befriend,
                     keys_exchange_token: {
-                        you: keys_exchange_token.me,
-                        me: keys_exchange_token.you
+                        befriend: keys_exchange_token.befriend,
+                        new_network: keys_exchange_token.new_network
                     }
                 });
 
@@ -354,8 +362,8 @@ module.exports = {
                         .insert({
                             network_id: network_qry.id,
                             is_active: true,
-                            secret_key_from: secret_key_other_network,
-                            secret_key_to: secret_key_me,
+                            secret_key_from: secret_key_new_network,
+                            secret_key_to: secret_key_befriend,
                             created: timeNow(),
                             updated: timeNow()
                         });
@@ -375,10 +383,10 @@ module.exports = {
 
             //saved to secret_key_from
             let network_token = req.body.network_token;
-            let secret_key_other_network = req.body.secret_key_from;
+            let secret_key_befriend = req.body.secret_key_befriend;
             let keys_exchange_token = req.body.keys_exchange_token;
 
-            if(!(keys_exchange_token) || !(keys_exchange_token.you) || !(keys_exchange_token.you in networkService.keys.oneTime)) {
+            if(!(keys_exchange_token) || !(keys_exchange_token.new_network) || !(keys_exchange_token.new_network in networkService.keys.oneTime)) {
                 res.json({
                     message: "Invalid one time token"
                 }, 400);
@@ -386,11 +394,19 @@ module.exports = {
                 return resolve();
             }
 
-            let secret_key_me = networkService.keys.oneTime[keys_exchange_token.you];
+            let secret_key_new_network = networkService.keys.oneTime[keys_exchange_token.new_network];
 
-            if(!secret_key_me) {
+            if(!secret_key_new_network) {
                 res.json({
                     message: "Secret key does not exist",
+                }, 400);
+
+                return resolve();
+            }
+
+            if(!secret_key_befriend) {
+                res.json({
+                    message: "Befriend secret key required",
                 }, 400);
 
                 return resolve();
@@ -416,8 +432,8 @@ module.exports = {
                     .insert({
                         network_id: network_qry.id,
                         is_active: true,
-                        secret_key_from: secret_key_other_network,
-                        secret_key_to: secret_key_me,
+                        secret_key_from: secret_key_befriend,
+                        secret_key_to: secret_key_new_network,
                         created: timeNow(),
                         updated: timeNow()
                     });
