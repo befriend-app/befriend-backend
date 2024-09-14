@@ -273,9 +273,12 @@ module.exports = {
             }
 
             try {
+                //save befriend secret key, set self secret key
                 networkService.keys.oneTime[keys_exchange_token.befriend] = secret_key_befriend;
 
                 let secret_key_new_network = generateToken(60);
+
+                networkService.keys.oneTime[keys_exchange_token.new_network] = secret_key_new_network;
 
                 await axios.post(getURL(befriend_network.api_domain, `keys/home/to`), {
                     network_token: networkService.token,
