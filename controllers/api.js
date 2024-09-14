@@ -177,8 +177,8 @@ module.exports = {
                     network: befriend_network,
                     secret_key_from: secret_key_me,
                     keys_exchange_token: {
-                        me: keys_exchange_token_me,
-                        you: keys_exchange_token_other_network
+                        from_befriend: keys_exchange_token_me,
+                        from_my_network: keys_exchange_token_other_network
                     },
                 });
 
