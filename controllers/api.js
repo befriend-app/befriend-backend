@@ -93,9 +93,28 @@ module.exports = {
                 }
             }
 
-            //check for existence of domain and token
+            //do not allow adding network on is_befriend=false network
             try {
                 conn = await dbService.conn();
+
+                let is_self_befriend = await conn('networks')
+                    .where('network_token', networkService.token)
+                    .where('is_self', true)
+                    .where('is_befriend', true);
+
+                if(!is_self_befriend) {
+                    res.json({
+                        message: "Could not register network"
+                    }, 400);
+
+                    return resolve();
+                }
+            } catch(e) {
+                console.error(e);
+            }
+
+            //check for existence of domain and token
+            try {
 
                 let domain_duplicate_qry = await conn('networks')
                     .where('base_domain', base.hostname)
@@ -239,6 +258,7 @@ module.exports = {
                         base_domain: befriend_network.base_domain,
                         api_domain: befriend_network.api_domain,
                         priority: befriend_network.priority,
+                        keys_exchanged: false,
                         is_network_known: befriend_network.is_network_known,
                         is_self: false,
                         is_befriend: befriend_network.is_befriend,
