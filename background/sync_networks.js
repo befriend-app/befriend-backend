@@ -37,6 +37,11 @@ loadScriptEnv();
 
                     if(r.data && r.data.networks) {
                         for(let network of r.data.networks) {
+                            //do not do anything if network belongs to me
+                            if(my_network.network_token === network.network_token) {
+                                continue;
+                            }
+
                             let keys_exchanged = false;
 
                             //add to db if not exists
