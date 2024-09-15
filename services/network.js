@@ -7,6 +7,11 @@ const {joinPaths, getRepoRoot, readFile, generateToken, writeFile, isProdApp, ti
 
 
 module.exports = {
+    cols: [
+        'network_token', 'network_name', 'network_logo', 'base_domain', 'api_domain', 'priority', 'keys_exchanged',
+        'is_network_known', 'is_self', 'is_befriend', 'is_trusted', 'is_blocked', 'is_online', 'last_online',
+        'admin_name', 'admin_email'
+    ],
     env: {
         alt_domains_key: 'ALT_BEFRIEND_DOMAINS',
         network_token_key: `NETWORK_TOKEN`
