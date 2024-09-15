@@ -16,6 +16,8 @@ module.exports = {
                  let networks = await conn('networks')
                      // .where('created', '<', timeNow() - 60000)
                      .orderBy('is_trusted', 'desc')
+                     .orderBy('is_befriend', 'desc')
+                     .orderBy('priority', 'asc')
                      .select('network_token', 'network_name', 'network_logo', 'base_domain', 'api_domain', 'priority',
                         'is_network_known', 'is_befriend', 'is_trusted', 'is_online', 'is_blocked', 'last_online', 'created', 'updated'
                      );
@@ -31,6 +33,7 @@ module.exports = {
     addNetwork: function (req, res) {
         return new Promise(async (resolve, reject) => {
             //befriend home
+
             let conn;
 
             let data = req.body.network;
