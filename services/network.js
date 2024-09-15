@@ -7,6 +7,10 @@ const {joinPaths, getRepoRoot, readFile, generateToken, writeFile, isProdApp, ti
 
 
 module.exports = {
+    env: {
+        alt_domains_key: 'ALT_BEFRIEND_DOMAINS',
+        network_token_key: `NETWORK_TOKEN`
+    },
     token: null, //network token for self
     keys: {
         oneTime: {}
@@ -18,11 +22,9 @@ module.exports = {
     homeDomains: function () {
         return module.exports.domains.befriend.concat(module.exports.domains.alt);
     },
-    init: function () {
+    loadAltDomains: function () {
         return new Promise(async (resolve, reject) => {
-            let conn;
-            let alt_domains_key = 'ALT_BEFRIEND_DOMAINS';
-            let env_network_key = `NETWORK_TOKEN`;
+            let alt_domains_key = module.exports.env.alt_domains_key;
 
             //check for alt befriend domains
             if(process.env[alt_domains_key]) {
@@ -48,6 +50,19 @@ module.exports = {
                 }
             }
 
+            resolve();
+        });
+    },
+    init: function () {
+        return new Promise(async (resolve, reject) => {
+            let conn;
+
+            try {
+                await module.exports.loadAltDomains();
+            } catch(e) {
+                console.error(e);
+            }
+
             try {
                 conn = await dbService.conn();
             } catch(e) {
@@ -55,6 +70,7 @@ module.exports = {
             }
 
             //get/create network token for self
+            let env_network_key = module.exports.env.network_token_key;
             let network_token = process.env[env_network_key];
 
             if(!network_token) {
