@@ -58,6 +58,11 @@ module.exports = {
             resolve();
         });
     },
+    loadNetworkToken: function () {
+        return new Promise(async (resolve, reject) => {
+
+        });
+    },
     init: function () {
         return new Promise(async (resolve, reject) => {
             let conn;
@@ -76,6 +81,7 @@ module.exports = {
 
             //get/create network token for self
             let env_network_key = module.exports.env.network_token_key;
+
             let network_token = process.env[env_network_key];
 
             if(!network_token) {
@@ -299,6 +305,41 @@ module.exports = {
                      });
             } catch(e) {
                 return reject(e);
+            }
+        });
+    },
+    getNetwork: function (network_token) {
+        return new Promise(async (resolve, reject) => {
+            if(!network_token) {
+                return reject("No network token");
+            }
+
+            try {
+                let conn = await dbService.conn();
+
+                let qry = await conn('networks')
+                    .where('network_token', network_token)
+                    .first();
+
+                resolve(qry);
+            } catch(e) {
+                reject(e);
+            }
+        });
+    },
+    getNetworkSelf: function () {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let conn = await dbService.conn();
+
+                let qry = await conn('networks')
+                    .where('network_token', process.env[module.exports.env.network_token_key])
+                    .where('is_self', true)
+                    .first();
+
+                resolve(qry);
+            } catch(e) {
+                reject(e);
             }
         });
     }

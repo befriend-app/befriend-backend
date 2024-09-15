@@ -3,9 +3,9 @@ const axios = require('axios');
 const dbService = require('../services/db');
 
 const {timeoutAwait, getLocalDate, loadScriptEnv, getURL, timeNow} = require("../services/shared");
-const {homeDomains, loadAltDomains, cols} = require("../services/network");
+const {homeDomains, loadAltDomains, cols, getNetworkSelf} = require("../services/network");
 
-const runInterval = 3600 * 60 * 1000; //every hour
+const runInterval = 3600 * 1000; //every hour
 
 loadScriptEnv();
 
@@ -28,6 +28,8 @@ loadScriptEnv();
 
         try {
             let conn = await dbService.conn();
+
+            let my_network = await getNetworkSelf();
 
             for(let domain of home_domains) {
                 try {
@@ -68,7 +70,33 @@ loadScriptEnv();
 
                             //exchange keys if needed
                             if(!keys_exchanged) {
+                                //do not initiate process if my network was added after this network to prevent duplicate cross-send
+                                let my_network_created = null;
+                                let their_network_created = network.created;
 
+                                for(let _network of r.data.networks) {
+                                    if(_network.network_token === my_network.network_token) {
+                                        my_network_created = _network.created;
+                                    }
+                                }
+
+                                if(my_network_created > their_network_created) {
+                                    continue;
+                                }
+
+                                //way to know communicating with non-spoofed network
+                                //befriend_network_token
+
+                                //self
+                                //sending_network_token
+
+                                //receiving_network_token
+                                //to_network_token
+
+                                //encrypt self_network_token with befriend_secret_key for to_network
+                                //decrypt encrypted self_network_token on to_network,
+                                // if value matches self_network_token, begin key exchange process
+                                debugger;
                             }
                         }
 
