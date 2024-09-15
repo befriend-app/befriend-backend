@@ -317,7 +317,7 @@ module.exports = {
 
             if(!secret_key_befriend) {
                 res.json({
-                    message: "Secret key does not exist",
+                    message: "Secret key not found",
                 }, 400);
 
                 return resolve();
@@ -370,6 +370,13 @@ module.exports = {
                             created: timeNow(),
                             updated: timeNow()
                         });
+
+                    await conn('networks')
+                        .where('id', network_qry.id)
+                        .update({
+                            keys_exchanged: true,
+                            updated: timeNow()
+                        });
                 }
             } catch(e) {
                 console.error(e);
@@ -401,7 +408,7 @@ module.exports = {
 
             if(!secret_key_new_network) {
                 res.json({
-                    message: "Secret key does not exist",
+                    message: "Self secret key not found",
                 }, 400);
 
                 return resolve();
@@ -438,6 +445,13 @@ module.exports = {
                         secret_key_from: secret_key_befriend,
                         secret_key_to: secret_key_new_network,
                         created: timeNow(),
+                        updated: timeNow()
+                    });
+
+                await conn('networks')
+                    .where('id', network_qry.id)
+                    .update({
+                        keys_exchanged: true,
                         updated: timeNow()
                     });
             } catch(e) {
