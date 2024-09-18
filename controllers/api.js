@@ -98,10 +98,12 @@ module.exports = {
             try {
                 conn = await dbService.conn();
 
-                network_self = await conn('networks')
-                    .where('network_token', networkService.token)
-                    .where('is_self', true)
-                    .where('is_befriend', true);
+                network_self = await conn('networks AS n')
+                    .join('networks AS n2', 'n.id', '=', 'n2.registration_network_id')
+                    .where('n.network_token', networkService.token)
+                    .where('n.is_self', true)
+                    .where('n.is_befriend', true)
+                    .select('n.*', 'n2.network_token AS registration_network_token');
 
                 if(!network_self) {
                     res.json({
@@ -191,13 +193,8 @@ module.exports = {
 
                 networkService.keys.oneTime[keys_exchange_token_me] = secret_key_me;
 
-                let befriend_network = await conn('networks')
-                    .where('network_token', networkService.token)
-                    .where('is_befriend', true)
-                    .first();
-
                 let r2 = await axios.post(exchange_key_url, {
-                    network: befriend_network,
+                    network: network_self,
                     secret_key_befriend: secret_key_me,
                     keys_exchange_token: {
                         befriend: keys_exchange_token_me,
@@ -207,7 +204,7 @@ module.exports = {
 
                 res.json({
                     message: "Network added successfully",
-                    network: befriend_network
+                    network: network_self
                 }, 201);
             } catch(e) {
                 console.error(e);
