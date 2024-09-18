@@ -28,8 +28,6 @@ module.exports = {
         return new Promise(async (resolve, reject) => {
             //initiate alt domains if null
             if(module.exports.domains.alt === null) {
-                module.exports.domains.alt = [];
-
                 try {
                     await module.exports.loadAltDomains();
                 } catch(e) {
@@ -44,6 +42,13 @@ module.exports = {
     },
     loadAltDomains: function () {
         return new Promise(async (resolve, reject) => {
+            //only load once
+            if(module.exports.domains.alt !== null) {
+                return resolve();
+            }
+
+            module.exports.domains.alt = [];
+
             let alt_domains_key = module.exports.env.alt_domains_key;
 
             //check for alt befriend domains
