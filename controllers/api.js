@@ -745,6 +745,14 @@ module.exports = {
                             created: timeNow(),
                             updated: timeNow()
                         });
+
+                    //set keys exchanged
+                    await conn('networks_secret_keys')
+                        .where('id', from_network.id)
+                        .update({
+                            keys_exchanged: true,
+                            updated: timeNow()
+                        });
                 } else {
                     res.json({
                         message: "Error exchanging keys with from_network"
@@ -858,6 +866,14 @@ module.exports = {
                          created: timeNow(),
                          updated: timeNow()
                      });
+
+                //set keys exchanged
+                await conn('networks_secret_keys')
+                    .where('id', to_network.id)
+                    .update({
+                        keys_exchanged: true,
+                        updated: timeNow()
+                    });
 
                  res.json({
                      secret_key_from: secret_key_to,
