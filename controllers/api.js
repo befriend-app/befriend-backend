@@ -6,6 +6,7 @@ const networkService = require('../services/network');
 
 const {isProdApp, isIPAddress, isLocalHost, getURL, timeNow, generateToken, joinPaths} = require("../services/shared");
 const {getNetwork, getNetworkSelf} = require("../services/network");
+const {encrypt} = require("../services/encryption");
 
 
 module.exports = {
@@ -531,6 +532,8 @@ module.exports = {
             //We enable key exchange between two networks by encrypting the to_network's network_token with their secret key stored in our database.
             //We pass the from_network's exchange_token to the to_network to authenticate the to_network's request back to the from_network.
 
+            let my_network, from_network, to_network;
+
             let encrypted_network_tokens = {
                 from: null,
                 to: null
@@ -567,12 +570,22 @@ module.exports = {
 
             //ensure the to_network was registered by us
             try {
-                let my_network = await getNetworkSelf();
-                let to_network = await getNetwork(to_network_token);
+                my_network = await getNetworkSelf();
+                from_network = await getNetwork(from_network_token);
+                to_network = await getNetwork(to_network_token);
 
                 if(to_network.registration_network_id !== my_network.id) {
                     res.json({
                         message: "Could not facilitate keys exchange with to_network",
+                        network_tokens: req.body.network_tokens
+                    }, 400);
+
+                    return resolve();
+                }
+
+                if(!from_network || !to_network) {
+                    res.json({
+                        message: "Could not find both networks",
                         network_tokens: req.body.network_tokens
                     }, 400);
 
@@ -586,11 +599,66 @@ module.exports = {
                 return resolve();
             }
 
-            
+            //get secret key of from and to_network
+            try {
+                let conn = await dbService.conn();
 
+                let from_secret_key_qry = await conn('networks_secret_keys')
+                    .where('network_id', from_network.id)
+                    .where('is_active', true)
+                    .first();
 
+                let to_secret_key_qry = await conn('networks_secret_keys')
+                    .where('network_id', to_network.id)
+                    .where('is_active', true)
+                    .first();
 
-            debugger;
+                if(!from_secret_key_qry || !to_secret_key_qry) {
+                    res.json({
+                        message: "Could not find keys for both networks"
+                    }, 400);
+
+                    return resolve();
+                }
+
+                encrypted_network_tokens.from = await encrypt(from_secret_key_qry.secret_key_to, from_network_token);
+                encrypted_network_tokens.to = await encrypt(to_secret_key_qry.secret_key_to, to_network_token);
+            } catch(e) {
+                console.error(e);
+
+                res.json({
+                    message: "Error processing tokens for keys exchange"
+                }, 400);
+
+                return resolve();
+            }
+
+            if(!encrypted_network_tokens.from || !encrypted_network_tokens.to) {
+                res.json({
+                    message: "Could not encrypt tokens"
+                }, 400);
+
+                return resolve();
+            }
+
+            try {
+                let r = await axios.post(getURL(to_network.api_domain, `/keys/exchange/decrypt`), {
+                    encrypted: encrypted_network_tokens,
+                    network_tokens: req.body.network_tokens
+                });
+
+                res.json({
+                    message: "Keys exchange process started successfully",
+                    network_tokens: req.body.network_tokens
+                }, 201);
+            } catch(e) {
+                res.json({
+                    message: "Error communicating with to_network",
+                    network_tokens: req.body.network_tokens
+                }, 400);
+
+                return resolve();
+            }
         });
     }
 }
