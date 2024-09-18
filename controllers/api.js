@@ -285,7 +285,7 @@ module.exports = {
                 return resolve();
             }
 
-            //set ourselves to known
+            //for own network: set registration_network_id, is_network_known
             try {
                 await conn('networks')
                     .where('network_token', networkService.token)
@@ -295,6 +295,27 @@ module.exports = {
                         is_network_known: true,
                         updated: timeNow()
                     });
+            } catch(e) {
+                console.error(e);
+            }
+
+            //set registration_network_id for just added registering network
+            try {
+                if(befriend_network.registration_network_token) {
+                    let qry = await conn('networks')
+                        .where('network_token', befriend_network.registration_network_token)
+                        .first();
+
+                    if(qry) {
+                        await conn('networks')
+                            .where('id', befriend_network_id)
+                            .update({
+                                registration_network_id: qry.id,
+                                updated: timeNow()
+                            });
+                    }
+                }
+
             } catch(e) {
                 console.error(e);
             }
