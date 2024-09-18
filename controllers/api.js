@@ -13,13 +13,16 @@ module.exports = {
             try {
                  let conn = await dbService.conn();
 
-                 let networks = await conn('networks')
+                 let networks = await conn('networks AS n')
+                     .join('networks AS n2', 'n.registration_network_id', '=', 'n2.id')
                      // .where('created', '<', timeNow() - 60000)
-                     .orderBy('is_trusted', 'desc')
-                     .orderBy('is_befriend', 'desc')
-                     .orderBy('priority', 'asc')
-                     .select('network_token', 'network_name', 'network_logo', 'base_domain', 'api_domain', 'priority',
-                        'is_network_known', 'is_befriend', 'is_trusted', 'is_online', 'is_blocked', 'last_online', 'created', 'updated'
+                     .orderBy('n.is_trusted', 'desc')
+                     .orderBy('n.is_befriend', 'desc')
+                     .orderBy('n.priority', 'asc')
+                     .select(
+                         'n.network_token', 'n.network_name', 'n.network_logo', 'n.base_domain', 'n.api_domain',
+                         'n.priority', 'n.is_network_known', 'n.is_befriend', 'n.is_trusted', 'n.is_online', 'n.is_blocked',
+                         'n.last_online', 'n.created', 'n.updated', 'n2.network_token AS registration_network_token'
                      );
 
                  res.json({
@@ -99,7 +102,7 @@ module.exports = {
                 conn = await dbService.conn();
 
                 network_self = await conn('networks AS n')
-                    .join('networks AS n2', 'n.id', '=', 'n2.registration_network_id')
+                    .join('networks AS n2', 'n.registration_network_id', '=', 'n2.id')
                     .where('n.network_token', networkService.token)
                     .where('n.is_self', true)
                     .where('n.is_befriend', true)

@@ -22,12 +22,28 @@ loadScriptEnv();
 
             let my_network = await getNetworkSelf();
 
+            let all_networks_qry = await conn('networks');
+
+            let all_networks_dict = {};
+
+            for(let network of all_networks_qry) {
+                all_networks_dict[network.network_token] = network;
+            }
+
             if(my_network) {
+                let networks_data_received = false;
+
                 for(let domain of home_domains) {
+                    if(networks_data_received) {
+                        break;
+                    }
+
                     try {
                         let r = await axios.get(getURL(domain, `networks`));
 
                         if(r.data && r.data.networks) {
+                            networks_data_received = true;
+
                             for(let network of r.data.networks) {
                                 //do not do anything if network belongs to me
                                 if(my_network.network_token === network.network_token) {
@@ -38,11 +54,7 @@ loadScriptEnv();
 
                                 //add to db if not exists
                                 try {
-                                    let db_qry = await conn('networks')
-                                        .where('network_token', network.network_token)
-                                        .first();
-
-                                    if(!db_qry) {
+                                    if(!network.network_token in all_networks_dict) {
                                         let network_insert = {};
 
                                         //prepare data insert based on networks table cols
@@ -57,10 +69,14 @@ loadScriptEnv();
                                         network_insert.created = timeNow();
                                         network_insert.updated = timeNow();
 
-                                        await conn('networks')
+                                        let id = await conn('networks')
                                             .insert(network_insert);
+
+                                        network_insert.id = id[0];
+
+                                        all_networks_dict[network.network_token] = network_insert;
                                     } else {
-                                        keys_exchanged = db_qry.keys_exchanged;
+                                        keys_exchanged = all_networks_dict[network.network_token].keys_exchanged;
                                     }
                                 } catch(e) {
                                     console.error(e);
