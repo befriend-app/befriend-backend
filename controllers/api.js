@@ -5,6 +5,7 @@ const dbService = require('../services/db');
 const networkService = require('../services/network');
 
 const {isProdApp, isIPAddress, isLocalHost, getURL, timeNow, generateToken, joinPaths} = require("../services/shared");
+const {getNetwork, getNetworkSelf} = require("../services/network");
 
 
 module.exports = {
@@ -521,6 +522,75 @@ module.exports = {
             }, 201);
 
             resolve();
+        });
+    },
+    keysExchangeEncrypt: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            //registering server/befriend
+
+            //We enable key exchange between two networks by encrypting the to_network's network_token with their secret key stored in our database.
+            //We pass the from_network's exchange_token to the to_network to authenticate the to_network's request back to the from_network.
+
+            let encrypted_network_tokens = {
+                from: null,
+                to: null
+            };
+
+            let exchange_token = req.body.exchange_token;
+
+            if(!exchange_token) {
+                res.json({
+                    message: "No exchange token provided"
+                }, 400);
+
+                return resolve();
+            }
+
+            if(!('network_tokens' in req.body)) {
+                res.json({
+                    message: "No network tokens provided"
+                }, 400);
+
+                return resolve();
+            }
+
+            let from_network_token = req.body.network_tokens.from_network;
+            let to_network_token = req.body.network_tokens.to_network;
+
+            if(!from_network_token || !to_network_token) {
+                res.json({
+                    message: "Both from and to network tokens required"
+                }, 400);
+
+                return resolve();
+            }
+
+            //ensure the to_network was registered by us
+            try {
+                let my_network = await getNetworkSelf();
+                let to_network = await getNetwork(to_network_token);
+
+                if(to_network.registration_network_id !== my_network.id) {
+                    res.json({
+                        message: "Could not facilitate keys exchange with to_network",
+                        network_tokens: req.body.network_tokens
+                    }, 400);
+
+                    return resolve();
+                }
+            } catch(e) {
+                res.json({
+                    message: "Error verifying networks"
+                }, 400);
+
+                return resolve();
+            }
+
+            
+
+
+
+            debugger;
         });
     }
 }
