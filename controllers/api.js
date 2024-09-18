@@ -429,6 +429,9 @@ module.exports = {
                             keys_exchanged: true,
                             updated: timeNow()
                         });
+
+                    //delete token from memory
+                    delete networkService.keys.oneTime[keys_exchange_token.befriend];
                 }
             } catch(e) {
                 console.error(e);
@@ -506,6 +509,9 @@ module.exports = {
                         keys_exchanged: true,
                         updated: timeNow()
                     });
+
+                //delete tokens from memory
+                delete networkService.keys.oneTime[keys_exchange_token.new_network];
             } catch(e) {
                 console.error(e);
             }
