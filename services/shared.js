@@ -212,6 +212,10 @@ function getDateTimeStr() {
     return date.toISOString().slice(0, 10) + ' ' + date.toISOString().substring(11, 19);
 }
 
+function getExchangeKeysKey(token) {
+    return `networks:keys:exchange:${token}`;
+}
+
 function getIPAddr(req) {
     return req.headers['x-forwarded-for'] ||
         req.socket.remoteAddress ||
@@ -635,6 +639,7 @@ module.exports = {
     getDateDiff: getDateDiff,
     getDateStr: getDateStr,
     getDateTimeStr: getDateTimeStr,
+    getExchangeKeysKey: getExchangeKeysKey,
     getIPAddr: getIPAddr,
     getLocalDate: getLocalDate,
     getLocalDateStr: getLocalDateStr,

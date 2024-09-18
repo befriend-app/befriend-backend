@@ -2,8 +2,9 @@ const axios = require('axios');
 
 const dbService = require('../services/db');
 
-const {timeoutAwait, getLocalDate, loadScriptEnv, getURL, timeNow} = require("../services/shared");
-const {homeDomains, cols, getNetworkSelf} = require("../services/network");
+const {timeoutAwait, getLocalDate, loadScriptEnv, getURL, timeNow, generateToken, getExchangeKeysKey} = require("../services/shared");
+const {homeDomains, cols, getNetworkSelf, getNetwork} = require("../services/network");
+const {setCache} = require("../services/cache");
 
 const runInterval = 3600 * 1000; //every hour
 
@@ -31,10 +32,10 @@ loadScriptEnv();
             }
 
             if(my_network) {
-                let networks_data_received = false;
+                let is_network_data_received = false;
 
                 for(let domain of home_domains) {
-                    if(networks_data_received) {
+                    if(is_network_data_received) {
                         break;
                     }
 
@@ -42,7 +43,7 @@ loadScriptEnv();
                         let r = await axios.get(getURL(domain, `networks`));
 
                         if(r.data && r.data.networks) {
-                            networks_data_received = true;
+                            is_network_data_received = true;
 
                             for(let network of r.data.networks) {
                                 //do not do anything if network belongs to me
@@ -52,9 +53,16 @@ loadScriptEnv();
 
                                 let keys_exchanged = false;
 
-                                //add to db if not exists
+                                let registering_network = all_networks_dict[network.registration_network_token];
+
+                                //registering network required for keys exchange
+                                if(!registering_network) {
+                                    continue;
+                                }
+
+                                //add network to db if not exists
                                 try {
-                                    if(!network.network_token in all_networks_dict) {
+                                    if(!(network.network_token in all_networks_dict)) {
                                         let network_insert = {};
 
                                         //prepare data insert based on networks table cols
@@ -64,6 +72,7 @@ loadScriptEnv();
                                             }
                                         }
 
+                                        network_insert.registration_network_id = registering_network.id;
                                         network_insert.is_self = false;
                                         network_insert.keys_exchanged = false;
                                         network_insert.created = timeNow();
@@ -100,11 +109,14 @@ loadScriptEnv();
                                     }
 
                                     //way to know communicating with non-spoofed network
+                                    //unique token to start process
+                                    let keys_exchange_token = generateToken(40);
 
-                                    //befriend_network_token
-                                    let befriend_qry = await conn('networks')
-                                        .where('')
+                                    let cache_key = getExchangeKeysKey(keys_exchange_token);
 
+                                    await setCache(cache_key, null);
+
+                                    //registration_network_token
                                     //self
                                     //sending_network_token
 
@@ -114,7 +126,14 @@ loadScriptEnv();
                                     //encrypt self_network_token with befriend_secret_key for to_network
                                     //decrypt encrypted self_network_token on to_network,
                                     // if value matches self_network_token, begin key exchange process
-                                    debugger;
+
+                                    let r = await axios.post(getURL(registering_network.api_domain, `keys/exchange/encrypt`), {
+                                        exchange_token: keys_exchange_token,
+                                        network_tokens: {
+                                            from_network: my_network.network_token,
+                                            to_network: network.network_token
+                                        }
+                                    });
                                 }
                             }
 
