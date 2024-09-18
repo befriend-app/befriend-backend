@@ -321,6 +321,8 @@ module.exports = {
             } catch(e) {
                 return reject(e);
             }
+
+            resolve();
         });
     },
     getNetwork: function (network_token) {

@@ -38,6 +38,7 @@ module.exports = {
 
             let data = req.body.network;
 
+            //for key exchange process
             let keys_new_network_token = req.body.keys_exchange_token;
 
             let required_props = [
@@ -115,7 +116,6 @@ module.exports = {
 
             //check for existence of domain and token
             try {
-
                 let domain_duplicate_qry = await conn('networks')
                     .where('base_domain', base.hostname)
                     .first();
@@ -181,6 +181,7 @@ module.exports = {
                 await conn('networks')
                     .insert(network_data);
 
+                //continue key exchange process
                 let secret_key_me = generateToken(60);
 
                 let exchange_key_url = getURL(data.api_domain, 'keys/home/from');
@@ -205,6 +206,7 @@ module.exports = {
 
                 res.json({
                     message: "Network added successfully",
+                    network: befriend_network
                 }, 201);
             } catch(e) {
                 console.error(e);
@@ -246,11 +248,13 @@ module.exports = {
                 return resolve();
             }
 
+            let befriend_network_id;
+
             //create network
             try {
                 conn = await dbService.conn();
 
-                await conn('networks')
+                befriend_network_id = await conn('networks')
                     .insert({
                         network_token: befriend_network.network_token,
                         network_name: befriend_network.network_name,
@@ -271,6 +275,8 @@ module.exports = {
                         created: timeNow(),
                         updated: timeNow()
                     });
+
+                befriend_network_id = befriend_network_id[0];
             } catch(e) {
                 console.error(e);
 
@@ -287,6 +293,7 @@ module.exports = {
                     .where('network_token', networkService.token)
                     .where('is_self', true)
                     .update({
+                        registration_network_id: befriend_network_id,
                         is_network_known: true,
                         updated: timeNow()
                     });
