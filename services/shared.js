@@ -45,8 +45,11 @@ function cloneObj(obj) {
 function confirmDecryptedNetworkToken(encrypted_message) {
     return new Promise(async (resolve, reject) => {
         try {
+            let networkService = require('../services/network');
+
             let conn = await dbService.conn();
-            let my_network = await require('../services/network').getNetworkSelf();
+
+            let my_network = await networkService.getNetworkSelf();
 
             if(!my_network || !my_network.registration_network_id) {
                 return reject("Error finding my registration network");
