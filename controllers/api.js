@@ -747,7 +747,7 @@ module.exports = {
                         });
 
                     //set keys exchanged
-                    await conn('networks_secret_keys')
+                    await conn('networks')
                         .where('id', from_network.id)
                         .update({
                             keys_exchanged: true,
@@ -868,7 +868,7 @@ module.exports = {
                      });
 
                 //set keys exchanged
-                await conn('networks_secret_keys')
+                await conn('networks')
                     .where('id', to_network.id)
                     .update({
                         keys_exchanged: true,
