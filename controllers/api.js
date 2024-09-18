@@ -803,8 +803,6 @@ module.exports = {
             }
 
             try {
-                let conn = await dbService.conn();
-
                 //retrieve to_network_token from exchange_token cache key
                 let cache_key = getExchangeKeysKey(exchange_token);
 
