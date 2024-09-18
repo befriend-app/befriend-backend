@@ -49,7 +49,7 @@ module.exports = {
                     return reject(e);
                 }
             }
-            
+
             try {
                 let data = await module.exports.conn.get(key);
 
