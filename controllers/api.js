@@ -557,8 +557,8 @@ module.exports = {
                 return resolve();
             }
 
-            let from_network_token = req.body.network_tokens.from_network;
-            let to_network_token = req.body.network_tokens.to_network;
+            let from_network_token = req.body.network_tokens.from;
+            let to_network_token = req.body.network_tokens.to;
 
             if(!from_network_token || !to_network_token) {
                 res.json({
@@ -681,7 +681,7 @@ module.exports = {
                 return resolve();
             }
 
-            if(!encrypted.from || !encrypted.to) {
+            if(!encrypted || !encrypted.from || !encrypted.to) {
                 res.json({
                     message: "Encrypted tokens required"
                 }, 400);
@@ -689,9 +689,9 @@ module.exports = {
                 return resolve();
             }
 
-            if(!network_tokens.from || !network_tokens.to) {
+            if(!network_tokens || !network_tokens.from || !network_tokens.to) {
                 res.json({
-                    message: "Network tokens required"
+                    message: "Network token data required"
                 }, 400);
 
                 return resolve();

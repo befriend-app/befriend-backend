@@ -131,8 +131,8 @@ loadScriptEnv();
                                     let r2 = await axios.post(getURL(registering_network.api_domain, `keys/exchange/encrypt`), {
                                         exchange_token: keys_exchange_token,
                                         network_tokens: {
-                                            from_network: my_network.network_token,
-                                            to_network: network.network_token
+                                            from: my_network.network_token,
+                                            to: network.network_token
                                         }
                                     });
                                 }
