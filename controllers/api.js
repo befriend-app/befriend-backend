@@ -103,7 +103,8 @@ module.exports = {
                     .where('n.network_token', networkService.token)
                     .where('n.is_self', true)
                     .where('n.is_befriend', true)
-                    .select('n.*', 'n2.network_token AS registration_network_token');
+                    .select('n.*', 'n2.network_token AS registration_network_token')
+                    .first();
 
                 if(!network_self) {
                     res.json({
