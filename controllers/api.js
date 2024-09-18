@@ -1,10 +1,14 @@
 const axios = require('axios');
 const tldts = require('tldts');
 
+const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 const networkService = require('../services/network');
 
-const {isProdApp, isIPAddress, isLocalHost, getURL, timeNow, generateToken, joinPaths} = require("../services/shared");
+
+const {isProdApp, isIPAddress, isLocalHost, getURL, timeNow, generateToken, joinPaths, getExchangeKeysKey,
+    confirmDecryptedNetworkToken
+} = require("../services/shared");
 const {getNetwork, getNetworkSelf} = require("../services/network");
 const {encrypt, decrypt} = require("../services/encryption");
 
@@ -698,53 +702,10 @@ module.exports = {
             }
 
             try {
-                let conn = await dbService.conn();
-
-                //get secret key for the registration network
-                my_network = await getNetworkSelf();
-
-                if(!my_network || !my_network.registration_network_id) {
-                    res.json({
-                        message: "Error finding my registration network"
-                    }, 400);
-
-                    return resolve();
-                }
-
-                let qry = await conn('networks_secret_keys')
-                    .where('network_id', my_network.registration_network_id)
-                    .where('is_active', true)
-                    .first();
-
-                if(!qry) {
-                    res.json({
-                        message: "Error finding keys"
-                    }, 400);
-
-                    return resolve();
-                }
-
-                //ensure can decrypt message and it matches my network token
-                try {
-                    let decoded = await decrypt(qry.secret_key_from, encrypted.to);
-
-                    if(!decoded || decoded !== networkService.token) {
-                        res.json({
-                            message: "Invalid keys exchange request"
-                        }, 400);
-
-                        return resolve();
-                    }
-                } catch(e) {
-                    res.json({
-                        message: "Error decrypting network_token"
-                    }, 400);
-
-                    return resolve();
-                }
+                await confirmDecryptedNetworkToken(encrypted.to);
             } catch(e) {
                 res.json({
-                    message: "Error verifying networks"
+                    message: e
                 }, 400);
 
                 return resolve();
@@ -779,7 +740,9 @@ module.exports = {
                             network_id: from_network.id,
                             is_active: true,
                             secret_key_from: r.data.secret_key_from,
-                            secret_key_to: secret_key_self
+                            secret_key_to: secret_key_self,
+                            created: timeNow(),
+                            updated: timeNow()
                         });
                 } else {
                     res.json({
@@ -797,6 +760,117 @@ module.exports = {
 
                 res.json({
                     message: "Could not exchange keys with from_network"
+                }, 400);
+
+                return resolve();
+            }
+        });
+    },
+    keysExchangeSave: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            //request received on from_network
+
+            let to_network;
+
+            //request received from to_network
+            let exchange_token = req.body.exchange_token;
+            let encrypted = req.body.encrypted;
+            let secret_key_from = req.body.secret_key_from;
+
+            if(!exchange_token) {
+                res.json({
+                    message: "Exchange token required"
+                }, 400);
+
+                return resolve();
+            }
+
+            if(!encrypted || !encrypted.from) {
+                res.json({
+                    message: "Encrypted tokens required"
+                }, 400);
+
+                return resolve();
+            }
+
+            if(!secret_key_from) {
+                res.json({
+                    message: "to_network secret key not provided"
+                }, 400);
+
+                return resolve();
+            }
+
+            try {
+                let conn = await dbService.conn();
+
+                //retrieve to_network_token from exchange_token cache key
+                let cache_key = getExchangeKeysKey(exchange_token);
+
+                let to_network_token = await cacheService.get(cache_key);
+
+                if(!to_network_token) {
+                    res.json({
+                        message: "Invalid exchange token"
+                    }, 400);
+
+                    return resolve();
+                }
+
+                to_network = await getNetwork(to_network_token);
+
+                if(!to_network) {
+                    res.json({
+                        message: "Could not find to_network"
+                    }, 400);
+
+                    return resolve();
+                }
+            } catch(e) {
+                res.json({
+                    message: "Error verifying networks"
+                }, 400);
+
+                return resolve();
+            }
+
+            //confirm decrypted network token
+            try {
+                 await confirmDecryptedNetworkToken(encrypted.from);
+            } catch(e) {
+                res.json({
+                    message: e
+                }, 400);
+
+                return resolve();
+            }
+
+            try {
+                let conn = await dbService.conn();
+
+                 let secret_key_to = generateToken(60);
+
+                 await conn('networks_secret_keys')
+                     .insert({
+                         network_id: to_network.id,
+                         is_active: true,
+                         secret_key_from: secret_key_from,
+                         secret_key_to: secret_key_to,
+                         created: timeNow(),
+                         updated: timeNow()
+                     });
+
+                 res.json({
+                     secret_key_from: secret_key_to,
+                     secret_key_to: secret_key_from
+                 }, 201);
+
+                 return resolve();
+            } catch(e) {
+                console.error(e);
+
+                res.json({
+                    message: "Error saving keys"
                 }, 400);
 
                 return resolve();

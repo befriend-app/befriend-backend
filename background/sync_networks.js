@@ -114,8 +114,8 @@ loadScriptEnv();
 
                                     let cache_key = getExchangeKeysKey(keys_exchange_token);
 
-                                    //save cache key to use as lookup in receiving message from registering network in keys/exchange/
-                                    await setCache(cache_key, null);
+                                    //save cache key with value of to_network_token to auth/validate request in keys/exchange/save
+                                    await setCache(cache_key, network.network_token);
 
                                     //registration_network_token
                                     //self

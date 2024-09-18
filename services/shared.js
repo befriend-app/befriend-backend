@@ -10,6 +10,9 @@ const tldts = require('tldts');
 const process = require("process");
 const sgMail = require("@sendgrid/mail");
 const {getDomain} = require("tldts");
+const {getNetworkSelf} = require("./network");
+const {decrypt} = require("./encryption");
+const networkService = require("./network");
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -40,6 +43,40 @@ function cloneObj(obj) {
         console.error(e);
         return null;
     }
+}
+
+function confirmDecryptedNetworkToken(encrypted_message) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let conn = await dbService.conn();
+            let my_network = await getNetworkSelf();
+
+            if(!my_network || !my_network.registration_network_id) {
+                return reject("Error finding my registration network");
+            }
+
+            //get secret key for the registration network
+            let secret_key_qry = await conn('networks_secret_keys')
+                .where('network_id', my_network.registration_network_id)
+                .where('is_active', true)
+                .first();
+
+            if(!secret_key_qry) {
+                return reject("Error finding keys");
+            }
+
+            //ensure can decrypt message and it matches my network token
+            let decoded = await decrypt(secret_key_qry.secret_key_from, encrypted_message);
+
+            if(!decoded || decoded !== networkService.token) {
+                return reject("Invalid keys exchange request");
+            }
+
+            resolve(true);
+        } catch(e) {
+            return reject("Error decrypting message");
+        }
+    });
 }
 
 function dateTimeNow(date) {
@@ -659,6 +696,7 @@ module.exports = {
     isValidUserName: isValidUserName,
     joinPaths: joinPaths,
     loadScriptEnv: loadScriptEnv,
+    confirmDecryptedNetworkToken: confirmDecryptedNetworkToken,
     normalizePort: normalizePort,
     numberWithCommas: numberWithCommas,
     readFile: readFile,
