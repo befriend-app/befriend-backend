@@ -10,21 +10,12 @@ const runInterval = 3600 * 1000; //every hour
 loadScriptEnv();
 
 (async function() {
-    try {
-        await loadAltDomains();
-    } catch(e) {
-        console.error(e);
-        process.exit();
-    }
+    let home_domains = await homeDomains();
 
-    let home_domains = homeDomains();
-
-    while (true) {
+    while(true) {
         console.log({
             sync_networks: getLocalDate()
         });
-
-        let conn = await dbService.conn();
 
         try {
             let conn = await dbService.conn();
@@ -53,6 +44,7 @@ loadScriptEnv();
                                 if(!db_qry) {
                                     let network_insert = {};
 
+                                    //prepare data insert based on networks table cols
                                     for(let col of cols) {
                                         if(col in network) {
                                             network_insert[col] = network[col];
@@ -82,6 +74,7 @@ loadScriptEnv();
                                 for(let _network of r.data.networks) {
                                     if(_network.network_token === my_network.network_token) {
                                         my_network_created = _network.created;
+                                        break;
                                     }
                                 }
 
@@ -90,7 +83,10 @@ loadScriptEnv();
                                 }
 
                                 //way to know communicating with non-spoofed network
+
                                 //befriend_network_token
+                                let befriend_qry = await conn('networks')
+                                    .where('')
 
                                 //self
                                 //sending_network_token
@@ -112,9 +108,8 @@ loadScriptEnv();
                 }
             }
         } catch(e) {
-
+            console.error(e);
         }
-
 
         await timeoutAwait(runInterval);
     }

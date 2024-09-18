@@ -22,10 +22,25 @@ module.exports = {
     },
     domains: {
         befriend: [`api.befriend.app`],
-        alt: []
+        alt: null
     },
     homeDomains: function () {
-        return module.exports.domains.befriend.concat(module.exports.domains.alt);
+        return new Promise(async (resolve, reject) => {
+            //initiate alt domains if null
+            if(module.exports.domains.alt === null) {
+                module.exports.domains.alt = [];
+
+                try {
+                    await module.exports.loadAltDomains();
+                } catch(e) {
+                    console.error(e);
+                }
+            }
+
+            let home_domains = module.exports.domains.befriend.concat(module.exports.domains.alt);
+
+            resolve(home_domains);
+        });
     },
     loadAltDomains: function () {
         return new Promise(async (resolve, reject) => {
@@ -252,7 +267,7 @@ module.exports = {
         return new Promise(async (resolve, reject) => {
             delete network_data.id;
 
-            let home_domains = module.exports.homeDomains();
+            let home_domains = await module.exports.homeDomains();
 
             for(let domain of home_domains) {
                 let keys_exchange_token_self = generateToken(30);
