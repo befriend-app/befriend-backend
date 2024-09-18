@@ -34,7 +34,7 @@ module.exports = {
         return new Promise(async (resolve, reject) => {
             //befriend home
 
-            let conn;
+            let conn, network_self;
 
             let data = req.body.network;
 
@@ -98,12 +98,12 @@ module.exports = {
             try {
                 conn = await dbService.conn();
 
-                let is_self_befriend = await conn('networks')
+                network_self = await conn('networks')
                     .where('network_token', networkService.token)
                     .where('is_self', true)
                     .where('is_befriend', true);
 
-                if(!is_self_befriend) {
+                if(!network_self) {
                     res.json({
                         message: "Could not register network"
                     }, 400);
@@ -160,6 +160,7 @@ module.exports = {
                 }
 
                 let network_data = {
+                    registration_network_id: network_self.id,
                     network_token: data.network_token,
                     network_name: data.network_name,
                     network_logo: data.network_logo || null,
@@ -298,7 +299,7 @@ module.exports = {
                         updated: timeNow()
                     });
             } catch(e) {
-
+                console.error(e);
             }
 
             try {
