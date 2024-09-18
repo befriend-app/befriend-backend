@@ -644,7 +644,8 @@ module.exports = {
             try {
                 let r = await axios.post(getURL(to_network.api_domain, `/keys/exchange/decrypt`), {
                     encrypted: encrypted_network_tokens,
-                    network_tokens: req.body.network_tokens
+                    network_tokens: req.body.network_tokens,
+                    exchange_token_from: exchange_token
                 });
 
                 res.json({
