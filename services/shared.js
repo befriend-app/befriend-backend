@@ -9,9 +9,7 @@ const geolib = require('geolib');
 const tldts = require('tldts');
 const process = require("process");
 const sgMail = require("@sendgrid/mail");
-const {getDomain} = require("tldts");
 const {decrypt} = require("./encryption");
-const networkService = require("./network");
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -48,7 +46,7 @@ function confirmDecryptedNetworkToken(encrypted_message) {
     return new Promise(async (resolve, reject) => {
         try {
             let conn = await dbService.conn();
-            let my_network = await networkService.getNetworkSelf();
+            let my_network = await require('../services/network').getNetworkSelf();
 
             if(!my_network || !my_network.registration_network_id) {
                 return reject("Error finding my registration network");
