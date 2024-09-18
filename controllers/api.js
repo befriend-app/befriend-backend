@@ -9,8 +9,9 @@ const networkService = require('../services/network');
 const {isProdApp, isIPAddress, isLocalHost, getURL, timeNow, generateToken, joinPaths, getExchangeKeysKey,
     confirmDecryptedNetworkToken
 } = require("../services/shared");
+
 const {getNetwork, getNetworkSelf} = require("../services/network");
-const {encrypt, decrypt} = require("../services/encryption");
+const {encrypt} = require("../services/encryption");
 
 
 module.exports = {

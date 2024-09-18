@@ -10,7 +10,6 @@ const tldts = require('tldts');
 const process = require("process");
 const sgMail = require("@sendgrid/mail");
 const {getDomain} = require("tldts");
-const {getNetworkSelf} = require("./network");
 const {decrypt} = require("./encryption");
 const networkService = require("./network");
 
@@ -49,7 +48,7 @@ function confirmDecryptedNetworkToken(encrypted_message) {
     return new Promise(async (resolve, reject) => {
         try {
             let conn = await dbService.conn();
-            let my_network = await getNetworkSelf();
+            let my_network = await networkService.getNetworkSelf();
 
             if(!my_network || !my_network.registration_network_id) {
                 return reject("Error finding my registration network");

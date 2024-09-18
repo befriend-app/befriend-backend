@@ -3,7 +3,7 @@ const axios = require('axios');
 const dbService = require('../services/db');
 
 const {timeoutAwait, getLocalDate, loadScriptEnv, getURL, timeNow, generateToken, getExchangeKeysKey} = require("../services/shared");
-const {homeDomains, cols, getNetworkSelf, getNetwork} = require("../services/network");
+const {homeDomains, cols, getNetworkSelf} = require("../services/network");
 const {setCache} = require("../services/cache");
 
 const runInterval = 3600 * 1000; //every hour
