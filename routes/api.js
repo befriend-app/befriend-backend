@@ -96,5 +96,17 @@ router.post('/keys/exchange/encrypt', function (req, res, next) {
     });
 });
 
+router.post('/keys/exchange/decrypt', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await apiController.keysExchangeDecrypt(req, res);
+        } catch(e) {
+            console.error(e);
+        }
+
+        resolve();
+    });
+});
+
 
 module.exports = router;

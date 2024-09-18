@@ -6,7 +6,7 @@ const networkService = require('../services/network');
 
 const {isProdApp, isIPAddress, isLocalHost, getURL, timeNow, generateToken, joinPaths} = require("../services/shared");
 const {getNetwork, getNetworkSelf} = require("../services/network");
-const {encrypt} = require("../services/encryption");
+const {encrypt, decrypt} = require("../services/encryption");
 
 
 module.exports = {
@@ -643,9 +643,9 @@ module.exports = {
 
             try {
                 let r = await axios.post(getURL(to_network.api_domain, `/keys/exchange/decrypt`), {
+                    exchange_token_from: exchange_token,
                     encrypted: encrypted_network_tokens,
                     network_tokens: req.body.network_tokens,
-                    exchange_token_from: exchange_token
                 });
 
                 res.json({
@@ -656,6 +656,147 @@ module.exports = {
                 res.json({
                     message: "Error communicating with to_network",
                     network_tokens: req.body.network_tokens
+                }, 400);
+
+                return resolve();
+            }
+        });
+    },
+    keysExchangeDecrypt: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            //request received on to_network
+
+            let my_network, from_network;
+
+            //request received from registering/befriend network
+            let exchange_token = req.body.exchange_token_from;
+            let encrypted = req.body.encrypted;
+            let network_tokens = req.body.network_tokens;
+
+            if(!exchange_token) {
+                res.json({
+                    message: "Exchange token required"
+                }, 400);
+
+                return resolve();
+            }
+
+            if(!encrypted.from || !encrypted.to) {
+                res.json({
+                    message: "Encrypted tokens required"
+                }, 400);
+
+                return resolve();
+            }
+
+            if(!network_tokens.from || !network_tokens.to) {
+                res.json({
+                    message: "Network tokens required"
+                }, 400);
+
+                return resolve();
+            }
+
+            try {
+                let conn = await dbService.conn();
+
+                //get secret key for the registration network
+                my_network = await getNetworkSelf();
+
+                if(!my_network || !my_network.registration_network_id) {
+                    res.json({
+                        message: "Error finding my registration network"
+                    }, 400);
+
+                    return resolve();
+                }
+
+                let qry = await conn('networks_secret_keys')
+                    .where('network_id', my_network.registration_network_id)
+                    .where('is_active', true)
+                    .first();
+
+                if(!qry) {
+                    res.json({
+                        message: "Error finding keys"
+                    }, 400);
+
+                    return resolve();
+                }
+
+                //ensure can decrypt message and it matches my network token
+                try {
+                    let decoded = await decrypt(qry.secret_key_from, encrypted.to);
+
+                    if(!decoded || decoded !== networkService.token) {
+                        res.json({
+                            message: "Invalid keys exchange request"
+                        }, 400);
+
+                        return resolve();
+                    }
+                } catch(e) {
+                    res.json({
+                        message: "Error decrypting network_token"
+                    }, 400);
+
+                    return resolve();
+                }
+            } catch(e) {
+                res.json({
+                    message: "Error verifying networks"
+                }, 400);
+
+                return resolve();
+            }
+
+            try {
+                let conn = await dbService.conn();
+
+                //get domain for from_network
+                from_network = await getNetwork(network_tokens.from);
+
+                if(!from_network) {
+                    res.json({
+                        message: "From network not found"
+                    }, 400);
+
+                    return resolve();
+                }
+
+                //generate my secret_key for from_network
+                let secret_key_self = generateToken(60);
+
+                let r = await axios.post(getURL(from_network.api_domain, `/keys/exchange/save`), {
+                    exchange_token: exchange_token,
+                    encrypted: encrypted,
+                    secret_key_from: secret_key_self
+                });
+
+                if(r.status === 201 && r.data.secret_key_from) {
+                    await conn(`networks_secret_keys`)
+                        .insert({
+                            network_id: from_network.id,
+                            is_active: true,
+                            secret_key_from: r.data.secret_key_from,
+                            secret_key_to: secret_key_self
+                        });
+                } else {
+                    res.json({
+                        message: "Error exchanging keys with from_network"
+                    }, 400);
+
+                    return resolve();
+                }
+
+                res.json("Keys exchanged successfully", 201);
+
+                return resolve();
+            } catch(e) {
+                console.error(e);
+
+                res.json({
+                    message: "Could not exchange keys with from_network"
                 }, 400);
 
                 return resolve();
