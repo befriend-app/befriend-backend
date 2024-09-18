@@ -1,8 +1,9 @@
+const redis = require('redis');
+
 module.exports = {
     conn: null,
     init: function () {
         return new Promise(async (resolve, reject) => {
-            const redis = require('redis');
 
             let redis_ip = process.env.REDIS_HOST;
 
@@ -40,6 +41,15 @@ module.exports = {
     },
     get: function (key, json) {
         return new Promise(async (resolve, reject) => {
+            //init conn in case first time
+            if(!module.exports.conn) {
+                try {
+                    await module.exports.init();
+                } catch(e) {
+                    return reject(e);
+                }
+            }
+            
             try {
                 let data = await module.exports.conn.get(key);
 
@@ -59,6 +69,15 @@ module.exports = {
     },
     setCache: function (key, data, cache_lifetime = null) {
         return new Promise(async (resolve, reject) => {
+            //init conn in case first time
+            if(!module.exports.conn) {
+                try {
+                     await module.exports.init();
+                } catch(e) {
+                    return reject(e);
+                }
+            }
+
             if(typeof data !== 'string') {
                 data = JSON.stringify(data);
             }
