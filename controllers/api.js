@@ -6,7 +6,7 @@ const dbService = require('../services/db');
 const networkService = require('../services/network');
 
 const {isProdApp, isIPAddress, isLocalHost, getURL, timeNow, generateToken, joinPaths, getExchangeKeysKey,
-    confirmDecryptedNetworkToken
+    confirmDecryptedRegistrationNetworkToken
 } = require("../services/shared");
 
 const {getNetwork, getNetworkSelf} = require("../services/network");
@@ -703,7 +703,7 @@ module.exports = {
             }
 
             try {
-                await confirmDecryptedNetworkToken(encrypted.to);
+                await confirmDecryptedRegistrationNetworkToken(encrypted.to);
             } catch(e) {
                 res.json({
                     message: e
@@ -843,7 +843,7 @@ module.exports = {
 
             //confirm decrypted network token
             try {
-                 await confirmDecryptedNetworkToken(encrypted.from);
+                 await confirmDecryptedRegistrationNetworkToken(encrypted.from);
             } catch(e) {
                 res.json({
                     message: e

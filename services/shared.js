@@ -10,6 +10,7 @@ const tldts = require('tldts');
 const process = require("process");
 const sgMail = require("@sendgrid/mail");
 const {decrypt} = require("./encryption");
+const networkService = require("./network");
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -42,7 +43,44 @@ function cloneObj(obj) {
     }
 }
 
-function confirmDecryptedNetworkToken(encrypted_message) {
+function confirmDecryptedNetworkToken(encrypted_message, network_token) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let networkService = require('../services/network');
+
+            let conn = await dbService.conn();
+
+            let network = await networkService.getNetwork(network_token);
+
+            if(!network) {
+                return reject("Error finding network");
+            }
+
+            //get secret key for encrypted message
+            let secret_key_qry = await conn('networks_secret_keys')
+                .where('network_id', network.id)
+                .where('is_active', true)
+                .first();
+
+            if(!secret_key_qry) {
+                return reject("Error validating network");
+            }
+
+            //ensure can decrypt message and it matches my network token
+            let decoded = await decrypt(secret_key_qry.secret_key_from, encrypted_message);
+
+            if(!decoded || decoded !== network_token) {
+                return reject("Invalid network_token");
+            }
+
+            resolve(true);
+        } catch(e) {
+            return reject("Error decrypting message");
+        }
+    });
+}
+
+function confirmDecryptedRegistrationNetworkToken(encrypted_message) {
     return new Promise(async (resolve, reject) => {
         try {
             let networkService = require('../services/network');
@@ -666,6 +704,8 @@ function writeFile(file_path, data) {
 
 module.exports = {
     changeTimezone: changeTimezone,
+    confirmDecryptedNetworkToken: confirmDecryptedNetworkToken,
+    confirmDecryptedRegistrationNetworkToken: confirmDecryptedRegistrationNetworkToken,
     cloneObj: cloneObj,
     dateTimeNow: dateTimeNow,
     downloadURL: downloadURL,
@@ -696,7 +736,6 @@ module.exports = {
     isValidUserName: isValidUserName,
     joinPaths: joinPaths,
     loadScriptEnv: loadScriptEnv,
-    confirmDecryptedNetworkToken: confirmDecryptedNetworkToken,
     normalizePort: normalizePort,
     numberWithCommas: numberWithCommas,
     readFile: readFile,
