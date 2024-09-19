@@ -35,7 +35,7 @@ exports.up = async function(knex) {
         table.increments('id').unsigned().primary();
         table.string('gender_token', 255).notNullable();
         table.string('gender_name', 255).notNullable();
-        table.float('sort_position').notNullable();
+        table.float('sort_position', 5, 3).notNullable();
 
         table.integer('created').notNullable();
         table.integer('updated').notNullable();
@@ -112,7 +112,7 @@ exports.up = async function(knex) {
         table.float('location_lat', 14, 10).nullable();
         table.float('location_lon', 14, 10).nullable();
         table.integer('reviews_count').unsigned().notNullable().defaultTo(0).comment('Aggregated from persons_reviews');
-        table.float('reviews_rating', 53).notNullable().comment('Aggregated from persons_reviews');
+        table.float('reviews_rating', 5, 3).notNullable().comment('Aggregated from persons_reviews');
         table.date('birth_date').nullable();
         table.foreign('gender_id').references('id').inTable('genders');
         table.foreign('network_id').references('id').inTable('networks');
@@ -162,7 +162,7 @@ exports.up = async function(knex) {
         table.increments('id').unsigned().primary();
         table.string('filter_token', 255).notNullable().comment('Unique system-wide');
         table.string('filter_name', 255).notNullable();
-        table.float('sort_position', 53).notNullable().defaultTo(0);
+        table.float('sort_position', 5, 3).notNullable().defaultTo(0);
         table.integer('parent_filter_id').unsigned().nullable();
         table.boolean('is_distance').notNullable().defaultTo(false);
         table.boolean('is_language').notNullable().defaultTo(false);
@@ -273,7 +273,7 @@ exports.up = async function(knex) {
         table.bigInteger('person_id').unsigned().notNullable();
         table.string('circle_token', 255).notNullable().comment('Unique system-wide');
         table.string('circle_name', 255).notNullable();
-        table.float('sort_position', 53).notNullable();
+        table.float('sort_position', 5, 3).notNullable();
         table.bigInteger('circle_parent_id').unsigned().nullable();
 
         table.integer('created').notNullable();
