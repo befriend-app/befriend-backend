@@ -10,7 +10,6 @@ const tldts = require('tldts');
 const process = require("process");
 const sgMail = require("@sendgrid/mail");
 const {decrypt} = require("./encryption");
-const networkService = require("./network");
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -43,18 +42,10 @@ function cloneObj(obj) {
     }
 }
 
-function confirmDecryptedNetworkToken(encrypted_message, network_token) {
+function confirmDecryptedNetworkToken(encrypted_message, network) {
     return new Promise(async (resolve, reject) => {
         try {
-            let networkService = require('../services/network');
-
             let conn = await dbService.conn();
-
-            let network = await networkService.getNetwork(network_token);
-
-            if(!network) {
-                return reject("Error finding network");
-            }
 
             //get secret key for encrypted message
             let secret_key_qry = await conn('networks_secret_keys')
@@ -69,7 +60,7 @@ function confirmDecryptedNetworkToken(encrypted_message, network_token) {
             //ensure can decrypt message and it matches my network token
             let decoded = await decrypt(secret_key_qry.secret_key_from, encrypted_message);
 
-            if(!decoded || decoded !== network_token) {
+            if(!decoded || decoded !== network.network_token) {
                 return reject("Invalid network_token");
             }
 
