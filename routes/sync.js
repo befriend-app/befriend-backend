@@ -25,3 +25,5 @@ router.post('/persons', function (req, res, next) {
         resolve();
     });
 });
+
+module.exports = router;
