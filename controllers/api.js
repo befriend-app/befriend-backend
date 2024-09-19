@@ -12,6 +12,7 @@ const {isProdApp, isIPAddress, isLocalHost, getURL, timeNow, generateToken, join
 
 const {getNetwork, getNetworkSelf} = require("../services/network");
 const {encrypt} = require("../services/encryption");
+const {deleteKeys} = require("../services/cache");
 
 
 module.exports = {
@@ -779,7 +780,7 @@ module.exports = {
         return new Promise(async (resolve, reject) => {
             //request received on from_network
 
-            let to_network;
+            let to_network, cache_key;
 
             //request received from to_network
             let exchange_token = req.body.exchange_token;
@@ -812,7 +813,7 @@ module.exports = {
 
             try {
                 //retrieve to_network_token from exchange_token cache key
-                let cache_key = getExchangeKeysKey(exchange_token);
+                cache_key = getExchangeKeysKey(exchange_token);
 
                 let to_network_token = await cacheService.get(cache_key);
 
@@ -879,6 +880,9 @@ module.exports = {
                      secret_key_from: secret_key_to,
                      secret_key_to: secret_key_from
                  }, 201);
+
+                 //delete exchange_token from cache
+                 await deleteKeys(cache_key);
 
                  return resolve();
             } catch(e) {
