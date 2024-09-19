@@ -5,7 +5,6 @@ const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 const networkService = require('../services/network');
 
-
 const {isProdApp, isIPAddress, isLocalHost, getURL, timeNow, generateToken, joinPaths, getExchangeKeysKey,
     confirmDecryptedNetworkToken
 } = require("../services/shared");

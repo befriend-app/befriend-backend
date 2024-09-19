@@ -1,12 +1,13 @@
 const {getRepoRoot, joinPaths, normalizePort} = require("../services/shared");
 
-let cookieParser = require('cookie-parser');
-let createError = require('http-errors');
-let express = require('express');
+const cookieParser = require('cookie-parser');
+const createError = require('http-errors');
+const express = require('express');
 const http = require("http");
-let logger = require('morgan');
-let sessionMid = require('../middleware/session');
-let webRouter = require('../routes/api');
+const logger = require('morgan');
+const sessionMid = require('../middleware/session');
+const apiRouter = require('../routes/api');
+const syncRouter = require('../routes/sync');
 const {timeNow} = require("./shared");
 
 let httpServer;
@@ -36,7 +37,8 @@ server.use(sessionMid.handle);
 
 server.use(express.static(joinPaths(getRepoRoot(), 'public')));
 
-server.use('/', webRouter);
+server.use('/', apiRouter);
+server.use('/sync', syncRouter);
 
 server.use(function(req, res, next) {
     next(createError(404));
