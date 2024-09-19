@@ -41,8 +41,18 @@ let num_persons = 1;
                 updated: timeNow()
             };
 
-            await conn('persons')
+            let person_id = await conn('persons')
                 .insert(person_insert);
+
+            person_id = person_id[0];
+
+            await conn('persons_networks')
+                .insert({
+                    person_id: person_id,
+                    network_id: self_network.id,
+                    created: timeNow(),
+                    updated: timeNow()
+                });
 
             console.log({
                 person_inserted: person_insert
