@@ -61,4 +61,6 @@ let num_persons = 1;
     } catch(e) {
         console.error(e);
     }
+
+    process.exit();
 })();
