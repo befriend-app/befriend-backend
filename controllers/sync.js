@@ -89,12 +89,16 @@ module.exports = {
                 await Promise.all(
                     persons.map(async (person) => {
                         let gender = await getGender(person.gender_id);
-                        person.gender = gender;
 
                         delete person.gender_id;
-                        delete gender.id;
-                        delete gender.created;
-                        delete gender.updated;
+
+                        if(gender) {
+                            person.gender = gender;
+                            delete gender.id;
+                            delete gender.created;
+                            delete gender.updated;
+                        }
+
                     })
                 );
 
