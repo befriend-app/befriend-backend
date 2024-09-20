@@ -47,7 +47,7 @@ function processPersons(network_id, persons) {
                             gender_id: gender_id,
                             reviews_count: person.reviews_count,
                             reviews_rating: person.reviews_rating,
-                            birth_date: person.birth_date,
+                            birth_date: birthDatePure(person.birth_date),
                             created: timeNow(),
                             updated: timeNow()
                         });
