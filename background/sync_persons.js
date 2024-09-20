@@ -59,7 +59,7 @@ function processPersons(network_id, persons) {
                             person_id: person_id,
                             network_id: network_id,
                             created: timeNow(),
-                            updated: timeNow()
+                            updated: person.updated
                         });
                 } else {
                     //person could possibly already exist but joined with a new (second) network
@@ -194,6 +194,23 @@ function processPersons(network_id, persons) {
                     }
 
                     //update sync table
+                    if(sync_qry) {
+                        await conn('sync')
+                            .where('id', sync_qry.id)
+                            .update({
+                                last_updated: timestamps.current,
+                                updated: timeNow()
+                            });
+                    } else {
+                        await conn('sync')
+                            .insert({
+                                sync_process: sync_name,
+                                network_id: network.id,
+                                last_updated: timestamps.current,
+                                created: timeNow(),
+                                updated: timeNow()
+                            });
+                    }
                 } catch(e) {
                     console.error(e);
                 }
