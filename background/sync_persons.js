@@ -45,6 +45,7 @@ function processPersons(network_id, persons) {
                             person_token: person.person_token,
                             network_id: network_id,
                             gender_id: gender_id,
+                            is_online: person.is_online,
                             reviews_count: person.reviews_count,
                             reviews_rating: person.reviews_rating,
                             birth_date: birthDatePure(person.birth_date),
