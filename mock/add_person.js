@@ -2,7 +2,7 @@ const axios = require('axios');
 const yargs = require('yargs');
 const dbService = require('../services/db');
 const {getNetworkSelf} = require("../services/network");
-const {loadScriptEnv, generateToken, timeNow} = require("../services/shared");
+const {loadScriptEnv, generateToken, timeNow, birthDatePure} = require("../services/shared");
 
 let args = yargs.argv;
 
@@ -43,7 +43,7 @@ if(args._ && args._.length) {
                 image_url: person.picture.large,
                 location_lat: person.location.coordinates.latitude,
                 location_lon: person.location.coordinates.longitude,
-                birth_date: person.dob.date.substring(0, 10),
+                birth_date: birthDatePure(person.dob.date),
                 created: timeNow(),
                 updated: timeNow()
             };
