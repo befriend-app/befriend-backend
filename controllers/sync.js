@@ -8,7 +8,7 @@ const {getGender} = require("../services/genders");
 
 module.exports = {
     limit: 10000,
-    data_since_ms_extra: 1000 * 100 * 100,
+    data_since_ms_extra: 1000,
     syncPersons: function (req, res) {
         return new Promise(async (resolve, reject) => {
             //returns persons on this network
