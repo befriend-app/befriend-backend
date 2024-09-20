@@ -67,10 +67,15 @@ function processPersons(network_id, persons) {
                 let encrypted_network_token = await encrypt(secret_key_to_qry.secret_key_to, network_self.network_token);
 
                 let response = await axios.post(sync_url, {
+                    request_sent: timeNow(),
                     since: timestamps.last,
                     network_token: network_self.network_token,
                     encrypted_network_token: encrypted_network_token,
                 });
+
+                if(response.status !== 202) {
+                    continue;
+                }
 
                 await processPersons(network.id, response.data.persons);
 
@@ -79,11 +84,15 @@ function processPersons(network_id, persons) {
                     try {
                         response = await axios.post(sync_url, {
                             request_sent: timeNow(),
-                            data_since: timestamps.last,
+                            prev_data_since: response.data.prev_data_since,
                             network_token: network_self.network_token,
                             encrypted_network_token: encrypted_network_token,
                             last_person_token: response.data.last_person_token
                         });
+
+                        if(response.status !== 202) {
+                            break;
+                        }
 
                         await processPersons(network.id, response.data.persons);
                     } catch(e) {
@@ -91,6 +100,8 @@ function processPersons(network_id, persons) {
                         break;
                     }
                 }
+
+                //update sync table
             }
         } catch(e) {
             console.error(e);

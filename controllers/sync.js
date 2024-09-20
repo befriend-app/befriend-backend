@@ -1,6 +1,9 @@
+const dbService = require("../services/db");
+
 const {getNetworkSelf} = require("../services/network");
-const {conn} = require("../services/db");
+
 const {timeNow} = require("../services/shared");
+
 module.exports = {
     limit: 10000,
     data_since_ms_extra: 1000,
@@ -9,12 +12,14 @@ module.exports = {
             //returns persons on this network
             //recursive request process to support pagination and most recent data
             try {
-                let add_data_since_ms, data_since_timestamp, from_network, last_person_token,
+                let add_data_since_ms, data_since_timestamp, conn, from_network, last_person_token,
                     my_network, person_token_qry, persons, persons_qry,
-                    request_sent, return_last_person_token, server_ms_diff,
-                    data_since_timestamp_w_extra = null, prev_data_since = null;
+                    request_sent, server_ms_diff,
+                    data_since_timestamp_w_extra = null, prev_data_since = null, return_last_person_token = null;
 
                 from_network = req.from_network;
+
+                conn = await dbService.conn();
 
                 my_network = await getNetworkSelf();
 
@@ -48,7 +53,7 @@ module.exports = {
 
                 persons_qry = conn('persons_networks AS pn')
                     .join('persons AS p', 'p.id', '=', 'pn.person_id')
-                    .where('network_id', my_network.id)
+                    .where('pn.network_id', my_network.id)
                     .orderBy('p.id', 'desc')
                     .limit(module.exports.limit)
                     .select(['p.person_token']);
@@ -74,8 +79,7 @@ module.exports = {
 
                 persons = await persons_qry;
 
-                return_last_person_token = null;
-
+                //paginate if length of results equals query limit
                 if(persons.length === module.exports.limit) {
                     let last_person = persons[persons.length - 1];
 
@@ -84,11 +88,12 @@ module.exports = {
                     }
                 }
 
+                //first call: data_since_timestamp, second+ call: prev_data_since
                 res.json({
                     last_person_token: return_last_person_token,
                     prev_data_since: prev_data_since || data_since_timestamp_w_extra,
                     persons: persons
-                });
+                }, 202);
             } catch(e) {
                 res.json("Error syncing persons", 400);
             }
