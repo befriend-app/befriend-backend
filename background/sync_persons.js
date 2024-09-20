@@ -9,7 +9,15 @@ const {encrypt} = require("../services/encryption");
 
 const sync_name = `persons`;
 
-const runInterval = 1800 * 1000; //every 30 minutes
+const runInterval = 60 * 30 * 1000; //every 30 minutes
+
+function processPersons(network_id, persons) {
+    return new Promise(async (resolve, reject) => {
+        if(!persons || !persons.length) {
+            return resolve();
+        }
+    });
+}
 
 (async function() {
     loadScriptEnv();
@@ -58,13 +66,31 @@ const runInterval = 1800 * 1000; //every 30 minutes
 
                 let encrypted_network_token = await encrypt(secret_key_to_qry.secret_key_to, network_self.network_token);
 
-                let r = await axios.post(sync_url, {
+                let response = await axios.post(sync_url, {
                     since: timestamps.last,
                     network_token: network_self.network_token,
                     encrypted_network_token: encrypted_network_token,
                 });
 
+                await processPersons(network.id, response.data.persons);
+
                 //handle paging, ~10,000 results
+                while (response.data.last_person_token) {
+                    try {
+                        response = await axios.post(sync_url, {
+                            request_sent: timeNow(),
+                            data_since: timestamps.last,
+                            network_token: network_self.network_token,
+                            encrypted_network_token: encrypted_network_token,
+                            last_person_token: response.data.last_person_token
+                        });
+
+                        await processPersons(network.id, response.data.persons);
+                    } catch(e) {
+                        console.error(e);
+                        break;
+                    }
+                }
             }
         } catch(e) {
             console.error(e);
