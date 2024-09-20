@@ -1,11 +1,13 @@
 const dbService = require("../services/db");
+const personsService = require("../services/persons");
 
 const {getNetworkSelf} = require("../services/network");
 
 const {timeNow} = require("../services/shared");
+const {getGender} = require("../services/genders");
 
 module.exports = {
-    limit: 10000,
+    limit: 1,
     data_since_ms_extra: 1000,
     syncPersons: function (req, res) {
         return new Promise(async (resolve, reject) => {
@@ -56,7 +58,10 @@ module.exports = {
                     .where('pn.network_id', my_network.id)
                     .orderBy('p.id', 'desc')
                     .limit(module.exports.limit)
-                    .select(['p.person_token']);
+                    .select(
+                        'p.person_token', 'gender_id', 'is_online',
+                        'reviews_count', 'reviews_rating', 'birth_date'
+                    );
 
                 if(prev_data_since) {
                     persons_qry = persons_qry.where('p.updated', '>', prev_data_since);
@@ -78,6 +83,19 @@ module.exports = {
                 }
 
                 persons = await persons_qry;
+
+                //organize data
+                await Promise.all(
+                    persons.map(async (person) => {
+                        let gender = await getGender(person.gender_id);
+                        person.gender = gender;
+
+                        delete person.gender_id;
+                        delete gender.id;
+                        delete gender.created;
+                        delete gender.updated;
+                    })
+                );
 
                 //paginate if length of results equals query limit
                 if(persons.length === module.exports.limit) {

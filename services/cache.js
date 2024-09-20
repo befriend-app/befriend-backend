@@ -69,7 +69,7 @@ module.exports = {
     },
     setCache: function (key, data, cache_lifetime = null) {
         return new Promise(async (resolve, reject) => {
-            //init conn in case first time
+            //in case conn not initiated
             if(!module.exports.conn) {
                 try {
                      await module.exports.init();

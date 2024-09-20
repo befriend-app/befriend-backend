@@ -1,9 +1,16 @@
 const axios = require('axios');
+const yargs = require('yargs');
 const dbService = require('../services/db');
 const {getNetworkSelf} = require("../services/network");
 const {loadScriptEnv, generateToken, timeNow} = require("../services/shared");
 
+let args = yargs.argv;
+
 let num_persons = 1;
+
+if(args._ && args._.length) {
+    num_persons = args._[0];
+}
 
 (async function() {
     loadScriptEnv();
