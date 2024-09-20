@@ -21,6 +21,24 @@ module.exports = {
             }
         });
     },
+    getGenderByToken: function (gender_token) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let genders = await module.exports.getAllGenders();
+
+                for(let gender of genders){
+                    if(gender_token === gender.gender_token) {
+                        return resolve(gender);
+                    }
+                }
+
+                return resolve(null);
+            } catch(e) {
+                console.error(e);
+                return reject(e);
+            }
+        });
+    },
     getAllGenders: function () {
         return new Promise(async (resolve, reject) => {
             try {

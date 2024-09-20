@@ -60,7 +60,8 @@ module.exports = {
                     .limit(module.exports.limit)
                     .select(
                         'p.person_token', 'gender_id', 'is_online',
-                        'reviews_count', 'reviews_rating', 'birth_date'
+                        'reviews_count', 'reviews_rating', 'birth_date',
+                        'p.updated'
                     );
 
                 if(prev_data_since) {
