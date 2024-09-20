@@ -7,8 +7,8 @@ const {timeNow} = require("../services/shared");
 const {getGender} = require("../services/genders");
 
 module.exports = {
-    limit: 2,
-    data_since_ms_extra: 1000,
+    limit: 10000,
+    data_since_ms_extra: 1000 * 100 * 100,
     syncPersons: function (req, res) {
         return new Promise(async (resolve, reject) => {
             //returns persons on this network
