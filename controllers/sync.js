@@ -7,7 +7,7 @@ const {timeNow} = require("../services/shared");
 const {getGender} = require("../services/genders");
 
 module.exports = {
-    limit: 1,
+    limit: 2,
     data_since_ms_extra: 1000,
     syncPersons: function (req, res) {
         return new Promise(async (resolve, reject) => {
@@ -79,7 +79,7 @@ module.exports = {
 
                     if(person_token_qry) {
                         persons_qry = persons_qry
-                            .where('id', '<', person_token_qry.id);
+                            .where('p.id', '<', person_token_qry.id);
                     }
                 }
 
@@ -98,7 +98,6 @@ module.exports = {
                             delete gender.created;
                             delete gender.updated;
                         }
-
                     })
                 );
 
