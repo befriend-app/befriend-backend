@@ -160,7 +160,7 @@ function processPersons(network_id, persons) {
 
                     let response = await axios.post(sync_url, {
                         request_sent: timeNow(),
-                        since: timestamps.last,
+                        data_since: timestamps.last,
                         network_token: network_self.network_token,
                         encrypted_network_token: encrypted_network_token,
                     });
