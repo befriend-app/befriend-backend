@@ -23,6 +23,14 @@ Object.defineProperty(String.prototype, 'capitalize', {
     enumerable: false
 });
 
+function birthDatePure(birth_date) {
+    if(!birth_date) {
+        return null;
+    }
+
+    return birth_date.substring(0, 10);
+}
+
 function changeTimezone(date, ianatz) {
     let invdate = new Date(date.toLocaleString('en-US', {
         timeZone: ianatz
@@ -694,6 +702,7 @@ function writeFile(file_path, data) {
 }
 
 module.exports = {
+    birthDatePure: birthDatePure,
     changeTimezone: changeTimezone,
     confirmDecryptedNetworkToken: confirmDecryptedNetworkToken,
     confirmDecryptedRegistrationNetworkToken: confirmDecryptedRegistrationNetworkToken,

@@ -3,7 +3,7 @@ const axios = require('axios');
 const dbService = require('../services/db');
 const genderService = require('../services/genders');
 
-const {loadScriptEnv, timeoutAwait, timeNow, getURL, joinPaths} = require("../services/shared");
+const {loadScriptEnv, timeoutAwait, timeNow, getURL, joinPaths, birthDatePure} = require("../services/shared");
 const {getNetworkSelf} = require("../services/network");
 const {setCache} = require("../services/cache");
 const {encrypt} = require("../services/encryption");
@@ -88,7 +88,7 @@ function processPersons(network_id, persons) {
                                 is_online: person.is_online,
                                 reviews_count: person.reviews_count,
                                 reviews_rating: person.reviews_rating,
-                                birth_date: person.birth_date,
+                                birth_date: birthDatePure(person.birth_date),
                                 updated: person.updated
                             });
                     }
