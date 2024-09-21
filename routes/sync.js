@@ -5,6 +5,7 @@ const {confirmDecryptedNetworkToken} = require("../services/shared");
 const dbService = require("../services/db");
 const {getNetwork} = require("../services/network");
 
+
 router.use(function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         let network_token = req.body.network_token;
