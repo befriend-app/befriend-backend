@@ -1,7 +1,7 @@
 const {confirmDecryptedNetworkToken} = require("../services/shared");
 const {getNetwork} = require("../services/network");
 
-modules.export = function(req, res, next) {
+module.export = function(req, res, next) {
     return new Promise(async (resolve, reject) => {
         let network_token = req.body.network_token;
         let encrypted_network_token = req.body.encrypted_network_token;
