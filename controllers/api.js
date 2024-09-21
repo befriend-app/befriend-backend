@@ -12,6 +12,7 @@ const {isProdApp, isIPAddress, isLocalHost, getURL, timeNow, generateToken, join
 const {getNetwork, getNetworkSelf} = require("../services/network");
 const {encrypt} = require("../services/encryption");
 const {deleteKeys} = require("../services/cache");
+const { getPersonByEmail } = require('../services/persons');
 
 
 module.exports = {
@@ -901,5 +902,28 @@ module.exports = {
                 return resolve();
             }
         });
-    }
+    },
+    doLogin: function(req, res) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let person_email = req.body.email;
+                let person_password = req.body.password;
+
+                let person = await getPersonByEmail(person_email);
+                
+                // check if passwords are equal
+
+                const validPassword = await bycryptjs.compare(peson_password, person.password);
+
+                if(!validPassword) {
+                    res.json('Invalid login', 403);
+                    return resolve();
+                }
+
+            } catch(e) {
+                // handle logic for different errors
+                res.json('Login failed', 500);
+            }
+        });
+    }   
 }
