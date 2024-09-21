@@ -1,9 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const syncController = require('../controllers/sync');
-const {confirmDecryptedNetworkToken} = require("../services/shared");
-const dbService = require("../services/db");
-const {getNetwork} = require("../services/network");
 
 router.use(require('../middleware/sync'));
 
