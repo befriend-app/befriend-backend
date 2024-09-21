@@ -653,10 +653,17 @@ module.exports = {
                     network_tokens: req.body.network_tokens,
                 });
 
-                res.json({
-                    message: "Keys exchange process started successfully",
-                    network_tokens: req.body.network_tokens
-                }, 201);
+                if(r.status === 201) {
+                    res.json({
+                        message: "Keys exchange process started successfully",
+                        network_tokens: req.body.network_tokens
+                    }, 201);
+                } else {
+                    res.json({
+                        message: "Error communicating with to_network",
+                        network_tokens: req.body.network_tokens
+                    }, 400);
+                }
             } catch(e) {
                 res.json({
                     message: "Error communicating with to_network",
