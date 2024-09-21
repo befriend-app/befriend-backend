@@ -2,6 +2,9 @@ const redis = require('redis');
 
 module.exports = {
     conn: null,
+    keys: {
+        ws: 'ws:messages'
+    },
     init: function () {
         return new Promise(async (resolve, reject) => {
 
