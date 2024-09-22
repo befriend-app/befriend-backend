@@ -9,8 +9,8 @@ module.exports = {
             try {
                 let conn = await dbService.conn();
 
-                let person = await conn('networks')
-                    .where('email', network_email)
+                let person = await conn('persons')
+                    .where('email', person_email)
                     .first();
 
                 resolve(person);
