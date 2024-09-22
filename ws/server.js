@@ -261,40 +261,38 @@ function initSubscribe() {
 
         const subscriber = cacheService.conn;
 
-        subscriber.on("message", (channel, message) => {
-            if (channel === ws_channel) {
-                try {
-                    let data = JSON.parse(message.toString());
+        subscriber.subscribe(ws_channel, (channel, message) => {
+            try {
+                let data = JSON.parse(message.toString());
 
-                    //skip sending messages without a process key
-                    if(data && !data.process_key && data.data) {
-                        return;
-                    }
+                //skip sending messages without a process key
+                if(data && !data.process_key && data.data) {
+                    return;
+                }
 
-                    console.log("processing ws message", getDateTimeStr());
+                console.log("processing ws message", getDateTimeStr());
 
-                    let message_sent = false;
-                    let person_token = data.person_token;
+                let message_sent = false;
+                let person_token = data.person_token;
 
-                    if(person_token in persons_connections) {
-                        for(let k in persons_connections[person_token]) {
-                            let client = persons_connections[person_token][k];
+                if(person_token in persons_connections) {
+                    for(let k in persons_connections[person_token]) {
+                        let client = persons_connections[person_token][k];
 
-                            if(client.readyState === WebSocket.OPEN) {
-                                console.log("Message sent");
+                        if(client.readyState === WebSocket.OPEN) {
+                            console.log("Message sent");
 
-                                client.send(JSON.stringify(data));
-                                message_sent = true;
-                            }
+                            client.send(JSON.stringify(data));
+                            message_sent = true;
                         }
                     }
-
-                    if(!message_sent) {
-                        addPersonMessage(data);
-                    }
-                } catch (e) {
-                    console.error(e);
                 }
+
+                if(!message_sent) {
+                    addPersonMessage(data);
+                }
+            } catch (e) {
+                console.error(e);
             }
         });
 
