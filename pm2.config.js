@@ -3,7 +3,7 @@ let home_dir = __dirname;
 module.exports = {
     apps : [
         {
-            name: 'befriend_web',
+            name: 'befriend_backend',
             script: 'server.js',
             instances: '2',
             exec_mode: 'cluster',
