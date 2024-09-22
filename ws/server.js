@@ -11,10 +11,10 @@ const http = require('http');
 const https = require('https');
 const process = require('process');
 const query_string = require('query-string');
-
 const WebSocket = require('ws');
 
 const port_num = process.env.WS_PORT || 8080;
+const ws_channel = cacheService.channels.ws;
 
 const message_timeout = 3600; //seconds
 
@@ -262,7 +262,7 @@ function initSubscribe() {
         const subscriber = cacheService.conn;
 
         subscriber.on("message", (channel, message) => {
-            if (channel === cacheService.keys.ws) {
+            if (channel === ws_channel) {
                 try {
                     let data = JSON.parse(message.toString());
 
@@ -298,7 +298,7 @@ function initSubscribe() {
             }
         });
 
-        subscriber.subscribe(cacheService.keys.ws);
+        subscriber.subscribe(ws_channel);
 
         resolve();
     });
