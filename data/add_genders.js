@@ -43,7 +43,7 @@ const {timeNow, loadScriptEnv} = require("../services/shared");
 
     for(let gender of genders) {
         let gender_check = await conn('genders')
-            .where('gender_token', gender.gender_name)
+            .where('gender_token', gender.gender_token)
             .first();
 
         if(!gender_check) {
