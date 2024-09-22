@@ -257,7 +257,7 @@ function addPersonMessage(data) {
 
 function initSubscribe() {
     return new Promise(async (resolve, reject) => {
-        console.log("Init subscribe");
+        console.log("Init Subscribe");
 
         const subscriber = cacheService.conn;
 

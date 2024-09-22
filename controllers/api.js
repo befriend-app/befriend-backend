@@ -4,14 +4,17 @@ const tldts = require('tldts');
 const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 const networkService = require('../services/network');
+const bcrypt = require("bcryptjs");
 
 const {isProdApp, isIPAddress, isLocalHost, getURL, timeNow, generateToken, joinPaths, getExchangeKeysKey,
-    confirmDecryptedRegistrationNetworkToken
+    confirmDecryptedRegistrationNetworkToken,
+    getPersonLoginCacheKey
 } = require("../services/shared");
 
 const {getNetwork, getNetworkSelf} = require("../services/network");
 const {encrypt} = require("../services/encryption");
 const {deleteKeys} = require("../services/cache");
+const { getPersonByEmail } = require('../services/persons');
 
 
 module.exports = {
@@ -901,5 +904,55 @@ module.exports = {
                 return resolve();
             }
         });
-    }
+    },
+    doLogin: function(req, res) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let person_email = req.body.email;
+                let person_password = req.body.password;
+
+                let person = await getPersonByEmail(person_email);
+                
+                // check if passwords are equal
+
+                const validPassword = await bcrypt.compare(person_password, person.password);
+
+                if(!validPassword) {
+                    res.json('Invalid login', 403);
+                    return resolve();
+                }
+
+                // generate login token return in response. Used for authentication on future requests
+                let login_token = generateToken();
+
+                // save to both mysql and redis
+                let conn = await dbService.conn();
+                
+                await conn('persons_login_tokens')
+                    .insert({
+                        person_id: person.id,
+                        login_token: login_token,
+                        expires: null,
+                        created: timeNow(),
+                        updated: timeNow()
+                    });
+
+                let cache_key = getPersonLoginCacheKey(person.person_token);
+
+                await cacheService.addItemToSet(cache_key, login_token);
+
+                res.json({
+                    login_token: login_token,
+                    message: "Login Successful"
+                }, 200);
+                
+                return resolve();
+
+            } catch(e) {
+                // handle logic for different errors
+                res.json('Login failed', 500);
+                return reject(e);
+            }
+        });
+    }   
 }

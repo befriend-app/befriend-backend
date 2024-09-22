@@ -10,6 +10,8 @@ const tldts = require('tldts');
 const process = require("process");
 const sgMail = require("@sendgrid/mail");
 const {decrypt} = require("./encryption");
+const bcrypt = require("bcryptjs");
+const _ = require('lodash');
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -150,6 +152,20 @@ function downloadURL(url, output_path) {
             return reject(e);
         }
 
+    });
+}
+
+function encodePassword(unencrypted_password) {
+    return new Promise(async (resolve, reject) => {
+        bcrypt.genSalt(10, function(err, salt) {
+            bcrypt.hash(unencrypted_password, salt, function(err, hash) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(hash);
+                }
+            });
+        });
     });
 }
 
@@ -327,6 +343,10 @@ function getLocalDateTimeStr(date) {
 
 function getMilesFromMeters(meters) {
     return meters * 0.000621371192;
+}
+
+function getPersonLoginCacheKey(person_token) {
+    return `persons:${person_token}:login_tokens`;
 }
 
 function getRepoRoot() {
@@ -709,6 +729,7 @@ module.exports = {
     cloneObj: cloneObj,
     dateTimeNow: dateTimeNow,
     downloadURL: downloadURL,
+    encodePassword: encodePassword,
     formatNumberLength: formatNumberLength,
     generateToken: generateToken,
     getCityState: getCityState,
@@ -722,6 +743,7 @@ module.exports = {
     getLocalDateStr: getLocalDateStr,
     getLocalDateTimeStr: getLocalDateTimeStr,
     getMilesFromMeters: getMilesFromMeters,
+    getPersonLoginCacheKey: getPersonLoginCacheKey,
     getRepoRoot: getRepoRoot,
     getStatesList: getStatesList,
     getSessionKey: getSessionKey,
@@ -744,5 +766,5 @@ module.exports = {
     slugName: slugName,
     timeNow: timeNow,
     timeoutAwait: timeoutAwait,
-    writeFile: writeFile
+    writeFile: writeFile,
 }

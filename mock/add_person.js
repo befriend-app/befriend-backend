@@ -2,7 +2,7 @@ const axios = require('axios');
 const yargs = require('yargs');
 const dbService = require('../services/db');
 const {getNetworkSelf} = require("../services/network");
-const {loadScriptEnv, generateToken, timeNow, birthDatePure} = require("../services/shared");
+const {loadScriptEnv, generateToken, timeNow, birthDatePure, encodePassword} = require("../services/shared");
 
 let args = yargs.argv;
 
@@ -30,6 +30,8 @@ if(args._ && args._.length) {
                 continue;
             }
 
+            let person_password = await encodePassword("password");
+
             let person_insert = {
                 person_token: generateToken(),
                 network_id: self_network.id,
@@ -37,7 +39,7 @@ if(args._ && args._.length) {
                 last_name: person.name.last,
                 gender_id: gender_qry.id,
                 email: person.email,
-                password: person.login.sha256,
+                password: person_password,
                 phone: person.phone,
                 is_online: true,
                 image_url: person.picture.large,

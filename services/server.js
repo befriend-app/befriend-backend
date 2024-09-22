@@ -7,7 +7,9 @@ const http = require("http");
 const logger = require('morgan');
 const sessionMid = require('../middleware/session');
 const apiRouter = require('../routes/api');
+const personsRouter = require('../routes/persons');
 const syncRouter = require('../routes/sync');
+
 const {timeNow} = require("./shared");
 
 let httpServer;
@@ -39,6 +41,7 @@ server.use(express.static(joinPaths(getRepoRoot(), 'public')));
 
 server.use('/', apiRouter);
 server.use('/sync', syncRouter);
+server.use('/persons', personsRouter);
 
 server.use(function(req, res, next) {
     next(createError(404));
