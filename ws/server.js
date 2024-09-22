@@ -259,7 +259,7 @@ function initSubscribe() {
     return new Promise(async (resolve, reject) => {
         console.log("Init Subscribe");
 
-        const subscriber = cacheService.conn;
+        const subscriber = cacheService.publisher;
 
         subscriber.subscribe(ws_channel, (channel, message) => {
             try {
