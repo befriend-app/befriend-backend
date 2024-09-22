@@ -33,6 +33,9 @@ module.exports = {
                 
                 let person_id = person_obj.id;
 
+                //todo
+                //add logic to prevent person from creating activities with overlapping times
+
                 let id = await conn('activities')
                         .insert({
                             activity_token: activity_token,
@@ -54,6 +57,9 @@ module.exports = {
                         });
                 
                 id = id[0];
+
+                //todo
+                //algorithm/logic to select persons to send this activity to
 
                 res.json({"created activity id": id}, 201)
                 resolve(id);
