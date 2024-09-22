@@ -913,7 +913,7 @@ module.exports = {
                 
                 // check if passwords are equal
 
-                const validPassword = await bycryptjs.compare(peson_password, person.password);
+                const validPassword = await bycryptjs.compare(person_password, person.password);
 
                 if(!validPassword) {
                     res.json('Invalid login', 403);
