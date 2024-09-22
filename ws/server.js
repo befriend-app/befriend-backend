@@ -261,7 +261,7 @@ function initSubscribe() {
 
         const subscriber = cacheService.publisher;
 
-        subscriber.subscribe(ws_channel, (channel, message) => {
+        subscriber.subscribe(ws_channel, (message) => {
             try {
                 let data = JSON.parse(message.toString());
 
