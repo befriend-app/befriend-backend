@@ -925,7 +925,6 @@ module.exports = {
                 // generate login token return in response. Used for authentication on future requests
                 let login_token = generateToken();
 
-
                 // save to both mysql and redis
                 let conn = await dbService.conn();
                 
@@ -937,9 +936,9 @@ module.exports = {
                         created: timeNow(),
                         updated: timeNow()
                     });
-
-                
+ 
                 let cache_key = getPersonLoginCacheKey(person.person_token);
+
                 await cacheService.addItemToSet(cache_key, login_token);
 
                 res.json({
