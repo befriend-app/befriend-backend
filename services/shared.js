@@ -345,6 +345,10 @@ function getMilesFromMeters(meters) {
     return meters * 0.000621371192;
 }
 
+function getPersonLoginCacheKey(person_token) {
+    return `persons:${person_token}:login_tokens`;
+}
+
 function getRepoRoot() {
     let slash = `/`;
 
@@ -739,6 +743,7 @@ module.exports = {
     getLocalDateStr: getLocalDateStr,
     getLocalDateTimeStr: getLocalDateTimeStr,
     getMilesFromMeters: getMilesFromMeters,
+    getPersonLoginCacheKey: getPersonLoginCacheKey,
     getRepoRoot: getRepoRoot,
     getStatesList: getStatesList,
     getSessionKey: getSessionKey,

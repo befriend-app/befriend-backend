@@ -7,7 +7,8 @@ const networkService = require('../services/network');
 const bcrypt = require("bcryptjs");
 
 const {isProdApp, isIPAddress, isLocalHost, getURL, timeNow, generateToken, joinPaths, getExchangeKeysKey,
-    confirmDecryptedRegistrationNetworkToken
+    confirmDecryptedRegistrationNetworkToken,
+    getPersonLoginCacheKey
 } = require("../services/shared");
 
 const {getNetwork, getNetworkSelf} = require("../services/network");
@@ -921,7 +922,31 @@ module.exports = {
                     return resolve();
                 }
 
-                res.json("Login successful", 200);
+                // generate login token return in response. Used for authentication on future requests
+                let login_token = generateToken();
+
+
+                // save to both mysql and redis
+                let conn = await dbService.conn();
+                
+                await conn('persons_login_tokens')
+                    .insert({
+                        person_id: person.id,
+                        login_token: login_token,
+                        expires: null,
+                        created: timeNow(),
+                        updated: timeNow()
+                    });
+
+                
+                let cache_key = getPersonLoginCacheKey(person.person_token);
+                await cacheService.addItemToSet(cache_key, login_token);
+
+                res.json({
+                    "login_token": login_token,
+                    "message": "Login Successful"
+                }, 200);
+                
                 return resolve();
 
             } catch(e) {
