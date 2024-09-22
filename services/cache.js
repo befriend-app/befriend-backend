@@ -2,9 +2,11 @@ const redis = require('redis');
 
 module.exports = {
     conn: null,
-    keys: {
+    publisher: null,
+    channels: {
         ws: 'ws:messages'
     },
+    keys: {},
     init: function () {
         return new Promise(async (resolve, reject) => {
 
@@ -18,11 +20,15 @@ module.exports = {
                 }
             );
 
+            //connect to redis server
             try {
                 await module.exports.conn.connect();
             } catch(e) {
                 return reject(e);
             }
+
+            //setup publisher
+            module.exports.publisher = module.exports.conn.duplicate();
 
             module.exports.conn.on('error', function (er) {
                 console.error(er.stack);
@@ -286,4 +292,10 @@ module.exports = {
             }
         });
     },
+    publish: function (channel, message) {
+        return new Promise(async (resolve, reject) => {
+            module.exports.publisher.publish(channel, message);
+            resolve();
+        });
+    }
 };
