@@ -6,15 +6,7 @@ const dbService = require('../services/db');
 const networkService = require('../services/network');
 const bcrypt = require("bcryptjs");
 
-const {isProdApp, isIPAddress, isLocalHost, getURL, timeNow, generateToken, joinPaths, getExchangeKeysKey,
-    confirmDecryptedRegistrationNetworkToken,
-    getPersonLoginCacheKey
-} = require("../services/shared");
-
-const {getNetwork, getNetworkSelf} = require("../services/network");
-const {encrypt} = require("../services/encryption");
-const {deleteKeys} = require("../services/cache");
-const { getPersonByEmail } = require('../services/persons');
+const {timeNow, generateToken} = require("../services/shared");
 
 module.exports = {
     createActivity: function (req, res) {

@@ -2,11 +2,11 @@ const axios = require('axios');
 const yargs = require('yargs');
 const dbService = require('../services/db');
 const {getNetworkSelf} = require("../services/network");
-const {loadScriptEnv, generateToken, timeNow, birthDatePure, encodePassword, joinPaths, getURL} = require("../services/shared");
+const {loadScriptEnv, timeNow, getURL} = require("../services/shared");
 
 let args = yargs.argv;
 
-let num_persons = null;
+let person_token = null;
 
 if(args._ && args._.length) {
     person_token = args._[0];
