@@ -4,6 +4,7 @@ const tldts = require('tldts');
 const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 const networkService = require('../services/network');
+const bcrypt = require("bcryptjs");
 
 const {isProdApp, isIPAddress, isLocalHost, getURL, timeNow, generateToken, joinPaths, getExchangeKeysKey,
     confirmDecryptedRegistrationNetworkToken
@@ -913,12 +914,15 @@ module.exports = {
                 
                 // check if passwords are equal
 
-                const validPassword = await bycryptjs.compare(person_password, person.password);
+                const validPassword = await bcrypt.compare(person_password, person.password);
 
                 if(!validPassword) {
                     res.json('Invalid login', 403);
                     return resolve();
                 }
+
+                res.json("Login successful", 200);
+                return resolve();
 
             } catch(e) {
                 // handle logic for different errors
