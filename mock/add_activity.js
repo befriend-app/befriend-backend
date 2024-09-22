@@ -6,16 +6,11 @@ const {loadScriptEnv, timeNow, getURL} = require("../services/shared");
 
 let args = yargs.argv;
 
-let person_token = null;
-
-if(args._ && args._.length) {
-    person_token = args._[0];
-}
-
 (async function() {
     loadScriptEnv();
-    let conn = await dbService.conn();
-    let self_network = await getNetworkSelf();
+
+    let login_token = args.lt;
+    let person_token = args.pt;
 
     try {
         let activities_url = getURL(process.env.NETWORK_API_DOMAIN, 'persons/activities');
@@ -37,14 +32,13 @@ if(args._ && args._.length) {
             updated: timeNow()
         }
 
-        let login_token = "12345";
-
         let r = await axios.post(activities_url, {
             person_token: person_token,
             login_token: login_token,
             activity: activity_insert
         });
 
+        console.log(r);
         
     } catch(e) {
         console.error(e);

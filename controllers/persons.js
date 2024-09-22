@@ -13,7 +13,6 @@ module.exports = {
         return new Promise(async (resolve, reject) => {
             try {
                 //login token, person token, activity object
-                let login_token = req.body.login_token;
                 let person_token = req.body.person_token;
                 let activity = req.body.activity;
 
@@ -56,12 +55,11 @@ module.exports = {
                 
                 id = id[0];
 
+                res.json({"created activity id": id}, 201)
                 resolve(id);
-            
             } catch(e) {
                 reject(e);
             }
-                
         });
     }
 }

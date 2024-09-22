@@ -1,30 +1,26 @@
-
-
-const cacheService = require('../services/cache'); // TODO: implement cache service
-const dbService = require('../services/db');
-const {getPerson} = require('../services/person');
-
+const cacheService = require('../services/cache');
+const {getPersonLoginCacheKey} = require("../services/shared");
 
 // authentication middleware for /persons
 module.exports = function(req, res, next) {
     return new Promise(async (resolve, reject) => {
-        // need to get our network ID from persons network table
-
         let person_token = req.body.person_token;
-        let auth_token = req.body.auth_token;
+        let login_token = req.body.login_token;
 
         try {
-            let conn = await dbService.conn();
+            let cache_key = getPersonLoginCacheKey(person_token);
 
+            let is_valid_token = await cacheService.isSetMember(cache_key, login_token);
 
-
-            
+            if(!is_valid_token) {
+                res.json({message:"unauthenticated request"}, 401);
+                return resolve();
+            }
             
             next();
         } catch(e) {
             res.json("Invalid network_token", 401);
         }
-
         resolve();
     });
 }
