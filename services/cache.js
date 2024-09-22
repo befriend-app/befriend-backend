@@ -30,6 +30,12 @@ module.exports = {
             //setup publisher
             module.exports.publisher = module.exports.conn.duplicate();
 
+            try {
+                await module.exports.publisher.connect();
+            } catch(e) {
+
+            }
+
             module.exports.conn.on('error', function (er) {
                 console.error(er.stack);
             });
@@ -294,7 +300,20 @@ module.exports = {
     },
     publish: function (channel, message) {
         return new Promise(async (resolve, reject) => {
-            module.exports.publisher.publish(channel, message);
+            if(!message) {
+                return resolve();
+            }
+
+            if(typeof message !== 'string') {
+                message = JSON.stringify(message);
+            }
+
+            try {
+                await module.exports.publisher.publish(channel, message);
+            } catch(e) {
+                console.error(e);
+            }
+
             resolve();
         });
     }
