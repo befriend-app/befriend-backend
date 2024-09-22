@@ -259,9 +259,9 @@ function initSubscribe() {
     return new Promise(async (resolve, reject) => {
         console.log("Init Subscribe");
 
-        const subscriber = cacheService.publisher;
+        const publisher = cacheService.publisher;
 
-        subscriber.subscribe(ws_channel, (message) => {
+        publisher.subscribe(ws_channel, (message) => {
             try {
                 let data = JSON.parse(message.toString());
 
@@ -295,8 +295,6 @@ function initSubscribe() {
                 console.error(e);
             }
         });
-
-        subscriber.subscribe(ws_channel);
 
         resolve();
     });
