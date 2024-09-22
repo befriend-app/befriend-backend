@@ -951,6 +951,7 @@ module.exports = {
             } catch(e) {
                 // handle logic for different errors
                 res.json('Login failed', 500);
+                return reject(e);
             }
         });
     }   

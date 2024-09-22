@@ -1,8 +1,13 @@
 let express = require('express');
 let router = express.Router();
 
-router.post('/:id/activity', function(req, res, next) {
+let personsController = require('../controllers/persons');
+
+router.post('/activities', function(req, res, next) {
     return new Promise(async (resolve, reject) => {
+
+        await personsController.createActivity(req, res);
+
         try {
             console.log(req.params.id);
             res.json("hapiness unlimited",200);
