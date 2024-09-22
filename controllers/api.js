@@ -936,14 +936,14 @@ module.exports = {
                         created: timeNow(),
                         updated: timeNow()
                     });
- 
+
                 let cache_key = getPersonLoginCacheKey(person.person_token);
 
                 await cacheService.addItemToSet(cache_key, login_token);
 
                 res.json({
-                    "login_token": login_token,
-                    "message": "Login Successful"
+                    login_token: login_token,
+                    message: "Login Successful"
                 }, 200);
                 
                 return resolve();
