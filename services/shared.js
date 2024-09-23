@@ -345,7 +345,25 @@ function getMilesFromMeters(meters) {
     return meters * 0.000621371192;
 }
 
+function getPersonCacheKey(person_token_or_email) {
+    if(!person_token_or_email) {
+        throw new Error("No person_token or email provided");
+    }
+
+    person_token_or_email = person_token_or_email.toLowerCase();
+
+    return `persons:${person_token_or_email}`;
+}
+
 function getPersonLoginCacheKey(person_token) {
+    //set
+
+    if(!person_token) {
+        throw new Error("No person_token provided");
+    }
+
+    person_token = person_token.toLowerCase();
+
     return `persons:${person_token}:login_tokens`;
 }
 
@@ -743,6 +761,7 @@ module.exports = {
     getLocalDateStr: getLocalDateStr,
     getLocalDateTimeStr: getLocalDateTimeStr,
     getMilesFromMeters: getMilesFromMeters,
+    getPersonCacheKey: getPersonCacheKey,
     getPersonLoginCacheKey: getPersonLoginCacheKey,
     getRepoRoot: getRepoRoot,
     getStatesList: getStatesList,
