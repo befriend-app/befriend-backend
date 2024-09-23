@@ -17,6 +17,9 @@
     }
   ],
   "main": "server.js",
+  "scripts": {
+    "format": "npx prettier . --write"
+  },
   "dependencies": {
     "@sendgrid/mail": "^8.1.3",
     "bcryptjs": "^2.4.3",
@@ -39,5 +42,8 @@
     "tldts": "^6.1.44",
     "ws": "^8.18.0",
     "yargs": "^17.7.2"
+  },
+  "devDependencies": {
+    "prettier": "3.3.3"
   }
 }
