@@ -24,7 +24,6 @@ https://drawsql.app/teams/befriend/diagrams/befriend-backend
 
 `npm run format`
 
-
 ### Linting
 
 `npm run lint`
