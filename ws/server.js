@@ -302,7 +302,6 @@ function initSubscribe() {
 
         resolve();
     });
-
 }
 
 function deleteOldMessages() {

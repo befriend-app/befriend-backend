@@ -914,7 +914,6 @@ module.exports = {
                 let person = await getPersonByEmail(person_email);
                 
                 // check if passwords are equal
-
                 const validPassword = await bcrypt.compare(person_password, person.password);
 
                 if(!validPassword) {
@@ -947,10 +946,9 @@ module.exports = {
                 }, 200);
                 
                 return resolve();
-
             } catch(e) {
                 // handle logic for different errors
-                res.json('Login failed', 500);
+                res.json('Login failed', 400);
                 return reject(e);
             }
         });
