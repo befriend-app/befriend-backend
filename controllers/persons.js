@@ -2,13 +2,29 @@ const dbService = require('../services/db');
 
 const {timeNow, generateToken} = require("../services/shared");
 
+const {getPersonByToken} = require("../services/persons");
+
+const {findMatches, notifyMatches, validateActivityOrThrow} = require("../services/activities");
+
 module.exports = {
     createActivity: function (req, res) {
         return new Promise(async (resolve, reject) => {
+            let matches;
+
             try {
-                //login token, person token, activity object
+                //person token, activity object
+
                 let person_token = req.body.person_token;
                 let activity = req.body.activity;
+                let circles = req.body.circles; //todo
+
+                //todo validate activity
+                try {
+                    await validateActivityOrThrow(activity, person_token);
+                } catch(e) {
+                    res.json(e, 400);
+                    return resolve();
+                }
 
                 // unique across systems
                 let activity_token = generateToken();
@@ -16,19 +32,17 @@ module.exports = {
                 let conn = await dbService.conn();
 
                 // get person id from person token
-                let person_obj = await conn('persons')
-                            .where('person_token', person_token)
-                            .first();
+                let person_obj = await getPersonByToken(person_token);
 
                 if(!person_obj) {
-                    res.json({message: "person token not found"}, 400)
+                    res.json({
+                            message: "person token not found"
+                        }, 400);
+
                     return resolve();
                 }
                 
                 let person_id = person_obj.id;
-
-                //todo
-                //add logic to prevent person from creating activities with overlapping times
 
                 let id = await conn('activities')
                         .insert({
@@ -52,11 +66,34 @@ module.exports = {
                 
                 id = id[0];
 
-                //todo
-                //algorithm/logic to select persons to send this activity to
+                //todo: algorithm/logic to select persons to send this activity to
+                try {
+                    matches = await findMatches(person_obj, activity);
+                } catch(e) {
+                    console.error(e);
+                }
 
-                res.json({"created activity id": id}, 201)
-                resolve(id);
+                //todo: send notifications to matches
+                if(matches && matches.length) {
+                    try {
+                        await notifyMatches(person_obj, activity, matches);
+                    } catch(e) {
+                        console.error(e);
+                        res.json({
+                            message: "Error notifying matches"
+                        }, 400);
+                    }
+
+                    res.json({
+                        activity_token: activity_token
+                    }, 201);
+                } else {
+                    res.json({
+                        message: "No persons found. Please check your filters or try again later."
+                    }, 400);
+                }
+
+                resolve();
             } catch(e) {
                 reject(e);
             }
