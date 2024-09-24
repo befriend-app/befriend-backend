@@ -282,6 +282,63 @@ function getCleanDomain(domain, remove_subdomain, allow_local) {
     return clean_domain;
 }
 
+function deg2rad(deg) {
+    return (deg * Math.PI) / 180;
+}
+
+function rad2deg(rad) {
+    return (rad * 180) / Math.PI;
+}
+
+function getCoordBoundBox (latitude, longitude, distance) {
+    const latLimits = [deg2rad(-90), deg2rad(90)];
+    const lonLimits = [deg2rad(-180), deg2rad(180)];
+
+    const radLat = deg2rad(latitude);
+    const radLon = deg2rad(longitude);
+
+    if (radLat < latLimits[0] || radLat > latLimits[1] || radLon < lonLimits[0] || radLon > lonLimits[1]) {
+        throw new Error("Invalid Argument");
+    }
+
+    // Angular distance in radians on a great circle,
+    // using Earth's radius in miles.
+    const angular = distance / 3958.762079;
+
+    let minLat = radLat - angular;
+    let maxLat = radLat + angular;
+
+    let minLon, maxLon;
+
+    if (minLat > latLimits[0] && maxLat < latLimits[1]) {
+        const deltaLon = Math.asin(Math.sin(angular) / Math.cos(radLat));
+        minLon = radLon - deltaLon;
+
+        if (minLon < lonLimits[0]) {
+            minLon += 2 * Math.PI;
+        }
+
+        maxLon = radLon + deltaLon;
+
+        if (maxLon > lonLimits[1]) {
+            maxLon -= 2 * Math.PI;
+        }
+    } else {
+        // A pole is contained within the distance.
+        minLat = Math.max(minLat, latLimits[0]);
+        maxLat = Math.min(maxLat, latLimits[1]);
+        minLon = lonLimits[0];
+        maxLon = lonLimits[1];
+    }
+
+    return {
+        minLat: rad2deg(minLat),
+        minLon: rad2deg(minLon),
+        maxLat: rad2deg(maxLat),
+        maxLon: rad2deg(maxLon)
+    };
+}
+
 function getDateDiff(date_1, date_2, unit) {
     let dayjs = require('dayjs');
 
@@ -341,6 +398,11 @@ function getLocalDateTimeStr(date) {
     return dayjs.format('MM-DD-YY HH:mm:ss');
 }
 
+function getMetersFromMiles(miles) {
+    return miles / 0.000621371192;
+}
+
+
 function getMilesFromMeters(meters) {
     return meters * 0.000621371192;
 }
@@ -365,6 +427,10 @@ function getPersonLoginCacheKey(person_token) {
     person_token = person_token.toLowerCase();
 
     return `persons:${person_token}:login_tokens`;
+}
+
+function getRandomInRange(from, to, fixed) {
+    return (Math.random() * (to - from) + from).toFixed(fixed) * 1;
 }
 
 function getRepoRoot() {
@@ -612,6 +678,16 @@ function numberWithCommas(x, to_integer) {
     return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
+function range(min, max) {
+    let arr = [];
+
+    for (let i = min; i <= max; i++) {
+        arr.push(i);
+    }
+
+    return arr;
+}
+
 function readFile(p, json) {
     return new Promise((resolve, reject) => {
         require('fs').readFile(p, function (err, data) {
@@ -680,6 +756,39 @@ function sendEmail(subject, html, email, from, cc, attachment_alt) {
     });
 }
 
+function setSystemProcessRan(system_key) {
+    return new Promise(async (resolve, reject) => {
+        try {
+             let conn = await dbService.conn();
+
+             let qry = await conn('system')
+                 .where('system_key', system_key)
+                 .first();
+
+             if(qry) {
+                 await conn('system')
+                     .where('id', qry.id)
+                     .update({
+                         updated: timeNow()
+                     });
+             } else {
+                 await conn('system')
+                     .insert({
+                         system_key: system_key,
+                         system_value: 1,
+                         created: timeNow(),
+                         updated: timeNow()
+                     });
+             }
+
+             resolve();
+        } catch(e) {
+            console.error(e);
+            return reject(e);
+        }
+    });
+}
+
 function shuffleFunc(array){
     let currentIndex = array.length, temporaryValue, randomIndex;
 
@@ -703,6 +812,39 @@ function slugName(name) {
     return require('slugify')(name, {
         lower: true,
         strict: true
+    });
+}
+
+function systemProcessRan(system_key) {
+    return new Promise(async (resolve, reject) => {
+        try {
+             let conn = await dbService.conn();
+
+             let qry = await conn('system')
+                 .where('system_key', system_key)
+                 .first();
+
+             if(!qry || !qry.system_value) {
+                 return resolve(false);
+             }
+
+             let value = qry.system_value.toLowerCase();
+
+             if(value === 'true') {
+                 return resolve(true);
+             }
+
+             if(isNumeric(value)) {
+                 if(parseInt(value)) {
+                    return resolve(true);
+                 }
+             }
+
+             return resolve(false);
+        } catch(e) {
+            console.error(e);
+            return reject(e);
+        }
     });
 }
 
@@ -752,6 +894,7 @@ module.exports = {
     generateToken: generateToken,
     getCityState: getCityState,
     getCleanDomain: getCleanDomain,
+    getCoordBoundBox: getCoordBoundBox,
     getDateDiff: getDateDiff,
     getDateStr: getDateStr,
     getDateTimeStr: getDateTimeStr,
@@ -760,9 +903,11 @@ module.exports = {
     getLocalDate: getLocalDate,
     getLocalDateStr: getLocalDateStr,
     getLocalDateTimeStr: getLocalDateTimeStr,
+    getMetersFromMiles: getMetersFromMiles,
     getMilesFromMeters: getMilesFromMeters,
     getPersonCacheKey: getPersonCacheKey,
     getPersonLoginCacheKey: getPersonLoginCacheKey,
+    getRandomInRange: getRandomInRange,
     getRepoRoot: getRepoRoot,
     getStatesList: getStatesList,
     getSessionKey: getSessionKey,
@@ -779,10 +924,14 @@ module.exports = {
     loadScriptEnv: loadScriptEnv,
     normalizePort: normalizePort,
     numberWithCommas: numberWithCommas,
+    range: range,
     readFile: readFile,
     sendEmail: sendEmail,
+    setSystemProcessRan: setSystemProcessRan,
     shuffleFunc: shuffleFunc,
     slugName: slugName,
+    systemProcessRan: systemProcessRan,
+
     timeNow: timeNow,
     timeoutAwait: timeoutAwait,
     writeFile: writeFile,
