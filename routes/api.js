@@ -17,7 +17,7 @@ router.get('/', function (req, res, next) {
 router.post('/login', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
 
-        // login network
+        //person login
         try {
             await apiController.doLogin(req, res);
         } catch (e) {
