@@ -931,7 +931,6 @@ module.exports = {
     shuffleFunc: shuffleFunc,
     slugName: slugName,
     systemProcessRan: systemProcessRan,
-
     timeNow: timeNow,
     timeoutAwait: timeoutAwait,
     writeFile: writeFile,
