@@ -1,10 +1,16 @@
 const dbService = require('../services/db');
-const {timeNow, loadScriptEnv, generateToken} = require("../services/shared");
+const {timeNow, loadScriptEnv, generateToken, cloneObj} = require("../services/shared");
 
 (async function() {
     loadScriptEnv();
 
     let conn = await dbService.conn();
+
+    let bools = [
+        `is_meet`, 'is_eat', 'is_drink', 'is_walk', 'is_exercise',
+        'is_watch', 'is_fun', 'is_dance', 'is_attend', 'is_relax',
+        `is_discover`, 'is_travel', 'is_shop', 'is_kids'
+    ];
 
     let activity_types = [
         {
@@ -128,411 +134,409 @@ const {timeNow, loadScriptEnv, generateToken} = require("../services/shared");
                         {
                             name: 'Any'
                         },
-                        [
-                            {
-                                "name": "Pizza",
-                                "emoji": "🍕"
-                            },
-                            {
-                                "name": "BBQ",
-                                "emoji": "🍖"
-                            },
-                            {
-                                "name": "Salad",
-                                "emoji": "🥗"
-                            },
-                            {
-                                "name": "Burger",
-                                "emoji": "🍔"
-                            },
-                            {
-                                "name": "Sushi",
-                                "emoji": "🍣"
-                            },
-                            {
-                                "name": "Steak",
-                                "emoji": "🥩"
-                            },
-                            {
-                                "name": "Seafood",
-                                "emoji": "🦞"
-                            },
-                            {
-                                "name": "Wings",
-                                "emoji": "🍗"
-                            },
-                            {
-                                "name": "Fried Chicken",
-                                "emoji": "🍗"
-                            },
-                            {
-                                "name": "Hot Dog",
-                                "emoji": "🌭"
-                            },
-                            {
-                                "name": "Fish and Chips",
-                                "emoji": "🍤"
-                            },
-                            {
-                                "name": "Mac and Cheese",
-                                "emoji": "🧀"
-                            },
-                            {
-                                "name": "Sandwich",
-                                "emoji": "🥪"
-                            },
-                            {
-                                "name": "Soup",
-                                "emoji": "🍲"
-                            },
-                            {
-                                "name": "Dumpling",
-                                "emoji": "🥟"
-                            },
-                            {
-                                "name": "Empanada",
-                                "emoji": "🥟"
-                            },
-                            {
-                                "name": "Falafel",
-                                "emoji": "🧆"
-                            },
-                            {
-                                "name": "Fast Food",
-                                "emoji": "🍟"
-                            },
-                            {
-                                "name": "Fondue",
-                                "emoji": "🫕"
-                            },
-                            {
-                                "name": "Halal",
-                                "emoji": "🥙"
-                            },
-                            {
-                                "name": "Poke",
-                                "emoji": "🍚"
-                            },
-                            {
-                                "name": "Hotpot",
-                                "emoji": "🍲"
-                            },
-                            {
-                                "name": "Kebab",
-                                "emoji": "🥙"
-                            },
-                            {
-                                "name": "Noodle",
-                                "emoji": "🍜"
-                            },
-                            {
-                                "name": "Satay",
-                                "emoji": "🍢"
-                            },
-                            {
-                                "name": "Shawarma",
-                                "emoji": "🌯"
-                            },
-                            {
-                                "name": "Vegan and Vegetarian",
-                                "emoji": "🥕"
-                            },
-                            {
-                                "name": "Snack",
-                                "emoji": "🍿"
-                            },
-                            {
-                                "name": "Gluten-Free",
-                                "emoji": "🚫🍞"
-                            }
-                        ]
+                        {
+                            "name": "Pizza",
+                            "emoji": "🍕"
+                        },
+                        {
+                            "name": "BBQ",
+                            "emoji": "🍖"
+                        },
+                        {
+                            "name": "Salad",
+                            "emoji": "🥗"
+                        },
+                        {
+                            "name": "Burger",
+                            "emoji": "🍔"
+                        },
+                        {
+                            "name": "Sushi",
+                            "emoji": "🍣"
+                        },
+                        {
+                            "name": "Steak",
+                            "emoji": "🥩"
+                        },
+                        {
+                            "name": "Seafood",
+                            "emoji": "🦞"
+                        },
+                        {
+                            "name": "Wings",
+                            "emoji": "🍗"
+                        },
+                        {
+                            "name": "Fried Chicken",
+                            "emoji": "🍗"
+                        },
+                        {
+                            "name": "Hot Dog",
+                            "emoji": "🌭"
+                        },
+                        {
+                            "name": "Fish and Chips",
+                            "emoji": "🍤"
+                        },
+                        {
+                            "name": "Mac and Cheese",
+                            "emoji": "🧀"
+                        },
+                        {
+                            "name": "Sandwich",
+                            "emoji": "🥪"
+                        },
+                        {
+                            "name": "Soup",
+                            "emoji": "🍲"
+                        },
+                        {
+                            "name": "Dumpling",
+                            "emoji": "🥟"
+                        },
+                        {
+                            "name": "Empanada",
+                            "emoji": "🥟"
+                        },
+                        {
+                            "name": "Falafel",
+                            "emoji": "🧆"
+                        },
+                        {
+                            "name": "Fast Food",
+                            "emoji": "🍟"
+                        },
+                        {
+                            "name": "Fondue",
+                            "emoji": "🫕"
+                        },
+                        {
+                            "name": "Halal",
+                            "emoji": "🥙"
+                        },
+                        {
+                            "name": "Poke",
+                            "emoji": "🍚"
+                        },
+                        {
+                            "name": "Hotpot",
+                            "emoji": "🍲"
+                        },
+                        {
+                            "name": "Kebab",
+                            "emoji": "🥙"
+                        },
+                        {
+                            "name": "Noodle",
+                            "emoji": "🍜"
+                        },
+                        {
+                            "name": "Satay",
+                            "emoji": "🍢"
+                        },
+                        {
+                            "name": "Shawarma",
+                            "emoji": "🌯"
+                        },
+                        {
+                            "name": "Vegan and Vegetarian",
+                            "emoji": "🥕"
+                        },
+                        {
+                            "name": "Snack",
+                            "emoji": "🍿"
+                        },
+                        {
+                            "name": "Gluten-Free",
+                            "emoji": "🚫🍞"
+                        }
                     ]
                 },
                 {
                     name: 'Ethnic',
                     sub: [
                         {
-                            "ethnic": "Italian",
+                            name: "Italian",
                             "emoji": "🍕"
                         },
                         {
-                            "ethnic": "Chinese",
+                            name: "Chinese",
                             "emoji": "🥡"
                         },
                         {
-                            "ethnic": "Mexican",
+                            name: "Mexican",
                             "emoji": "🌮"
                         },
                         {
-                            "ethnic": "Japanese",
+                            name: "Japanese",
                             "emoji": "🍣"
                         },
                         {
-                            "ethnic": "Indian",
+                            name: "Indian",
                             "emoji": "🍛"
                         },
                         {
-                            "ethnic": "American",
+                            name: "American",
                             "emoji": "🍔"
                         },
                         {
-                            "ethnic": "Thai",
+                            name: "Thai",
                             "emoji": "🍜"
                         },
                         {
-                            "ethnic": "French",
+                            name: "French",
                             "emoji": "🥖"
                         },
                         {
-                            "ethnic": "Mediterranean",
+                            name: "Mediterranean",
                             "emoji": "🥙"
                         },
                         {
-                            "ethnic": "Spanish",
+                            name: "Spanish",
                             "emoji": "🥘"
                         },
                         {
-                            "ethnic": "Vietnamese",
+                            name: "Vietnamese",
                             "emoji": "🍜"
                         },
                         {
-                            "ethnic": "Korean",
+                            name: "Korean",
                             "emoji": "🍲"
                         },
                         {
-                            "ethnic": "Middle Eastern",
+                            name: "Middle Eastern",
                             "emoji": "🍢"
                         },
                         {
-                            "ethnic": "Brazilian",
+                            name: "Brazilian",
                             "emoji": "🥩"
                         },
                         {
-                            "ethnic": "Caribbean",
+                            name: "Caribbean",
                             "emoji": "🍤"
                         },
                         {
-                            "ethnic": "German",
+                            name: "German",
                             "emoji": "🥨"
                         },
                         {
-                            "ethnic": "Greek",
+                            name: "Greek",
                             "emoji": "🥗"
                         },
                         {
-                            "ethnic": "African",
+                            name: "African",
                             "emoji": "🍲"
                         },
                         {
-                            "ethnic": "Lebanese",
+                            name: "Lebanese",
                             "emoji": "🥙"
                         },
                         {
-                            "ethnic": "Cajun and Creole",
+                            name: "Cajun and Creole",
                             "emoji": "🍤"
                         },
                         {
-                            "ethnic": "Hawaiian",
+                            name: "Hawaiian",
                             "emoji": "🍍"
                         },
                         {
-                            "ethnic": "Australian",
+                            name: "Australian",
                             "emoji": "🥩"
                         },
                         {
-                            "ethnic": "Turkish",
+                            name: "Turkish",
                             "emoji": "🍢"
                         },
                         {
-                            "ethnic": "Argentinian",
+                            name: "Argentinian",
                             "emoji": "🥩"
                         },
                         {
-                            "ethnic": "Filipino",
+                            name: "Filipino",
                             "emoji": "🍲"
                         },
                         {
-                            "ethnic": "Polish",
+                            name: "Polish",
                             "emoji": "🥟"
                         },
                         {
-                            "ethnic": "Russian",
+                            name: "Russian",
                             "emoji": "🥟"
                         },
                         {
-                            "ethnic": "Hungarian",
+                            name: "Hungarian",
                             "emoji": "🥘"
                         },
                         {
-                            "ethnic": "Ethiopian",
+                            name: "Ethiopian",
                             "emoji": "🍲"
                         },
                         {
-                            "ethnic": "Peruvian",
+                            name: "Peruvian",
                             "emoji": "🍲"
                         },
                         {
-                            "ethnic": "Sri Lankan",
+                            name: "Sri Lankan",
                             "emoji": "🍛"
                         },
                         {
-                            "ethnic": "Moroccan",
+                            name: "Moroccan",
                             "emoji": "🥘"
                         },
                         {
-                            "ethnic": "Syrian",
+                            name: "Syrian",
                             "emoji": "🍢"
                         },
                         {
-                            "ethnic": "Afghan",
+                            name: "Afghan",
                             "emoji": "🥟"
                         },
                         {
-                            "ethnic": "Tibetan",
+                            name: "Tibetan",
                             "emoji": "🍜"
                         },
                         {
-                            "ethnic": "Burmese",
+                            name: "Burmese",
                             "emoji": "🍲"
                         },
                         {
-                            "ethnic": "Singaporean",
+                            name: "Singaporean",
                             "emoji": "🥘"
                         },
                         {
-                            "ethnic": "Bangladeshi",
+                            name: "Bangladeshi",
                             "emoji": "🍛"
                         },
                         {
-                            "ethnic": "Indonesian",
+                            name: "Indonesian",
                             "emoji": "🍜"
                         },
                         {
-                            "ethnic": "Iraqi",
+                            name: "Iraqi",
                             "emoji": "🥙"
                         },
                         {
-                            "ethnic": "Jewish",
+                            name: "Jewish",
                             "emoji": "🥯"
                         },
                         {
-                            "ethnic": "Cuban",
+                            name: "Cuban",
                             "emoji": "🍢"
                         },
                         {
-                            "ethnic": "Colombian",
+                            name: "Colombian",
                             "emoji": "🥙"
                         },
                         {
-                            "ethnic": "Mauritian",
+                            name: "Mauritian",
                             "emoji": "🍲"
                         },
                         {
-                            "ethnic": "Slovak",
+                            name: "Slovak",
                             "emoji": "🥟"
                         },
                         {
-                            "ethnic": "Belarusian",
+                            name: "Belarusian",
                             "emoji": "🥟"
                         },
                         {
-                            "ethnic": "Armenian",
+                            name: "Armenian",
                             "emoji": "🍢"
                         },
                         {
-                            "ethnic": "Modern European",
+                            name: "Modern European",
                             "emoji": "🍽️"
                         },
                         {
-                            "ethnic": "Eastern European",
+                            name: "Eastern European",
                             "emoji": "🥟"
                         },
                         {
-                            "ethnic": "Scottish",
+                            name: "Scottish",
                             "emoji": "🥧"
                         },
                         {
-                            "ethnic": "Ukrainian",
+                            name: "Ukrainian",
                             "emoji": "🥟"
                         },
                         {
-                            "ethnic": "Malay",
+                            name: "Malay",
                             "emoji": "🍜"
                         },
                         {
-                            "ethnic": "New American",
+                            name: "New American",
                             "emoji": "🍔"
                         },
                         {
-                            "ethnic": "Latin American",
+                            name: "Latin American",
                             "emoji": "🥙"
                         },
                         {
-                            "ethnic": "Poutine",
+                            name: "Poutine",
                             "emoji": "🍟"
                         },
                         {
-                            "ethnic": "Tatar",
+                            name: "Tatar",
                             "emoji": "🥟"
                         },
                         {
-                            "ethnic": "Bulgarian",
+                            name: "Bulgarian",
                             "emoji": "🥘"
                         },
                         {
-                            "ethnic": "Bosnian",
+                            name: "Bosnian",
                             "emoji": "🍢"
                         },
                         {
-                            "ethnic": "Himalayan",
+                            name: "Himalayan",
                             "emoji": "🍲"
                         },
                         {
-                            "ethnic": "Venezuelan",
+                            name: "Venezuelan",
                             "emoji": "🥙"
                         },
                         {
-                            "ethnic": "Austrian",
+                            name: "Austrian",
                             "emoji": "🍰"
                         },
                         {
-                            "ethnic": "Satay",
+                            name: "Satay",
                             "emoji": "🍢"
                         },
                         {
-                            "ethnic": "Kurdish",
+                            name: "Kurdish",
                             "emoji": "🍢"
                         },
                         {
-                            "ethnic": "South American",
+                            name: "South American",
                             "emoji": "🥙"
                         },
                         {
-                            "ethnic": "Cambodian",
+                            name: "Cambodian",
                             "emoji": "🍲"
                         },
                         {
-                            "ethnic": "Scandinavian",
+                            name: "Scandinavian",
                             "emoji": "🥖"
                         },
                         {
-                            "ethnic": "Honduran",
+                            name: "Honduran",
                             "emoji": "🥙"
                         },
                         {
-                            "ethnic": "Egyptian",
+                            name: "Egyptian",
                             "emoji": "🍲"
                         },
                         {
-                            "ethnic": "Finnish",
+                            name: "Finnish",
                             "emoji": "🥖"
                         },
                         {
-                            "ethnic": "Danish",
+                            name: "Danish",
                             "emoji": "🥐"
                         },
                         {
-                            "ethnic": "Belgian",
+                            name: "Belgian",
                             "emoji": "🍫"
                         }
                     ]
@@ -1199,34 +1203,103 @@ const {timeNow, loadScriptEnv, generateToken} = require("../services/shared");
         },
     ];
 
-    for(let int = 0; int < activity_types.length; int++) {
-        let activity = activity_types[i];
+    let activity_dict = {};
 
-        let parent_ids = [];
+    function processActivity(activity, int, parent_ids, bool) {
+        return new Promise(async (resolve, reject) => {
+            let at_check;
 
-        let at_check = await conn('activity_types')
-            .where('activity_name', activity.name)
-            .first();
+            try {
+                at_check = await conn('activity_types')
+                    .where('activity_name', activity.name)
+                    .first();
+            } catch(e) {
+                console.error(e);
+            }
 
-        let id;
+            let id;
 
-        if(!at_check) {
-            id = await conn('activity_types')
-                .insert({
+            let parent_id = null;
+
+            if(parent_ids && parent_ids.length) {
+                parent_id = parent_ids[parent_ids.length - 1];
+            }
+
+            let activity_full_name = activity.name;
+
+            let activity_full_add = [];
+
+            if(parent_ids.length) {
+                for(let _id of parent_ids) {
+                    activity_full_add.push(activity_dict[_id].activity_name);
+                }
+
+                activity_full_name += `: ${activity_full_add.join(' - ')}`;
+            }
+
+            let insert;
+
+            if(!at_check) {
+                insert = {
+                    parent_activity_type_id: parent_id,
                     activity_type_token: generateToken(24),
                     activity_name: activity.name,
-                    activity_name_full: activity.name,
+                    activity_name_full: activity_full_name,
                     activity_image: activity.image || null,
                     activity_emoji: activity.emoji || null,
                     sort_position: int,
                     is_visible: true,
                     created: timeNow(),
                     updated: timeNow()
-                });
+                };
 
-            id = id[0];
-        } else {
-            id = at_check.id;
+                if(bool) {
+                    insert[bool] = true;
+                }
+
+                id = await conn('activity_types')
+                    .insert(insert);
+
+                id = id[0];
+            } else {
+                id = at_check.id;
+            }
+
+            parent_ids.push(id);
+
+            activity_dict[id] = insert || at_check;
+
+            if(activity.sub) {
+                for(let int = 0; int < activity.sub.length; int++) {
+                    try {
+                         await processActivity(activity.sub[int], int, cloneObj(parent_ids), bool);
+                    } catch(e) {
+                        console.error(e);
+                    }
+                }
+            }
+
+            resolve();
+        });
+    }
+
+    for(let int = 0; int < activity_types.length; int++) {
+        let activity = activity_types[int];
+
+        let parent_ids = [];
+
+        let activity_bool = null;
+
+        for(let bool of bools) {
+            if(bool in activity) {
+                activity_bool = bool;
+            }
+        }
+
+        try {
+             await processActivity(activity, int, parent_ids, cloneObj(activity_bool));
+        } catch(e) {
+            console.error(e);
         }
     }
 
