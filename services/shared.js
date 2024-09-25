@@ -398,8 +398,14 @@ function getLocalDateTimeStr(date) {
     return dayjs.format('MM-DD-YY HH:mm:ss');
 }
 
-function getMetersFromMiles(miles) {
-    return miles / 0.000621371192;
+function getMetersFromMiles(miles, to_int) {
+    let meters = miles / 0.000621371192;
+
+    if(to_int) {
+        return Math.floor(meters);
+    }
+
+    return meters;
 }
 
 
