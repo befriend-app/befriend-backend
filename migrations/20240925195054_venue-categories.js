@@ -26,6 +26,8 @@ exports.up = function(knex) {
         table.bigInteger('updated').notNullable();
 
         table.foreign('parent_id').references('id').inTable('venue_categories');
+
+        table.index('fsq_id', 'venue_categories_fsq_id_index');
     });
 };
 
