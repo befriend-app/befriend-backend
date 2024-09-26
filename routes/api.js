@@ -134,5 +134,61 @@ router.post('/keys/exchange/save', function (req, res, next) {
     });
 });
 
+router.get('/review-venues', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        let conn = await require('../services/db').conn();
+
+        let qry = await conn('activity_type_venues AS atv')
+            .join('activity_types AS at', 'at.id', '=', 'atv.activity_type_id')
+            .join('venues_categories AS vc', 'vc.id', '=', 'atv.venue_category_id')
+            .orderBy('atv.sort_position');
+
+        let organized = {};
+
+        for(let item of qry) {
+            if(!(item.activity_type_id in organized)) {
+                organized[item.activity_type_id] = {
+                    id: item.activity_type_id,
+                    name: item.activity_name_full,
+                    venues: []
+                };
+            }
+
+            organized[item.activity_type_id].venues.push(item);
+        }
+
+        let html = `
+        <style>
+            .activities {
+                display: flex;
+                gap: 30px 30px;
+                flex-wrap: wrap;
+            }
+            
+            .name {
+                font-size: 20px;
+            }
+        </style>
+        
+        `;
+
+        for(let k in organized) {
+            let d = organized[k];
+
+            let venues_html = ``;
+
+            for(let v of d.venues) {
+                venues_html += `<div class="venue">${v.category_name} - ${v.venue_category_id}</div>`;
+            }
+
+            html += `<div class="activity"><div class="name">${d.name} - ${d.id}</div><div class="venues">${venues_html}</div></div>`
+        }
+
+        res.send(`<div class="activities">${html}</div>`);
+
+        resolve();
+    });
+});
+
 
 module.exports = router;
