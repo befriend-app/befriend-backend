@@ -1,7 +1,7 @@
 const cacheService = require('../services/cache');
 const {getPersonLoginCacheKey} = require("../services/shared");
 
-// authentication middleware for /persons
+// authentication middleware
 module.exports = function(req, res, next) {
     return new Promise(async (resolve, reject) => {
         let person_token = req.body.person_token;
@@ -20,7 +20,7 @@ module.exports = function(req, res, next) {
                 return resolve();
             }
 
-            //continue request to /persons route
+            //continue request to auth route
             next();
         } catch(e) {
             res.json("Invalid network_token", 401);

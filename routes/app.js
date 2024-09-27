@@ -2,7 +2,7 @@ let express = require('express');
 let router = express.Router();
 let personsController = require('../controllers/persons');
 
-router.use(require('../middleware/persons'));
+router.use(require('../middleware/auth'));
 
 router.post('/activities', function(req, res, next) {
     return new Promise(async (resolve, reject) => {
