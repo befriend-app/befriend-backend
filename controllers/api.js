@@ -952,5 +952,125 @@ module.exports = {
                 return reject(e);
             }
         });
-    }   
+    },
+    getActivityVenues: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            function getActivity(item) {
+                if (!item.parent_activity_type_id) {
+                    return data_organized[item.at_id];
+                }
+
+                for (let parent_id in data_organized) {
+                    const level_2_dict = data_organized[parent_id].sub;
+
+                    // Check level 2
+                    for (let level_2_id in level_2_dict) {
+                        if (parseInt(level_2_id) === item.at_id) {
+                            return level_2_dict[level_2_id];
+                        }
+
+                        // Check level 3
+                        const level_3_dict = level_2_dict[level_2_id].sub;
+
+                        for (let level_3_id in level_3_dict) {
+                            if (parseInt(level_3_id) === item.at_id) {
+                                return level_3_dict[level_3_id];
+                            }
+                        }
+                    }
+                }
+
+                return null; // If activity is not found
+            }
+
+            function createActivityObject(activity) {
+                return {
+                    name: activity.activity_name,
+                    image: activity.activity_image,
+                    emoji: activity.activity_emoji,
+                    categories: [],
+                    sub: {}
+                };
+            }
+
+            let cache_key = cacheService.keys.activity_venues;
+            let data_organized = {};
+
+            try {
+                //use existing data in cache if exists
+                let data = await cacheService.get(cache_key, true);
+
+                if(data) {
+                    // res.json(data);
+                    //
+                    // return resolve();
+                }
+
+                let conn = await dbService.conn();
+
+                //organize by activity types
+                let parent_activity_types = await conn('activity_types')
+                    .whereNull('parent_activity_type_id')
+                    .orderBy('sort_position');
+
+                //level 1
+                for(let at of parent_activity_types) {
+                    data_organized[at.id] = createActivityObject(at);
+                }
+
+                //level 2
+                for(let parent_id in data_organized) {
+                    let level_2_qry = await conn('activity_types')
+                        .where('parent_activity_type_id', parent_id)
+
+                    for(let at of level_2_qry) {
+                        data_organized[parent_id].sub[at.id] = createActivityObject(at);
+                    }
+                }
+
+                //level 3
+                for(let parent_id in data_organized) {
+                    let level_2_dict = data_organized[parent_id].sub;
+
+                    for(let level_2_id in level_2_dict) {
+                        let level_3_qry = await conn('activity_types')
+                            .where('parent_activity_type_id', level_2_id);
+
+                        for(let at of level_3_qry) {
+                            data_organized[parent_id].sub[level_2_id].sub[at.id] = createActivityObject(at);
+                        }
+                    }
+                }
+
+                //add venues to each category/subcategory
+                let qry = await conn('activity_type_venues AS atv')
+                    .join('activity_types AS at', 'at.id', '=', 'atv.activity_type_id')
+                    .join('venues_categories AS vc', 'vc.id', '=', 'atv.venue_category_id')
+                    .where('at.is_visible', true)
+                    .orderBy('at.sort_position')
+                    .orderBy('atv.sort_position')
+                    .select('at.*', 'at.id AS at_id', 'vc.category_name', 'fsq_id', 'vc.category_token');
+
+                for(let item of qry) {
+                    let activity = getActivity(item);
+
+                    activity.categories.push(item.fsq_id);
+                }
+
+                await cacheService.setCache(cache_key, data_organized);
+
+                res.json(data_organized);
+
+                return resolve();
+            } catch(e) {
+                console.error(e);
+
+                res.json({
+                    message: "Error getting activity venue data"
+                }, 400);
+
+                return resolve();
+            }
+        });
+    }
 }

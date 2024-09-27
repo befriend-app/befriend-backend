@@ -1,3 +1,4 @@
+const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 const {timeNow, loadScriptEnv, generateToken, cloneObj} = require("../services/shared");
 
@@ -13,8 +14,13 @@ const {timeNow, loadScriptEnv, generateToken, cloneObj} = require("../services/s
     let venue_categories = require("./activity_venues/add_venues_categories");
 
     try {
+        //remove previous cache if any
+        await cacheService.deleteKeys(cacheService.keys.activity_venues);
+
+        //add venue categories
         await venue_categories.main();
 
+        //organize for performance
         let qry = await conn('venues_categories');
 
         for(let item of qry) {

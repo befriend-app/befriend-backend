@@ -134,6 +134,18 @@ router.post('/keys/exchange/save', function (req, res, next) {
     });
 });
 
+router.get('/activity-venues', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await apiController.getActivityVenues(req, res);
+        } catch(e) {
+            console.error(e);
+        }
+
+        resolve();
+    });
+});
+
 router.get('/review-venues', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         let conn = await require('../services/db').conn();
