@@ -14,6 +14,7 @@ const {timeNow, loadScriptEnv, generateToken, cloneObj} = require("../services/s
     let venue_categories = require("./activity_venues/add_venues_categories");
 
     try {
+        await cacheService.init();
         //remove previous cache if any
         await cacheService.deleteKeys(cacheService.keys.activity_venues);
 

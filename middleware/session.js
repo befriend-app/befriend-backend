@@ -28,6 +28,7 @@ function isSessionExpired(session_check) {
 
 async function handleSession(req, res, next) {
     return new Promise(async (resolve, reject) => {
+        res.header("Access-Control-Allow-Origin", "*");
 
         // req.app.locals.user = null;
 
