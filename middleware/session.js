@@ -28,9 +28,10 @@ function isSessionExpired(session_check) {
 
 async function handleSession(req, res, next) {
     return new Promise(async (resolve, reject) => {
-        res.header("Access-Control-Allow-Origin", "*");
-
-        // req.app.locals.user = null;
+        res.header('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,OPTIONS,POST,PUT');
+        res.setHeader('Access-Control-Allow-Headers', 'Access-Control-Allow-Headers, Origin,Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers');
+        
 
         function createSession() {
             return new Promise(async (resolve, reject) => {

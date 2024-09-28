@@ -1077,7 +1077,7 @@ module.exports = {
             }
         });
     },
-    getPlacesForActivityType: function (req, res) {
+    getActivityTypePlaces: function (req, res) {
         return new Promise(async (resolve, reject) => {
             let activity_type, places_organized = {};
 
@@ -1095,7 +1095,7 @@ module.exports = {
 
                 let location = req.body.location;
 
-                if(!location || !(location.lat && !location.lon)) {
+                if(!location || !(location.lat && location.lon)) {
                     res.json({
                         message: "Location required"
                     }, 400);
@@ -1106,7 +1106,7 @@ module.exports = {
                 let conn = await dbService.conn();
 
                 //get fsq_ids from cache or db
-                let cache_key = `${cacheService.keys.venues_categories_activity_type}${activity_type_token}`;
+                let cache_key = `${cacheService.keys.activity_type_venue_categories}${activity_type_token}`;
 
                 let activity_fsq_ids = await cacheService.get(cache_key, true);
 
@@ -1122,12 +1122,14 @@ module.exports = {
                         return resolve();
                     }
 
-                    activity_fsq_ids = await conn('activity_type_venues AS atv')
+                    let categories_qry = await conn('activity_type_venues AS atv')
                         .join('venues_categories AS vc', 'vc.id', '=', 'atv.venue_category_id')
                         .where('atv.activity_type_id', activity_type.id)
                         .where('atv.is_active', true)
                         .orderBy('atv.sort_position')
-                        .select('fsq_id');
+                        .select('vc.fsq_id');
+
+                    activity_fsq_ids = categories_qry.map(x=>x.fsq_id);
 
                     await cacheService.setCache(cache_key, activity_fsq_ids);
                 }
