@@ -134,14 +134,25 @@ router.post('/keys/exchange/save', function (req, res, next) {
     });
 });
 
-router.get('/activity-venues', function (req, res, next) {
+router.get('/activity-types', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
-            await apiController.getActivityVenues(req, res);
+            await apiController.getActivityTypes(req, res);
         } catch(e) {
             console.error(e);
         }
 
+        resolve();
+    });
+});
+
+router.put('/activity_type/places/:activity_type_token', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await apiController.getPlacesForActivityType(req, res);
+        } catch(e) {
+            console.error(e);
+        }
         resolve();
     });
 });

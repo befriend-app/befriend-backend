@@ -1,6 +1,7 @@
 const axios = require('axios');
 const tldts = require('tldts');
 
+const activitiesService = require('../services/activities');
 const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 const networkService = require('../services/network');
@@ -14,7 +15,8 @@ const {isProdApp, isIPAddress, isLocalHost, getURL, timeNow, generateToken, join
 const {getNetwork, getNetworkSelf} = require("../services/network");
 const {encrypt} = require("../services/encryption");
 const {deleteKeys} = require("../services/cache");
-const { getPersonByEmail } = require('../services/persons');
+const {getPersonByEmail} = require('../services/persons');
+const {getCategoriesPlaces} = require("../services/places");
 
 
 module.exports = {
@@ -953,7 +955,7 @@ module.exports = {
             }
         });
     },
-    getActivityVenues: function (req, res) {
+    getActivityTypes: function (req, res) {
         return new Promise(async (resolve, reject) => {
             function getActivity(item) {
                 if (!item.parent_activity_type_id) {
@@ -986,6 +988,7 @@ module.exports = {
             function createActivityObject(activity) {
                 return {
                     name: activity.activity_name,
+                    token: activity.activity_type_token,
                     image: activity.activity_image,
                     emoji: activity.activity_emoji,
                     categories: [],
@@ -993,7 +996,7 @@ module.exports = {
                 };
             }
 
-            let cache_key = cacheService.keys.activity_venues;
+            let cache_key = cacheService.keys.activity_types;
             let data_organized = {};
 
             try {
@@ -1043,19 +1046,20 @@ module.exports = {
                 }
 
                 //add venues to each category/subcategory
-                let qry = await conn('activity_type_venues AS atv')
-                    .join('activity_types AS at', 'at.id', '=', 'atv.activity_type_id')
-                    .join('venues_categories AS vc', 'vc.id', '=', 'atv.venue_category_id')
-                    .where('at.is_visible', true)
-                    .orderBy('at.sort_position')
-                    .orderBy('atv.sort_position')
-                    .select('at.*', 'at.id AS at_id', 'vc.category_name', 'fsq_id', 'vc.category_token');
 
-                for(let item of qry) {
-                    let activity = getActivity(item);
-
-                    activity.categories.push(item.fsq_id);
-                }
+                // let qry = await conn('activity_type_venues AS atv')
+                //     .join('activity_types AS at', 'at.id', '=', 'atv.activity_type_id')
+                //     .join('venues_categories AS vc', 'vc.id', '=', 'atv.venue_category_id')
+                //     .where('at.is_visible', true)
+                //     .orderBy('at.sort_position')
+                //     .orderBy('atv.sort_position')
+                //     .select('at.*', 'at.id AS at_id', 'vc.category_name', 'fsq_id', 'vc.category_token');
+                //
+                // for(let item of qry) {
+                //     let activity = getActivity(item);
+                //
+                //     activity.categories.push(item.fsq_id);
+                // }
 
                 await cacheService.setCache(cache_key, data_organized);
 
@@ -1071,6 +1075,87 @@ module.exports = {
 
                 return resolve();
             }
+        });
+    },
+    getPlacesForActivityType: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            let activity_type, places_organized = {};
+
+            try {
+
+                let activity_type_token = req.params.activity_type_token;
+
+                if(!activity_type_token) {
+                    res.json({
+                        message: "activity_type token required"
+                    }, 400);
+
+                    return resolve();
+                }
+
+                let location = req.body.location;
+
+                if(!location || !(location.lat && !location.lon)) {
+                    res.json({
+                        message: "Location required"
+                    }, 400);
+
+                    return resolve();
+                }
+
+                let conn = await dbService.conn();
+
+                //get fsq_ids from cache or db
+                let cache_key = `${cacheService.keys.venues_categories_activity_type}${activity_type_token}`;
+
+                let activity_fsq_ids = await cacheService.get(cache_key, true);
+
+                if(!activity_fsq_ids) {
+                    //get activity type
+                    activity_type = await activitiesService.getActivityType(activity_type_token);
+
+                    if(!activity_type) {
+                        res.json({
+                            message: "Activity type not found"
+                        }, 400);
+
+                        return resolve();
+                    }
+
+                    activity_fsq_ids = await conn('activity_type_venues AS atv')
+                        .join('venues_categories AS vc', 'vc.id', '=', 'atv.venue_category_id')
+                        .where('atv.activity_type_id', activity_type.id)
+                        .where('atv.is_active', true)
+                        .orderBy('atv.sort_position')
+                        .select('fsq_id');
+
+                    await cacheService.setCache(cache_key, activity_fsq_ids);
+                }
+
+                try {
+                    let places = await getCategoriesPlaces(activity_fsq_ids, location);
+
+                    res.json({
+                        places: places
+                    });
+                } catch(e) {
+                    console.error(e);
+                    res.json({
+                        message: "Error getting category(s) places"
+                    }, 400);
+
+                    return resolve();
+                }
+            } catch(e) {
+                console.error(e);
+
+                res.json({
+                    message: "Error getting places for activity"
+                }, 400);
+            }
+
+            return resolve();
+
         });
     }
 }

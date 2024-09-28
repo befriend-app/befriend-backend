@@ -4,7 +4,9 @@ module.exports = {
     conn: null,
     keys: {
         ws: 'ws:messages',
-        activity_venues: `activities:venues`
+        activity_types: `activity_types`,
+        activity_type: `activity_type:`,
+        activity_type_venue_categories: `activity_type:venue_categories:`,
     },
     init: function () {
         return new Promise(async (resolve, reject) => {

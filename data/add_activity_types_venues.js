@@ -6,17 +6,18 @@ const {timeNow, loadScriptEnv, generateToken, cloneObj} = require("../services/s
     loadScriptEnv();
 
     let venues_dict = {};
-    let activity_venues_dict = {};
+    let activities_venues_dict = {};
 
     let conn = await dbService.conn();
 
-    let activity_types = require('./activity_venues/activity-types');
-    let venue_categories = require("./activity_venues/add_venues_categories");
+    let activity_types = require('./activity_type_venues/activity-types');
+    let venue_categories = require("./activity_type_venues/add_venues_categories");
 
     try {
         await cacheService.init();
+
         //remove previous cache if any
-        await cacheService.deleteKeys(cacheService.keys.activity_venues);
+        await cacheService.deleteKeys(cacheService.keys.activity_types);
 
         //add venue categories
         await venue_categories.main();
@@ -31,11 +32,11 @@ const {timeNow, loadScriptEnv, generateToken, cloneObj} = require("../services/s
         let venue_qry = await conn('activity_type_venues');
 
         for(let item of venue_qry) {
-            if(!(item.activity_type_id in activity_venues_dict)) {
-                activity_venues_dict[item.activity_type_id] = {};
+            if(!(item.activity_type_id in activities_venues_dict)) {
+                activities_venues_dict[item.activity_type_id] = {};
             }
 
-            activity_venues_dict[item.activity_type_id][item.venue_category_id] = true;
+            activities_venues_dict[item.activity_type_id][item.venue_category_id] = true;
         }
     } catch(e) {
         console.error(e);
@@ -117,7 +118,7 @@ const {timeNow, loadScriptEnv, generateToken, cloneObj} = require("../services/s
                 let db_id = venues_dict[fsq_id].id;
 
                 //previously added
-                if(id in activity_venues_dict && db_id in activity_venues_dict[id]) {
+                if(id in activities_venues_dict && db_id in activities_venues_dict[id]) {
                     continue;
                 }
 
