@@ -14,7 +14,7 @@ exports.up = function(knex) {
         table.bigInteger('updated').notNullable();
 
         table.foreign('activity_type_id').references('id').inTable('activity_types');
-        table.foreign('venue_category_id').references('id').inTable('venue_categories');
+        table.foreign('venue_category_id').references('id').inTable('venues_categories');
     });
 };
 
