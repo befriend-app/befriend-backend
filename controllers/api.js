@@ -986,7 +986,7 @@ module.exports = {
             }
 
             function createActivityObject(activity) {
-                return {
+                let data = {
                     name: activity.activity_name,
                     token: activity.activity_type_token,
                     image: activity.activity_image,
@@ -994,6 +994,17 @@ module.exports = {
                     categories: [],
                     sub: {}
                 };
+
+                //include bool
+                for(let k in activity) {
+                    if(k.startsWith('is_')) {
+                        if(activity[k]) {
+                            data[k] = activity[k];
+                        }
+                    }
+                }
+
+                return data;
             }
 
             let cache_key = cacheService.keys.activity_types;
