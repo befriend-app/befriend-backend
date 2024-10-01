@@ -18,6 +18,8 @@ dayjs.extend(timezone);
 
 global.serverTimezoneString = process.env.TZ || 'America/Chicago';
 
+const meters_to_miles = 0.000621371192;
+
 Object.defineProperty(String.prototype, 'capitalize', {
     value: function() {
         return this.charAt(0).toUpperCase() + this.slice(1);
@@ -414,8 +416,14 @@ function getLocalDateTimeStr(date) {
     return dayjs.format('MM-DD-YY HH:mm:ss');
 }
 
-function getMetersFromMiles(miles, to_int) {
-    let meters = miles / 0.000621371192;
+function getMetersFromMilesOrKm(miles_or_km, to_int) {
+    let meters;
+
+    if(useKM()) {
+        meters = miles_or_km  * 1000;
+    } else {
+        meters = miles_or_km / meters_to_miles;
+    }
 
     if(to_int) {
         return Math.floor(meters);
@@ -425,8 +433,12 @@ function getMetersFromMiles(miles, to_int) {
 }
 
 
-function getMilesFromMeters(meters) {
-    return meters * 0.000621371192;
+function getMilesOrKmFromMeters(meters) {
+    if(useKM()) {
+        return meters / 1000;
+    } else {
+        return meters * meters_to_miles;
+    }
 }
 
 function getPersonCacheKey(person_token_or_email) {
@@ -673,6 +685,10 @@ function loadScriptEnv() {
     require('dotenv').config();
 }
 
+function normalizeDistance(distance, radius_meters) {
+    return 1 - Math.min(distance / radius_meters, 1);
+}
+
 function normalizePort(val) {
     let port = parseInt(val, 10);
 
@@ -890,6 +906,12 @@ function timeoutAwait(ms, f) {
     });
 }
 
+function useKM() {
+    let value = process.env.DISPLAY_KM;
+
+    return value && (value === 'true' || value === '1');
+}
+
 function writeFile(file_path, data) {
     return new Promise(async (resolve, reject) => {
         fs.writeFile(file_path, data, (err) => {
@@ -926,8 +948,8 @@ module.exports = {
     getLocalDate: getLocalDate,
     getLocalDateStr: getLocalDateStr,
     getLocalDateTimeStr: getLocalDateTimeStr,
-    getMetersFromMiles: getMetersFromMiles,
-    getMilesFromMeters: getMilesFromMeters,
+    getMetersFromMilesOrKm: getMetersFromMilesOrKm,
+    getMilesOrKmFromMeters: getMilesOrKmFromMeters,
     getPersonCacheKey: getPersonCacheKey,
     getPersonLoginCacheKey: getPersonLoginCacheKey,
     getRandomInRange: getRandomInRange,
@@ -945,6 +967,7 @@ module.exports = {
     isValidUserName: isValidUserName,
     joinPaths: joinPaths,
     loadScriptEnv: loadScriptEnv,
+    normalizeDistance: normalizeDistance,
     normalizePort: normalizePort,
     numberWithCommas: numberWithCommas,
     range: range,
@@ -956,5 +979,6 @@ module.exports = {
     systemProcessRan: systemProcessRan,
     timeNow: timeNow,
     timeoutAwait: timeoutAwait,
+    useKM: useKM,
     writeFile: writeFile,
 }
