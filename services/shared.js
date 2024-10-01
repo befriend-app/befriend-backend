@@ -359,6 +359,22 @@ function getDateTimeStr() {
     return date.toISOString().slice(0, 10) + ' ' + date.toISOString().substring(11, 19);
 }
 
+function getDistanceMeters(loc_1, loc_2) {
+    const R = 6371; // Earth's radius in km
+
+    const dLat = (loc_2.lat - loc_1.lat) * (Math.PI / 180);
+    const dLon = (loc_2.lon - loc_1.lon) * (Math.PI / 180);
+
+    const a =
+        Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(loc_1.lat * Math.PI / 180) * Math.cos(loc_1.lat * Math.PI / 180) *
+        Math.sin(dLon/2) * Math.sin(dLon/2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+    return R * c * 1000;
+}
+
 function getExchangeKeysKey(token) {
     return `networks:keys:exchange:${token}`;
 }
@@ -904,6 +920,7 @@ module.exports = {
     getDateDiff: getDateDiff,
     getDateStr: getDateStr,
     getDateTimeStr: getDateTimeStr,
+    getDistanceMeters: getDistanceMeters,
     getExchangeKeysKey: getExchangeKeysKey,
     getIPAddr: getIPAddr,
     getLocalDate: getLocalDate,
