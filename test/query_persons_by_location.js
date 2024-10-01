@@ -1,4 +1,4 @@
-const {loadScriptEnv, getCoordBoundBox, range, timeNow, getMetersFromMiles} = require("../services/shared");
+const {loadScriptEnv, getCoordBoundBox, range, timeNow, getMetersFromMilesOrKm} = require("../services/shared");
 const axios = require("axios");
 loadScriptEnv();
 
@@ -18,7 +18,7 @@ const dbService = require("../services/db");
                     .whereRaw('(ST_Distance_Sphere(point(location_lon, location_lat), point(?,?))) <= ?', [
                         coords.lon,
                         coords.lat,
-                        getMetersFromMiles(max_miles)
+                        getMetersFromMilesOrKm(max_miles)
                     ]);
 
                 resolve();
