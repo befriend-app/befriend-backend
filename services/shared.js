@@ -292,7 +292,7 @@ function rad2deg(rad) {
     return (rad * 180) / Math.PI;
 }
 
-function getCoordBoundBox (latitude, longitude, distance) {
+function getCoordBoundBox (latitude, longitude, distance_miles_or_km) {
     const latLimits = [deg2rad(-90), deg2rad(90)];
     const lonLimits = [deg2rad(-180), deg2rad(180)];
 
@@ -304,8 +304,13 @@ function getCoordBoundBox (latitude, longitude, distance) {
     }
 
     // Angular distance in radians on a great circle,
-    // using Earth's radius in miles.
-    const angular = distance / 3958.762079;
+    let angular;
+
+    if(useKM()) {
+        angular = distance_miles_or_km / 6371;
+    } else {
+        angular = distance_miles_or_km / 3958.762079;
+    }
 
     let minLat = radLat - angular;
     let maxLat = radLat + angular;

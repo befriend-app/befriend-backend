@@ -53,9 +53,9 @@ exports.up = function(knex) {
         table.float('location_lon', 14, 10).notNullable();
         table.mediumint('location_lon_1000').notNullable();
 
-        table.string('hours').nullable();
+        table.string('hours', 1000).nullable();
 
-        table.string('hours_popular').nullable();
+        table.string('hours_popular', 1000).nullable();
 
         table.string('location_address').nullable();
         table.string('location_address_2').nullable();
