@@ -1,35 +1,50 @@
 const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 const fsq = require('../.api/apis/fsq-developers');
-const {getMetersFromMiles} = require("./shared");
+const {getMetersFromMilesOrKm, timeNow, getDistanceMeters, normalizeDistance} = require("./shared");
 
 module.exports = {
     default: {
-        radius: 5
+        radius: 1 //miles or km
     },
     fields: {
-        core: `fsq_id,categories,chains,closed_bucket,distance,geocodes,link,location,name,related_places,timezone`,
-        rich: `price,description,verified,hours,hours_popular,rating,stats,popularity,menu,date_closed,photos,tips,tastes,features,store_id,venue_reality_bucket`
+        core: `fsq_id,closed_bucket,distance,geocodes,location,name,timezone`, //categories,chains,link,related_places
+        rich: `price,description,hours,rating,popularity,venue_reality_bucket` //verified,hours_popular,stats,menu,date_closed,photos,tips,tastes,features,store_id,
     },
     weights: {
+        distance: {
+            weight: .4,
+        },
+        popularity: {
+            weight: .15,
+        },
+        rating: {
+            weight: .15,
+        },
         open_probability: {
-            weight: .3,
+            weight: .2,
             values: {
-                VeryLikelyOpen: 10,
-                LikelyOpen: 8,
-                Unsure: 6,
-                LikelyClosed: 4,
-                VeryLikelyClosed: 2,
+                VeryLikelyOpen: 1,
+                LikelyOpen: .8,
+                Unsure: .6,
+                LikelyClosed: .3,
+                VeryLikelyClosed: 0,
             }
         },
-        distance: {
-            weight: .7,
-        }
+        venue_reality: {
+            weight: .2,
+            values: {
+                VeryHigh: 1,
+                High: .9,
+                Medium: .7,
+                Low: .3
+            }
+        },
     },
-    getCategoriesPlaces: function (category_ids, location, radius_miles) {
+    getCategoriesPlaces: function (category_ids, location, radius) {
         return new Promise(async (resolve, reject) => {
-            if(!radius_miles){
-                radius_miles = module.exports.default.radius;
+            if(!radius){
+                radius = module.exports.default.radius;
             }
 
             if(!location || !(location.lat && location.lon)) {
@@ -45,30 +60,24 @@ module.exports = {
             }
 
             try {
+                //set fsq auth
                 fsq.auth(process.env.FSQ_KEY);
 
+                let radius_meters = getMetersFromMilesOrKm(radius, true);
+
                 let data = await fsq.placeSearch({
-                    // query: 'movie theater',
                     ll: `${location.lat},${location.lon}`,
                     categories: category_ids.join(','),
-                    radius: getMetersFromMiles(radius_miles, true),
+                    radius: radius_meters,
                     fields: `${module.exports.fields.core},${module.exports.fields.rich}`,
-                    limit: 50,
+                    limit: 20,
+                    // query: 'movie theater',
                     // min_price: 1,
                     // max_price: 3
                 });
 
-                // TODO: remove later; just checking to make sure we aren't missing a closed bucket key
-                for(let place of data.data.results) {
-                    const { closed_bucket} = place;
-    
-                    if(!(closed_bucket in module.exports.weights.open_probability.values)) {
-                        console.log("The following key was not found in dictionary", closed_bucket);
-                    }
-                }
-
                 try {
-                    places_sorted = module.exports.sortPlaces(data.data.results);
+                    let places_sorted = await module.exports.sortPlaces(data.data.results, radius_meters);
 
                     resolve(places_sorted);
                 } catch(e) {
@@ -81,23 +90,47 @@ module.exports = {
             }
         });
     },
-    sortPlaces: function(places) {
-        function normalizeDistance(distance) {
-            return 1 - Math.min(distance/10000, 1);
-        }
+    sortPlaces: function(places, radius_meters) {
+        return new Promise(async (resolve, reject) => {
+            if(!places || !places.length || typeof radius_meters === 'undefined') {
+                return reject("Invalid sort places params");
+            }
 
-        const weights = module.exports.weights;
+            let weights = module.exports.weights;
 
-        // TODO: implement other weights in score equation: popularity, rating, venue reality bucket
-        return places.sort((a, b) => {
+            try {
+                places.sort((a, b) => {
+                    let score = 0;
 
-            let normalize_open_a = (weights.open_probability.values[a.closed_bucket] / 10);
-            let normalize_open_b = (weights.open_probability.values[b.closed_bucket] / 10);
-            
-            const score_a = (normalizeDistance(a.distance) * weights.distance.weight) + (normalize_open_a * weights.open_probability.weight);
-            const score_b = (normalizeDistance(b.distance) * weights.distance.weight) + (normalize_open_b * weights.open_probability.weight);
+                    //shorter distance first
+                    let aDistance = normalizeDistance(a.distance, radius_meters);
+                    let bDistance = normalizeDistance(b.distance, radius_meters);
+                    score += (bDistance - aDistance) * weights.distance.weight;
 
-            return score_b - score_a;
+                    //higher popularity first
+                    score += (a.popularity - b.popularity) * weights.popularity.weight;
+
+                    //higher rating first
+                    score += (a.rating - b.rating) * weights.rating.weight;
+
+                    //in business
+                    let aOpen = weights.open_probability.values[a.closed_bucket];
+                    let bOpen = weights.open_probability.values[b.closed_bucket];
+                    score += (aOpen - bOpen) * weights.open_probability.weight;
+
+                    //reality
+                    let aReality = weights.venue_reality.values[a.venue_reality_bucket];
+                    let bReality = weights.venue_reality.values[b.venue_reality_bucket];
+                    score += (aReality - bReality) * weights.venue_reality.weight;
+
+                    return score;
+                });
+
+                resolve();
+            } catch(e) {
+                console.error(e);
+                reject(e);
+            }
         });
     },
 }
