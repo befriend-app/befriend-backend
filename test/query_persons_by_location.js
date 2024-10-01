@@ -44,10 +44,6 @@ const dbService = require("../services/db");
 
     let box = getCoordBoundBox(coords.lat, coords.lon, max_miles);
 
-    // Convert latitudes
-    box.minLat1000 = parseInt(Math.floor(box.minLat * 1000));
-    box.maxLat1000 = parseInt(Math.floor(box.maxLat * 1000));
-
     // Fill out the range of possibilities.
     let lats = range(box.minLat1000, box.maxLat1000);
 

@@ -333,11 +333,20 @@ function getCoordBoundBox (latitude, longitude, distance) {
         maxLon = lonLimits[1];
     }
 
+    let degMinLat = rad2deg(minLat);
+    let degMinLon= rad2deg(minLon);
+    let degMaxLat = rad2deg(maxLat);
+    let degMaxLon = rad2deg(maxLon);
+
     return {
-        minLat: rad2deg(minLat),
-        minLon: rad2deg(minLon),
-        maxLat: rad2deg(maxLat),
-        maxLon: rad2deg(maxLon)
+        minLat: degMinLat,
+        minLon: degMinLon,
+        maxLat: degMaxLat,
+        maxLon: degMaxLon,
+        minLat1000: parseInt(Math.floor(degMinLat * 1000)),
+        minLon1000: parseInt(Math.floor(degMinLon * 1000)),
+        maxLat1000: parseInt(Math.floor(degMaxLat * 1000)),
+        maxLon1000: parseInt(Math.floor(degMaxLon * 1000))
     };
 }
 
