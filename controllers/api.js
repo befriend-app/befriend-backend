@@ -1090,10 +1090,9 @@ module.exports = {
     },
     getActivityTypePlaces: function (req, res) {
         return new Promise(async (resolve, reject) => {
-            let activity_type, places_organized = {};
+            let activity_type, location;
 
             try {
-
                 let activity_type_token = req.params.activity_type_token;
 
                 if(!activity_type_token) {
@@ -1104,7 +1103,7 @@ module.exports = {
                     return resolve();
                 }
 
-                let location = req.body.location;
+                location = req.body.location;
 
                 if(!location || !(location.lat && location.lon)) {
                     res.json({
@@ -1153,11 +1152,10 @@ module.exports = {
                     });
                 } catch(e) {
                     console.error(e);
+
                     res.json({
                         message: "Error getting category(s) places"
                     }, 400);
-
-                    return resolve();
                 }
             } catch(e) {
                 console.error(e);
@@ -1168,7 +1166,6 @@ module.exports = {
             }
 
             return resolve();
-
         });
     }
 }

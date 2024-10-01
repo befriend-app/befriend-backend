@@ -1,7 +1,7 @@
 const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 const fsq = require('../.api/apis/fsq-developers');
-const {getMetersFromMilesOrKm, timeNow, getDistanceMeters, normalizeDistance} = require("./shared");
+const {getMetersFromMilesOrKm, timeNow, getDistanceMeters, normalizeDistance, getMilesOrKmFromMeters, useKM} = require("./shared");
 
 module.exports = {
     default: {
@@ -9,7 +9,7 @@ module.exports = {
     },
     fields: {
         core: `fsq_id,closed_bucket,distance,geocodes,location,name,timezone`, //categories,chains,link,related_places
-        rich: `price,description,hours,rating,popularity,venue_reality_bucket` //verified,hours_popular,stats,menu,date_closed,photos,tips,tastes,features,store_id,
+        rich: `price,description,hours,hours_popular,rating,popularity,venue_reality_bucket` //verified,hours_popular,stats,menu,date_closed,photos,tips,tastes,features,store_id,
     },
     weights: {
         distance: {
@@ -43,6 +43,8 @@ module.exports = {
     },
     getCategoriesPlaces: function (category_ids, location, radius) {
         return new Promise(async (resolve, reject) => {
+            let places_organized = [];
+
             if(!radius){
                 radius = module.exports.default.radius;
             }
@@ -70,16 +72,39 @@ module.exports = {
                     categories: category_ids.join(','),
                     radius: radius_meters,
                     fields: `${module.exports.fields.core},${module.exports.fields.rich}`,
-                    limit: 20,
+                    limit: 50,
                     // query: 'movie theater',
                     // min_price: 1,
                     // max_price: 3
                 });
 
-                try {
-                    let places_sorted = await module.exports.sortPlaces(data.data.results, radius_meters);
+                let places = data.data.results;
 
-                    resolve(places_sorted);
+                try {
+                    //sorts
+                    await module.exports.sortPlaces(places, radius_meters);
+
+                    for(let place of places){
+                        places_organized.push({
+                            name: place.name,
+                            geo: {
+                                lat: place.geocodes.main.latitude,
+                                lon: place.geocodes.main.longitude
+                            },
+                            distance: {
+                                meters: place.distance,
+                                miles_km: getMilesOrKmFromMeters(place.distance),
+                                use_km: useKM()
+                            },
+                            location: place.location,
+                            popularity: place.popularity,
+                            rating: place.rating,
+                            price: place.price,
+                            real: place.venue_reality_bucket
+                        });
+                    }
+
+                    resolve(places_organized);
                 } catch(e) {
                     console.error(e);
                     reject(e);
