@@ -125,6 +125,13 @@ module.exports = {
 
                 let places = data.data.results;
 
+                //update rating from scale of 10 to 5
+                for(let place of places) {
+                    if(place.rating) {
+                        place.rating = place.rating / 2;
+                    }
+                }
+
                 //save data to db/cache
 
                 //1. categories_geo
@@ -174,6 +181,7 @@ module.exports = {
                         }
                     } catch(e) {
                         console.error(e);
+                        continue;
                     }
 
                     //3. categories_geo_places
@@ -195,34 +203,24 @@ module.exports = {
                     } catch(e) {
                         console.error(e);
                     }
+
+                    //set distance of person's device from place
+                    place.distance = {
+                        use_km: useKM(),
+                        meters: getDistanceMeters(location, {
+                            lat: place.location_lat,
+                            lon: place.location_lon
+                        })
+                    };
+
+                    place.distance.miles_km = getMilesOrKmFromMeters(place.distance.meters);
+
+                    places_organized.push(place);
                 }
 
                 //organize return data
                 try {
-                    await module.exports.sortPlaces(places, search_radius_meters);
-
-                    for(let place of places){
-                        places_organized.push({
-                            name: place.name,
-                            geo: {
-                                lat: place.geocodes.main.latitude,
-                                lon: place.geocodes.main.longitude
-                            },
-                            distance: {
-                                meters: place.distance,
-                                miles_km: getMilesOrKmFromMeters(place.distance),
-                                use_km: useKM()
-                            },
-                            location: place.location,
-                            hours: place.hours,
-                            hours_popular: place.hours_popular,
-                            popularity: place.popularity,
-                            rating: place.rating,
-                            price: place.price,
-                            business_open: place.closed_bucket,
-                            real: place.venue_reality_bucket
-                        });
-                    }
+                    await module.exports.sortPlaces(places_organized, search_radius_meters);
 
                     resolve(places_organized);
                 } catch(e) {
@@ -237,7 +235,7 @@ module.exports = {
     },
     sortPlaces: function(places, radius_meters) {
         function normalizeRating(value) {
-            return value / 10;
+            return value / 5;
         }
 
         return new Promise(async (resolve, reject) => {
@@ -249,13 +247,13 @@ module.exports = {
 
             try {
                 places.sort((a, b) => {
-                    let score = 0;
-
                     //normalize all to range from 0-1
 
+                    let score = 0;
+
                     //shorter distance first
-                    let aDistance = normalizeDistance(a.distance, radius_meters);
-                    let bDistance = normalizeDistance(b.distance, radius_meters);
+                    let aDistance = normalizeDistance(a.distance.meters, radius_meters);
+                    let bDistance = normalizeDistance(b.distance.meters, radius_meters);
                     score += (bDistance - aDistance) * weights.distance.weight;
 
                     //higher popularity first
@@ -265,13 +263,13 @@ module.exports = {
                     score += (normalizeRating(a.rating) - normalizeRating(b.rating)) * weights.rating.weight;
 
                     //in business
-                    let aOpen = weights.business_open.values[a.closed_bucket];
-                    let bOpen = weights.business_open.values[b.closed_bucket];
+                    let aOpen = weights.business_open.values[a.business_open];
+                    let bOpen = weights.business_open.values[b.business_open];
                     score += (aOpen - bOpen) * weights.business_open.weight;
 
-                    //reality
-                    let aReality = weights.venue_reality.values[a.venue_reality_bucket];
-                    let bReality = weights.venue_reality.values[b.venue_reality_bucket];
+                    //real
+                    let aReality = weights.venue_reality.values[a.reality];
+                    let bReality = weights.venue_reality.values[b.reality];
                     score += (aReality - bReality) * weights.venue_reality.weight;
 
                     return score;
@@ -312,6 +310,15 @@ module.exports = {
                     .first();
 
                 if(qry) {
+                    //parse json
+                    if(qry.hours) {
+                        qry.hours = JSON.parse(qry.hours);
+                    }
+
+                    if(qry.hours_popular) {
+                        qry.hours_popular = JSON.parse(qry.hours_popular);
+                    }
+
                     await cacheService.setCache(cache_key, qry);
                 }
 
@@ -320,89 +327,6 @@ module.exports = {
                 console.error(e);
                 return reject();
             }
-        });
-    },
-    updatePlace: function (place_id, data) {
-        return new Promise(async (resolve, reject) => {
-            let cache_key = `${cacheService.keys.place_fsq}:${data.fsq_id}`;
-
-            let lat, lon, lat_1000, lon_1000, hours, hours_popular, address, address_2, locality, postcode, region;
-
-            try {
-                lat = data.geocodes.main.latitude;
-                lon = data.geocodes.main.longitude;
-                lat_1000 = parseInt(Math.floor(data.geocodes.main.latitude * 1000));
-                lon_1000 = parseInt(Math.floor(data.geocodes.main.longitude * 1000));
-            } catch(e) {
-                console.error(e);
-            }
-
-            try {
-                hours = JSON.stringify(data.hours.regular);
-            } catch(e) {
-                console.error(e);
-            }
-
-            try {
-                hours_popular = JSON.stringify(data.hours_popular);
-            } catch(e) {
-                console.error(e);
-            }
-
-            try {
-                 address = data.location.address;
-                 address_2 = data.location.address_extended;
-                 locality = data.location.locality;
-                 postcode = data.location.postcode;
-                 region = data.location.region;
-            } catch(e) {
-                console.error(e);
-            }
-
-            try {
-                let conn = await dbService.conn();
-
-                let updateData = {
-                    name: data.name,
-                    business_open: data.closed_bucket,
-                    location_lat: lat,
-                    location_lon: lon,
-                    location_lat_1000: lat_1000,
-                    location_lon_1000: lon_1000,
-                    hours: hours,
-                    hours_popular: hours_popular,
-                    location_address: address,
-                    location_address_2: address_2,
-                    location_locality: locality,
-                    location_postcode: postcode,
-                    location_region: region,
-                    popularity: data.popularity,
-                    price: data.price,
-                    rating: data.rating,
-                    reality: data.venue_reality_bucket,
-                    timezone: data.timezone,
-                    updated: timeNow()
-                };
-
-                await conn('places')
-                    .where('id', place_id)
-                    .update(updateData);
-
-                //prev data
-                let cache_data = await cacheService.get(cache_key, true);
-
-                //update with new data
-                for(let k in updateData) {
-                    cache_data[k] = updateData[k];
-                }
-
-                await cacheService.setCache(cache_key, cache_data);
-            } catch(e) {
-                console.error(e);
-                return reject(e);
-            }
-
-            resolve();
         });
     },
     addPlace: function (data) {
@@ -420,6 +344,7 @@ module.exports = {
                 console.error(e);
             }
 
+            //stringify for db
             try {
                 hours = JSON.stringify(data.hours.regular);
             } catch(e) {
@@ -474,6 +399,15 @@ module.exports = {
 
                 insert_data.id = id[0];
 
+                //parse back
+                if(hours) {
+                    insert_data.hours = JSON.parse(hours);
+                }
+
+                if(hours_popular) {
+                    insert_data.hours_popular = JSON.parse(hours_popular);
+                }
+
                 await cacheService.setCache(cache_key, insert_data);
 
                 return resolve(insert_data);
@@ -482,5 +416,97 @@ module.exports = {
                 return reject(e);
             }
         });
-    }
+    },
+    updatePlace: function (place_id, data) {
+        return new Promise(async (resolve, reject) => {
+            let cache_key = `${cacheService.keys.place_fsq}:${data.fsq_id}`;
+
+            let lat, lon, lat_1000, lon_1000, hours, hours_popular, address, address_2, locality, postcode, region;
+
+            try {
+                lat = data.geocodes.main.latitude;
+                lon = data.geocodes.main.longitude;
+                lat_1000 = parseInt(Math.floor(data.geocodes.main.latitude * 1000));
+                lon_1000 = parseInt(Math.floor(data.geocodes.main.longitude * 1000));
+            } catch(e) {
+                console.error(e);
+            }
+
+            try {
+                hours = JSON.stringify(data.hours.regular);
+            } catch(e) {
+                console.error(e);
+            }
+
+            try {
+                hours_popular = JSON.stringify(data.hours_popular);
+            } catch(e) {
+                console.error(e);
+            }
+
+            try {
+                address = data.location.address;
+                address_2 = data.location.address_extended;
+                locality = data.location.locality;
+                postcode = data.location.postcode;
+                region = data.location.region;
+            } catch(e) {
+                console.error(e);
+            }
+
+            try {
+                let conn = await dbService.conn();
+
+                let updateData = {
+                    name: data.name,
+                    business_open: data.closed_bucket,
+                    location_lat: lat,
+                    location_lon: lon,
+                    location_lat_1000: lat_1000,
+                    location_lon_1000: lon_1000,
+                    hours: hours,
+                    hours_popular: hours_popular,
+                    location_address: address,
+                    location_address_2: address_2,
+                    location_locality: locality,
+                    location_postcode: postcode,
+                    location_region: region,
+                    popularity: data.popularity,
+                    price: data.price,
+                    rating: data.rating,
+                    reality: data.venue_reality_bucket,
+                    timezone: data.timezone,
+                    updated: timeNow()
+                };
+
+                await conn('places')
+                    .where('id', place_id)
+                    .update(updateData);
+
+                //parse back
+                if(hours) {
+                    updateData.hours = JSON.parse(hours);
+                }
+
+                if(hours_popular) {
+                    updateData.hours_popular = JSON.parse(hours_popular);
+                }
+
+                //prev data
+                let cache_data = await cacheService.get(cache_key, true);
+
+                //update with new data
+                for(let k in updateData) {
+                    cache_data[k] = updateData[k];
+                }
+
+                await cacheService.setCache(cache_key, cache_data);
+            } catch(e) {
+                console.error(e);
+                return reject(e);
+            }
+
+            resolve();
+        });
+    },
 }
