@@ -2,7 +2,7 @@ const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 const fsq = require('../.api/apis/fsq-developers');
 const {getMetersFromMilesOrKm, timeNow, getDistanceMeters, normalizeDistance, getMilesOrKmFromMeters, useKM, cloneObj,
-    getCoordBoundBox
+    getCoordBoundBox, range
 } = require("./shared");
 
 const dayjs = require('dayjs');
@@ -19,7 +19,7 @@ module.exports = {
     },
     weights: {
         distance: {
-            weight: .4,
+            weight: .2,
         },
         popularity: {
             weight: .15,
@@ -27,7 +27,7 @@ module.exports = {
         rating: {
             weight: .15,
         },
-        open_probability: {
+        business_open: {
             weight: .2,
             values: {
                 VeryLikelyOpen: 1,
@@ -38,12 +38,12 @@ module.exports = {
             }
         },
         venue_reality: {
-            weight: .2,
+            weight: .3,
             values: {
                 VeryHigh: 1,
-                High: .9,
-                Medium: .7,
-                Low: .3
+                High: .8,
+                Medium: .5,
+                Low: .2
             }
         },
     },
@@ -73,15 +73,36 @@ module.exports = {
             } catch(e) {
                 console.error(e);
             }
-
+            let categories_geo = [];
             //query db/cache for existing data
             try {
+                let testBox = getCoordBoundBox(location.lat, location.lon, .71);
+                location.lat = testBox.maxLat;
+                location.lon = testBox.maxLon;
+
                 //categories key is a string, sorted from lowest category_id to highest
                 categories_key = cloneObj(category_ids).sort().join(',');
                 search_radius_meters = getMetersFromMilesOrKm(radius, true);
                 searchBox = getCoordBoundBox(location.lat, location.lon, radius);
 
                 //todo
+                let lats = range(searchBox.minLat1000, searchBox.maxLat1000);
+                let lons = range(searchBox.minLon1000, searchBox.maxLon1000);
+
+                try {
+                    // categories_geo = await conn('categories_geo')
+                    //     .whereIn('location_lat_1000', lats)
+                    //     .whereIn('location_lon_1000', lons)
+                    //     // .whereBetween('location_lat', [box.minLat, box.maxLon])
+                    //     // .whereBetween('location_lon', [searchBox.minLon, searchBox.maxLon])
+                    //     .whereRaw('(ST_Distance_Sphere(point(location_lon, location_lat), point(?,?))) <= ?', [
+                    //         location.lon,
+                    //         location.lat,
+                    //         getMetersFromMilesOrKm(radius)
+                    //     ]);
+                } catch(e) {
+                    console.log(e)
+                }
             } catch(e) {
                 console.error(e);
             }
@@ -193,9 +214,12 @@ module.exports = {
                                 use_km: useKM()
                             },
                             location: place.location,
+                            hours: place.hours,
+                            hours_popular: place.hours_popular,
                             popularity: place.popularity,
                             rating: place.rating,
                             price: place.price,
+                            business_open: place.closed_bucket,
                             real: place.venue_reality_bucket
                         });
                     }
@@ -212,6 +236,10 @@ module.exports = {
         });
     },
     sortPlaces: function(places, radius_meters) {
+        function normalizeRating(value) {
+            return value / 10;
+        }
+
         return new Promise(async (resolve, reject) => {
             if(!places || !places.length || typeof radius_meters === 'undefined') {
                 return reject("Invalid sort places params");
@@ -223,6 +251,8 @@ module.exports = {
                 places.sort((a, b) => {
                     let score = 0;
 
+                    //normalize all to range from 0-1
+
                     //shorter distance first
                     let aDistance = normalizeDistance(a.distance, radius_meters);
                     let bDistance = normalizeDistance(b.distance, radius_meters);
@@ -232,12 +262,12 @@ module.exports = {
                     score += (a.popularity - b.popularity) * weights.popularity.weight;
 
                     //higher rating first
-                    score += (a.rating - b.rating) * weights.rating.weight;
+                    score += (normalizeRating(a.rating) - normalizeRating(b.rating)) * weights.rating.weight;
 
                     //in business
-                    let aOpen = weights.open_probability.values[a.closed_bucket];
-                    let bOpen = weights.open_probability.values[b.closed_bucket];
-                    score += (aOpen - bOpen) * weights.open_probability.weight;
+                    let aOpen = weights.business_open.values[a.closed_bucket];
+                    let bOpen = weights.business_open.values[b.closed_bucket];
+                    score += (aOpen - bOpen) * weights.business_open.weight;
 
                     //reality
                     let aReality = weights.venue_reality.values[a.venue_reality_bucket];
@@ -334,7 +364,7 @@ module.exports = {
 
                 let updateData = {
                     name: data.name,
-                    open_probability: data.closed_bucket,
+                    business_open: data.closed_bucket,
                     location_lat: lat,
                     location_lon: lon,
                     location_lat_1000: lat_1000,
@@ -418,7 +448,7 @@ module.exports = {
                 let insert_data = {
                     fsq_place_id: data.fsq_id,
                     name: data.name,
-                    open_probability: data.closed_bucket,
+                    business_open: data.closed_bucket,
                     location_lat: lat,
                     location_lon: lon,
                     location_lat_1000: lat_1000,

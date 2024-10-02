@@ -7,22 +7,22 @@ exports.up = function(knex) {
         table.bigIncrements('id').unsigned().primary();
 
         table.string('categories_key').notNullable().comment("One or more venue_category_id separated by commas, ordered from lowest to highest");
-
-        table.float('location_lat', 14, 10).notNullable();
-        table.mediumint('location_lat_1000').notNullable();
-        table.float('location_lon', 14, 10).notNullable();
-        table.mediumint('location_lon_1000').notNullable();
-
         table.integer('search_radius_meters').notNullable();
 
+        table.float('location_lat', 14, 10).notNullable();
         table.float('location_lat_min', 14, 10).notNullable();
-        table.mediumint('location_lat_min_1000').notNullable();
-        table.float('location_lon_min', 14, 10).notNullable();
-        table.mediumint('location_lon_min_1000').notNullable();
-
         table.float('location_lat_max', 14, 10).notNullable();
-        table.mediumint('location_lat_max_1000').notNullable();
+
+        table.float('location_lon', 14, 10).notNullable();
+        table.float('location_lon_min', 14, 10).notNullable();
         table.float('location_lon_max', 14, 10).notNullable();
+
+        table.mediumint('location_lat_1000').notNullable();
+        table.mediumint('location_lat_min_1000').notNullable();
+        table.mediumint('location_lat_max_1000').notNullable();
+
+        table.mediumint('location_lon_1000').notNullable();
+        table.mediumint('location_lon_min_1000').notNullable();
         table.mediumint('location_lon_max_1000').notNullable();
 
         table.bigInteger('expires').notNullable();
@@ -46,7 +46,7 @@ exports.up = function(knex) {
 
         table.string('name').notNullable();
 
-        table.string('open_probability').nullable();
+        table.string('business_open').nullable();
 
         table.float('location_lat', 14, 10).notNullable();
         table.mediumint('location_lat_1000').notNullable();
