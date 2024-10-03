@@ -2,7 +2,7 @@ const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 const fsq = require('../.api/apis/fsq-developers');
 const {getMetersFromMilesOrKm, timeNow, getDistanceMeters, normalizeDistance, getMilesOrKmFromMeters, useKM, cloneObj,
-    getCoordBoundBox, range
+    getCoordBoundBox, range, getTimeZoneFromCoords
 } = require("./shared");
 
 const dayjs = require('dayjs');
@@ -370,6 +370,16 @@ module.exports = {
             try {
                 let conn = await dbService.conn();
 
+                let timezone = data.timezone;
+
+                if(!timezone) {
+                    timezone = getTimeZoneFromCoords(lat, lon);
+                }
+
+                if(!timezone) {
+                    return reject("No time zone");
+                }
+
                 let insert_data = {
                     fsq_place_id: data.fsq_id,
                     name: data.name,
@@ -389,7 +399,7 @@ module.exports = {
                     price: data.price,
                     rating: data.rating,
                     reality: data.venue_reality_bucket,
-                    timezone: data.timezone,
+                    timezone: timezone,
                     created: timeNow(),
                     updated: timeNow()
                 };
@@ -454,6 +464,16 @@ module.exports = {
                 console.error(e);
             }
 
+            let timezone = data.timezone;
+
+            if(!timezone) {
+                timezone = getTimeZoneFromCoords(lat, lon);
+
+                if(!timezone) {
+                    return reject("No time zone");
+                }
+            }
+
             try {
                 let conn = await dbService.conn();
 
@@ -475,7 +495,7 @@ module.exports = {
                     price: data.price,
                     rating: data.rating,
                     reality: data.venue_reality_bucket,
-                    timezone: data.timezone,
+                    timezone: timezone,
                     updated: timeNow()
                 };
 

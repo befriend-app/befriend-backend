@@ -556,6 +556,16 @@ function getSessionKey(session) {
     return `session:api:${session}`;
 }
 
+function getTimeZoneFromCoords(lat, lon) {
+    const { find } = require('geo-tz');
+
+    let tz = find(lat, lon);
+
+    if(tz && tz.length) {
+        return tz[0];
+    }
+}
+
 function getURL(raw_domain, endpoint) {
     if(!raw_domain) {
         throw new Error("Domain required");
@@ -970,6 +980,7 @@ module.exports = {
     getRepoRoot: getRepoRoot,
     getStatesList: getStatesList,
     getSessionKey: getSessionKey,
+    getTimeZoneFromCoords: getTimeZoneFromCoords,
     getURL: getURL,
     hasPort: hasPort,
     isLocalApp: isLocalApp,
