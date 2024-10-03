@@ -988,6 +988,7 @@ module.exports = {
             function createActivityObject(activity) {
                 let data = {
                     name: activity.activity_name,
+                    title: activity.activity_title,
                     token: activity.activity_type_token,
                     image: activity.activity_image,
                     emoji: activity.activity_emoji,

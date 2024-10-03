@@ -91,6 +91,7 @@ const {timeNow, loadScriptEnv, generateToken, cloneObj} = require("../services/s
                     activity_type_token: generateToken(24),
                     activity_name: activity.name,
                     activity_name_full: activity_full_name,
+                    activity_title: activity.title,
                     activity_image: activity.image || null,
                     activity_emoji: activity.emoji || null,
                     sort_position: int,
