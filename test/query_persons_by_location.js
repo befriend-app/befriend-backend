@@ -1,4 +1,4 @@
-const {loadScriptEnv, getCoordBoundBox, range, timeNow, getMetersFromMilesOrKm} = require("../services/shared");
+const {loadScriptEnv, getCoordsBoundBox, range, timeNow, getMetersFromMilesOrKm} = require("../services/shared");
 const axios = require("axios");
 loadScriptEnv();
 
@@ -42,7 +42,7 @@ const dbService = require("../services/db");
         lon: parseFloat(person.location.coordinates.longitude)
     }
 
-    let box = getCoordBoundBox(coords.lat, coords.lon, max_miles);
+    let box = getCoordsBoundBox(coords.lat, coords.lon, max_miles);
 
     // Fill out the range of possibilities.
     let lats = range(box.minLat1000, box.maxLat1000);

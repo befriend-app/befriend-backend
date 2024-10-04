@@ -2,7 +2,7 @@ const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 const fsq = require('../.api/apis/fsq-developers');
 const {getMetersFromMilesOrKm, timeNow, getDistanceMeters, normalizeDistance, getMilesOrKmFromMeters, useKM, cloneObj,
-    getCoordBoundBox, range, getTimeZoneFromCoords
+    getCoordsBoundBox, range, getTimeZoneFromCoords
 } = require("./shared");
 
 const dayjs = require('dayjs');
@@ -77,14 +77,14 @@ module.exports = {
 
             //query db/cache for existing data
             try {
-                let testBox = getCoordBoundBox(location.lat, location.lon, .71);
+                let testBox = getCoordsBoundBox(location.lat, location.lon, .71);
                 location.lat = testBox.maxLat;
                 location.lon = testBox.maxLon;
 
                 //categories key is a string, sorted from lowest category_id to highest
                 categories_key = cloneObj(category_ids).sort().join(',');
                 search_radius_meters = getMetersFromMilesOrKm(radius, true);
-                searchBox = getCoordBoundBox(location.lat, location.lon, radius);
+                searchBox = getCoordsBoundBox(location.lat, location.lon, radius);
 
                 //todo
                 let lats = range(searchBox.minLat1000, searchBox.maxLat1000);
@@ -167,7 +167,6 @@ module.exports = {
 
                 for(let data of places) {
                     //2. places
-
                     let place;
 
                     try {
@@ -175,10 +174,10 @@ module.exports = {
 
                         if(place) {
                             //update
-                            await module.exports.updatePlace(place.id, data);
+                            await module.exports.addOrUpdatePlace(data, place.id);
                         } else {
                             //insert
-                            place = await module.exports.addPlace(data);
+                            place = await module.exports.addOrUpdatePlace(data);
                         }
                     } catch(e) {
                         console.error(e);
@@ -338,7 +337,7 @@ module.exports = {
             }
         });
     },
-    addPlace: function (data) {
+    addOrUpdatePlace: function (data, place_id = null) {
         return new Promise(async (resolve, reject) => {
             let cache_key = `${cacheService.keys.place_fsq}:${data.fsq_id}`;
 
@@ -409,8 +408,7 @@ module.exports = {
                     return reject("No time zone");
                 }
 
-                let insert_data = {
-                    fsq_place_id: data.fsq_id,
+                let db_data = {
                     name: data.name,
                     business_open: data.closed_bucket,
                     location_lat: lat,
@@ -424,159 +422,58 @@ module.exports = {
                     location_locality: locality,
                     location_postcode: postcode,
                     location_region: region,
+                    photos: photo_urls,
                     popularity: data.popularity,
                     price: data.price,
                     rating: data.rating,
-                    photos: photo_urls,
                     reality: data.venue_reality_bucket,
                     timezone: timezone,
-                    created: timeNow(),
                     updated: timeNow()
                 };
 
-                let id = await conn('places')
-                    .insert(insert_data);
+                if(place_id) {
+                    await conn('places')
+                        .where('id', place_id)
+                        .update(db_data);
 
-                insert_data.id = id[0];
+                    //prev data
+                    let cache_data = await cacheService.get(cache_key, true);
 
-                //parse back
-                if(hours) {
-                    insert_data.hours = JSON.parse(hours);
-                }
+                    //include all properties for re-saving to cache
+                    for(let k in cache_data) {
+                        //only add properties not set above
+                        if(!(k in db_data)) {
+                            db_data[k] = cache_data[k];
+                        }
+                    }
 
-                if(hours_popular) {
-                    insert_data.hours_popular = JSON.parse(hours_popular);
-                }
-
-                await cacheService.setCache(cache_key, insert_data);
-
-                return resolve(insert_data);
-            } catch(e) {
-                console.error(e);
-                return reject(e);
-            }
-        });
-    },
-    updatePlace: function (place_id, data) {
-        return new Promise(async (resolve, reject) => {
-            let cache_key = `${cacheService.keys.place_fsq}:${data.fsq_id}`;
-
-            let lat, lon, lat_1000, lon_1000, hours, hours_popular, address, address_2, locality, postcode, region, photo_urls = [];
-
-            try {
-                lat = data.geocodes.main.latitude;
-                lon = data.geocodes.main.longitude;
-                lat_1000 = parseInt(Math.floor(data.geocodes.main.latitude * 1000));
-                lon_1000 = parseInt(Math.floor(data.geocodes.main.longitude * 1000));
-            } catch(e) {
-                console.error(e);
-            }
-
-            try {
-                for(let photo of data.photos) {
-                    let photo_url = {
-                        prefix: photo.prefix,
-                        suffix:photo.suffix
-                    };
-
-                    photo_urls.push(photo_url);
-                }
-
-                if(photo_urls.length) {
-                    photo_urls = JSON.stringify(photo_urls);
+                    db_data.id = place_id;
                 } else {
-                    photo_urls = null;
+                    db_data.fsq_place_id = data.fsq_id;
+                    db_data.created = timeNow();
+
+                    let id = await conn('places')
+                        .insert(db_data);
+
+                    db_data.id = id[0];
                 }
-            } catch(e) {
-                console.error(e);
-            }
-
-            try {
-                hours = JSON.stringify(data.hours.regular);
-            } catch(e) {
-                console.error(e);
-            }
-
-            try {
-                hours_popular = JSON.stringify(data.hours_popular);
-            } catch(e) {
-                console.error(e);
-            }
-
-            try {
-                address = data.location.address;
-                address_2 = data.location.address_extended;
-                locality = data.location.locality;
-                postcode = data.location.postcode;
-                region = data.location.region;
-            } catch(e) {
-                console.error(e);
-            }
-
-            let timezone = data.timezone;
-
-            if(!timezone) {
-                timezone = getTimeZoneFromCoords(lat, lon);
-
-                if(!timezone) {
-                    return reject("No time zone");
-                }
-            }
-
-            try {
-                let conn = await dbService.conn();
-
-                let updateData = {
-                    name: data.name,
-                    business_open: data.closed_bucket,
-                    location_lat: lat,
-                    location_lon: lon,
-                    location_lat_1000: lat_1000,
-                    location_lon_1000: lon_1000,
-                    hours: hours,
-                    hours_popular: hours_popular,
-                    location_address: address,
-                    location_address_2: address_2,
-                    location_locality: locality,
-                    location_postcode: postcode,
-                    location_region: region,
-                    popularity: data.popularity,
-                    price: data.price,
-                    rating: data.rating,
-                    photos: photo_urls,
-                    reality: data.venue_reality_bucket,
-                    timezone: timezone,
-                    updated: timeNow()
-                };
-
-                await conn('places')
-                    .where('id', place_id)
-                    .update(updateData);
 
                 //parse back
                 if(hours) {
-                    updateData.hours = JSON.parse(hours);
+                    db_data.hours = JSON.parse(hours);
                 }
 
                 if(hours_popular) {
-                    updateData.hours_popular = JSON.parse(hours_popular);
+                    db_data.hours_popular = JSON.parse(hours_popular);
                 }
 
-                //prev data
-                let cache_data = await cacheService.get(cache_key, true);
+                await cacheService.setCache(cache_key, db_data);
 
-                //update with new data
-                for(let k in updateData) {
-                    cache_data[k] = updateData[k];
-                }
-
-                await cacheService.setCache(cache_key, cache_data);
+                return resolve(db_data);
             } catch(e) {
                 console.error(e);
                 return reject(e);
             }
-
-            resolve();
         });
     },
 }

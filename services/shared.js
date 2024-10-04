@@ -292,7 +292,7 @@ function rad2deg(rad) {
     return (rad * 180) / Math.PI;
 }
 
-function getCoordBoundBox (latitude, longitude, distance_miles_or_km) {
+function getCoordsBoundBox (latitude, longitude, distance_miles_or_km) {
     const latLimits = [deg2rad(-90), deg2rad(90)];
     const lonLimits = [deg2rad(-180), deg2rad(180)];
 
@@ -962,7 +962,7 @@ module.exports = {
     generateToken: generateToken,
     getCityState: getCityState,
     getCleanDomain: getCleanDomain,
-    getCoordBoundBox: getCoordBoundBox,
+    getCoordsBoundBox: getCoordsBoundBox,
     getDateDiff: getDateDiff,
     getDateStr: getDateStr,
     getDateTimeStr: getDateTimeStr,
