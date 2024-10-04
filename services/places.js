@@ -6,7 +6,6 @@ const {getMetersFromMilesOrKm, timeNow, getDistanceMeters, normalizeDistance, ge
 } = require("./shared");
 
 const dayjs = require('dayjs');
-const {cache_key} = require("./genders");
 
 module.exports = {
     refresh_data: 30, //days
@@ -15,7 +14,7 @@ module.exports = {
     },
     fields: {
         core: `fsq_id,closed_bucket,distance,geocodes,location,name,timezone`, //categories,chains,link,related_places
-        rich: `price,description,hours,hours_popular,rating,popularity,venue_reality_bucket` //verified,hours_popular,stats,menu,date_closed,photos,tips,tastes,features,store_id,
+        rich: `price,description,hours,hours_popular,rating,popularity,venue_reality_bucket,photos` //verified,stats,menu,date_closed,photos,tips,tastes,features,store_id,
     },
     weights: {
         distance: {
@@ -73,7 +72,9 @@ module.exports = {
             } catch(e) {
                 console.error(e);
             }
+
             let categories_geo = [];
+
             //query db/cache for existing data
             try {
                 let testBox = getCoordBoundBox(location.lat, location.lon, .71);
@@ -239,7 +240,11 @@ module.exports = {
         }
 
         return new Promise(async (resolve, reject) => {
-            if(!places || !places.length || typeof radius_meters === 'undefined') {
+            if(places && !places.length) {
+                return resolve(places);
+            }
+
+            if(!places || typeof radius_meters === 'undefined') {
                 return reject("Invalid sort places params");
             }
 
@@ -319,6 +324,10 @@ module.exports = {
                         qry.hours_popular = JSON.parse(qry.hours_popular);
                     }
 
+                    if(qry.photos) {
+                        qry.photos = JSON.parse(qry.photos);
+                    }
+
                     await cacheService.setCache(cache_key, qry);
                 }
 
@@ -333,13 +342,33 @@ module.exports = {
         return new Promise(async (resolve, reject) => {
             let cache_key = `${cacheService.keys.place_fsq}:${data.fsq_id}`;
 
-            let lat, lon, lat_1000, lon_1000, hours, hours_popular, address, address_2, locality, postcode, region;
+            let lat, lon, lat_1000, lon_1000, hours, hours_popular, address, address_2, locality, postcode, region, photo_urls = [];
 
             try {
                 lat = data.geocodes.main.latitude;
                 lon = data.geocodes.main.longitude;
                 lat_1000 = parseInt(Math.floor(data.geocodes.main.latitude * 1000));
                 lon_1000 = parseInt(Math.floor(data.geocodes.main.longitude * 1000));
+            } catch(e) {
+                console.error(e);
+            }
+
+            try {
+                for(let photo of data.photos) {
+                    let photo_url = {
+                        prefix: photo.prefix,
+                        suffix:photo.suffix
+                    };
+
+                    photo_urls.push(photo_url);
+                }
+
+                if(photo_urls.length) {
+                    photo_urls = JSON.stringify(photo_urls);
+                } else {
+                    photo_urls = null;
+                }
+
             } catch(e) {
                 console.error(e);
             }
@@ -398,6 +427,7 @@ module.exports = {
                     popularity: data.popularity,
                     price: data.price,
                     rating: data.rating,
+                    photos: photo_urls,
                     reality: data.venue_reality_bucket,
                     timezone: timezone,
                     created: timeNow(),
@@ -431,13 +461,32 @@ module.exports = {
         return new Promise(async (resolve, reject) => {
             let cache_key = `${cacheService.keys.place_fsq}:${data.fsq_id}`;
 
-            let lat, lon, lat_1000, lon_1000, hours, hours_popular, address, address_2, locality, postcode, region;
+            let lat, lon, lat_1000, lon_1000, hours, hours_popular, address, address_2, locality, postcode, region, photo_urls = [];
 
             try {
                 lat = data.geocodes.main.latitude;
                 lon = data.geocodes.main.longitude;
                 lat_1000 = parseInt(Math.floor(data.geocodes.main.latitude * 1000));
                 lon_1000 = parseInt(Math.floor(data.geocodes.main.longitude * 1000));
+            } catch(e) {
+                console.error(e);
+            }
+
+            try {
+                for(let photo of data.photos) {
+                    let photo_url = {
+                        prefix: photo.prefix,
+                        suffix:photo.suffix
+                    };
+
+                    photo_urls.push(photo_url);
+                }
+
+                if(photo_urls.length) {
+                    photo_urls = JSON.stringify(photo_urls);
+                } else {
+                    photo_urls = null;
+                }
             } catch(e) {
                 console.error(e);
             }
@@ -494,6 +543,7 @@ module.exports = {
                     popularity: data.popularity,
                     price: data.price,
                     rating: data.rating,
+                    photos: photo_urls,
                     reality: data.venue_reality_bucket,
                     timezone: timezone,
                     updated: timeNow()
