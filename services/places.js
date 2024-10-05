@@ -10,7 +10,7 @@ const dayjs = require('dayjs');
 module.exports = {
     refresh_data: 30, //days
     default: {
-        radius: 1 //miles or km
+        radius: 2 //miles or km
     },
     fields: {
         core: `fsq_id,closed_bucket,distance,geocodes,location,name,timezone`, //categories,chains,link,related_places
