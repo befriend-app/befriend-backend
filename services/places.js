@@ -78,8 +78,8 @@ module.exports = {
             //query db/cache for existing data
             try {
                 let testBox = getCoordsBoundBox(location.lat, location.lon, .71);
-                location.lat = testBox.maxLat;
-                location.lon = testBox.maxLon;
+                // location.lat = testBox.maxLat;
+                // location.lon = testBox.maxLon;
 
                 //categories key is a string, sorted from lowest category_id to highest
                 categories_key = cloneObj(category_ids).sort().join(',');
