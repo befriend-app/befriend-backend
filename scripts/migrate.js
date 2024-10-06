@@ -1,33 +1,27 @@
-const Knex = require('knex');
-const {loadScriptEnv} = require("../services/shared");
+const Knex = require("knex");
+const { loadScriptEnv } = require("../services/shared");
 const color = require("colorette");
 
 loadScriptEnv();
-
 
 function main() {
     return new Promise(async (resolve, reject) => {
         console.log("Migrate DB");
 
-        let required = [
-            'DB_NAME',
-            'DB_HOST',
-            'DB_USER',
-            'DB_PASSWORD',
-        ];
+        let required = ["DB_NAME", "DB_HOST", "DB_USER", "DB_PASSWORD"];
 
         let missing = [];
 
-        for(let key of required) {
-            if(!(process.env[key])) {
+        for (let key of required) {
+            if (!process.env[key]) {
                 missing.push(key);
             }
         }
 
-        if(missing.length) {
+        if (missing.length) {
             console.error({
-                message: '.env keys needed',
-                keys: missing
+                message: ".env keys needed",
+                keys: missing,
             });
 
             return reject();
@@ -39,48 +33,49 @@ function main() {
             password: process.env.DB_PASSWORD,
         };
 
-        if(process.env.DB_PORT) {
+        if (process.env.DB_PORT) {
             connection.port = parseInt(process.env.DB_PORT);
         }
 
         let knex = Knex({
             client: process.env.DB_CLIENT,
-            connection: connection
+            connection: connection,
         });
 
-        await knex.raw('CREATE DATABASE IF NOT EXISTS ??', process.env.DB_NAME);
+        await knex.raw("CREATE DATABASE IF NOT EXISTS ??", process.env.DB_NAME);
 
         connection.database = process.env.DB_NAME;
 
         knex = Knex({
             client: process.env.DB_CLIENT,
-            connection: connection
+            connection: connection,
         });
 
         let output = await knex.migrate.latest();
 
-        if(!output[1].length) {
-            console.log(color.cyan('Already up to date'));
+        if (!output[1].length) {
+            console.log(color.cyan("Already up to date"));
         } else {
-            console.log(color.green(`Batch ${output[0]} run: ${output[1].length} migration${output[1].length > 1 ? 's' : ''}`));
+            console.log(
+                color.green(`Batch ${output[0]} run: ${output[1].length} migration${output[1].length > 1 ? "s" : ""}`),
+            );
         }
 
         resolve();
     });
 }
 
-
 module.exports = {
-    main: main
-}
+    main: main,
+};
 
 //script executed directly
-if(require.main === module) {
-    (async function() {
+if (require.main === module) {
+    (async function () {
         try {
             await main();
             process.exit();
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
     })();

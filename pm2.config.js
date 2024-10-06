@@ -1,14 +1,14 @@
 let home_dir = __dirname;
 
 module.exports = {
-    apps : [
+    apps: [
         {
-            name: 'befriend_backend',
-            script: 'server.js',
-            instances: '2',
-            exec_mode: 'cluster',
+            name: "befriend_backend",
+            script: "server.js",
+            instances: "2",
+            exec_mode: "cluster",
             cwd: home_dir,
-            node_args: '-r dotenv/config',
-        }
-    ]
-}
+            node_args: "-r dotenv/config",
+        },
+    ],
+};

@@ -1,7 +1,6 @@
-let cacheService = require('../services/cache');
+let cacheService = require("../services/cache");
 
-const {generateToken, getSessionKey, timeNow} = require('../services/shared');
-
+const { generateToken, getSessionKey, timeNow } = require("../services/shared");
 
 function getSessionData(key) {
     return new Promise(async (resolve, reject) => {
@@ -9,7 +8,7 @@ function getSessionData(key) {
             let data = await cacheService.get(getSessionKey(key), true);
 
             resolve(data);
-        } catch(e) {
+        } catch (e) {
             return reject(e);
         }
     });
@@ -17,36 +16,36 @@ function getSessionData(key) {
 
 function isSessionExpired(session_check) {
     return new Promise(async (resolve, reject) => {
-        if(!session_check || !session_check.expires) {
+        if (!session_check || !session_check.expires) {
             return resolve(true);
         }
 
         return resolve(session_check.expires < timeNow());
     });
-
 }
 
 async function handleSession(req, res, next) {
     return new Promise(async (resolve, reject) => {
-        res.header('Access-Control-Allow-Origin', '*');
-        res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,OPTIONS,POST,PUT');
-        res.setHeader('Access-Control-Allow-Headers', 'Access-Control-Allow-Headers, Origin,Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers');
-        
+        res.header("Access-Control-Allow-Origin", "*");
+        res.setHeader("Access-Control-Allow-Methods", "GET,HEAD,OPTIONS,POST,PUT");
+        res.setHeader(
+            "Access-Control-Allow-Headers",
+            "Access-Control-Allow-Headers, Origin,Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers",
+        );
 
         function createSession() {
             return new Promise(async (resolve, reject) => {
-
                 let session_str = generateToken(20);
 
                 //check for existence in rare  cases
                 try {
                     let check = await cacheService.get(getSessionKey(session_str));
 
-                    if(check) {
+                    if (check) {
                         await createSession();
                         return resolve();
                     }
-                } catch(e) {
+                } catch (e) {
                     console.error(e);
                 }
 
@@ -56,24 +55,24 @@ async function handleSession(req, res, next) {
 
                 try {
                     await setCookie(res, session_str, session_lifetime * 1000);
-                } catch(e) {
+                } catch (e) {
                     console.error(e);
                 }
 
                 let data = {
                     key: session_str,
-                    expires: expires
+                    expires: expires,
                 };
 
                 try {
                     await cacheService.setCache(getSessionKey(session_str), data, session_lifetime);
-                } catch(e) {
+                } catch (e) {
                     return reject(e);
                 }
 
                 try {
                     await setSessionData(data);
-                } catch(e) {
+                } catch (e) {
                     return reject(e);
                 }
 
@@ -83,7 +82,7 @@ async function handleSession(req, res, next) {
 
         function setSessionData(data) {
             return new Promise(async (resolve, reject) => {
-                if(!req.app.locals.SESSION) {
+                if (!req.app.locals.SESSION) {
                     req.app.locals.SESSION = {};
                 }
 
@@ -99,22 +98,22 @@ async function handleSession(req, res, next) {
 
         let session_str = null;
 
-        let cookie = req.cookies['SESSION'];
+        let cookie = req.cookies["SESSION"];
 
-        if(cookie) {
+        if (cookie) {
             session_str = cookie;
         }
 
-        let user_agent = req.headers['user-agent'];
+        let user_agent = req.headers["user-agent"];
 
-        if(user_agent && user_agent.includes('ELB-HealthChecker')) {
+        if (user_agent && user_agent.includes("ELB-HealthChecker")) {
             return resolve(next());
         }
 
-        if(!session_str) {
+        if (!session_str) {
             try {
                 await createSession();
-            } catch(e) {
+            } catch (e) {
                 return resolve(next());
             }
         } else {
@@ -124,20 +123,20 @@ async function handleSession(req, res, next) {
                 //possible session invalidation logic
                 let invalid_session = false;
 
-                if(await isSessionExpired(session_check) || invalid_session) {
+                if ((await isSessionExpired(session_check)) || invalid_session) {
                     try {
                         await createSession();
-                    } catch(e) {
+                    } catch (e) {
                         return resolve(next());
                     }
                 } else {
                     try {
                         await setSessionData(session_check);
-                    } catch(e) {
+                    } catch (e) {
                         return resolve(next());
                     }
                 }
-            } catch(e) {
+            } catch (e) {
                 return resolve(next());
             }
         }
@@ -148,20 +147,20 @@ async function handleSession(req, res, next) {
 
 function setCookie(res, session_str, expires_in) {
     return new Promise(async (resolve, reject) => {
-        if(!session_str) {
+        if (!session_str) {
             return reject("No session str");
         }
 
-        if(!expires_in) {
+        if (!expires_in) {
             return reject("No expires in");
         }
 
         let options = {
-            maxAge: expires_in
-        }
+            maxAge: expires_in,
+        };
 
         // Set cookie
-        res.cookie('SESSION', session_str, options);
+        res.cookie("SESSION", session_str, options);
 
         return resolve();
     });
@@ -171,7 +170,7 @@ function getSessionKeyValue(req, key) {
     return new Promise(async (resolve, reject) => {
         let session_data = req.app.locals.SESSION;
 
-        if(!session_data) {
+        if (!session_data) {
             return resolve(null);
         }
 
@@ -181,7 +180,7 @@ function getSessionKeyValue(req, key) {
             let session = await cacheService.get(session_key, true);
 
             return resolve(session[key]);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return resolve(null);
         }
@@ -192,7 +191,7 @@ function setSessionKeyValue(req, key, val) {
     return new Promise(async (resolve, reject) => {
         let session_data = req.app.locals.SESSION;
 
-        if(!session_data) {
+        if (!session_data) {
             return resolve(null);
         }
 
@@ -205,7 +204,7 @@ function setSessionKeyValue(req, key, val) {
             await cacheService.setCache(session_key, session, session.expires - timeNow());
 
             return resolve();
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return resolve(null);
         }
@@ -220,7 +219,7 @@ function deleteSessionUser(req, res) {
 
         try {
             await cacheService.deleteKeys(session_key);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
 
@@ -232,5 +231,5 @@ module.exports = {
     handle: handleSession,
     getSessionKeyValue: getSessionKeyValue,
     setSessionKeyValue: setSessionKeyValue,
-    deleteSessionUser: deleteSessionUser
+    deleteSessionUser: deleteSessionUser,
 };

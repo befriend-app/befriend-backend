@@ -1,4 +1,4 @@
-const {loadScriptEnv, generateToken, timeNow} = require("../../services/shared");
+const { loadScriptEnv, generateToken, timeNow } = require("../../services/shared");
 loadScriptEnv();
 
 const dbService = require("../../services/db");
@@ -6,31 +6,31 @@ const dbService = require("../../services/db");
 function main() {
     return new Promise(async (resolve, reject) => {
         function getCategoryStr(category_name) {
-            for(let item of categories_str) {
-                if(item['Category Label'].includes(category_name)) {
-                    return item['Category ID'];
+            for (let item of categories_str) {
+                if (item["Category Label"].includes(category_name)) {
+                    return item["Category ID"];
                 }
             }
 
             //try category variation with "ies"
-            let category_split = category_name.split(' ');
+            let category_split = category_name.split(" ");
 
-            for(let i = 0; i < category_split.length; i++) {
+            for (let i = 0; i < category_split.length; i++) {
                 let word = category_split[i];
 
-                if(word.endsWith('y')) {
+                if (word.endsWith("y")) {
                     word = word.substring(0, word.length - 1);
-                    word += 'ies';
+                    word += "ies";
                 }
 
                 category_split[i] = word;
             }
 
-            let category_var = category_split.join(' ');
+            let category_var = category_split.join(" ");
 
-            for(let item of categories_str) {
-                if(item['Category Label'].includes(category_var)) {
-                    return item['Category ID'];
+            for (let item of categories_str) {
+                if (item["Category Label"].includes(category_var)) {
+                    return item["Category ID"];
                 }
             }
 
@@ -53,33 +53,33 @@ function main() {
                 "Psychic and Astrologer": "52f2ab2ebcbc57f1066b8b43",
                 "Search Engine Marketing and Optimization Service": "63be6904847c3692a84b9b8e",
                 "Ski Resort and Area": "4bf58dd8d48988d1e9941735",
-                "Promotional Item Service": "63be6904847c3692a84b9b80"
+                "Promotional Item Service": "63be6904847c3692a84b9b80",
             };
 
             return dict[category_name] || null;
         }
 
         function getKey(categories, parent) {
-            if(!parent) {
-                return categories.join('-');
+            if (!parent) {
+                return categories.join("-");
             }
 
-            return categories.slice(0, -1).join('-');
+            return categories.slice(0, -1).join("-");
         }
 
         try {
             let conn = await dbService.conn();
 
-            let categories = require('./fsq-categories.json');
+            let categories = require("./fsq-categories.json");
 
-            var categories_str = require('./fsq-categories-str.json');
+            var categories_str = require("./fsq-categories-str.json");
 
             let new_lines = [];
 
-            for(let line of categories) {
+            for (let line of categories) {
                 new_lines.push({
                     fsq_id: line.category_id,
-                    categories: line.category_label.split('>'),
+                    categories: line.category_label.split(">"),
                 });
             }
 
@@ -89,13 +89,11 @@ function main() {
 
             let db_ids = {};
 
-            for(let line of new_lines) {
-                let existing_qry = await conn('venues_categories')
-                    .where('fsq_id', line.fsq_id)
-                    .first();
+            for (let line of new_lines) {
+                let existing_qry = await conn("venues_categories").where("fsq_id", line.fsq_id).first();
 
                 //trim categories
-                for(let i = 0; i < line.categories.length; i++) {
+                for (let i = 0; i < line.categories.length; i++) {
                     line.categories[i] = line.categories[i].trim();
                 }
 
@@ -108,50 +106,48 @@ function main() {
                 let parent_categories = line.categories.slice(0, -1);
                 let category_full = `${category_name}`;
 
-                if(parent_categories.length) {
-                    category_full += ` - ${parent_categories.join(' > ')}`;
+                if (parent_categories.length) {
+                    category_full += ` - ${parent_categories.join(" > ")}`;
                 }
 
                 let fsq_id_str = getCategoryStr(category_name);
 
-                if(existing_qry) {
+                if (existing_qry) {
                     db_ids[db_key] = existing_qry.id;
                 } else {
-                    let id = await conn('venues_categories')
-                        .insert({
-                            parent_id: parent_id,
-                            fsq_id: line.fsq_id,
-                            fsq_id_str: fsq_id_str,
-                            category_token: generateToken(24),
-                            category_name: category_name,
-                            category_name_full: category_full,
-                            created: timeNow(),
-                            updated: timeNow()
-                        });
+                    let id = await conn("venues_categories").insert({
+                        parent_id: parent_id,
+                        fsq_id: line.fsq_id,
+                        fsq_id_str: fsq_id_str,
+                        category_token: generateToken(24),
+                        category_name: category_name,
+                        category_name_full: category_full,
+                        created: timeNow(),
+                        updated: timeNow(),
+                    });
 
                     db_ids[db_key] = id[0];
                 }
             }
 
             resolve();
-        } catch(e) {
+        } catch (e) {
             reject(e);
         }
     });
 }
 
 module.exports = {
-    main: main
-}
+    main: main,
+};
 
-if(!module.parent) {
-    (async function() {
-       try {
+if (!module.parent) {
+    (async function () {
+        try {
             await main();
             process.exit();
-       } catch(e) {
-           console.error(e);
-       }
+        } catch (e) {
+            console.error(e);
+        }
     })();
 }
-

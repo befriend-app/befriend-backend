@@ -1,7 +1,7 @@
 const dbService = require("../services/db");
-const {getNetworkSelf} = require("../services/network");
-const {timeNow} = require("../services/shared");
-const {getGender} = require("../services/genders");
+const { getNetworkSelf } = require("../services/network");
+const { timeNow } = require("../services/shared");
+const { getGender } = require("../services/genders");
 
 module.exports = {
     limit: 10000,
@@ -11,10 +11,20 @@ module.exports = {
             //returns persons on this network
             //recursive request process to support pagination and most recent data
             try {
-                let add_data_since_ms, data_since_timestamp, conn, from_network, last_person_token,
-                    my_network, person_token_qry, persons, persons_qry,
-                    request_sent, server_ms_diff,
-                    data_since_timestamp_w_extra = null, prev_data_since = null, return_last_person_token = null;
+                let add_data_since_ms,
+                    data_since_timestamp,
+                    conn,
+                    from_network,
+                    last_person_token,
+                    my_network,
+                    person_token_qry,
+                    persons,
+                    persons_qry,
+                    request_sent,
+                    server_ms_diff,
+                    data_since_timestamp_w_extra = null,
+                    prev_data_since = null,
+                    return_last_person_token = null;
 
                 conn = await dbService.conn();
 
@@ -26,14 +36,14 @@ module.exports = {
                 //de-duplicate on request initiating side
                 request_sent = req.body.request_sent;
 
-                if(!request_sent) {
+                if (!request_sent) {
                     res.json("request timestamp required", 400);
                     return resolve();
                 }
 
                 server_ms_diff = timeNow() - request_sent;
 
-                if(server_ms_diff < 0) {
+                if (server_ms_diff < 0) {
                     server_ms_diff = 0;
                 }
 
@@ -48,33 +58,34 @@ module.exports = {
 
                 //results in reverse order
 
-                persons_qry = conn('persons_networks AS pn')
-                    .join('persons AS p', 'p.id', '=', 'pn.person_id')
-                    .where('pn.network_id', my_network.id)
-                    .orderBy('p.id', 'desc')
+                persons_qry = conn("persons_networks AS pn")
+                    .join("persons AS p", "p.id", "=", "pn.person_id")
+                    .where("pn.network_id", my_network.id)
+                    .orderBy("p.id", "desc")
                     .limit(module.exports.limit)
                     .select(
-                        'p.person_token', 'gender_id', 'is_online',
-                        'reviews_count', 'reviews_rating', 'birth_date',
-                        'p.updated'
+                        "p.person_token",
+                        "gender_id",
+                        "is_online",
+                        "reviews_count",
+                        "reviews_rating",
+                        "birth_date",
+                        "p.updated",
                     );
 
-                if(prev_data_since) {
-                    persons_qry = persons_qry.where('p.updated', '>', prev_data_since);
-                } else if(data_since_timestamp) {
+                if (prev_data_since) {
+                    persons_qry = persons_qry.where("p.updated", ">", prev_data_since);
+                } else if (data_since_timestamp) {
                     data_since_timestamp_w_extra = data_since_timestamp - add_data_since_ms;
-                    persons_qry = persons_qry.where('p.updated', '>', data_since_timestamp_w_extra);
+                    persons_qry = persons_qry.where("p.updated", ">", data_since_timestamp_w_extra);
                 }
 
-                if(last_person_token) {
+                if (last_person_token) {
                     //id from person token
-                    person_token_qry = await conn('persons')
-                        .where('person_token', last_person_token)
-                        .first();
+                    person_token_qry = await conn("persons").where("person_token", last_person_token).first();
 
-                    if(person_token_qry) {
-                        persons_qry = persons_qry
-                            .where('p.id', '<', person_token_qry.id);
+                    if (person_token_qry) {
+                        persons_qry = persons_qry.where("p.id", "<", person_token_qry.id);
                     }
                 }
 
@@ -87,35 +98,38 @@ module.exports = {
 
                         delete person.gender_id;
 
-                        if(gender) {
+                        if (gender) {
                             person.gender = gender;
                             delete gender.id;
                             delete gender.created;
                             delete gender.updated;
                         }
-                    })
+                    }),
                 );
 
                 //paginate if length of results equals query limit
-                if(persons.length === module.exports.limit) {
+                if (persons.length === module.exports.limit) {
                     let last_person = persons[persons.length - 1];
 
-                    if(last_person) {
+                    if (last_person) {
                         return_last_person_token = last_person.person_token;
                     }
                 }
 
                 //first call: data_since_timestamp, second+ call: prev_data_since
-                res.json({
-                    last_person_token: return_last_person_token,
-                    prev_data_since: prev_data_since || data_since_timestamp_w_extra,
-                    persons: persons
-                }, 202);
-            } catch(e) {
+                res.json(
+                    {
+                        last_person_token: return_last_person_token,
+                        prev_data_since: prev_data_since || data_since_timestamp_w_extra,
+                        persons: persons,
+                    },
+                    202,
+                );
+            } catch (e) {
                 res.json("Error syncing persons", 400);
             }
 
             resolve();
         });
-    }
+    },
 };
