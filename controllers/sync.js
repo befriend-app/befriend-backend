@@ -1,8 +1,5 @@
 const dbService = require("../services/db");
-const personsService = require("../services/persons");
-
 const {getNetworkSelf} = require("../services/network");
-
 const {timeNow} = require("../services/shared");
 const {getGender} = require("../services/genders");
 
@@ -18,8 +15,6 @@ module.exports = {
                     my_network, person_token_qry, persons, persons_qry,
                     request_sent, server_ms_diff,
                     data_since_timestamp_w_extra = null, prev_data_since = null, return_last_person_token = null;
-
-                from_network = req.from_network;
 
                 conn = await dbService.conn();
 

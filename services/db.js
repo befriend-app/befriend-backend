@@ -37,6 +37,8 @@ module.exports = {
     },
     batchInsert: function (to_conn, table_name, insert_rows) {
         return new Promise(async (resolve, reject) => {
+            let output = [];
+
             try {
                 let cols = await to_conn(table_name).columnInfo();
 
@@ -45,13 +47,15 @@ module.exports = {
                 let chunks = require('lodash').chunk(insert_rows, chunk_items_count);
 
                 for(let chunk of chunks) {
-                    await to_conn.batchInsert(table_name, chunk);
+                    let id = await to_conn.batchInsert(table_name, chunk);
+
+                    output.push([id[0], id[0] + chunk.length - 1]);
                 }
             } catch(e) {
                 return reject(e);
             }
 
-            return resolve();
+            return resolve(output);
         });
     }
 };

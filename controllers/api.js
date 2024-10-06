@@ -1,6 +1,7 @@
 const axios = require('axios');
 const tldts = require('tldts');
 
+const activitiesService = require('../services/activities');
 const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 const networkService = require('../services/network');
@@ -14,7 +15,8 @@ const {isProdApp, isIPAddress, isLocalHost, getURL, timeNow, generateToken, join
 const {getNetwork, getNetworkSelf} = require("../services/network");
 const {encrypt} = require("../services/encryption");
 const {deleteKeys} = require("../services/cache");
-const { getPersonByEmail } = require('../services/persons');
+const {getPersonByEmail} = require('../services/persons');
+const {getCategoriesPlaces} = require("../services/places");
 
 
 module.exports = {
@@ -914,7 +916,6 @@ module.exports = {
                 let person = await getPersonByEmail(person_email);
                 
                 // check if passwords are equal
-
                 const validPassword = await bcrypt.compare(person_password, person.password);
 
                 if(!validPassword) {
@@ -947,12 +948,225 @@ module.exports = {
                 }, 200);
                 
                 return resolve();
-
             } catch(e) {
                 // handle logic for different errors
-                res.json('Login failed', 500);
+                res.json('Login failed', 400);
                 return reject(e);
             }
         });
-    }   
+    },
+    getActivityTypes: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            function getActivity(item) {
+                if (!item.parent_activity_type_id) {
+                    return data_organized[item.at_id];
+                }
+
+                for (let parent_id in data_organized) {
+                    const level_2_dict = data_organized[parent_id].sub;
+
+                    // Check level 2
+                    for (let level_2_id in level_2_dict) {
+                        if (parseInt(level_2_id) === item.at_id) {
+                            return level_2_dict[level_2_id];
+                        }
+
+                        // Check level 3
+                        const level_3_dict = level_2_dict[level_2_id].sub;
+
+                        for (let level_3_id in level_3_dict) {
+                            if (parseInt(level_3_id) === item.at_id) {
+                                return level_3_dict[level_3_id];
+                            }
+                        }
+                    }
+                }
+
+                return null; // If activity is not found
+            }
+
+            function createActivityObject(activity) {
+                let data = {
+                    name: activity.activity_name,
+                    title: activity.activity_title,
+                    token: activity.activity_type_token,
+                    image: activity.activity_image,
+                    emoji: activity.activity_emoji,
+                    categories: [],
+                    sub: {}
+                };
+
+                //include bool
+                for(let k in activity) {
+                    if(k.startsWith('is_')) {
+                        if(activity[k]) {
+                            data[k] = activity[k];
+                        }
+                    }
+                }
+
+                return data;
+            }
+
+            let cache_key = cacheService.keys.activity_types;
+            let data_organized = {};
+
+            try {
+                //use existing data in cache if exists
+                let data = await cacheService.get(cache_key, true);
+
+                if(data) {
+                    // res.json(data);
+                    //
+                    // return resolve();
+                }
+
+                let conn = await dbService.conn();
+
+                //organize by activity types
+                let parent_activity_types = await conn('activity_types')
+                    .whereNull('parent_activity_type_id')
+                    .orderBy('sort_position');
+
+                //level 1
+                for(let at of parent_activity_types) {
+                    data_organized[at.id] = createActivityObject(at);
+                }
+
+                //level 2
+                for(let parent_id in data_organized) {
+                    let level_2_qry = await conn('activity_types')
+                        .where('parent_activity_type_id', parent_id)
+
+                    for(let at of level_2_qry) {
+                        data_organized[parent_id].sub[at.id] = createActivityObject(at);
+                    }
+                }
+
+                //level 3
+                for(let parent_id in data_organized) {
+                    let level_2_dict = data_organized[parent_id].sub;
+
+                    for(let level_2_id in level_2_dict) {
+                        let level_3_qry = await conn('activity_types')
+                            .where('parent_activity_type_id', level_2_id);
+
+                        for(let at of level_3_qry) {
+                            data_organized[parent_id].sub[level_2_id].sub[at.id] = createActivityObject(at);
+                        }
+                    }
+                }
+
+                //add venues to each category/subcategory
+
+                // let qry = await conn('activity_type_venues AS atv')
+                //     .join('activity_types AS at', 'at.id', '=', 'atv.activity_type_id')
+                //     .join('venues_categories AS vc', 'vc.id', '=', 'atv.venue_category_id')
+                //     .where('at.is_visible', true)
+                //     .orderBy('at.sort_position')
+                //     .orderBy('atv.sort_position')
+                //     .select('at.*', 'at.id AS at_id', 'vc.category_name', 'fsq_id', 'vc.category_token');
+                //
+                // for(let item of qry) {
+                //     let activity = getActivity(item);
+                //
+                //     activity.categories.push(item.fsq_id);
+                // }
+
+                await cacheService.setCache(cache_key, data_organized);
+
+                res.json(data_organized);
+
+                return resolve();
+            } catch(e) {
+                console.error(e);
+
+                res.json({
+                    message: "Error getting activity venue data"
+                }, 400);
+
+                return resolve();
+            }
+        });
+    },
+    getActivityTypePlaces: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            let activity_type, location;
+
+            try {
+                let activity_type_token = req.params.activity_type_token;
+
+                if(!activity_type_token) {
+                    res.json({
+                        message: "activity_type token required"
+                    }, 400);
+
+                    return resolve();
+                }
+
+                location = req.body.location;
+
+                if(!location || !(location.lat && location.lon)) {
+                    res.json({
+                        message: "Location required"
+                    }, 400);
+
+                    return resolve();
+                }
+
+                let conn = await dbService.conn();
+
+                //get fsq_ids from cache or db
+                let cache_key = `${cacheService.keys.activity_type_venue_categories}${activity_type_token}`;
+
+                let activity_fsq_ids = await cacheService.get(cache_key, true);
+
+                if(!activity_fsq_ids) {
+                    //get activity type
+                    activity_type = await activitiesService.getActivityType(activity_type_token);
+
+                    if(!activity_type) {
+                        res.json({
+                            message: "Activity type not found"
+                        }, 400);
+
+                        return resolve();
+                    }
+
+                    let categories_qry = await conn('activity_type_venues AS atv')
+                        .join('venues_categories AS vc', 'vc.id', '=', 'atv.venue_category_id')
+                        .where('atv.activity_type_id', activity_type.id)
+                        .where('atv.is_active', true)
+                        .orderBy('atv.sort_position')
+                        .select('vc.fsq_id');
+
+                    activity_fsq_ids = categories_qry.map(x=>x.fsq_id);
+
+                    await cacheService.setCache(cache_key, activity_fsq_ids);
+                }
+
+                try {
+                    let places = await getCategoriesPlaces(activity_fsq_ids, location);
+
+                    res.json({
+                        places: places
+                    });
+                } catch(e) {
+                    console.error(e);
+
+                    res.json({
+                        message: "Error getting category(s) places"
+                    }, 400);
+                }
+            } catch(e) {
+                console.error(e);
+
+                res.json({
+                    message: "Error getting places for activity"
+                }, 400);
+            }
+
+            return resolve();
+        });
+    }
 }

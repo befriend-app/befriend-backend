@@ -18,6 +18,8 @@ dayjs.extend(timezone);
 
 global.serverTimezoneString = process.env.TZ || 'America/Chicago';
 
+const meters_to_miles = 0.000621371192;
+
 Object.defineProperty(String.prototype, 'capitalize', {
     value: function() {
         return this.charAt(0).toUpperCase() + this.slice(1);
@@ -282,6 +284,77 @@ function getCleanDomain(domain, remove_subdomain, allow_local) {
     return clean_domain;
 }
 
+function deg2rad(deg) {
+    return (deg * Math.PI) / 180;
+}
+
+function rad2deg(rad) {
+    return (rad * 180) / Math.PI;
+}
+
+function getCoordsBoundBox (latitude, longitude, distance_miles_or_km) {
+    const latLimits = [deg2rad(-90), deg2rad(90)];
+    const lonLimits = [deg2rad(-180), deg2rad(180)];
+
+    const radLat = deg2rad(latitude);
+    const radLon = deg2rad(longitude);
+
+    if (radLat < latLimits[0] || radLat > latLimits[1] || radLon < lonLimits[0] || radLon > lonLimits[1]) {
+        throw new Error("Invalid Argument");
+    }
+
+    // Angular distance in radians on a great circle,
+    let angular;
+
+    if(useKM()) {
+        angular = distance_miles_or_km / 6371;
+    } else {
+        angular = distance_miles_or_km / 3958.762079;
+    }
+
+    let minLat = radLat - angular;
+    let maxLat = radLat + angular;
+
+    let minLon, maxLon;
+
+    if (minLat > latLimits[0] && maxLat < latLimits[1]) {
+        const deltaLon = Math.asin(Math.sin(angular) / Math.cos(radLat));
+        minLon = radLon - deltaLon;
+
+        if (minLon < lonLimits[0]) {
+            minLon += 2 * Math.PI;
+        }
+
+        maxLon = radLon + deltaLon;
+
+        if (maxLon > lonLimits[1]) {
+            maxLon -= 2 * Math.PI;
+        }
+    } else {
+        // A pole is contained within the distance.
+        minLat = Math.max(minLat, latLimits[0]);
+        maxLat = Math.min(maxLat, latLimits[1]);
+        minLon = lonLimits[0];
+        maxLon = lonLimits[1];
+    }
+
+    let degMinLat = rad2deg(minLat);
+    let degMinLon= rad2deg(minLon);
+    let degMaxLat = rad2deg(maxLat);
+    let degMaxLon = rad2deg(maxLon);
+
+    return {
+        minLat: degMinLat,
+        minLon: degMinLon,
+        maxLat: degMaxLat,
+        maxLon: degMaxLon,
+        minLat1000: parseInt(Math.floor(degMinLat * 1000)),
+        minLon1000: parseInt(Math.floor(degMinLon * 1000)),
+        maxLat1000: parseInt(Math.floor(degMaxLat * 1000)),
+        maxLon1000: parseInt(Math.floor(degMaxLon * 1000))
+    };
+}
+
 function getDateDiff(date_1, date_2, unit) {
     let dayjs = require('dayjs');
 
@@ -300,6 +373,22 @@ function getDateStr(date) {
 function getDateTimeStr() {
     let date = new Date();
     return date.toISOString().slice(0, 10) + ' ' + date.toISOString().substring(11, 19);
+}
+
+function getDistanceMeters(loc_1, loc_2) {
+    const R = 6371; // Earth's radius in km
+
+    const dLat = (loc_2.lat - loc_1.lat) * (Math.PI / 180);
+    const dLon = (loc_2.lon - loc_1.lon) * (Math.PI / 180);
+
+    const a =
+        Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(loc_1.lat * Math.PI / 180) * Math.cos(loc_1.lat * Math.PI / 180) *
+        Math.sin(dLon/2) * Math.sin(dLon/2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+    return R * c * 1000;
 }
 
 function getExchangeKeysKey(token) {
@@ -341,12 +430,55 @@ function getLocalDateTimeStr(date) {
     return dayjs.format('MM-DD-YY HH:mm:ss');
 }
 
-function getMilesFromMeters(meters) {
-    return meters * 0.000621371192;
+function getMetersFromMilesOrKm(miles_or_km, to_int) {
+    let meters;
+
+    if(useKM()) {
+        meters = miles_or_km  * 1000;
+    } else {
+        meters = miles_or_km / meters_to_miles;
+    }
+
+    if(to_int) {
+        return Math.floor(meters);
+    }
+
+    return meters;
+}
+
+
+function getMilesOrKmFromMeters(meters) {
+    if(useKM()) {
+        return meters / 1000;
+    } else {
+        return meters * meters_to_miles;
+    }
+}
+
+function getPersonCacheKey(person_token_or_email) {
+    if(!person_token_or_email) {
+        throw new Error("No person_token or email provided");
+    }
+
+    person_token_or_email = person_token_or_email.toLowerCase();
+
+    return `persons:${person_token_or_email}`;
 }
 
 function getPersonLoginCacheKey(person_token) {
+    //set
+
+    if(!person_token) {
+        throw new Error("No person_token provided");
+    }
+
+    person_token = person_token.toLowerCase();
+
     return `persons:${person_token}:login_tokens`;
+}
+
+function getRandomInRange(from, to, fixed) {
+    return (Math.random() * (to - from) + from).toFixed(fixed) * 1;
 }
 
 function getRepoRoot() {
@@ -422,6 +554,16 @@ function getStatesList() {
 
 function getSessionKey(session) {
     return `session:api:${session}`;
+}
+
+function getTimeZoneFromCoords(lat, lon) {
+    const { find } = require('geo-tz');
+
+    let tz = find(lat, lon);
+
+    if(tz && tz.length) {
+        return tz[0];
+    }
 }
 
 function getURL(raw_domain, endpoint) {
@@ -567,6 +709,10 @@ function loadScriptEnv() {
     require('dotenv').config();
 }
 
+function normalizeDistance(distance, radius_meters) {
+    return 1 - Math.min(distance / radius_meters, 1);
+}
+
 function normalizePort(val) {
     let port = parseInt(val, 10);
 
@@ -592,6 +738,16 @@ function numberWithCommas(x, to_integer) {
         x = Number.parseInt(x);
     }
     return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+function range(min, max) {
+    let arr = [];
+
+    for (let i = min; i <= max; i++) {
+        arr.push(i);
+    }
+
+    return arr;
 }
 
 function readFile(p, json) {
@@ -662,6 +818,39 @@ function sendEmail(subject, html, email, from, cc, attachment_alt) {
     });
 }
 
+function setSystemProcessRan(system_key) {
+    return new Promise(async (resolve, reject) => {
+        try {
+             let conn = await dbService.conn();
+
+             let qry = await conn('system')
+                 .where('system_key', system_key)
+                 .first();
+
+             if(qry) {
+                 await conn('system')
+                     .where('id', qry.id)
+                     .update({
+                         updated: timeNow()
+                     });
+             } else {
+                 await conn('system')
+                     .insert({
+                         system_key: system_key,
+                         system_value: 1,
+                         created: timeNow(),
+                         updated: timeNow()
+                     });
+             }
+
+             resolve();
+        } catch(e) {
+            console.error(e);
+            return reject(e);
+        }
+    });
+}
+
 function shuffleFunc(array){
     let currentIndex = array.length, temporaryValue, randomIndex;
 
@@ -688,6 +877,39 @@ function slugName(name) {
     });
 }
 
+function systemProcessRan(system_key) {
+    return new Promise(async (resolve, reject) => {
+        try {
+             let conn = await dbService.conn();
+
+             let qry = await conn('system')
+                 .where('system_key', system_key)
+                 .first();
+
+             if(!qry || !qry.system_value) {
+                 return resolve(false);
+             }
+
+             let value = qry.system_value.toLowerCase();
+
+             if(value === 'true') {
+                 return resolve(true);
+             }
+
+             if(isNumeric(value)) {
+                 if(parseInt(value)) {
+                    return resolve(true);
+                 }
+             }
+
+             return resolve(false);
+        } catch(e) {
+            console.error(e);
+            return reject(e);
+        }
+    });
+}
+
 function timeNow(seconds) {
     if(seconds) {
         return Number.parseInt(Date.now() / 1000);
@@ -706,6 +928,12 @@ function timeoutAwait(ms, f) {
             resolve();
         }, ms);
     });
+}
+
+function useKM() {
+    let value = process.env.DISPLAY_KM;
+
+    return value && (value === 'true' || value === '1');
 }
 
 function writeFile(file_path, data) {
@@ -734,19 +962,25 @@ module.exports = {
     generateToken: generateToken,
     getCityState: getCityState,
     getCleanDomain: getCleanDomain,
+    getCoordsBoundBox: getCoordsBoundBox,
     getDateDiff: getDateDiff,
     getDateStr: getDateStr,
     getDateTimeStr: getDateTimeStr,
+    getDistanceMeters: getDistanceMeters,
     getExchangeKeysKey: getExchangeKeysKey,
     getIPAddr: getIPAddr,
     getLocalDate: getLocalDate,
     getLocalDateStr: getLocalDateStr,
     getLocalDateTimeStr: getLocalDateTimeStr,
-    getMilesFromMeters: getMilesFromMeters,
+    getMetersFromMilesOrKm: getMetersFromMilesOrKm,
+    getMilesOrKmFromMeters: getMilesOrKmFromMeters,
+    getPersonCacheKey: getPersonCacheKey,
     getPersonLoginCacheKey: getPersonLoginCacheKey,
+    getRandomInRange: getRandomInRange,
     getRepoRoot: getRepoRoot,
     getStatesList: getStatesList,
     getSessionKey: getSessionKey,
+    getTimeZoneFromCoords: getTimeZoneFromCoords,
     getURL: getURL,
     hasPort: hasPort,
     isLocalApp: isLocalApp,
@@ -758,13 +992,18 @@ module.exports = {
     isValidUserName: isValidUserName,
     joinPaths: joinPaths,
     loadScriptEnv: loadScriptEnv,
+    normalizeDistance: normalizeDistance,
     normalizePort: normalizePort,
     numberWithCommas: numberWithCommas,
+    range: range,
     readFile: readFile,
     sendEmail: sendEmail,
+    setSystemProcessRan: setSystemProcessRan,
     shuffleFunc: shuffleFunc,
     slugName: slugName,
+    systemProcessRan: systemProcessRan,
     timeNow: timeNow,
     timeoutAwait: timeoutAwait,
+    useKM: useKM,
     writeFile: writeFile,
 }

@@ -44,6 +44,7 @@ if(args._ && args._.length) {
                 is_online: true,
                 image_url: person.picture.large,
                 location_lat: person.location.coordinates.latitude,
+                location_lat_1000: Math.floor(parseFloat(person.location.coordinates.latitude) * 1000),
                 location_lon: person.location.coordinates.longitude,
                 birth_date: birthDatePure(person.dob.date),
                 created: timeNow(),
