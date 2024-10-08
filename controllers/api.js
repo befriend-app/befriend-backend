@@ -1168,5 +1168,45 @@ module.exports = {
 
             return resolve();
         });
+    },
+    getMapboxToken: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            //get temporary mapbox token for use in app
+
+            const tokenConfig = {
+                "note": "Temporary token for accessing maps",
+                "expires": new Date(Date.now() + 60 * 60 * 1000).toISOString(), // 1 hour expiration
+                "scopes": [
+                    "styles:tiles",
+                    "styles:read", // Allow reading styles
+                    "fonts:read",  // Allow reading fonts
+                    "datasets:read",
+                    "tilesets:read" // Allow reading tilesets
+                ]
+            };
+
+            try {
+                const response = await axios.post(
+                    'https://api.mapbox.com/tokens/v2/befriend-app', //update username for forks of repo
+                    tokenConfig,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${process.env.MAPBOX_SECRET_KEY}`,
+                            'Content-Type': 'application/json'
+                        }
+                    }
+                );
+
+                res.json({
+                    token: response.data.token,
+                }, 200);
+            } catch(e) {
+                console.error(e);
+
+                res.json("Error getting map token", 400);
+            }
+
+            resolve();
+        });
     }
 }

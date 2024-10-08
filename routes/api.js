@@ -157,6 +157,18 @@ router.put('/activity_type/:activity_type_token/places', function (req, res, nex
     });
 });
 
+router.get('/mapbox/token', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await apiController.getMapboxToken(req, res);
+        } catch(e) {
+            console.error(e);
+        }
+
+        resolve();
+    });
+});
+
 router.get('/review-venues', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         let conn = await require('../services/db').conn();
