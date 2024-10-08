@@ -1,22 +1,20 @@
-let express = require('express');
+let express = require("express");
 let router = express.Router();
 
-let apiController = require('../controllers/api');
+let apiController = require("../controllers/api");
 
-
-router.get('/', function (req, res, next) {
+router.get("/", function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         res.json({
-           happiness: 'unlimited'
+            happiness: "unlimited",
         });
 
         resolve();
     });
 });
 
-router.post('/login', function (req, res, next) {
+router.post("/login", function (req, res, next) {
     return new Promise(async (resolve, reject) => {
-
         //person login
         try {
             await apiController.doLogin(req, res);
@@ -28,21 +26,21 @@ router.post('/login', function (req, res, next) {
     });
 });
 
-router.get('/happy-connect', function (req, res, next) {
+router.get("/happy-connect", function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         res.json({
-            happiness: 'unlimited'
+            happiness: "unlimited",
         });
 
         resolve();
     });
 });
 
-router.get('/networks', function (req, res, next) {
+router.get("/networks", function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
-             await apiController.getNetworks(req, res);
-        } catch(e) {
+            await apiController.getNetworks(req, res);
+        } catch (e) {
             console.error(e);
         }
 
@@ -50,11 +48,11 @@ router.get('/networks', function (req, res, next) {
     });
 });
 
-router.post('/network-add', function (req, res, next) {
+router.post("/network-add", function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await apiController.addNetwork(req, res);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
 
@@ -62,11 +60,11 @@ router.post('/network-add', function (req, res, next) {
     });
 });
 
-router.post('/keys/home/from', function (req, res, next) {
+router.post("/keys/home/from", function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await apiController.exchangeKeysHomeFrom(req, res);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
 
@@ -74,11 +72,11 @@ router.post('/keys/home/from', function (req, res, next) {
     });
 });
 
-router.post('/keys/home/to', function (req, res, next) {
+router.post("/keys/home/to", function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await apiController.exchangeKeysHomeTo(req, res);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
 
@@ -86,11 +84,11 @@ router.post('/keys/home/to', function (req, res, next) {
     });
 });
 
-router.post('/keys/home/save', function (req, res, next) {
+router.post("/keys/home/save", function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await apiController.exchangeKeysHomeSave(req, res);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
 
@@ -98,11 +96,11 @@ router.post('/keys/home/save', function (req, res, next) {
     });
 });
 
-router.post('/keys/exchange/encrypt', function (req, res, next) {
+router.post("/keys/exchange/encrypt", function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await apiController.keysExchangeEncrypt(req, res);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
 
@@ -110,11 +108,11 @@ router.post('/keys/exchange/encrypt', function (req, res, next) {
     });
 });
 
-router.post('/keys/exchange/decrypt', function (req, res, next) {
+router.post("/keys/exchange/decrypt", function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await apiController.keysExchangeDecrypt(req, res);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
 
@@ -122,11 +120,11 @@ router.post('/keys/exchange/decrypt', function (req, res, next) {
     });
 });
 
-router.post('/keys/exchange/save', function (req, res, next) {
+router.post("/keys/exchange/save", function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await apiController.keysExchangeSave(req, res);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
 
@@ -134,11 +132,11 @@ router.post('/keys/exchange/save', function (req, res, next) {
     });
 });
 
-router.get('/activity_types', function (req, res, next) {
+router.get("/activity_types", function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await apiController.getActivityTypes(req, res);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
 
@@ -146,22 +144,22 @@ router.get('/activity_types', function (req, res, next) {
     });
 });
 
-router.put('/activity_type/:activity_type_token/places', function (req, res, next) {
+router.put("/activity_type/:activity_type_token/places", function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await apiController.getActivityTypePlaces(req, res);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
         resolve();
     });
 });
 
-router.get('/mapbox/token', function (req, res, next) {
+router.get("/mapbox/token", function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await apiController.getMapboxToken(req, res);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
 
@@ -169,23 +167,23 @@ router.get('/mapbox/token', function (req, res, next) {
     });
 });
 
-router.get('/review-venues', function (req, res, next) {
+router.get("/review-venues", function (req, res, next) {
     return new Promise(async (resolve, reject) => {
-        let conn = await require('../services/db').conn();
+        let conn = await require("../services/db").conn();
 
-        let qry = await conn('activity_type_venues AS atv')
-            .join('activity_types AS at', 'at.id', '=', 'atv.activity_type_id')
-            .join('venues_categories AS vc', 'vc.id', '=', 'atv.venue_category_id')
-            .orderBy('atv.sort_position');
+        let qry = await conn("activity_type_venues AS atv")
+            .join("activity_types AS at", "at.id", "=", "atv.activity_type_id")
+            .join("venues_categories AS vc", "vc.id", "=", "atv.venue_category_id")
+            .orderBy("atv.sort_position");
 
         let organized = {};
 
-        for(let item of qry) {
-            if(!(item.activity_type_id in organized)) {
+        for (let item of qry) {
+            if (!(item.activity_type_id in organized)) {
                 organized[item.activity_type_id] = {
                     id: item.activity_type_id,
                     name: item.activity_name_full,
-                    venues: []
+                    venues: [],
                 };
             }
 
@@ -207,16 +205,16 @@ router.get('/review-venues', function (req, res, next) {
         
         `;
 
-        for(let k in organized) {
+        for (let k in organized) {
             let d = organized[k];
 
             let venues_html = ``;
 
-            for(let v of d.venues) {
+            for (let v of d.venues) {
                 venues_html += `<div class="venue">${v.category_name} - ${v.venue_category_id}</div>`;
             }
 
-            html += `<div class="activity"><div class="name">${d.name} - ${d.id}</div><div class="venues">${venues_html}</div></div>`
+            html += `<div class="activity"><div class="name">${d.name} - ${d.id}</div><div class="venues">${venues_html}</div></div>`;
         }
 
         res.send(`<div class="activities">${html}</div>`);
@@ -224,6 +222,5 @@ router.get('/review-venues', function (req, res, next) {
         resolve();
     });
 });
-
 
 module.exports = router;
