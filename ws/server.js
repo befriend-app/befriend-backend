@@ -1,18 +1,25 @@
-const {loadScriptEnv, isProdApp, generateToken, timeNow, getDateTimeStr, getSessionKey} = require('../services/shared');
+const {
+    loadScriptEnv,
+    isProdApp,
+    generateToken,
+    timeNow,
+    getDateTimeStr,
+    getSessionKey,
+} = require("../services/shared");
 
 loadScriptEnv();
 
-const cacheService = require('../services/cache');
-const dbService = require('../services/db');
+const cacheService = require("../services/cache");
+const dbService = require("../services/db");
 
-const _ = require('lodash');
-const fs = require('fs');
-const http = require('http');
-const https = require('https');
-const process = require('process');
-const query_string = require('query-string');
+const _ = require("lodash");
+const fs = require("fs");
+const http = require("http");
+const https = require("https");
+const process = require("process");
+const query_string = require("query-string");
 
-const WebSocket = require('ws');
+const WebSocket = require("ws");
 
 const port_num = process.env.WS_PORT || 8080;
 
@@ -29,16 +36,16 @@ let server;
 
 let options = {};
 
-if(process.env.APP_ENV !== 'local') {
-    if(isProdApp()) {
+if (process.env.APP_ENV !== "local") {
+    if (isProdApp()) {
         options = {
-            cert: fs.readFileSync('/etc/ssl/certs/befriend.crt'),
-            key: fs.readFileSync('/etc/ssl/private/befriend.key')
+            cert: fs.readFileSync("/etc/ssl/certs/befriend.crt"),
+            key: fs.readFileSync("/etc/ssl/private/befriend.key"),
         };
     } else {
         options = {
-            cert: fs.readFileSync('/etc/ssl/certs/dev.befriend.crt'),
-            key: fs.readFileSync('/etc/ssl/private/dev.befriend.key')
+            cert: fs.readFileSync("/etc/ssl/certs/dev.befriend.crt"),
+            key: fs.readFileSync("/etc/ssl/private/dev.befriend.key"),
         };
     }
 
@@ -47,21 +54,19 @@ if(process.env.APP_ENV !== 'local') {
     server = http.createServer(options);
 }
 
-
 const wss = new WebSocket.Server({ server: server });
 
+process.on("uncaughtException", function (err) {
+    if (err.code === "EADDRINUSE") {
+        let exec = require("child_process").exec;
 
-process.on('uncaughtException', function (err) {
-    if(err.code === 'EADDRINUSE') {
-        let exec = require('child_process').exec;
-
-        exec(`sudo lsof -i :${port_num}`, function callback(error, stdout, stderr){
-            let lines = stdout.split('\n');
+        exec(`sudo lsof -i :${port_num}`, function callback(error, stdout, stderr) {
+            let lines = stdout.split("\n");
 
             let pid;
 
             lines.forEach(function (line) {
-                if(line.indexOf('node') > -1) {
+                if (line.indexOf("node") > -1) {
                     pid = line.split(/[ ]+/)[1];
                     return false;
                 }
@@ -74,7 +79,6 @@ process.on('uncaughtException', function (err) {
     }
 });
 
-
 function initDB() {
     return new Promise(async (resolve, reject) => {
         try {
@@ -82,7 +86,7 @@ function initDB() {
 
             conn = await dbService.conn();
             resolve();
-        } catch(e) {
+        } catch (e) {
             return reject(e);
         }
     });
@@ -96,7 +100,7 @@ function initRedis() {
             await cacheService.init();
 
             resolve();
-        } catch(e) {
+        } catch (e) {
             return reject(e);
         }
     });
@@ -109,17 +113,17 @@ function removeConnections(ws) {
 function removePersonConnection(ws) {
     let user_connections = persons_connections[ws.person_token];
 
-    if(user_connections && user_connections.length) {
+    if (user_connections && user_connections.length) {
         user_connections.splice(user_connections.indexOf(ws), 1);
     }
 }
 
 function terminate(ws, logout) {
     console.log({
-        logout: ws
+        logout: ws,
     });
 
-    if(logout) {
+    if (logout) {
         ws.send(401);
     }
 
@@ -130,11 +134,11 @@ function terminate(ws, logout) {
 
 function getSession(url) {
     return new Promise(async (resolve, reject) => {
-        if(url.length > 1000) {
+        if (url.length > 1000) {
             return reject("URL too long");
         }
 
-        const parsed = query_string.parse(url.replace('/', ''));
+        const parsed = query_string.parse(url.replace("/", ""));
 
         try {
             let data = await cacheService.get(getSessionKey(parsed.session), true);
@@ -148,11 +152,11 @@ function getSession(url) {
 
 function sendRecentMessages(ws) {
     //send messages
-    if(ws.person_token && ws.person_token in persons_messages) {
+    if (ws.person_token && ws.person_token in persons_messages) {
         let messages = persons_messages[ws.person_token];
 
-        if(ws.readyState === WebSocket.OPEN) {
-            for(let k in messages) {
+        if (ws.readyState === WebSocket.OPEN) {
+            for (let k in messages) {
                 let message = messages[k];
 
                 ws.send(JSON.stringify(message));
@@ -170,7 +174,7 @@ function initWS() {
             this.isAlive = true;
         }
 
-        wss.on('connection', async function connection(ws, req) {
+        wss.on("connection", async function connection(ws, req) {
             let session_data = null;
 
             try {
@@ -184,27 +188,27 @@ function initWS() {
 
             console.log("Connection", {
                 session_id: session_id,
-                person_token: person_token
+                person_token: person_token,
             });
 
             ws.isAlive = true;
             ws.person_token = person_token;
             ws.session_id = session_id;
 
-            if(!(person_token in persons_connections)) {
+            if (!(person_token in persons_connections)) {
                 persons_connections[person_token] = [];
             }
 
             persons_connections[person_token].push(ws);
 
             //do not allow incoming messages
-            ws.on('message', function incoming(message) {
+            ws.on("message", function incoming(message) {
                 terminate(ws, true);
             });
 
-            ws.on('pong', heartBeat);
+            ws.on("pong", heartBeat);
 
-            ws.on('close', function () {
+            ws.on("close", function () {
                 removeConnections(ws);
             });
 
@@ -213,11 +217,11 @@ function initWS() {
 
         const heart_interval = setInterval(function () {
             wss.clients.forEach(function each(ws) {
-                if(!ws.session_id) {
+                if (!ws.session_id) {
                     return false;
                 }
 
-                if(ws.isAlive === false) {
+                if (ws.isAlive === false) {
                     return terminate(ws);
                 }
 
@@ -236,13 +240,13 @@ function initWS() {
 }
 
 function addPersonMessage(data) {
-    if(!data) {
+    if (!data) {
         return;
     }
 
     let person_token = data.person_token;
 
-    if(!(person_token in persons_messages)) {
+    if (!(person_token in persons_messages)) {
         persons_messages[person_token] = {};
     }
 
@@ -250,7 +254,7 @@ function addPersonMessage(data) {
 
     data.timestamp = timeNow();
 
-    if(person_token) {
+    if (person_token) {
         persons_messages[person_token][token] = data;
     }
 }
@@ -267,7 +271,7 @@ function initSubscribe() {
                     let data = JSON.parse(message.toString());
 
                     //skip sending messages without a process key
-                    if(data && !data.process_key && data.data) {
+                    if (data && !data.process_key && data.data) {
                         return;
                     }
 
@@ -276,11 +280,11 @@ function initSubscribe() {
                     let message_sent = false;
                     let person_token = data.person_token;
 
-                    if(person_token in persons_connections) {
-                        for(let k in persons_connections[person_token]) {
+                    if (person_token in persons_connections) {
+                        for (let k in persons_connections[person_token]) {
                             let client = persons_connections[person_token][k];
 
-                            if(client.readyState === WebSocket.OPEN) {
+                            if (client.readyState === WebSocket.OPEN) {
                                 console.log("Message sent");
 
                                 client.send(JSON.stringify(data));
@@ -289,7 +293,7 @@ function initSubscribe() {
                         }
                     }
 
-                    if(!message_sent) {
+                    if (!message_sent) {
                         addPersonMessage(data);
                     }
                 } catch (e) {
@@ -310,21 +314,20 @@ function deleteOldMessages() {
     setInterval(function () {
         let time_now = timeNow(true);
 
-        for(let person_token in persons_messages) {
+        for (let person_token in persons_messages) {
             let person_messages = persons_messages[person_token];
 
-            for(let token in person_messages) {
+            for (let token in person_messages) {
                 let message = person_messages[token];
 
                 //compare
-                if(time_now - message.timestamp > message_timeout) {
+                if (time_now - message.timestamp > message_timeout) {
                     delete person_messages[token];
                 }
             }
         }
     }, 60 * 1000);
 }
-
 
 async function init() {
     await initDB();

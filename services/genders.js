@@ -1,21 +1,21 @@
-const dbService = require('../services/db');
-const cacheService = require('../services/cache');
+const dbService = require("../services/db");
+const cacheService = require("../services/cache");
 
 module.exports = {
-    cache_key: 'genders',
+    cache_key: "genders",
     getGender: function (gender_id) {
         return new Promise(async (resolve, reject) => {
             try {
-                 let genders = await module.exports.getAllGenders();
+                let genders = await module.exports.getAllGenders();
 
-                 for(let gender of genders){
-                     if(gender_id === gender.id) {
-                         return resolve(gender);
-                     }
-                 }
+                for (let gender of genders) {
+                    if (gender_id === gender.id) {
+                        return resolve(gender);
+                    }
+                }
 
-                 return resolve(null);
-            } catch(e) {
+                return resolve(null);
+            } catch (e) {
                 console.error(e);
                 return reject(e);
             }
@@ -26,14 +26,14 @@ module.exports = {
             try {
                 let genders = await module.exports.getAllGenders();
 
-                for(let gender of genders){
-                    if(gender_token === gender.gender_token) {
+                for (let gender of genders) {
+                    if (gender_token === gender.gender_token) {
                         return resolve(gender);
                     }
                 }
 
                 return resolve(null);
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
                 return reject(e);
             }
@@ -42,27 +42,26 @@ module.exports = {
     getAllGenders: function () {
         return new Promise(async (resolve, reject) => {
             try {
-                 //from cache first
+                //from cache first
                 let genders = await cacheService.get(module.exports.cache_key, true);
 
-                if(genders) {
+                if (genders) {
                     return resolve(genders);
                 }
 
                 let conn = await dbService.conn();
 
                 //db backup
-                genders = await conn('genders')
-                    .orderBy('sort_position');
+                genders = await conn("genders").orderBy("sort_position");
 
                 //save to cache
                 await cacheService.setCache(module.exports.cache_key, genders);
 
                 resolve(genders);
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
                 return reject();
             }
         });
-    }
-}
+    },
+};

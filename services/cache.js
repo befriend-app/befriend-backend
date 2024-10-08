@@ -1,34 +1,31 @@
-const redis = require('redis');
+const redis = require("redis");
 
 module.exports = {
     conn: null,
     keys: {
-        ws: 'ws:messages',
+        ws: "ws:messages",
         activity_types: `activity_types`,
         activity_type: `activity_type:`,
         activity_type_venue_categories: `activity_type:venue_categories:`,
-        place_fsq: `place:fsq:`
+        place_fsq: `place:fsq:`,
     },
     init: function () {
         return new Promise(async (resolve, reject) => {
-
             let redis_ip = process.env.REDIS_HOST;
 
-            module.exports.conn = redis.createClient(
-                {
-                    socket: {
-                        host: `${redis_ip}`
-                    }
-                }
-            );
+            module.exports.conn = redis.createClient({
+                socket: {
+                    host: `${redis_ip}`,
+                },
+            });
 
             try {
                 await module.exports.conn.connect();
-            } catch(e) {
+            } catch (e) {
                 return reject(e);
             }
 
-            module.exports.conn.on('error', function (er) {
+            module.exports.conn.on("error", function (er) {
                 console.error(er.stack);
             });
 
@@ -40,7 +37,7 @@ module.exports = {
             try {
                 let keys = await module.exports.conn.keys(pattern);
                 resolve(keys);
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
                 reject();
             }
@@ -49,10 +46,10 @@ module.exports = {
     get: function (key, json) {
         return new Promise(async (resolve, reject) => {
             //init conn in case first time
-            if(!module.exports.conn) {
+            if (!module.exports.conn) {
                 try {
                     await module.exports.init();
-                } catch(e) {
+                } catch (e) {
                     return reject(e);
                 }
             }
@@ -60,16 +57,16 @@ module.exports = {
             try {
                 let data = await module.exports.conn.get(key);
 
-                if(!json) {
+                if (!json) {
                     return resolve(data);
                 }
 
                 try {
                     return resolve(JSON.parse(data));
-                } catch(e) {
+                } catch (e) {
                     return resolve(null);
                 }
-            } catch(e) {
+            } catch (e) {
                 return reject(e);
             }
         });
@@ -77,27 +74,27 @@ module.exports = {
     setCache: function (key, data, cache_lifetime = null) {
         return new Promise(async (resolve, reject) => {
             //in case conn not initiated
-            if(!module.exports.conn) {
+            if (!module.exports.conn) {
                 try {
-                     await module.exports.init();
-                } catch(e) {
+                    await module.exports.init();
+                } catch (e) {
                     return reject(e);
                 }
             }
 
-            if(typeof data !== 'string') {
+            if (typeof data !== "string") {
                 data = JSON.stringify(data);
             }
 
             try {
-                if(cache_lifetime) {
+                if (cache_lifetime) {
                     module.exports.conn.set(key, data, {
-                        'EX': cache_lifetime
+                        EX: cache_lifetime,
                     });
                 } else {
                     module.exports.conn.set(key, data);
                 }
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
             }
 
@@ -107,9 +104,9 @@ module.exports = {
     formatKeyName: function (key, params = []) {
         let new_key = key;
 
-        if(params) {
-            for(let param of params) {
-                if(param) {
+        if (params) {
+            for (let param of params) {
+                if (param) {
                     param = JSON.stringify(param);
                     new_key += `-${param}`;
                 }
@@ -123,7 +120,7 @@ module.exports = {
             try {
                 await module.exports.conn.del(keys);
                 return resolve();
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
                 return reject(e);
             }
@@ -134,7 +131,7 @@ module.exports = {
             try {
                 let data = await multi.exec();
                 return resolve(data);
-            } catch(e) {
+            } catch (e) {
                 return reject(e);
             }
         });
@@ -142,30 +139,30 @@ module.exports = {
     addItemToSet(key, item) {
         return new Promise(async (resolve, reject) => {
             try {
-                if(typeof item === 'object') {
+                if (typeof item === "object") {
                     item = JSON.stringify(item);
-                } else if(typeof item !== 'string') {
+                } else if (typeof item !== "string") {
                     item = item.toString();
                 }
 
                 await module.exports.conn.sAdd(key, item);
                 return resolve();
-            } catch(e) {
+            } catch (e) {
                 return reject(e);
             }
         });
     },
     addItemsToSet(key, items) {
         return new Promise(async (resolve, reject) => {
-            if(!items.length) {
+            if (!items.length) {
                 return resolve();
             }
 
             function addToSet(key_items) {
-                for(let i = 0; i < key_items.length; i++) {
+                for (let i = 0; i < key_items.length; i++) {
                     let item = key_items[i];
 
-                    if(typeof item !== 'string') {
+                    if (typeof item !== "string") {
                         key_items[i] = JSON.stringify(item);
                     }
                 }
@@ -174,7 +171,7 @@ module.exports = {
                     try {
                         let data = await module.exports.conn.sAdd(key, key_items);
                         return resolve1(data);
-                    } catch(err) {
+                    } catch (err) {
                         reject1(err);
                     }
                 });
@@ -182,9 +179,9 @@ module.exports = {
 
             let max_length = 1000000;
 
-            let chunks = require('lodash').chunk(items, max_length);
+            let chunks = require("lodash").chunk(items, max_length);
 
-            for(let chunk of chunks) {
+            for (let chunk of chunks) {
                 // chunk.unshift(key);
 
                 try {
@@ -195,7 +192,6 @@ module.exports = {
             }
 
             resolve();
-
         });
     },
     getSetMembers: function (key) {
@@ -203,7 +199,7 @@ module.exports = {
             try {
                 let data = await module.exports.conn.sMembers(key);
                 return resolve(data);
-            } catch(err) {
+            } catch (err) {
                 reject(err);
             }
         });
@@ -213,7 +209,7 @@ module.exports = {
             try {
                 let data = await module.exports.conn.sCard(key);
                 resolve(data);
-            } catch(e) {
+            } catch (e) {
                 return reject(e);
             }
         });
@@ -223,7 +219,7 @@ module.exports = {
             try {
                 let data = await module.exports.conn.sIsMember(key, member);
                 resolve(data);
-            } catch(e) {
+            } catch (e) {
                 reject(e);
             }
         });
@@ -233,7 +229,7 @@ module.exports = {
             try {
                 await module.exports.conn.sRem(key, member);
                 return resolve();
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
                 return reject(e);
             }
@@ -245,21 +241,21 @@ module.exports = {
                 let data = await module.exports.conn.lLen(key);
 
                 resolve(data);
-            } catch(e) {
+            } catch (e) {
                 return reject(e);
             }
         });
     },
     addItemToList: function (key, item) {
         return new Promise(async (resolve, reject) => {
-            if(typeof item === 'object') {
+            if (typeof item === "object") {
                 item = JSON.stringify(item);
             }
 
             try {
                 await module.exports.conn.lPush(key, item);
                 resolve();
-            } catch(e) {
+            } catch (e) {
                 return reject(e);
             }
         });
@@ -270,7 +266,7 @@ module.exports = {
                 let data = await module.exports.conn.rPopLPush(key_from, key_to);
 
                 resolve(data);
-            } catch(e) {
+            } catch (e) {
                 return reject(e);
             }
         });
@@ -278,14 +274,14 @@ module.exports = {
     removeListItem: function (key, item) {
         return new Promise(async (resolve, reject) => {
             try {
-                if(typeof item === 'object') {
+                if (typeof item === "object") {
                     item = JSON.stringify(item);
                 }
 
                 await module.exports.conn.lRem(key, 0, item);
 
                 resolve();
-            } catch(e) {
+            } catch (e) {
                 return reject(e);
             }
         });

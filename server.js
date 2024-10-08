@@ -1,28 +1,27 @@
 #!/usr/bin/env node
 
-require('dotenv').config();
+require("dotenv").config();
 
-let cacheService = require('./services/cache');
-let networkService = require('./services/network');
-let serverService = require('./services/server');
+let cacheService = require("./services/cache");
+let networkService = require("./services/network");
+let serverService = require("./services/server");
 
-
-(async function() {
+(async function () {
     try {
         await cacheService.init();
-    } catch(e) {
+    } catch (e) {
         console.error(e);
     }
 
     try {
         await serverService.init();
-    } catch(e) {
+    } catch (e) {
         console.error(e);
     }
 
     try {
         await networkService.init();
-    } catch(e) {
+    } catch (e) {
         console.error(e);
     }
 })();
