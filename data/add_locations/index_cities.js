@@ -28,7 +28,7 @@ function main() {
 
                 let city = cities[int];
 
-                const city_key = `city:${city.id}`;
+                const city_key = `${cacheService.keys.city}${city.id}`;
 
                 pipeline.hSet(city_key, {
                     id: city.id,
@@ -41,7 +41,7 @@ function main() {
                 });
 
                 try {
-                    pipeline.zAdd('cities:by_population', [{
+                    pipeline.zAdd(cacheService.keys.cities_population, [{
                         value: city.id.toString(),
                         score: city.population
                     }]);
@@ -54,7 +54,7 @@ function main() {
                 for (let i = 1; i <= nameLower.length; i++) {
                     const prefix = nameLower.slice(0, i);
 
-                    pipeline.zAdd(`cities:prefix:${prefix}`, [{
+                    pipeline.zAdd(`${cacheService.keys.cities_prefix}${prefix}`, [{
                         value: city.id.toString(),
                         score: city.population
                     }]);

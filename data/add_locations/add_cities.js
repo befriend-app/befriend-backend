@@ -108,6 +108,11 @@ function main() {
                             continue;
                         }
 
+                        //skip administrative
+                        if(data.type === 'administrative') {
+                            continue;
+                        }
+
                         let name = data.name;
 
                         if('other_names' in data) {
