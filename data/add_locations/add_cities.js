@@ -187,7 +187,7 @@ function main() {
                             continue;
                         }
 
-                        batch_insert.push({
+                        let insert_data = {
                             country_id: country.id,
                             state_id: state_db.id,
                             city_name: name,
@@ -200,7 +200,12 @@ function main() {
                             is_village: data.type === 'village',
                             is_hamlet: data.type === 'hamlet',
                             is_administrative: data.type === 'administrative'
-                        });
+                        };
+
+                        //prevent duplicate cities in same state
+                        cities_dict[country.id][state_db.id][name.toLowerCase()] = insert_data;
+
+                        batch_insert.push(insert_data);
 
                         if(batch_insert.length > 5000) {
                             await dbService.batchInsert(conn, 'open_cities', batch_insert);
