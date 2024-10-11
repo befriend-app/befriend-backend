@@ -211,9 +211,7 @@ function main() {
 
             console.log({
                 time: ((timeNow() - t) / 1000).toFixed(1) + ' sec'
-            })
-
-            resolve();
+            });
         } catch(e) {
             console.error(e);
         }

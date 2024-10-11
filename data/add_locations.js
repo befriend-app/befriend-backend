@@ -6,6 +6,8 @@ function main() {
             await require("./add_locations/add_countries").main();
             await require("./add_locations/add_cities").main();
 
+            await require("./add_locations/index_cities").main();
+
             console.log("Locations loaded");
         } catch(e) {
             console.error(e);
