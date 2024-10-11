@@ -67,7 +67,7 @@ function main() {
 
                 console.log({
                     id: country.id,
-                    country: country.name
+                    country: country.country_name
                 });
 
                 let url = joinPaths(link_prefix, country.country_code.toLowerCase() + '.zip');
