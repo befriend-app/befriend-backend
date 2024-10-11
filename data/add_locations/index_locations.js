@@ -93,6 +93,7 @@ function indexStates() {
                 pipeline.hSet(state_key, {
                     id: state.id,
                     name: state.state_name,
+                    short: state.state_short,
                     country_id: state.country_id,
                     population: state.population ? state.population : '',
                     lat: state.lat ? state.lat : '',

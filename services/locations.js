@@ -17,16 +17,16 @@ function cityAutoComplete(search, userLat, userLon, maxDistance) {
         search = search.toLowerCase();
 
         try {
-             let key = `${cacheService.keys.cities_prefix}${search}`;
+             let city_key = `${cacheService.keys.cities_prefix}${search}`;
 
-             let city_ids = await cacheService.getSortedSet(key);
+             let city_ids = await cacheService.getSortedSet(city_key);
 
              if(!city_ids.length) {
                  return resolve([]);
              }
 
             // Get city details and calculate scores
-            const pipeline = cacheService.conn.multi();
+            let pipeline = cacheService.conn.multi();
 
              for(let id of city_ids) {
                  pipeline.hGetAll(`${cacheService.keys.city}${id}`);
@@ -64,10 +64,10 @@ function cityAutoComplete(search, userLat, userLon, maxDistance) {
 
                     // Calculate combined score
                     const populationScore = city.population / 500000; // Normalize to 500k
-                    let score;
+                    let score, distanceScore;
 
                     if (distance != null) {
-                        const distanceScore = (1000 * 1000) / (distance + 1);
+                        distanceScore = (1000 * 1000) / (distance + 1);
                         score = (populationScore + distanceScore) / 2;
                     } else {
                         score = populationScore;
@@ -82,6 +82,42 @@ function cityAutoComplete(search, userLat, userLon, maxDistance) {
                 .filter(Boolean)
                 .sort((a, b) => b.score - a.score)
                 .slice(0, limit);
+
+            //state
+            pipeline = cacheService.conn.multi();
+
+            for(let result of results) {
+                pipeline.hGetAll(`${cacheService.keys.state}${result.state_id}`);
+            }
+
+            let states = await cacheService.execRedisMulti(pipeline);
+
+            for(let i = 0; i < states.length; i++) {
+                let state = states[i];
+                let result = results[i];
+
+                if(state) {
+                    result.state = state;
+                }
+            }
+
+            //country
+            pipeline = cacheService.conn.multi();
+
+            for(let result of results) {
+                pipeline.hGetAll(`${cacheService.keys.country}${result.country_id}`);
+            }
+
+            let countries = await cacheService.execRedisMulti(pipeline);
+
+            for(let i = 0; i < countries.length; i++) {
+                let country = countries[i];
+                let result = results[i];
+
+                if(country) {
+                    result.country = country;
+                }
+            }
 
             return resolve(results);
         } catch(e) {

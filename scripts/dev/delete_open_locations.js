@@ -21,7 +21,7 @@ loadScriptEnv();
             connection.port = parseInt(process.env.DB_PORT);
         }
 
-        knex = require('knex')({
+        let knex = require('knex')({
             client: process.env.DB_CLIENT,
             connection: connection
         });
