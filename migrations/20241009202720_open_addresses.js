@@ -37,14 +37,21 @@ exports.up = function(knex) {
             table.increments('id').unsigned().primary();
 
             table.integer('country_id').unsigned().notNullable();
-            table.integer('state_id').unsigned().notNullable();
+            table.integer('state_id').unsigned().nullable();
 
             table.string('city_name').notNullable();
+            table.string('postcode').nullable();
 
             table.integer('population').nullable();
 
             table.float('lat', 14, 10).nullable();
             table.float('lon', 14, 10).nullable();
+
+            table.boolean('is_city').defaultTo(0);
+            table.boolean('is_town').defaultTo(0);
+            table.boolean('is_village').defaultTo(0);
+            table.boolean('is_hamlet').defaultTo(0);
+            table.boolean('is_administrative').defaultTo(0);
 
             table.foreign('country_id').references('id').inTable('open_countries');
             table.foreign('state_id').references('id').inTable('open_states');

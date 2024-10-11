@@ -1,15 +1,12 @@
-const axios = require('axios');
-
-const source_link = `https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/geonames-all-cities-with-a-population-1000/exports/json?lang=en`;
-
 function main() {
     return new Promise(async (resolve, reject) => {
         try {
-             console.log("Downloading cities and populations");
+            console.log("Loading locations");
 
-             let r = await axios.get(source_link);
+            await require("./add_locations/add_countries").main();
+            await require("./add_locations/add_cities").main();
 
-             let d = r.data;
+            console.log("Locations loaded");
         } catch(e) {
             console.error(e);
         }
