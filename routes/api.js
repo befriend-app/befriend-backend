@@ -167,6 +167,18 @@ router.get("/mapbox/token", function (req, res, next) {
     });
 });
 
+router.post("/autocomplete/cities", function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await apiController.postAutoCompleteCities(req, res);
+        } catch (e) {
+            console.error(e);
+        }
+
+        resolve();
+    });
+});
+
 router.get("/review-venues", function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         let conn = await require("../services/db").conn();

@@ -8,6 +8,11 @@ module.exports = {
         activity_type: `activity_type:`,
         activity_type_venue_categories: `activity_type:venue_categories:`,
         place_fsq: `place:fsq:`,
+        city: `city:`,
+        cities_population: `cities:by_population`,
+        cities_prefix: `cities:prefix:`,
+        state: `state:`,
+        country: `country:`
     },
     init: function () {
         return new Promise(async (resolve, reject) => {
@@ -130,6 +135,7 @@ module.exports = {
         return new Promise(async (resolve, reject) => {
             try {
                 let data = await multi.exec();
+
                 return resolve(data);
             } catch (e) {
                 return reject(e);
@@ -286,4 +292,27 @@ module.exports = {
             }
         });
     },
+    getSortedSet: function (key, start, end) {
+        return new Promise(async (resolve, reject) => {
+            if(!key) {
+                return reject("No key");
+            }
+
+            let results;
+
+            try {
+                if(typeof start === 'undefined' || typeof end === 'undefined') {
+                    start = 0;
+                    end = -1;
+                }
+
+                results = await module.exports.conn.zRange(key, start, end);
+
+                return resolve(results);
+            } catch(e) {
+                console.error(e);
+                return reject();
+            }
+        });
+    }
 };

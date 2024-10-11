@@ -378,8 +378,8 @@ function getDateTimeStr() {
 function getDistanceMeters(loc_1, loc_2) {
     const R = 6371; // Earth's radius in km
 
-    const dLat = (loc_2.lat - loc_1.lat) * (Math.PI / 180);
-    const dLon = (loc_2.lon - loc_1.lon) * (Math.PI / 180);
+    const dLat = deg2rad(loc_2.lat - loc_1.lat);
+    const dLon = deg2rad(loc_2.lon - loc_1.lon);
 
     const a =
         Math.sin(dLat / 2) * Math.sin(dLat / 2) +
