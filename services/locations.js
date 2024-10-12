@@ -187,27 +187,81 @@ function cityAutoComplete(search, userLat, userLon, maxDistance) {
             console.error(e);
         }
 
-        let location_obj = parseSearch(search, true);
+        let parsed_arr = [];
+
+        parsed_arr.push(parseSearch(search, true));
+        parsed_arr.push(parseSearch(search));
 
         try {
-            let city_key = `${cacheService.keys.cities_prefix}${location_obj.city}`;
+            let results_arr = [];
 
-            let city_ids = await cacheService.getSortedSet(city_key);
-
-            if (!city_ids.length) {
-                return resolve([]);
+            if(JSON.stringify(parsed_arr[0]) === JSON.stringify(parsed_arr[1])) {
+                parsed_arr = parsed_arr.slice(0, 1);
             }
 
-            // Get city details and calculate scores
-            let pipeline = cacheService.conn.multi();
+            for(let parsed of parsed_arr) {
+                let city_key = `${cacheService.keys.cities_prefix}${parsed.city}`;
 
-            for (let id of city_ids) {
-                pipeline.hGetAll(`${cacheService.keys.city}${id}`);
+                let city_ids = await cacheService.getSortedSet(city_key);
+
+                if (!city_ids.length) {
+                    results_arr.push([]);
+                    continue;
+                }
+
+                // Get city details and calculate scores
+                let pipeline = cacheService.conn.multi();
+
+                for (let id of city_ids) {
+                    pipeline.hGetAll(`${cacheService.keys.city}${id}`);
+                }
+
+                let cities = await cacheService.execRedisMulti(pipeline);
+
+                await addState(cities);
+                await addCountry(cities);
+
+                if(parsed.state || parsed.country) {
+                    cities = cities.filter(function (result) {
+                        if(parsed.state && parsed.country) {
+                            let state_match = stateMatch(result.state, parsed.state);
+                            let country_match = countryMatch(result.country, parsed.country);
+
+                            if(parsed.parts === 2) {
+                                return state_match || country_match;
+                            }
+
+                            return state_match && country_match;
+                        } else if(parsed.state) {
+                            return stateMatch(result.state, parsed.state);
+                        } else if(parsed.country) {
+                            return countryMatch(result.country, parsed.country);
+                        } else {
+                            return false;
+                        }
+                    });
+                }
+
+                results_arr.push(cities);
             }
 
-            let cities = await cacheService.execRedisMulti(pipeline);
+            //remove duplicates
+            let city_id_dict = {};
 
-            let results = cities
+            let results = [];
+
+            for(let i = 0; i < results_arr.length; i++) {
+                let arr = results_arr[i];
+
+                for(let city of arr) {
+                    if(!(city.id in city_id_dict)) {
+                        city_id_dict[city.id] = true;
+                        results.push(city);
+                    }
+                }
+            }
+
+            results = results
                 .map(function (city) {
                     if (!city) return null;
 
@@ -255,33 +309,8 @@ function cityAutoComplete(search, userLat, userLon, maxDistance) {
                     };
                 })
                 .filter(Boolean)
-                .sort((a, b) => b.score - a.score);
-
-            await addState(results);
-            await addCountry(results);
-
-            if(location_obj.state || location_obj.country) {
-                results = results.filter(function (result) {
-                    if(location_obj.state && location_obj.country) {
-                        let state_match = stateMatch(result.state, location_obj.state);
-                        let country_match = countryMatch(result.country, location_obj.country);
-
-                        if(location_obj.parts === 2) {
-                            return state_match || country_match;
-                        }
-
-                        return state_match && country_match;
-                    } else if(location_obj.state) {
-                        return stateMatch(result.state, location_obj.state);
-                    } else if(location_obj.country) {
-                        return countryMatch(result.country, location_obj.country);
-                    } else {
-                        return false;
-                    }
-                });
-            } else {
-                results = results.slice(0, limit);
-            }
+                .sort((a, b) => b.score - a.score)
+                .slice(0, limit);
 
             return resolve(results);
         } catch (e) {
