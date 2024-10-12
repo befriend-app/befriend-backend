@@ -122,6 +122,10 @@ module.exports = {
     },
     deleteKeys: function (keys) {
         return new Promise(async (resolve, reject) => {
+            if(!keys || !keys.length) {
+                return resolve();
+            }
+
             try {
                 await module.exports.conn.del(keys);
                 return resolve();
