@@ -9,7 +9,7 @@ function main() {
             await require("./add_locations/index_locations").main();
 
             console.log("Locations loaded");
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
 
@@ -18,8 +18,8 @@ function main() {
 }
 
 module.exports = {
-    main: main
-}
+    main: main,
+};
 
 if (require.main === module) {
     (async function () {

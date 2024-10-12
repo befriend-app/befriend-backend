@@ -12,6 +12,7 @@ const sgMail = require("@sendgrid/mail");
 const { decrypt } = require("./encryption");
 const bcrypt = require("bcryptjs");
 const _ = require("lodash");
+const sea = require("node:sea");
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -731,6 +732,28 @@ function normalizePort(val) {
     return false;
 }
 
+function normalizeSearch(search, skip_lowercase) {
+    if(!search) {
+        return null;
+    }
+
+    let clean_search;
+
+    if(!skip_lowercase) {
+        clean_search = search.toLowerCase();
+    }
+
+    //remove extra space
+    clean_search = clean_search.trim().replace(/\s+/g, ' ');
+
+    //remove non-allowed characters
+    let regex = /[^a-zA-Z0-9 ,.'-]+/;
+
+    clean_search = clean_search.replace(regex, '');
+
+    return clean_search;
+}
+
 function numberWithCommas(x, to_integer) {
     if (!x) {
         return x;
@@ -739,6 +762,7 @@ function numberWithCommas(x, to_integer) {
     if (to_integer) {
         x = Number.parseInt(x);
     }
+
     return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
@@ -990,6 +1014,7 @@ module.exports = {
     loadScriptEnv: loadScriptEnv,
     normalizeDistance: normalizeDistance,
     normalizePort: normalizePort,
+    normalizeSearch: normalizeSearch,
     numberWithCommas: numberWithCommas,
     range: range,
     readFile: readFile,

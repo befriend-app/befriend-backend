@@ -12,7 +12,7 @@ module.exports = {
         cities_population: `cities:by_population`,
         cities_prefix: `cities:prefix:`,
         state: `state:`,
-        country: `country:`
+        country: `country:`,
     },
     init: function () {
         return new Promise(async (resolve, reject) => {
@@ -294,14 +294,14 @@ module.exports = {
     },
     getSortedSet: function (key, start, end) {
         return new Promise(async (resolve, reject) => {
-            if(!key) {
+            if (!key) {
                 return reject("No key");
             }
 
             let results;
 
             try {
-                if(typeof start === 'undefined' || typeof end === 'undefined') {
+                if (typeof start === "undefined" || typeof end === "undefined") {
                     start = 0;
                     end = -1;
                 }
@@ -309,10 +309,10 @@ module.exports = {
                 results = await module.exports.conn.zRange(key, start, end);
 
                 return resolve(results);
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
                 return reject();
             }
         });
-    }
+    },
 };

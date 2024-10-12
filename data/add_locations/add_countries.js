@@ -1,5 +1,5 @@
-const axios = require('axios');
-const {loadScriptEnv} = require("../../services/shared");
+const axios = require("axios");
+const { loadScriptEnv } = require("../../services/shared");
 const dbService = require("../../services/db");
 
 loadScriptEnv();
@@ -9,32 +9,29 @@ const source_link = `https://raw.githubusercontent.com/grafana/worldmap-panel/re
 function main() {
     return new Promise(async (resolve, reject) => {
         try {
-             console.log("Adding countries to DB");
+            console.log("Adding countries to DB");
 
             let conn = await dbService.conn();
 
-             let r = await axios.get(source_link);
+            let r = await axios.get(source_link);
 
             let countries = r.data;
 
-             for(let country of countries) {
-                 let check = await conn('open_countries')
-                     .where('country_name', country.name)
-                     .first();
+            for (let country of countries) {
+                let check = await conn("open_countries").where("country_name", country.name).first();
 
-                 if(!check) {
-                     await conn('open_countries')
-                         .insert({
-                            country_name: country.name,
-                            country_code: country.key,
-                            lat: country.latitude,
-                            lon: country.longitude
-                         });
-                 }
-             }
+                if (!check) {
+                    await conn("open_countries").insert({
+                        country_name: country.name,
+                        country_code: country.key,
+                        lat: country.latitude,
+                        lon: country.longitude,
+                    });
+                }
+            }
 
-             resolve();
-        } catch(e) {
+            resolve();
+        } catch (e) {
             console.error(e);
         }
 
@@ -43,8 +40,8 @@ function main() {
 }
 
 module.exports = {
-    main: main
-}
+    main: main,
+};
 
 if (require.main === module) {
     (async function () {

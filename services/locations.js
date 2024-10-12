@@ -1,38 +1,37 @@
-const cacheService = require('../services/cache');
-const {getDistanceMeters, timeNow} = require("./shared");
-
+const cacheService = require("../services/cache");
+const { getDistanceMeters, timeNow, normalizeSearch} = require("./shared");
 
 function cityAutoComplete(search, userLat, userLon, maxDistance) {
     return new Promise(async (resolve, reject) => {
-        let limit = 10;
+        let limit = 10, temp_limit = 50;
 
-        if(userLat) {
+        if (userLat) {
             userLat = parseFloat(userLat);
         }
 
-        if(userLon) {
+        if (userLon) {
             userLon = parseFloat(userLon);
         }
 
-        search = search.toLowerCase();
+        search = normalizeSearch(search);
 
         try {
-             let city_key = `${cacheService.keys.cities_prefix}${search}`;
+            let city_key = `${cacheService.keys.cities_prefix}${search}`;
 
-             let city_ids = await cacheService.getSortedSet(city_key);
+            let city_ids = await cacheService.getSortedSet(city_key);
 
-             if(!city_ids.length) {
-                 return resolve([]);
-             }
+            if (!city_ids.length) {
+                return resolve([]);
+            }
 
             // Get city details and calculate scores
             let pipeline = cacheService.conn.multi();
 
-             for(let id of city_ids) {
-                 pipeline.hGetAll(`${cacheService.keys.city}${id}`);
-             }
+            for (let id of city_ids) {
+                pipeline.hGetAll(`${cacheService.keys.city}${id}`);
+            }
 
-             let cities = await cacheService.execRedisMulti(pipeline);
+            let cities = await cacheService.execRedisMulti(pipeline);
 
             const results = cities
                 .map(function (city) {
@@ -47,13 +46,15 @@ function cityAutoComplete(search, userLat, userLon, maxDistance) {
                     let distance = null;
 
                     if (userLat != null && userLon != null) {
-                        distance = getDistanceMeters({
+                        distance = getDistanceMeters(
+                            {
                                 lat: userLat,
-                                lon: userLon
-                            }, {
+                                lon: userLon,
+                            },
+                            {
                                 lat: city.lat,
-                                lon: city.lon
-                            }
+                                lon: city.lon,
+                            },
                         );
 
                         // Skip if beyond maxDistance
@@ -76,7 +77,7 @@ function cityAutoComplete(search, userLat, userLon, maxDistance) {
                     return {
                         ...city,
                         distance,
-                        score
+                        score,
                     };
                 })
                 .filter(Boolean)
@@ -86,17 +87,17 @@ function cityAutoComplete(search, userLat, userLon, maxDistance) {
             //state
             pipeline = cacheService.conn.multi();
 
-            for(let result of results) {
+            for (let result of results) {
                 pipeline.hGetAll(`${cacheService.keys.state}${result.state_id}`);
             }
 
             let states = await cacheService.execRedisMulti(pipeline);
 
-            for(let i = 0; i < states.length; i++) {
+            for (let i = 0; i < states.length; i++) {
                 let state = states[i];
                 let result = results[i];
 
-                if(state) {
+                if (state) {
                     result.state = state;
                 }
             }
@@ -104,23 +105,23 @@ function cityAutoComplete(search, userLat, userLon, maxDistance) {
             //country
             pipeline = cacheService.conn.multi();
 
-            for(let result of results) {
+            for (let result of results) {
                 pipeline.hGetAll(`${cacheService.keys.country}${result.country_id}`);
             }
 
             let countries = await cacheService.execRedisMulti(pipeline);
 
-            for(let i = 0; i < countries.length; i++) {
+            for (let i = 0; i < countries.length; i++) {
                 let country = countries[i];
                 let result = results[i];
 
-                if(country) {
+                if (country) {
                     result.country = country;
                 }
             }
 
             return resolve(results);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return reject();
         }
@@ -128,5 +129,5 @@ function cityAutoComplete(search, userLat, userLon, maxDistance) {
 }
 
 module.exports = {
-    cityAutoComplete: cityAutoComplete
-}
+    cityAutoComplete: cityAutoComplete,
+};

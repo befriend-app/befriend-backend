@@ -9,9 +9,6 @@ export default [
         },
     },
     {
-        ignores: [
-            '**/.api/**',
-            '**/tmp/**'
-        ]
-    }
+        ignores: ["**/.api/**", "**/tmp/**"],
+    },
 ];

@@ -25,7 +25,7 @@ const { encrypt } = require("../services/encryption");
 const { deleteKeys } = require("../services/cache");
 const { getPersonByEmail } = require("../services/persons");
 const { getCategoriesPlaces } = require("../services/places");
-const {cityAutoComplete} = require("../services/locations");
+const { cityAutoComplete } = require("../services/locations");
 
 module.exports = {
     getNetworks: function (req, res) {
@@ -1380,12 +1380,15 @@ module.exports = {
     postAutoCompleteCities: function (req, res) {
         return new Promise(async (resolve, reject) => {
             try {
-                const {search, lat, lon} = req.body;
+                const { search, lat, lon } = req.body;
 
-                if(!search) {
-                    res.json({
-                        message: "Search string is required"
-                    }, 400);
+                if (!search) {
+                    res.json(
+                        {
+                            message: "Search string is required",
+                        },
+                        400,
+                    );
 
                     return resolve();
                 }
@@ -1393,14 +1396,17 @@ module.exports = {
                 const results = await cityAutoComplete(search, lat, lon);
 
                 res.json({
-                    cities: results
+                    cities: results,
                 });
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
 
-                res.json({
-                    message: "Autocomplete error"
-                }, 400);
+                res.json(
+                    {
+                        message: "Autocomplete error",
+                    },
+                    400,
+                );
             }
 
             resolve();
