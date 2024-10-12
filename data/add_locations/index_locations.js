@@ -59,6 +59,20 @@ function indexCities() {
                    }]);
                }
 
+               //split name into words
+               const nameSplit = nameLower.split(' ');
+
+               for(let word of nameSplit) {
+                   for (let i = 1; i <= word.length; i++) {
+                       const prefix = word.slice(0, i);
+
+                       pipeline.zAdd(`${cacheService.keys.cities_prefix}${prefix}`, [{
+                           value: city.id.toString(),
+                           score: city.population
+                       }]);
+                   }
+               }
+
                if(int % 5000 === 0) {
                    await pipeline.execAsPipeline();
 
