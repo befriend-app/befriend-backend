@@ -1,9 +1,12 @@
+const cache = require('../../services/cache');
 const db = require("../../services/db");
 const { loadScriptEnv } = require("../../services/shared");
 
 loadScriptEnv();
 
 (async function () {
+    await cache.init();
+
     let dbs = [process.env.DB_NAME];
 
     for (let db of dbs) {
@@ -18,7 +21,7 @@ loadScriptEnv();
             connection.port = parseInt(process.env.DB_PORT);
         }
 
-        knex = require("knex")({
+        let knex = require("knex")({
             client: process.env.DB_CLIENT,
             connection: connection,
         });
@@ -57,6 +60,11 @@ loadScriptEnv();
             }
         }
     }
+
+    //delete cache
+    let keys = await cache.getKeys(cache.keys.place_fsq + '*');
+
+    await cache.deleteKeys(keys);
 
     try {
         await require("../../data/add_activity_types_venues").main();
