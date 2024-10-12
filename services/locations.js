@@ -192,12 +192,12 @@ function cityAutoComplete(search, userLat, userLon, maxDistance) {
         parsed_arr.push(parseSearch(search, true));
         parsed_arr.push(parseSearch(search));
 
+        if(JSON.stringify(parsed_arr[0]) === JSON.stringify(parsed_arr[1])) {
+            parsed_arr = parsed_arr.slice(0, 1);
+        }
+
         try {
             let results_arr = [];
-
-            if(JSON.stringify(parsed_arr[0]) === JSON.stringify(parsed_arr[1])) {
-                parsed_arr = parsed_arr.slice(0, 1);
-            }
 
             for(let parsed of parsed_arr) {
                 let city_key = `${cacheService.keys.cities_prefix}${parsed.city}`;
