@@ -34,6 +34,7 @@
         "express-ejs-layouts": "^2.5.1",
         "geo-tz": "^8.1.1",
         "geoip-lite": "^1.4.10",
+        "geojson-places": "^1.0.8",
         "geolib": "^3.3.4",
         "http-errors": "^2.0.0",
         "inline-css": "^4.0.2",

@@ -1,7 +1,7 @@
 const cacheService = require("../services/cache");
 const dbService = require("./db");
 
-const { getDistanceMeters, timeNow, normalizeSearch} = require("./shared");
+const { getDistanceMeters, timeNow, normalizeSearch, latLonLookup} = require("./shared");
 
 
 function isCountry(str, min_char = 1) {
@@ -170,7 +170,7 @@ function cityAutoComplete(search, userLat, userLon, maxDistance) {
     }
 
     return new Promise(async (resolve, reject) => {
-        let limit = 10;
+        let limit = 10, location_country;
 
         if (userLat) {
             userLat = parseFloat(userLat);
@@ -178,6 +178,12 @@ function cityAutoComplete(search, userLat, userLon, maxDistance) {
 
         if (userLon) {
             userLon = parseFloat(userLon);
+        }
+
+        try {
+            location_country = latLonLookup(userLat, userLon);
+        } catch(e) {
+
         }
 
         //get list of countries
@@ -269,6 +275,17 @@ function cityAutoComplete(search, userLat, userLon, maxDistance) {
                     city.population = parseInt(city.population);
                     city.lat = parseFloat(city.lat);
                     city.lon = parseFloat(city.lon);
+
+                    city.is_user_country = false;
+
+                    //is user location country
+                    if(city.country && location_country) {
+                        if(
+                            location_country.country_a2.startsWith(city.country.code)
+                            || location_country.country_a3.startsWith(city.country.code)) {
+                                city.is_user_country = true;
+                            }
+                    }
 
                     // Calculate distance if coordinates provided
                     let distance = null;

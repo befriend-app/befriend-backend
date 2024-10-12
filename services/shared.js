@@ -6,6 +6,7 @@ const utc = require("dayjs/plugin/utc");
 const timezone = require("dayjs/plugin/timezone");
 const geoip = require("geoip-lite");
 const geolib = require("geolib");
+const geoplaces = require("geojson-places");
 const tldts = require("tldts");
 const process = require("process");
 const sgMail = require("@sendgrid/mail");
@@ -704,6 +705,14 @@ function joinPaths() {
     return url;
 }
 
+function latLonLookup(lat, lon) {
+    if(!lat || !lon) {
+        return null;
+    }
+
+    return geoplaces.lookUp(lat, lon);
+}
+
 function loadScriptEnv() {
     let repo_root = getRepoRoot();
 
@@ -1011,6 +1020,7 @@ module.exports = {
     isValidEmail: isValidEmail,
     isValidUserName: isValidUserName,
     joinPaths: joinPaths,
+    latLonLookup: latLonLookup,
     loadScriptEnv: loadScriptEnv,
     normalizeDistance: normalizeDistance,
     normalizePort: normalizePort,
