@@ -9,10 +9,16 @@ module.exports = {
         activity_type_venue_categories: `activity_type:venue_categories:`,
         place_fsq: `place:fsq:`,
         city: `city:`,
+        cities_country: `cities:country:`,
         cities_population: `cities:by_population`,
         cities_prefix: `cities:prefix:`,
         state: `state:`,
         country: `country:`,
+        multi: {
+            cityCountryPrefix: function (country_code, prefix) {
+                return `cities:country:${country_code}:${prefix}`;
+            }
+        }
     },
     init: function () {
         return new Promise(async (resolve, reject) => {
@@ -311,6 +317,37 @@ module.exports = {
                 }
 
                 results = await module.exports.conn.zRange(key, start, end);
+
+                return resolve(results);
+            } catch (e) {
+                console.error(e);
+                return reject();
+            }
+        });
+    },
+    getSortedSetByScore: function (key, limit, lowest_to_highest) {
+        return new Promise(async (resolve, reject) => {
+            if (!key) {
+                return reject("No key");
+            }
+
+            let results;
+
+            let options = {
+                BY: 'SCORE',
+                REV: !lowest_to_highest,
+            };
+
+            if(limit) {
+                options.LIMIT= {
+                    offset: 0,
+                    count: limit
+                }
+            }
+
+            try {
+                results = await module.exports.conn.
+                    zRange(key, '+inf', '-inf', options);
 
                 return resolve(results);
             } catch (e) {

@@ -205,21 +205,48 @@ function cityAutoComplete(search, userLat, userLon, maxDistance) {
         try {
             let results_arr = [];
 
+            let country_city_ids = [];
+
+            if(location_country && parsed_arr.length) {
+                try {
+                    let country_prefix_key = cacheService.keys.multi.cityCountryPrefix(location_country.country_a2, parsed_arr[0].city);
+                    country_city_ids = await cacheService.getSortedSet(country_prefix_key);
+                } catch(e) {
+
+                }
+            }
+
             for(let parsed of parsed_arr) {
+                let parsed_city_dict = {};
+
                 let city_key = `${cacheService.keys.cities_prefix}${parsed.city}`;
 
-                let city_ids = await cacheService.getSortedSet(city_key);
+                let city_ids = await cacheService.getSortedSetByScore(city_key, 1000);
 
                 if (!city_ids.length) {
                     results_arr.push([]);
                     continue;
                 }
 
-                // Get city details and calculate scores
+                // Setup multi pipeline
                 let pipeline = cacheService.conn.multi();
 
-                for (let id of city_ids) {
+                //merge with country city ids
+                // get city details and calculate scores
+                // remove duplicates
+
+                for(let id of country_city_ids) {
+                    parsed_city_dict[id] = true;
+
                     pipeline.hGetAll(`${cacheService.keys.city}${id}`);
+                }
+
+                for (let id of city_ids) {
+                    if(!(id in parsed_city_dict)) {
+                        parsed_city_dict[id] = true;
+
+                        pipeline.hGetAll(`${cacheService.keys.city}${id}`);
+                    }
                 }
 
                 let cities = await cacheService.execRedisMulti(pipeline);

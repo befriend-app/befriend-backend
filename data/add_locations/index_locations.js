@@ -12,6 +12,14 @@ function indexCities() {
 
             console.log("Cities");
 
+            let countries = await conn("open_countries");
+
+            let countries_dict = {};
+
+            countries.map((country) => {
+               countries_dict[country.id] = country;
+            });
+
             let cities = await conn("open_cities").whereNotNull("population");
 
             let pipeline = cacheService.conn.multi();
@@ -48,6 +56,17 @@ function indexCities() {
                     debugger;
                 }
 
+                //add to country set
+                let country_code = countries_dict[city.country_id].country_code;
+
+                pipeline.zAdd(`${cacheService.keys.cities_country}${country_code}`, [
+                    {
+                        value: city.id.toString(),
+                        score: city.population
+                    },
+                ]);
+
+                //from beginning of name to end
                 const nameLower = city.city_name.toLowerCase();
 
                 for (let i = 1; i <= nameLower.length; i++) {
@@ -74,6 +93,16 @@ function indexCities() {
                                 score: city.population,
                             },
                         ]);
+
+                        //add to country prefix for small number of characters
+                        if(i < 4) {
+                            pipeline.zAdd(cacheService.keys.multi.cityCountryPrefix(country_code, prefix), [
+                                {
+                                    value: city.id.toString(),
+                                    score: city.population,
+                                },
+                            ]);
+                        }
                     }
                 }
 
