@@ -1,6 +1,6 @@
 const cacheService = require("../services/cache");
 const dbService = require("./db");
-const { getDistanceMeters, timeNow, normalizeSearch, latLonLookup } = require("./shared");
+const { getDistanceMeters, normalizeSearch, latLonLookup } = require("./shared");
 
 const LIMIT = 10;
 const MIN_COUNTRY_CHARS = 1;
@@ -9,6 +9,7 @@ const countries = {
     codes: [],
     names: []
 };
+
 
 function loadCountries() {
     return new Promise(async (resolve, reject) => {
@@ -210,7 +211,7 @@ function calculateCityScore(city, userLat, userLon, maxDistance, locationCountry
     }
 
     // Calculate combined score
-    const populationScore = city.population / 500000; // Normalize to 500k
+    const populationScore = city.population / 500000; // Normalize
     let score, distanceScore;
 
     if (distance != null) {

@@ -1,14 +1,17 @@
 // https://www.geoapify.com/data-share/localities/
+// https://public.opendatasoft.com/explore/dataset/geonames-all-cities-with-a-population-500
 
 const axios = require("axios");
 const AdmZip = require("adm-zip");
 
-const { loadScriptEnv, joinPaths, timeNow } = require("../../services/shared");
+const { loadScriptEnv, joinPaths, timeNow, getDistanceMeters, getMetersFromMilesOrKm} = require("../../services/shared");
 const dbService = require("../../services/db");
 
 loadScriptEnv();
 
 const link_prefix = `https://www.geoapify.com/data-share/localities/`;
+
+const cities_population_link = `https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/geonames-all-cities-with-a-population-500/exports/json`;
 
 let countries_dict = {};
 let countries_id_dict = {};
@@ -16,12 +19,93 @@ let states_dict = {};
 let states_id_dict = {};
 let cities_dict = {};
 
+let populations_dict = {};
+
+function fetchCityPopulations() {
+    return new Promise(async (resolve, reject) => {
+        console.log("Download cities with a population > 500");
+
+        try {
+             let r = await axios.get(cities_population_link);
+
+             for(let city of r.data) {
+                 if(!city.population) {
+                     continue;
+                 }
+
+                 if(!(city.country_code in populations_dict)) {
+                     populations_dict[city.country_code] = {};
+                 }
+
+                 let city_name_lower = city.name.toLowerCase();
+
+                 if(!(city_name_lower in populations_dict[city.country_code])) {
+                     populations_dict[city.country_code][city_name_lower] = [];
+                 }
+
+                 populations_dict[city.country_code][city_name_lower].push({
+                     name: city.name,
+                     population: city.population,
+                     coordinates: city.coordinates,
+                 });
+             }
+        } catch(e) {
+            console.error(e);
+        }
+
+        resolve();
+    });
+}
+
+function findPopulation(city) {
+    if(city.address && city.address.country_code.toUpperCase() in populations_dict) {
+        let country_data = populations_dict[city.address.country_code.toUpperCase()];
+
+        let city_name_lower = getCityName(city).toLowerCase();
+
+        if(city_name_lower in country_data) {
+            let cities = country_data[city_name_lower];
+
+            for(let _city of cities) {
+                let distance = getDistanceMeters({
+                    lat: city.location[1],
+                    lon: city.location[0],
+                }, _city.coordinates);
+
+                if(distance < getMetersFromMilesOrKm(30)) {
+                    if(_city.population) {
+                        return _city.population;
+                    }
+                }
+            }
+        }
+    }
+
+    return null;
+}
+
+function getCityName(city) {
+    let name = city.name;
+
+    if ("other_names" in city) {
+        if ("name:en" in city.other_names) {
+            name = city.other_names["name:en"];
+        } else if ("int_name" in city.other_names) {
+            name = city.other_names["int_name"];
+        }
+    }
+
+    return name;
+}
+
 function main() {
     return new Promise(async (resolve, reject) => {
         try {
             console.log("Add cities, states, and populations");
 
             let t = timeNow();
+
+            await fetchCityPopulations();
 
             let conn = await dbService.conn();
 
@@ -59,6 +143,8 @@ function main() {
 
                 cities_dict[city.country_id][city.state_id][city.city_name.toLowerCase()] = city;
             }
+
+            console.log("Process countries");
 
             for (let country of countries) {
                 let r;
@@ -101,51 +187,41 @@ function main() {
                     let batch_insert = [];
 
                     for (let line of lines) {
-                        let data = JSON.parse(line);
+                        let city = JSON.parse(line);
 
-                        if (!data.name) {
+                        if (!city.name) {
                             continue;
                         }
 
                         //skip administrative
-                        if (data.type === "administrative") {
+                        if (city.type === "administrative") {
                             continue;
                         }
 
-                        let name = data.name;
-
-                        if ("other_names" in data) {
-                            if ("name:en" in data.other_names) {
-                                name = data.other_names["name:en"];
-                            } else if ("int_name" in data.other_names) {
-                                name = data.other_names["int_name"];
-                            }
-                        }
+                        let name = getCityName(city);
 
                         let state, state_short;
 
-                        let population = null;
+                        let population = city.population;
 
-                        if ("state" in data.address) {
-                            state = data.address.state;
+                        if ("state" in city.address) {
+                            state = city.address.state;
 
                             try {
-                                if ("ISO3166-2-lvl4" in data.address) {
-                                    state_short = data.address["ISO3166-2-lvl4"].split("-")[1];
-                                } else if ("ISO3166-2-lvl5" in data.address) {
-                                    state_short = data.address["ISO3166-2-lvl5"].split("-")[1];
-                                } else if ("ISO3166-2-lvl6" in data.address) {
-                                    state_short = data.address["ISO3166-2-lvl6"].split("-")[0];
+                                if ("ISO3166-2-lvl4" in city.address) {
+                                    state_short = city.address["ISO3166-2-lvl4"].split("-")[1];
+                                } else if ("ISO3166-2-lvl5" in city.address) {
+                                    state_short = city.address["ISO3166-2-lvl5"].split("-")[1];
+                                } else if ("ISO3166-2-lvl6" in city.address) {
+                                    state_short = city.address["ISO3166-2-lvl6"].split("-")[0];
                                 } else {
-                                    state_short = data.address.state;
+                                    state_short = city.address.state;
                                 }
                             } catch (e) {
                                 debugger;
                             }
-
-                            population = data.population;
-                        } else if ("municipality" in data.address) {
-                            state = data.address.municipality;
+                        } else if ("municipality" in city.address) {
+                            state = city.address.municipality;
                             state_short = state;
                         } else {
                             continue;
@@ -185,19 +261,23 @@ function main() {
                             continue;
                         }
 
+                        if(!population) {
+                            population = findPopulation(city);
+                        }
+
                         let insert_data = {
                             country_id: country.id,
                             state_id: state_db.id,
                             city_name: name,
                             population: population,
-                            lat: data.location[1],
-                            lon: data.location[0],
-                            postcode: data.address.postcode,
-                            is_city: data.type === "city",
-                            is_town: data.type === "town",
-                            is_village: data.type === "village",
-                            is_hamlet: data.type === "hamlet",
-                            is_administrative: data.type === "administrative",
+                            lat: city.location[1],
+                            lon: city.location[0],
+                            postcode: city.address.postcode,
+                            is_city: city.type === "city",
+                            is_town: city.type === "town",
+                            is_village: city.type === "village",
+                            is_hamlet: city.type === "hamlet",
+                            is_administrative: city.type === "administrative",
                         };
 
                         //prevent duplicate cities in same state
