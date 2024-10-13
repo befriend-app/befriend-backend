@@ -53,7 +53,7 @@ function indexCities() {
                         },
                     ]);
                 } catch (e) {
-                    debugger;
+                    console.error(e);
                 }
 
                 //add to country set

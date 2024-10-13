@@ -1,373 +1,311 @@
 const cacheService = require("../services/cache");
 const dbService = require("./db");
+const { getDistanceMeters, timeNow, normalizeSearch, latLonLookup } = require("./shared");
 
-const { getDistanceMeters, timeNow, normalizeSearch, latLonLookup} = require("./shared");
+const LIMIT = 10;
+const MIN_COUNTRY_CHARS = 1;
 
-
-function isCountry(str, min_char = 1) {
-    str = str.toLowerCase();
-
-    //codes
-    for(let code of module.exports.countries.codes) {
-        if(str.length >= min_char && code.startsWith(str)) {
-            return true;
-        }
-    }
-
-    //names
-    for(let name of module.exports.countries.names) {
-        if(str.length >= min_char && name.startsWith(str)) {
-            return true;
-        }
-    }
-
-    return false;
-}
+const countries = {
+    codes: [],
+    names: []
+};
 
 function loadCountries() {
     return new Promise(async (resolve, reject) => {
-        if(module.exports.countries.names.length) {
+        if (countries.names.length) {
             return resolve();
         }
 
         try {
             let conn = await dbService.conn();
-            let countries = await conn("open_countries");
+            let dbCountries = await conn("open_countries");
 
-            for(let c of countries) {
-                module.exports.countries.names.push(c.country_name.toLowerCase());
-                module.exports.countries.codes.push(c.country_code.toLowerCase());
+            for (let c of dbCountries) {
+                countries.names.push(c.country_name.toLowerCase());
+                countries.codes.push(c.country_code.toLowerCase());
             }
-        } catch(e) {
-            console.error(e);
+            resolve();
+        } catch (e) {
+            console.error("Error loading countries:", e);
+            reject(e);
         }
-
-        resolve();
     });
 }
 
-function cityAutoComplete(search, userLat, userLon, maxDistance) {
-    function addState(results) {
-        return new Promise(async (resolve, reject) => {
-            try {
-                let pipeline = cacheService.conn.multi();
+function isCountry(str, minChar = MIN_COUNTRY_CHARS) {
+    str = str.toLowerCase();
+    return countries.codes.some(code => str.length >= minChar && code.startsWith(str)) ||
+        countries.names.some(name => str.length >= minChar && name.startsWith(str));
+}
 
-                for (let result of results) {
-                    pipeline.hGetAll(`${cacheService.keys.state}${result.state_id}`);
-                }
+function parseSearch(input, commaOnly = false) {
+    input = normalizeSearch(input);
+    let parts = commaOnly ? input.split(',').map(part => part.trim()) : input.split(/[,\s]+/);
 
-                let states = await cacheService.execRedisMulti(pipeline);
+    let result = {
+        city: '',
+        state: '',
+        country: '',
+        parts: parts.length
+    };
 
-                for (let i = 0; i < states.length; i++) {
-                    let state = states[i];
-                    let result = results[i];
+    if (parts.length === 1) {
+        result.city = parts[0];
+    } else if (parts.length === 2) {
+        result.city = parts[0];
+        result.country = isCountry(parts[1]) ? parts[1] : '';
+        result.state = parts[1];
+    } else if (parts.length >= 3) {
+        result.city = parts.slice(0, -2).join(' ');
+        result.state = parts[parts.length - 2];
+        result.country = parts[parts.length - 1];
 
-                    if (state) {
-                        result.state = state;
-                    }
-                }
-
-                resolve();
-            } catch(e) {
-                console.error(e);
-                return reject();
-            }
-        });
+        if (!isCountry(result.country)) {
+            result.city = parts.slice(0, -1).join(' ');
+            result.state = parts[parts.length - 1];
+            result.country = '';
+        }
     }
 
-    function addCountry(results) {
-        return new Promise(async (resolve, reject) => {
-           try {
-               let pipeline = cacheService.conn.multi();
+    return result;
+}
 
-               for (let result of results) {
-                   pipeline.hGetAll(`${cacheService.keys.country}${result.country_id}`);
-               }
-
-               let countries = await cacheService.execRedisMulti(pipeline);
-
-               for (let i = 0; i < countries.length; i++) {
-                   let country = countries[i];
-                   let result = results[i];
-
-                   if (country) {
-                       result.country = country;
-                   }
-               }
-
-               resolve();
-           } catch(e) {
-               console.error(e);
-               return reject();
-           }
-        });
+function stateMatch(state, compare) {
+    if (!state || !state.name || !state.short) {
+        return false;
     }
+    return state.name.toLowerCase().startsWith(compare) ||
+        state.short.toLowerCase().startsWith(compare);
+}
 
-    function parseSearch(input, comma_only) {
-        input = normalizeSearch(input);
-
-        let parts = input.split(',').map(part => part.trim());
-
-        if (!comma_only && parts.length === 1) {
-            // If no commas, split by space
-            parts = input.split(' ');
-        }
-
-        let result = {
-            city: '',
-            state: '',
-            country: '',
-            parts: parts.length
-        };
-
-        if (parts.length === 1) {
-            // Only city
-            result.city = parts[0];
-        } else if (parts.length === 2) {
-            // City and country, or city and state
-            result.city = parts[0];
-            result.country = isCountry(parts[1]) ? parts[1] : '';
-            result.state = parts[1];
-        } else if (parts.length >= 3) {
-            // City, state, and country
-            result.city = parts.slice(0, -2).join(' '); // Join multi-word cities
-            result.state = parts[parts.length - 2];
-            result.country = parts[parts.length - 1];
-
-            // Check if the last part is actually a country
-            if (!isCountry(result.country)) {
-                result.city = parts.slice(0, -1).join(' ');
-                result.state = parts[parts.length - 1];
-                result.country = '';
-            }
-        }
-
-        return result;
+function countryMatch(country, compare) {
+    if (!country || !country.name || !country.code) {
+        return false;
     }
-    
-    function stateMatch(state, compare) {
-        if(!state || !state.name || !state.short) {
-            return false;
-        }
+    return country.name.toLowerCase().startsWith(compare) ||
+        country.code.toLowerCase().startsWith(compare);
+}
 
-        if(state.name.toLowerCase().startsWith(compare)) {
-            return true;
-        }
-        
-        return state.short.toLowerCase().startsWith(compare);
-    }
-    
-    function countryMatch(country, compare) {
-        if(!country || !country.name || !country.code) {
-            return false;
-        }
-
-        if(country.name.toLowerCase().startsWith(compare)) {
-            return true;
-        }
-
-        return country.code.toLowerCase().startsWith(compare);
-    }
-
+function addLocationData(results, dataType) {
     return new Promise(async (resolve, reject) => {
-        let limit = 10, location_country;
-
-        if (userLat) {
-            userLat = parseFloat(userLat);
-        }
-
-        if (userLon) {
-            userLon = parseFloat(userLon);
-        }
-
         try {
-            location_country = latLonLookup(userLat, userLon);
-        } catch(e) {
+            let pipeline = cacheService.conn.multi();
 
+            for (let result of results) {
+                pipeline.hGetAll(`${cacheService.keys[dataType]}${result[`${dataType}_id`]}`);
+            }
+
+            let data = await cacheService.execRedisMulti(pipeline);
+
+            for (let i = 0; i < data.length; i++) {
+                let item = data[i];
+                let result = results[i];
+
+                if (item) {
+                    result[dataType] = item;
+                }
+            }
+
+            resolve();
+        } catch (e) {
+            console.error(`Error adding ${dataType} data:`, e);
+            reject(e);
         }
+    });
+}
 
-        //get list of countries
+function getCityIds(parsed, locationCountry) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let cityIds = new Set();
+
+            if (locationCountry && parsed.city) {
+                let countryPrefixKey = cacheService.keys.multi.cityCountryPrefix(locationCountry.country_a2, parsed.city);
+                let countryCityIds = await cacheService.getSortedSet(countryPrefixKey);
+                countryCityIds.forEach(id => cityIds.add(id));
+            }
+
+            let cityKey = `${cacheService.keys.cities_prefix}${parsed.city}`;
+            let globalCityIds = await cacheService.getSortedSetByScore(cityKey, 1000);
+            globalCityIds.forEach(id => cityIds.add(id));
+
+            resolve(Array.from(cityIds));
+        } catch (e) {
+            console.error("Error getting city IDs:", e);
+            reject(e);
+        }
+    });
+}
+
+function fetchCityDetails(cityIds) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let pipeline = cacheService.conn.multi();
+
+            for (let id of cityIds) {
+                pipeline.hGetAll(`${cacheService.keys.city}${id}`);
+            }
+
+            let cities = await cacheService.execRedisMulti(pipeline);
+            resolve(cities);
+        } catch (e) {
+            console.error("Error fetching city details:", e);
+            reject(e);
+        }
+    });
+}
+
+function filterCitiesByParsedCriteria(cities, parsed) {
+    return cities.filter(function (result) {
+        if (parsed.state && parsed.country) {
+            let stateMatches = stateMatch(result.state, parsed.state);
+            let countryMatches = countryMatch(result.country, parsed.country);
+
+            if (parsed.parts === 2) {
+                return stateMatches || countryMatches;
+            }
+
+            return stateMatches && countryMatches;
+        } else if (parsed.state) {
+            return stateMatch(result.state, parsed.state);
+        } else if (parsed.country) {
+            return countryMatch(result.country, parsed.country);
+        } else {
+            return true;
+        }
+    });
+}
+
+function calculateCityScore(city, userLat, userLon, maxDistance, locationCountry) {
+    // Convert types
+    city.population = parseInt(city.population);
+    city.lat = parseFloat(city.lat);
+    city.lon = parseFloat(city.lon);
+
+    city.is_user_country = false;
+
+    // Is user location country
+    if (city.country && locationCountry) {
+        if (
+            locationCountry.country_a2.startsWith(city.country.code) ||
+            locationCountry.country_a3.startsWith(city.country.code)
+        ) {
+            city.is_user_country = true;
+        }
+    }
+
+    // Calculate distance if coordinates provided
+    let distance = null;
+
+    if (userLat != null && userLon != null) {
+        distance = getDistanceMeters(
+            { lat: userLat, lon: userLon },
+            { lat: city.lat, lon: city.lon }
+        );
+
+        // Skip if beyond maxDistance
+        if (maxDistance && distance > maxDistance) {
+            return null;
+        }
+    }
+
+    // Calculate combined score
+    const populationScore = city.population / 500000; // Normalize to 500k
+    let score, distanceScore;
+
+    if (distance != null) {
+        distanceScore = (1000 * 1000) / (distance + 1);
+        score = (populationScore + distanceScore) / 2;
+    } else {
+        score = populationScore;
+    }
+
+    return {
+        ...city,
+        distance,
+        score,
+    };
+}
+
+function cityAutoComplete(search, userLat, userLon, maxDistance) {
+    return new Promise(async (resolve, reject) => {
         try {
             await loadCountries();
-        } catch(e) {
-            console.error(e);
-        }
 
-        let parsed_arr = [];
-
-        parsed_arr.push(parseSearch(search, true));
-        parsed_arr.push(parseSearch(search));
-
-        if(JSON.stringify(parsed_arr[0]) === JSON.stringify(parsed_arr[1])) {
-            parsed_arr = parsed_arr.slice(0, 1);
-        }
-
-        try {
-            let results_arr = [];
-
-            let country_city_ids = [];
-
-            if(location_country && parsed_arr.length) {
-                try {
-                    let country_prefix_key = cacheService.keys.multi.cityCountryPrefix(location_country.country_a2, parsed_arr[0].city);
-                    country_city_ids = await cacheService.getSortedSet(country_prefix_key);
-                } catch(e) {
-
-                }
+            if (userLat) {
+                userLat = parseFloat(userLat);
             }
 
-            for(let parsed of parsed_arr) {
-                let parsed_city_dict = {};
+            if (userLon) {
+                userLon = parseFloat(userLon);
+            }
 
-                let city_key = `${cacheService.keys.cities_prefix}${parsed.city}`;
+            let locationCountry;
+            try {
+                locationCountry = latLonLookup(userLat, userLon);
+            } catch (e) {
+                console.error("Error looking up location:", e);
+            }
 
-                let city_ids = await cacheService.getSortedSetByScore(city_key, 1000);
+            let parsedSearches = [
+                parseSearch(search, true),
+                parseSearch(search)
+            ];
 
-                if (!city_ids.length) {
+            if (JSON.stringify(parsedSearches[0]) === JSON.stringify(parsedSearches[1])) {
+                parsedSearches = parsedSearches.slice(0, 1);
+            }
+
+            let results_arr = [];
+
+            for (let parsed of parsedSearches) {
+                let cityIds = await getCityIds(parsed, locationCountry);
+
+                if (!cityIds.length) {
                     results_arr.push([]);
                     continue;
                 }
 
-                // Setup multi pipeline
-                let pipeline = cacheService.conn.multi();
+                let cities = await fetchCityDetails(cityIds);
 
-                //merge with country city ids
-                // get city details and calculate scores
-                // remove duplicates
+                await addLocationData(cities, 'state');
+                await addLocationData(cities, 'country');
 
-                for(let id of country_city_ids) {
-                    parsed_city_dict[id] = true;
-
-                    pipeline.hGetAll(`${cacheService.keys.city}${id}`);
-                }
-
-                for (let id of city_ids) {
-                    if(!(id in parsed_city_dict)) {
-                        parsed_city_dict[id] = true;
-
-                        pipeline.hGetAll(`${cacheService.keys.city}${id}`);
-                    }
-                }
-
-                let cities = await cacheService.execRedisMulti(pipeline);
-
-                await addState(cities);
-                await addCountry(cities);
-
-                if(parsed.state || parsed.country) {
-                    cities = cities.filter(function (result) {
-                        if(parsed.state && parsed.country) {
-                            let state_match = stateMatch(result.state, parsed.state);
-                            let country_match = countryMatch(result.country, parsed.country);
-
-                            if(parsed.parts === 2) {
-                                return state_match || country_match;
-                            }
-
-                            return state_match && country_match;
-                        } else if(parsed.state) {
-                            return stateMatch(result.state, parsed.state);
-                        } else if(parsed.country) {
-                            return countryMatch(result.country, parsed.country);
-                        } else {
-                            return false;
-                        }
-                    });
-                }
+                cities = filterCitiesByParsedCriteria(cities, parsed);
 
                 results_arr.push(cities);
             }
 
-            //remove duplicates
-            let city_id_dict = {};
-
+            // Remove duplicates
+            let cityIdDict = {};
             let results = [];
 
-            for(let i = 0; i < results_arr.length; i++) {
+            for (let i = 0; i < results_arr.length; i++) {
                 let arr = results_arr[i];
 
-                for(let city of arr) {
-                    if(!(city.id in city_id_dict)) {
-                        city_id_dict[city.id] = true;
+                for (let city of arr) {
+                    if (!(city.id in cityIdDict)) {
+                        cityIdDict[city.id] = true;
                         results.push(city);
                     }
                 }
             }
 
             results = results
-                .map(function (city) {
-                    if (!city) return null;
-
-                    // Convert types
-                    city.population = parseInt(city.population);
-                    city.lat = parseFloat(city.lat);
-                    city.lon = parseFloat(city.lon);
-
-                    city.is_user_country = false;
-
-                    //is user location country
-                    if(city.country && location_country) {
-                        if(
-                            location_country.country_a2.startsWith(city.country.code)
-                            || location_country.country_a3.startsWith(city.country.code)) {
-                                city.is_user_country = true;
-                            }
-                    }
-
-                    // Calculate distance if coordinates provided
-                    let distance = null;
-
-                    if (userLat != null && userLon != null) {
-                        distance = getDistanceMeters(
-                            {
-                                lat: userLat,
-                                lon: userLon,
-                            },
-                            {
-                                lat: city.lat,
-                                lon: city.lon,
-                            },
-                        );
-
-                        // Skip if beyond maxDistance
-                        if (maxDistance && distance > maxDistance) {
-                            return null;
-                        }
-                    }
-
-                    // Calculate combined score
-                    const populationScore = city.population / 500000; // Normalize to 500k
-                    let score, distanceScore;
-
-                    if (distance != null) {
-                        distanceScore = (1000 * 1000) / (distance + 1);
-                        score = (populationScore + distanceScore) / 2;
-                    } else {
-                        score = populationScore;
-                    }
-
-                    return {
-                        ...city,
-                        distance,
-                        score,
-                    };
-                })
+                .map(city => calculateCityScore(city, userLat, userLon, maxDistance, locationCountry))
                 .filter(Boolean)
                 .sort((a, b) => b.score - a.score)
-                .slice(0, limit);
+                .slice(0, LIMIT);
 
-            return resolve(results);
+            resolve(results);
         } catch (e) {
-            console.error(e);
-            return reject();
+            console.error("Error in cityAutoComplete:", e);
+            reject(e);
         }
     });
 }
 
 module.exports = {
-    countries: {
-        codes: [],
-        names: []
-    },
-    cityAutoComplete: cityAutoComplete,
+    countries,
+    cityAutoComplete,
 };
