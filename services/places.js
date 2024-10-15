@@ -674,10 +674,11 @@ module.exports = {
                 // organize data
                 // set distance in mi/km
                 for(let result of data.data.results) {
-                    let place_data;
+                    let place_data = {};
 
                     if(result.type === 'place') {
                         place_data = batch_dict[result.place.fsq_id];
+                        place_data.type = 'place';
 
                         if(result.place.geocodes && result.place.geocodes.main) {
                             let geo = result.place.geocodes.main;
@@ -695,7 +696,19 @@ module.exports = {
                             place_data.distance.miles_km = getMilesOrKmFromMeters(place_data.distance.meters);
                         }
                     } else if(result.type === 'address') {
-                        debugger;
+                        place_data.type = 'address';
+                        place_data.fsq_address_id = result.address.address_id;
+                        place_data.location_address = resolve.text.primary;
+
+                        try {
+                            let secondary_split = result.text.secondary.split(' ');
+
+                            place_data.location_locality = secondary_split[0];
+                            place_data.location_region = secondary_split[1];
+                            place_data.location_postcode = secondary_split[2];
+                        } catch(e) {
+                            console.error(e);
+                        }
                     }
 
                     results.push(place_data);
