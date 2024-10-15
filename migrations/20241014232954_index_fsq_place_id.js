@@ -13,5 +13,7 @@ exports.up = function(knex) {
  * @returns { Promise<void> }
  */
 exports.down = function(knex) {
-  
+    knex.schema.alterTable('places', table => {
+        table.dropIndex('fsq_place_id');
+    });
 };

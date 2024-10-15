@@ -701,7 +701,7 @@ module.exports = {
                     } else if (result.type === "address") {
                         place_data.type = "address";
                         place_data.fsq_address_id = result.address.address_id;
-                        place_data.location_address = resolve.text.primary;
+                        place_data.location_address = result.text.primary;
 
                         try {
                             let secondary_split = result.text.secondary.split(" ");
