@@ -13,7 +13,6 @@ const sgMail = require("@sendgrid/mail");
 const { decrypt } = require("./encryption");
 const bcrypt = require("bcryptjs");
 const _ = require("lodash");
-const sea = require("node:sea");
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
