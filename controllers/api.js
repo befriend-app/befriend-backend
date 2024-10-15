@@ -1380,7 +1380,7 @@ module.exports = {
     postAutoCompletePlaces: function (req, res) {
         return new Promise(async (resolve, reject) => {
             try {
-                const { session_token, search, lat, lon, friends } = req.body;
+                const { session_token, search, location, friends } = req.body;
 
                 if (!session_token) {
                     res.json(
@@ -1393,18 +1393,7 @@ module.exports = {
                     return resolve();
                 }
 
-                if (!search) {
-                    res.json(
-                        {
-                            message: "Search string is required",
-                        },
-                        400,
-                    );
-
-                    return resolve();
-                }
-
-                if (search.length < 3) {
+                if (!search || search.length < 3) {
                     res.json(
                         {
                             message: "Search string must be at least 3 characters",
@@ -1415,7 +1404,18 @@ module.exports = {
                     return resolve();
                 }
 
-                const results = await placesAutoComplete(session_token, search, lat, lon, friends);
+                if(!location || !location.map || !(location.map.lat && location.map.lon)) {
+                    res.json(
+                        {
+                            message: "Location required",
+                        },
+                        400,
+                    );
+
+                    return resolve();
+                }
+
+                const results = await placesAutoComplete(session_token, search, location, friends);
 
                 res.json({
                     places: results,

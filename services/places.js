@@ -565,7 +565,7 @@ module.exports = {
             }
         });
     },
-    placesAutoComplete: function (session_token, search, lat, lon, friends) {
+    placesAutoComplete: function (session_token, search, location, friends) {
         return new Promise(async (resolve, reject) => {
             let conn;
             let search_type = "place";
@@ -579,6 +579,9 @@ module.exports = {
             } catch (e) {
                 console.error(e);
             }
+
+            let lat = location.map.lat;
+            let lon = location.map.lon;
 
             try {
                 fsq.auth(process.env.FSQ_KEY);
@@ -682,12 +685,20 @@ module.exports = {
                         if (result.place.geocodes && result.place.geocodes.main) {
                             let geo = result.place.geocodes.main;
 
+                            let from_lat = lat;
+                            let from_lon = lon;
+
+                            if(location.device && (location.device.lat && location.device.lon)) {
+                                from_lat = location.device.lat;
+                                from_lon = location.device.lon;
+                            }
+
                             place_data.distance = {
                                 use_km: useKM(),
                                 meters: getDistanceMeters(
                                     {
-                                        lat,
-                                        lon,
+                                        lat: from_lat,
+                                        lon: from_lon,
                                     },
                                     {
                                         lat: geo.latitude,
