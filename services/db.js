@@ -49,8 +49,8 @@ module.exports = {
 
                     output.push([id[0], id[0] + chunk.length - 1]);
 
-                    if(add_id_prop) {
-                        for(let i = 0; i < chunk.length; i++) {
+                    if (add_id_prop) {
+                        for (let i = 0; i < chunk.length; i++) {
                             let item = chunk[i];
                             item.id = id[0] + i;
                         }

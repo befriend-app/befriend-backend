@@ -4,7 +4,13 @@
 const axios = require("axios");
 const AdmZip = require("adm-zip");
 
-const { loadScriptEnv, joinPaths, timeNow, getDistanceMeters, getMetersFromMilesOrKm} = require("../../services/shared");
+const {
+    loadScriptEnv,
+    joinPaths,
+    timeNow,
+    getDistanceMeters,
+    getMetersFromMilesOrKm,
+} = require("../../services/shared");
 const dbService = require("../../services/db");
 
 loadScriptEnv();
@@ -26,30 +32,30 @@ function fetchCityPopulations() {
         console.log("Download cities with a population > 500");
 
         try {
-             let r = await axios.get(cities_population_link);
+            let r = await axios.get(cities_population_link);
 
-             for(let city of r.data) {
-                 if(!city.population) {
-                     continue;
-                 }
+            for (let city of r.data) {
+                if (!city.population) {
+                    continue;
+                }
 
-                 if(!(city.country_code in populations_dict)) {
-                     populations_dict[city.country_code] = {};
-                 }
+                if (!(city.country_code in populations_dict)) {
+                    populations_dict[city.country_code] = {};
+                }
 
-                 let city_name_lower = city.name.toLowerCase();
+                let city_name_lower = city.name.toLowerCase();
 
-                 if(!(city_name_lower in populations_dict[city.country_code])) {
-                     populations_dict[city.country_code][city_name_lower] = [];
-                 }
+                if (!(city_name_lower in populations_dict[city.country_code])) {
+                    populations_dict[city.country_code][city_name_lower] = [];
+                }
 
-                 populations_dict[city.country_code][city_name_lower].push({
-                     name: city.name,
-                     population: city.population,
-                     coordinates: city.coordinates,
-                 });
-             }
-        } catch(e) {
+                populations_dict[city.country_code][city_name_lower].push({
+                    name: city.name,
+                    population: city.population,
+                    coordinates: city.coordinates,
+                });
+            }
+        } catch (e) {
             console.error(e);
         }
 
@@ -58,22 +64,25 @@ function fetchCityPopulations() {
 }
 
 function findPopulation(city) {
-    if(city.address && city.address.country_code.toUpperCase() in populations_dict) {
+    if (city.address && city.address.country_code.toUpperCase() in populations_dict) {
         let country_data = populations_dict[city.address.country_code.toUpperCase()];
 
         let city_name_lower = getCityName(city).toLowerCase();
 
-        if(city_name_lower in country_data) {
+        if (city_name_lower in country_data) {
             let cities = country_data[city_name_lower];
 
-            for(let _city of cities) {
-                let distance = getDistanceMeters({
-                    lat: city.location[1],
-                    lon: city.location[0],
-                }, _city.coordinates);
+            for (let _city of cities) {
+                let distance = getDistanceMeters(
+                    {
+                        lat: city.location[1],
+                        lon: city.location[0],
+                    },
+                    _city.coordinates,
+                );
 
-                if(distance < getMetersFromMilesOrKm(30)) {
-                    if(_city.population) {
+                if (distance < getMetersFromMilesOrKm(30)) {
+                    if (_city.population) {
                         return _city.population;
                     }
                 }
@@ -261,7 +270,7 @@ function main() {
                             continue;
                         }
 
-                        if(!population) {
+                        if (!population) {
                             population = findPopulation(city);
                         }
 

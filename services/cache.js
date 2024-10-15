@@ -1,6 +1,5 @@
 const redis = require("redis");
 
-
 module.exports = {
     conn: null,
     keys: {
@@ -18,8 +17,8 @@ module.exports = {
         multi: {
             cityCountryPrefix: function (country_code, prefix) {
                 return `cities:country:${country_code}:${prefix}`;
-            }
-        }
+            },
+        },
     },
     init: function () {
         return new Promise(async (resolve, reject) => {
@@ -129,7 +128,7 @@ module.exports = {
     },
     deleteKeys: function (keys) {
         return new Promise(async (resolve, reject) => {
-            if(!keys || !keys.length) {
+            if (!keys || !keys.length) {
                 return resolve();
             }
 
@@ -335,20 +334,19 @@ module.exports = {
             let results;
 
             let options = {
-                BY: 'SCORE',
+                BY: "SCORE",
                 REV: !lowest_to_highest,
             };
 
-            if(limit) {
-                options.LIMIT= {
+            if (limit) {
+                options.LIMIT = {
                     offset: 0,
-                    count: limit
-                }
+                    count: limit,
+                };
             }
 
             try {
-                results = await module.exports.conn.
-                    zRange(key, '+inf', '-inf', options);
+                results = await module.exports.conn.zRange(key, "+inf", "-inf", options);
 
                 return resolve(results);
             } catch (e) {

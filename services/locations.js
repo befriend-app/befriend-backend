@@ -7,9 +7,8 @@ const MIN_COUNTRY_CHARS = 1;
 
 const countries = {
     codes: [],
-    names: []
+    names: [],
 };
-
 
 function loadCountries() {
     return new Promise(async (resolve, reject) => {
@@ -35,36 +34,38 @@ function loadCountries() {
 
 function isCountry(str, minChar = MIN_COUNTRY_CHARS) {
     str = str.toLowerCase();
-    return countries.codes.some(code => str.length >= minChar && code.startsWith(str)) ||
-        countries.names.some(name => str.length >= minChar && name.startsWith(str));
+    return (
+        countries.codes.some((code) => str.length >= minChar && code.startsWith(str)) ||
+        countries.names.some((name) => str.length >= minChar && name.startsWith(str))
+    );
 }
 
 function parseSearch(input, commaOnly = false) {
     input = normalizeSearch(input);
-    let parts = commaOnly ? input.split(',').map(part => part.trim()) : input.split(/[,\s]+/);
+    let parts = commaOnly ? input.split(",").map((part) => part.trim()) : input.split(/[,\s]+/);
 
     let result = {
-        city: '',
-        state: '',
-        country: '',
-        parts: parts.length
+        city: "",
+        state: "",
+        country: "",
+        parts: parts.length,
     };
 
     if (parts.length === 1) {
         result.city = parts[0];
     } else if (parts.length === 2) {
         result.city = parts[0];
-        result.country = isCountry(parts[1]) ? parts[1] : '';
+        result.country = isCountry(parts[1]) ? parts[1] : "";
         result.state = parts[1];
     } else if (parts.length >= 3) {
-        result.city = parts.slice(0, -2).join(' ');
+        result.city = parts.slice(0, -2).join(" ");
         result.state = parts[parts.length - 2];
         result.country = parts[parts.length - 1];
 
         if (!isCountry(result.country)) {
-            result.city = parts.slice(0, -1).join(' ');
+            result.city = parts.slice(0, -1).join(" ");
             result.state = parts[parts.length - 1];
-            result.country = '';
+            result.country = "";
         }
     }
 
@@ -75,16 +76,14 @@ function stateMatch(state, compare) {
     if (!state || !state.name || !state.short) {
         return false;
     }
-    return state.name.toLowerCase().startsWith(compare) ||
-        state.short.toLowerCase().startsWith(compare);
+    return state.name.toLowerCase().startsWith(compare) || state.short.toLowerCase().startsWith(compare);
 }
 
 function countryMatch(country, compare) {
     if (!country || !country.name || !country.code) {
         return false;
     }
-    return country.name.toLowerCase().startsWith(compare) ||
-        country.code.toLowerCase().startsWith(compare);
+    return country.name.toLowerCase().startsWith(compare) || country.code.toLowerCase().startsWith(compare);
 }
 
 function addLocationData(results, dataType) {
@@ -121,14 +120,17 @@ function getCityIds(parsed, locationCountry) {
             let cityIds = new Set();
 
             if (locationCountry && parsed.city) {
-                let countryPrefixKey = cacheService.keys.multi.cityCountryPrefix(locationCountry.country_a2, parsed.city);
+                let countryPrefixKey = cacheService.keys.multi.cityCountryPrefix(
+                    locationCountry.country_a2,
+                    parsed.city,
+                );
                 let countryCityIds = await cacheService.getSortedSet(countryPrefixKey);
-                countryCityIds.forEach(id => cityIds.add(id));
+                countryCityIds.forEach((id) => cityIds.add(id));
             }
 
             let cityKey = `${cacheService.keys.cities_prefix}${parsed.city}`;
             let globalCityIds = await cacheService.getSortedSetByScore(cityKey, 1000);
-            globalCityIds.forEach(id => cityIds.add(id));
+            globalCityIds.forEach((id) => cityIds.add(id));
 
             resolve(Array.from(cityIds));
         } catch (e) {
@@ -199,10 +201,7 @@ function calculateCityScore(city, userLat, userLon, maxDistance, locationCountry
     let distance = null;
 
     if (userLat != null && userLon != null) {
-        distance = getDistanceMeters(
-            { lat: userLat, lon: userLon },
-            { lat: city.lat, lon: city.lon }
-        );
+        distance = getDistanceMeters({ lat: userLat, lon: userLon }, { lat: city.lat, lon: city.lon });
 
         // Skip if beyond maxDistance
         if (maxDistance && distance > maxDistance) {
@@ -248,10 +247,7 @@ function cityAutoComplete(search, userLat, userLon, maxDistance) {
                 console.error("Error looking up location:", e);
             }
 
-            let parsedSearches = [
-                parseSearch(search, true),
-                parseSearch(search)
-            ];
+            let parsedSearches = [parseSearch(search, true), parseSearch(search)];
 
             if (JSON.stringify(parsedSearches[0]) === JSON.stringify(parsedSearches[1])) {
                 parsedSearches = parsedSearches.slice(0, 1);
@@ -269,8 +265,8 @@ function cityAutoComplete(search, userLat, userLon, maxDistance) {
 
                 let cities = await fetchCityDetails(cityIds);
 
-                await addLocationData(cities, 'state');
-                await addLocationData(cities, 'country');
+                await addLocationData(cities, "state");
+                await addLocationData(cities, "country");
 
                 cities = filterCitiesByParsedCriteria(cities, parsed);
 
@@ -293,7 +289,7 @@ function cityAutoComplete(search, userLat, userLon, maxDistance) {
             }
 
             results = results
-                .map(city => calculateCityScore(city, userLat, userLon, maxDistance, locationCountry))
+                .map((city) => calculateCityScore(city, userLat, userLon, maxDistance, locationCountry))
                 .filter(Boolean)
                 .sort((a, b) => b.score - a.score)
                 .slice(0, LIMIT);

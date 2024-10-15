@@ -36,7 +36,13 @@ loadScriptEnv();
         //delete cache
         let batchSize = 50000;
 
-        let param_keys = [cache.keys.city, cache.keys.cities_prefix, cache.keys.state, cache.keys.country, cache.keys.cities_country];
+        let param_keys = [
+            cache.keys.city,
+            cache.keys.cities_prefix,
+            cache.keys.state,
+            cache.keys.country,
+            cache.keys.cities_country,
+        ];
 
         for (let key of param_keys) {
             let param_key = key + "*";

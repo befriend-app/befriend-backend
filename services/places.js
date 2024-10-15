@@ -350,12 +350,12 @@ module.exports = {
             }
 
             let fsq_dict = {};
-            
+
             let cache_miss_ids = [];
 
             let multi = cacheService.conn.multi();
 
-            for(let fsq_id of fsq_ids) {
+            for (let fsq_id of fsq_ids) {
                 let cache_key = `${cacheService.keys.place_fsq}${fsq_id}`;
 
                 multi.get(cache_key);
@@ -364,16 +364,16 @@ module.exports = {
             //try cache first
             try {
                 let cache_data = await cacheService.execRedisMulti(multi);
-                
-                for(let i = 0; i < cache_data.length; i++) {
+
+                for (let i = 0; i < cache_data.length; i++) {
                     let data = cache_data[i];
                     let fsq_id = fsq_ids[i];
-                    
-                    if(data) {
+
+                    if (data) {
                         try {
                             data = JSON.parse(data);
                             fsq_dict[fsq_id] = data;
-                        } catch(e) {
+                        } catch (e) {
                             console.error(e);
                         }
                     } else {
@@ -389,10 +389,9 @@ module.exports = {
             try {
                 let conn = await dbService.conn();
 
-                let places = await conn("places")
-                    .whereIn('fsq_place_id', cache_miss_ids);
-                
-                for(let place of places) {
+                let places = await conn("places").whereIn("fsq_place_id", cache_miss_ids);
+
+                for (let place of places) {
                     let cache_key = `${cacheService.keys.place_fsq}:${place.fsq_place_id}`;
 
                     //parse json
@@ -569,15 +568,15 @@ module.exports = {
     placesAutoComplete: function (session_token, search, lat, lon, friends) {
         return new Promise(async (resolve, reject) => {
             let conn;
-            let search_type = 'place';
+            let search_type = "place";
 
-            if(friends.type.is_existing) {
-                search_type = 'place,address';
+            if (friends.type.is_existing) {
+                search_type = "place,address";
             }
 
             try {
                 conn = await dbService.conn();
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
             }
 
@@ -600,113 +599,117 @@ module.exports = {
                 let fsq_ids = [];
                 let fsq_dict = {};
 
-                for(let result of data.data.results) {
-                    if(result.place) {
+                for (let result of data.data.results) {
+                    if (result.place) {
                         fsq_ids.push(result.place.fsq_id);
                         fsq_dict[result.place.fsq_id] = result.place;
                     }
                 }
 
                 try {
-                     batch_dict = await module.exports.getBatchPlacesFSQ(fsq_ids);
+                    batch_dict = await module.exports.getBatchPlacesFSQ(fsq_ids);
 
-                     let batch_insert = [];
+                    let batch_insert = [];
 
-                     for(let fsq_id of fsq_ids) {
-                         if(!(fsq_id in batch_dict)) {
-                             let data = fsq_dict[fsq_id];
+                    for (let fsq_id of fsq_ids) {
+                        if (!(fsq_id in batch_dict)) {
+                            let data = fsq_dict[fsq_id];
 
-                             let lat = data.geocodes.main.latitude;
-                             let lon = data.geocodes.main.longitude;
-                             let lat_1000 = parseInt(Math.floor(lat * 1000));
-                             let lon_1000 = parseInt(Math.floor(lon * 1000));
-                             
-                             let insert_data = {
-                                 fsq_place_id: fsq_id,
-                                 name: data.name,
-                                 location_address: data.location.address,
-                                 location_address_2: data.location.address_extended,
-                                 location_locality: data.location.locality,
-                                 location_postcode: data.location.postcode,
-                                 location_region: data.location.region,
-                                 location_lat: lat,
-                                 location_lat_1000: lat_1000,
-                                 location_lon: lon,
-                                 location_lon_1000: lon_1000,
-                                 timezone: getTimeZoneFromCoords(lat, lon),
-                                 created: timeNow(),
-                                 updated: timeNow()
-                             };
+                            let lat = data.geocodes.main.latitude;
+                            let lon = data.geocodes.main.longitude;
+                            let lat_1000 = parseInt(Math.floor(lat * 1000));
+                            let lon_1000 = parseInt(Math.floor(lon * 1000));
 
-                             batch_insert.push(insert_data);
+                            let insert_data = {
+                                fsq_place_id: fsq_id,
+                                name: data.name,
+                                location_address: data.location.address,
+                                location_address_2: data.location.address_extended,
+                                location_locality: data.location.locality,
+                                location_postcode: data.location.postcode,
+                                location_region: data.location.region,
+                                location_lat: lat,
+                                location_lat_1000: lat_1000,
+                                location_lon: lon,
+                                location_lon_1000: lon_1000,
+                                timezone: getTimeZoneFromCoords(lat, lon),
+                                created: timeNow(),
+                                updated: timeNow(),
+                            };
 
-                             batch_dict[fsq_id] = insert_data;
-                         }
-                     }
+                            batch_insert.push(insert_data);
 
-                     if(batch_insert.length) {
-                         //db
-                         try {
-                              await dbService.batchInsert(conn, 'places', batch_insert, true);
-                         } catch(e) {
-                             console.error(e);
-                         }
+                            batch_dict[fsq_id] = insert_data;
+                        }
+                    }
 
-                         //cache
-                         try {
-                              let multi = cacheService.conn.multi();
+                    if (batch_insert.length) {
+                        //db
+                        try {
+                            await dbService.batchInsert(conn, "places", batch_insert, true);
+                        } catch (e) {
+                            console.error(e);
+                        }
 
-                              for(let item of batch_insert) {
-                                  let cache_key = cacheService.keys.place_fsq + item.fsq_place_id;
+                        //cache
+                        try {
+                            let multi = cacheService.conn.multi();
 
-                                  multi.set(cache_key, JSON.stringify(item));
-                              }
+                            for (let item of batch_insert) {
+                                let cache_key = cacheService.keys.place_fsq + item.fsq_place_id;
 
-                              await cacheService.execRedisMulti(multi);
-                         } catch(e) {
-                             console.error(e);
-                         }
-                     }
-                } catch(e) {
+                                multi.set(cache_key, JSON.stringify(item));
+                            }
+
+                            await cacheService.execRedisMulti(multi);
+                        } catch (e) {
+                            console.error(e);
+                        }
+                    }
+                } catch (e) {
                     console.error(e);
                 }
 
                 // organize data
-                // set distance in mi/km
-                for(let result of data.data.results) {
+                for (let result of data.data.results) {
                     let place_data = {};
 
-                    if(result.type === 'place') {
+                    if (result.type === "place") {
                         place_data = batch_dict[result.place.fsq_id];
-                        place_data.type = 'place';
+                        place_data.type = "place";
 
-                        if(result.place.geocodes && result.place.geocodes.main) {
+                        // set distance in mi/km
+                        if (result.place.geocodes && result.place.geocodes.main) {
                             let geo = result.place.geocodes.main;
 
                             place_data.distance = {
                                 use_km: useKM(),
-                                meters: getDistanceMeters({
-                                    lat, lon
-                                }, {
-                                    lat: geo.latitude,
-                                    lon: geo.longitude,
-                                }),
+                                meters: getDistanceMeters(
+                                    {
+                                        lat,
+                                        lon,
+                                    },
+                                    {
+                                        lat: geo.latitude,
+                                        lon: geo.longitude,
+                                    },
+                                ),
                             };
 
                             place_data.distance.miles_km = getMilesOrKmFromMeters(place_data.distance.meters);
                         }
-                    } else if(result.type === 'address') {
-                        place_data.type = 'address';
+                    } else if (result.type === "address") {
+                        place_data.type = "address";
                         place_data.fsq_address_id = result.address.address_id;
                         place_data.location_address = resolve.text.primary;
 
                         try {
-                            let secondary_split = result.text.secondary.split(' ');
+                            let secondary_split = result.text.secondary.split(" ");
 
                             place_data.location_locality = secondary_split[0];
                             place_data.location_region = secondary_split[1];
                             place_data.location_postcode = secondary_split[2];
-                        } catch(e) {
+                        } catch (e) {
                             console.error(e);
                         }
                     }
@@ -715,10 +718,10 @@ module.exports = {
                 }
 
                 return resolve(results);
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
                 return reject();
             }
         });
-    }
+    },
 };

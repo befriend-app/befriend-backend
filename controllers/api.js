@@ -24,7 +24,7 @@ const { getNetwork, getNetworkSelf } = require("../services/network");
 const { encrypt } = require("../services/encryption");
 const { deleteKeys } = require("../services/cache");
 const { getPersonByEmail } = require("../services/persons");
-const { getCategoriesPlaces, placesAutoComplete} = require("../services/places");
+const { getCategoriesPlaces, placesAutoComplete } = require("../services/places");
 const { cityAutoComplete } = require("../services/locations");
 
 module.exports = {
@@ -1382,7 +1382,7 @@ module.exports = {
             try {
                 const { session_token, search, lat, lon, friends } = req.body;
 
-                if(!session_token) {
+                if (!session_token) {
                     res.json(
                         {
                             message: "Session token required",

@@ -706,7 +706,7 @@ function joinPaths() {
 }
 
 function latLonLookup(lat, lon) {
-    if(!lat || !lon) {
+    if (!lat || !lon) {
         return null;
     }
 
@@ -742,23 +742,23 @@ function normalizePort(val) {
 }
 
 function normalizeSearch(search, skip_lowercase) {
-    if(!search) {
+    if (!search) {
         return null;
     }
 
     let clean_search;
 
-    if(!skip_lowercase) {
+    if (!skip_lowercase) {
         clean_search = search.toLowerCase();
     }
 
     //remove extra space
-    clean_search = clean_search.trim().replace(/\s+/g, ' ');
+    clean_search = clean_search.trim().replace(/\s+/g, " ");
 
     //remove non-allowed characters
     let regex = /[^a-zA-Z0-9 ,.'-]+/;
 
-    clean_search = clean_search.replace(regex, '');
+    clean_search = clean_search.replace(regex, "");
 
     return clean_search;
 }
