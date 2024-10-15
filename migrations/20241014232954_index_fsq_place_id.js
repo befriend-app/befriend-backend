@@ -4,7 +4,7 @@
  */
 exports.up = function(knex) {
     return knex.schema.alterTable('places', table => {
-        table.index('fsq_place_id')
+        table.index('fsq_place_id');
     });
 };
 

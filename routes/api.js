@@ -167,6 +167,18 @@ router.get("/mapbox/token", function (req, res, next) {
     });
 });
 
+router.post("/autocomplete/places", function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await apiController.postAutoCompletePlaces(req, res);
+        } catch (e) {
+            console.error(e);
+        }
+
+        resolve();
+    });
+});
+
 router.post("/autocomplete/cities", function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {

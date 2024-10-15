@@ -24,7 +24,7 @@ const { getNetwork, getNetworkSelf } = require("../services/network");
 const { encrypt } = require("../services/encryption");
 const { deleteKeys } = require("../services/cache");
 const { getPersonByEmail } = require("../services/persons");
-const { getCategoriesPlaces } = require("../services/places");
+const { getCategoriesPlaces, placesAutoComplete} = require("../services/places");
 const { cityAutoComplete } = require("../services/locations");
 
 module.exports = {
@@ -1372,6 +1372,63 @@ module.exports = {
                 console.error(e);
 
                 res.json("Error getting map token", 400);
+            }
+
+            resolve();
+        });
+    },
+    postAutoCompletePlaces: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const { session_token, search, lat, lon, friends } = req.body;
+
+                if(!session_token) {
+                    res.json(
+                        {
+                            message: "Session token required",
+                        },
+                        400,
+                    );
+
+                    return resolve();
+                }
+
+                if (!search) {
+                    res.json(
+                        {
+                            message: "Search string is required",
+                        },
+                        400,
+                    );
+
+                    return resolve();
+                }
+
+                if (search.length < 3) {
+                    res.json(
+                        {
+                            message: "Search string must be at least 3 characters",
+                        },
+                        400,
+                    );
+
+                    return resolve();
+                }
+
+                const results = await placesAutoComplete(session_token, search, lat, lon, friends);
+
+                res.json({
+                    places: results,
+                });
+            } catch (e) {
+                console.error(e);
+
+                res.json(
+                    {
+                        message: "Search for places error",
+                    },
+                    400,
+                );
             }
 
             resolve();

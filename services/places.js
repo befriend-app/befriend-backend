@@ -173,6 +173,7 @@ module.exports = {
                     console.error(e);
                 }
 
+                //todo - refactor for batch get/insert
                 for (let data of places) {
                     //2. places
                     let place;
@@ -211,7 +212,7 @@ module.exports = {
                         console.error(e);
                     }
 
-                    //set distance of person's device from place
+                    //set distance of device/custom location from place
                     place.distance = {
                         use_km: useKM(),
                         meters: getDistanceMeters(location, {
@@ -340,6 +341,83 @@ module.exports = {
                 console.error(e);
                 return reject();
             }
+        });
+    },
+    getBatchPlacesFSQ: function (fsq_ids) {
+        return new Promise(async (resolve, reject) => {
+            if (!fsq_ids || !fsq_ids.length) {
+                return reject("No ids provided");
+            }
+
+            let fsq_dict = {};
+            
+            let cache_miss_ids = [];
+
+            let multi = cacheService.conn.multi();
+
+            for(let fsq_id of fsq_ids) {
+                let cache_key = `${cacheService.keys.place_fsq}${fsq_id}`;
+
+                multi.get(cache_key);
+            }
+
+            //try cache first
+            try {
+                let cache_data = await cacheService.execRedisMulti(multi);
+                
+                for(let i = 0; i < cache_data.length; i++) {
+                    let data = cache_data[i];
+                    let fsq_id = fsq_ids[i];
+                    
+                    if(data) {
+                        try {
+                            data = JSON.parse(data);
+                            fsq_dict[fsq_id] = data;
+                        } catch(e) {
+                            console.error(e);
+                        }
+                    } else {
+                        // use in db query
+                        cache_miss_ids.push(fsq_id);
+                    }
+                }
+            } catch (e) {
+                console.error(e);
+            }
+
+            //db backup
+            try {
+                let conn = await dbService.conn();
+
+                let places = await conn("places")
+                    .whereIn('fsq_place_id', cache_miss_ids);
+                
+                for(let place of places) {
+                    let cache_key = `${cacheService.keys.place_fsq}:${place.fsq_place_id}`;
+
+                    //parse json
+                    if (place.hours) {
+                        place.hours = JSON.parse(place.hours);
+                    }
+
+                    if (place.hours_popular) {
+                        place.hours_popular = JSON.parse(place.hours_popular);
+                    }
+
+                    if (place.photos) {
+                        place.photos = JSON.parse(place.photos);
+                    }
+
+                    fsq_dict[place.fsq_place_id] = place;
+
+                    await cacheService.setCache(cache_key, place);
+                }
+            } catch (e) {
+                console.error(e);
+                return reject();
+            }
+
+            resolve(fsq_dict);
         });
     },
     addOrUpdatePlace: function (data, place_id = null) {
@@ -488,4 +566,146 @@ module.exports = {
             }
         });
     },
+    placesAutoComplete: function (session_token, search, lat, lon, friends) {
+        return new Promise(async (resolve, reject) => {
+            let conn;
+            let search_type = 'place';
+
+            if(friends.type.is_existing) {
+                search_type = 'place,address';
+            }
+
+            try {
+                conn = await dbService.conn();
+            } catch(e) {
+                console.error(e);
+            }
+
+            try {
+                fsq.auth(process.env.FSQ_KEY);
+
+                let data = await fsq.autocomplete({
+                    session_token: session_token,
+                    ll: `${lat},${lon}`,
+                    types: search_type,
+                    query: search,
+                    radius: 50000,
+                    limit: 10,
+                });
+
+                let results = [];
+
+                // batch logic
+                let batch_dict = {};
+                let fsq_ids = [];
+                let fsq_dict = {};
+
+                for(let result of data.data.results) {
+                    if(result.place) {
+                        fsq_ids.push(result.place.fsq_id);
+                        fsq_dict[result.place.fsq_id] = result.place;
+                    }
+                }
+
+                try {
+                     batch_dict = await module.exports.getBatchPlacesFSQ(fsq_ids);
+
+                     let batch_insert = [];
+
+                     for(let fsq_id of fsq_ids) {
+                         if(!(fsq_id in batch_dict)) {
+                             let data = fsq_dict[fsq_id];
+
+                             let lat = data.geocodes.main.latitude;
+                             let lon = data.geocodes.main.longitude;
+                             let lat_1000 = parseInt(Math.floor(lat * 1000));
+                             let lon_1000 = parseInt(Math.floor(lon * 1000));
+                             
+                             let insert_data = {
+                                 fsq_place_id: fsq_id,
+                                 name: data.name,
+                                 location_address: data.location.address,
+                                 location_address_2: data.location.address_extended,
+                                 location_locality: data.location.locality,
+                                 location_postcode: data.location.postcode,
+                                 location_region: data.location.region,
+                                 location_lat: lat,
+                                 location_lat_1000: lat_1000,
+                                 location_lon: lon,
+                                 location_lon_1000: lon_1000,
+                                 timezone: getTimeZoneFromCoords(lat, lon),
+                                 created: timeNow(),
+                                 updated: timeNow()
+                             };
+
+                             batch_insert.push(insert_data);
+
+                             batch_dict[fsq_id] = insert_data;
+                         }
+                     }
+
+                     if(batch_insert.length) {
+                         //db
+                         try {
+                              await dbService.batchInsert(conn, 'places', batch_insert, true);
+                         } catch(e) {
+                             console.error(e);
+                         }
+
+                         //cache
+                         try {
+                              let multi = cacheService.conn.multi();
+
+                              for(let item of batch_insert) {
+                                  let cache_key = cacheService.keys.place_fsq + item.fsq_place_id;
+
+                                  multi.set(cache_key, JSON.stringify(item));
+                              }
+
+                              await cacheService.execRedisMulti(multi);
+                         } catch(e) {
+                             console.error(e);
+                         }
+                     }
+                } catch(e) {
+                    console.error(e);
+                }
+
+                // organize data
+                // set distance in mi/km
+                for(let result of data.data.results) {
+                    let place_data;
+
+                    if(result.type === 'place') {
+                        place_data = batch_dict[result.place.fsq_id];
+
+                        if(result.place.geocodes && result.place.geocodes.main) {
+                            let geo = result.place.geocodes.main;
+
+                            place_data.distance = {
+                                use_km: useKM(),
+                                meters: getDistanceMeters({
+                                    lat, lon
+                                }, {
+                                    lat: geo.latitude,
+                                    lon: geo.longitude,
+                                }),
+                            };
+
+                            place_data.distance.miles_km = getMilesOrKmFromMeters(place_data.distance.meters);
+                        }
+                    } else if(result.type === 'address') {
+                        debugger;
+                    }
+
+                    results.push(place_data);
+                }
+
+                return resolve(results);
+            } catch(e) {
+                console.error(e);
+                return reject();
+            }
+        });
+    }
 };

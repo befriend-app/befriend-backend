@@ -33,7 +33,7 @@ module.exports = {
             return resolve(knex);
         });
     },
-    batchInsert: function (to_conn, table_name, insert_rows) {
+    batchInsert: function (to_conn, table_name, insert_rows, add_id_prop) {
         return new Promise(async (resolve, reject) => {
             let output = [];
 
@@ -48,6 +48,13 @@ module.exports = {
                     let id = await to_conn.batchInsert(table_name, chunk);
 
                     output.push([id[0], id[0] + chunk.length - 1]);
+
+                    if(add_id_prop) {
+                        for(let i = 0; i < chunk.length; i++) {
+                            let item = chunk[i];
+                            item.id = id[0] + i;
+                        }
+                    }
                 }
             } catch (e) {
                 return reject(e);

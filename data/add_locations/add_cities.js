@@ -218,7 +218,7 @@ function main() {
                                     state_short = city.address.state;
                                 }
                             } catch (e) {
-                                debugger;
+                                console.error(e);
                             }
                         } else if ("municipality" in city.address) {
                             state = city.address.municipality;
