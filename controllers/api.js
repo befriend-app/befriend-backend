@@ -1259,7 +1259,7 @@ module.exports = {
 
                 location = req.body.location;
 
-                if (!location || !(location.lat && location.lon)) {
+                if (!location || !location.map || !(location.map.lat && location.map.lon)) {
                     res.json(
                         {
                             message: "Location required",

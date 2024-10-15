@@ -64,7 +64,7 @@ module.exports = {
                 radius = module.exports.default.radius;
             }
 
-            if (!location || !(location.lat && location.lon)) {
+            if (!location || !location.map || !(location.map.lat && location.map.lon)) {
                 return reject("Missing location");
             }
 
@@ -82,11 +82,14 @@ module.exports = {
                 console.error(e);
             }
 
+            let map_location = location.map;
+            let device_location = location.device;
+
             let categories_geo = [];
 
             //query db/cache for existing data
             try {
-                let testBox = getCoordsBoundBox(location.lat, location.lon, 0.71);
+                let testBox = getCoordsBoundBox(map_location.lat, map_location.lon, 0.71);
                 // location.lat = testBox.maxLat;
                 // location.lon = testBox.maxLon;
 
@@ -123,7 +126,7 @@ module.exports = {
 
                 //query fsq api
                 let data = await fsq.placeSearch({
-                    ll: `${location.lat},${location.lon}`,
+                    ll: `${map_location.lat},${map_location.lon}`,
                     categories: category_ids.join(","),
                     radius: search_radius_meters,
                     fields: `${module.exports.fields.core},${module.exports.fields.rich}`,
@@ -150,10 +153,10 @@ module.exports = {
 
                     category_geo_id = await conn("categories_geo").insert({
                         categories_key: categories_key,
-                        location_lat: location.lat,
-                        location_lon: location.lon,
-                        location_lat_1000: parseInt(Math.floor(location.lat * 1000)),
-                        location_lon_1000: parseInt(Math.floor(location.lon * 1000)),
+                        location_lat: map_location.lat,
+                        location_lon: map_location.lon,
+                        location_lat_1000: parseInt(Math.floor(map_location.lat * 1000)),
+                        location_lon_1000: parseInt(Math.floor(map_location.lon * 1000)),
                         search_radius_meters: search_radius_meters,
                         location_lat_min: searchBox.minLat,
                         location_lon_min: searchBox.minLon,
@@ -212,10 +215,12 @@ module.exports = {
                         console.error(e);
                     }
 
-                    //set distance of device/custom location from place
+                    //set distance of device/map/custom location from place
+                    let from_location = device_location || map_location;
+
                     place.distance = {
                         use_km: useKM(),
-                        meters: getDistanceMeters(location, {
+                        meters: getDistanceMeters(from_location, {
                             lat: place.location_lat,
                             lon: place.location_lon,
                         }),
