@@ -346,7 +346,7 @@ module.exports = {
             }
 
             try {
-                results = await module.exports.conn.zRange(key, "+inf", "-inf", options);
+                results = await module.exports.conn.zRange(key, "8000000000", "-8000000000", options);
 
                 return resolve(results);
             } catch (e) {
