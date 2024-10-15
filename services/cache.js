@@ -334,7 +334,6 @@ module.exports = {
             let results;
 
             let options = {
-                BY: "SCORE",
                 REV: !lowest_to_highest,
             };
 
@@ -346,7 +345,7 @@ module.exports = {
             }
 
             try {
-                results = await module.exports.conn.zRange(key, "8000000000", "-8000000000", options);
+                results = await module.exports.conn.zRangeByScore(key, "-inf", "+inf", options);
 
                 return resolve(results);
             } catch (e) {
