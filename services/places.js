@@ -19,11 +19,13 @@ const {
 } = require("./shared");
 
 const dayjs = require("dayjs");
+const {batchInsert} = require("./db");
 
 module.exports = {
     refresh_data: 30, //days
+    cache_distance: .5, //mi/km
     default: {
-        radius: 2, //miles or km
+        radius: 2, //mi/km
     },
     weights: {
         distance: {
@@ -56,17 +58,102 @@ module.exports = {
         },
     },
     getCategoriesPlaces: function (category_ids, location, radius) {
+        let conn, categories_key, search_radius_meters, map_location, device_location, searchBox;
+
+        if (!radius) {
+            radius = module.exports.default.radius;
+        }
+
+        function searchCategoryPlaces () {
+            return new Promise(async (resolve, reject) => {
+                let category_geo_id;
+
+                // batching
+                let fsq_ids = [];
+                let fsq_dict = {};
+
+                let batch_geo_place_insert = [];
+
+                try {
+                    let places = await fsqService.getPlacesByCategory(map_location.lat, map_location.lon, radius, category_ids.join(','));
+
+                    //no results
+                    if (!places.length) {
+                        return resolve([]);
+                    }
+
+                    for (let place of places) {
+                        //update rating from scale of 10 to 5
+                        if (place.rating) {
+                            place.rating = place.rating / 2;
+                        }
+
+                        //for batching
+                        fsq_ids.push(place.fsq_id);
+                        fsq_dict[place.fsq_id] = place;
+                    }
+
+                    //save data to db/cache
+
+                    //1. categories_geo
+                    try {
+                        let expires = dayjs().add(module.exports.refresh_data, "days").valueOf();
+
+                        category_geo_id = await conn("categories_geo").insert({
+                            categories_key: categories_key,
+                            location_lat: map_location.lat,
+                            location_lon: map_location.lon,
+                            location_lat_1000: parseInt(Math.floor(map_location.lat * 1000)),
+                            location_lon_1000: parseInt(Math.floor(map_location.lon * 1000)),
+                            search_radius_meters: search_radius_meters,
+                            location_lat_min: searchBox.minLat,
+                            location_lon_min: searchBox.minLon,
+                            location_lat_max: searchBox.maxLat,
+                            location_lon_max: searchBox.maxLon,
+                            location_lat_min_1000: searchBox.minLat1000,
+                            location_lon_min_1000: searchBox.minLon1000,
+                            location_lat_max_1000: searchBox.maxLat1000,
+                            location_lon_max_1000: searchBox.maxLon1000,
+                            expires: expires,
+                            created: timeNow(),
+                            updated: timeNow(),
+                        });
+
+                        category_geo_id = category_geo_id[0];
+                    } catch (e) {
+                        console.error(e);
+                    }
+
+                    let batch_dict = await module.exports.processFSQPlaces(fsq_ids, fsq_dict);
+
+                    let batch_places = Object.values(batch_dict);
+
+                    for (let place of batch_places) {
+                        //3. categories_geo_places
+                        batch_geo_place_insert.push({
+                            category_geo_id: category_geo_id,
+                            place_id: place.id,
+                            created: timeNow(),
+                            updated: timeNow(),
+                        });
+                    }
+
+                    try {
+                        await batchInsert(conn, 'categories_geo_places', batch_geo_place_insert);
+                    } catch(e) {
+                        console.error(e);
+                    }
+
+                    resolve(batch_places);
+                } catch(e) {
+                    console.error(e);
+                    return reject();
+                }
+            });
+        }
+
         return new Promise(async (resolve, reject) => {
             let places_organized = [];
-            let conn, category_geo_id, categories_key, search_radius_meters, searchBox;
-
-            // batching
-            let fsq_ids = [];
-            let fsq_dict = {};
-
-            if (!radius) {
-                radius = module.exports.default.radius;
-            }
 
             if (!location || !location.map || !(location.map.lat && location.map.lon)) {
                 return reject("Missing location");
@@ -86,37 +173,34 @@ module.exports = {
                 console.error(e);
             }
 
-            let map_location = location.map;
-            let device_location = location.device;
+            map_location = location.map;
+            device_location = location.device;
 
             let categories_geo = [];
 
             //query db/cache for existing data
             try {
-                let testBox = getCoordsBoundBox(map_location.lat, map_location.lon, 0.71);
-                // location.lat = testBox.maxLat;
-                // location.lon = testBox.maxLon;
+                let search_lat = map_location.lat;
+                let search_lon = map_location.lon;
 
-                //categories key is a string, sorted from lowest category_id to highest
+                //categories key is a string, sorted from lowest to highest category_id
                 categories_key = cloneObj(category_ids).sort().join(",");
                 search_radius_meters = getMetersFromMilesOrKm(radius, true);
-                searchBox = getCoordsBoundBox(map_location.lat, map_location.lon, radius);
+                searchBox = getCoordsBoundBox(search_lat, search_lon, radius);
 
-                //todo
                 let lats = range(searchBox.minLat1000, searchBox.maxLat1000);
                 let lons = range(searchBox.minLon1000, searchBox.maxLon1000);
 
                 try {
-                    // categories_geo = await conn('categories_geo')
-                    //     .whereIn('location_lat_1000', lats)
-                    //     .whereIn('location_lon_1000', lons)
-                    //     // .whereBetween('location_lat', [box.minLat, box.maxLon])
-                    //     // .whereBetween('location_lon', [searchBox.minLon, searchBox.maxLon])
-                    //     .whereRaw('(ST_Distance_Sphere(point(location_lon, location_lat), point(?,?))) <= ?', [
-                    //         location.lon,
-                    //         location.lat,
-                    //         getMetersFromMilesOrKm(radius)
-                    //     ]);
+                    categories_geo = await conn('categories_geo')
+                        .whereIn('location_lat_1000', lats)
+                        .whereIn('location_lon_1000', lons)
+                        .where('categories_key', categories_key)
+                        .whereRaw('(ST_Distance_Sphere(point(location_lon, location_lat), point(?,?))) <= ?', [
+                            search_lon,
+                            search_lat,
+                            getMetersFromMilesOrKm(module.exports.cache_distance)
+                        ]);
                 } catch (e) {
                     console.log(e);
                 }
@@ -124,109 +208,33 @@ module.exports = {
                 console.error(e);
             }
 
+            //use cached data
+            if(categories_geo.length) {
+                places_organized = await module.exports.getCachedCategoryPlaces(categories_geo);
+            } else {
+                places_organized = await searchCategoryPlaces();
+            }
+
+            if(!places_organized.length) {
+                return resolve([]);
+            }
+
+            //set distance of device/map/custom location from place
+            let from_location = device_location || map_location;
+
+            for(let place of places_organized) {
+                place.distance = {
+                    use_km: useKM(),
+                    meters: getDistanceMeters(from_location, {
+                        lat: place.location_lat,
+                        lon: place.location_lon,
+                    }),
+                };
+
+                place.distance.miles_km = getMilesOrKmFromMeters(place.distance.meters);
+            }
+
             try {
-                //set fsq auth
-                fsq.auth(process.env.FSQ_KEY);
-
-                //query fsq api
-                let data = await fsq.placeSearch({
-                    ll: `${map_location.lat},${map_location.lon}`,
-                    categories: category_ids.join(","),
-                    radius: search_radius_meters,
-                    fields: `${fsqService.fields.core},${fsqService.fields.rich}`,
-                    limit: 50,
-                    // query: 'movie theater',
-                    // min_price: 1,
-                    // max_price: 3
-                });
-
-                //no results
-                if (!data.data.results.length) {
-                    return resolve([]);
-                }
-
-                for (let place of data.data.results) {
-                    //update rating from scale of 10 to 5
-                    if (place.rating) {
-                        place.rating = place.rating / 2;
-                    }
-
-                    //for batching
-                    fsq_ids.push(place.fsq_id);
-                    fsq_dict[place.fsq_id] = place;
-                }
-
-                //save data to db/cache
-
-                //1. categories_geo
-                try {
-                    let expires = dayjs().add(module.exports.refresh_data, "days").valueOf();
-
-                    category_geo_id = await conn("categories_geo").insert({
-                        categories_key: categories_key,
-                        location_lat: map_location.lat,
-                        location_lon: map_location.lon,
-                        location_lat_1000: parseInt(Math.floor(map_location.lat * 1000)),
-                        location_lon_1000: parseInt(Math.floor(map_location.lon * 1000)),
-                        search_radius_meters: search_radius_meters,
-                        location_lat_min: searchBox.minLat,
-                        location_lon_min: searchBox.minLon,
-                        location_lat_max: searchBox.maxLat,
-                        location_lon_max: searchBox.maxLon,
-                        location_lat_min_1000: searchBox.minLat1000,
-                        location_lon_min_1000: searchBox.minLon1000,
-                        location_lat_max_1000: searchBox.maxLat1000,
-                        location_lon_max_1000: searchBox.maxLon1000,
-                        expires: expires,
-                        created: timeNow(),
-                        updated: timeNow(),
-                    });
-
-                    category_geo_id = category_geo_id[0];
-                } catch (e) {
-                    console.error(e);
-                }
-
-                let batch_dict = await module.exports.processFSQPlaces(fsq_ids, fsq_dict);
-
-                let places = Object.values(batch_dict);
-
-                for (let place of places) {
-                    //3. categories_geo_places
-                    try {
-                        let check = await conn("categories_geo_places")
-                            .where("category_geo_id", category_geo_id)
-                            .where("place_id", place.id)
-                            .first();
-
-                        if (place && !check) {
-                            await conn("categories_geo_places").insert({
-                                category_geo_id: category_geo_id,
-                                place_id: place.id,
-                                created: timeNow(),
-                                updated: timeNow(),
-                            });
-                        }
-                    } catch (e) {
-                        console.error(e);
-                    }
-
-                    //set distance of device/map/custom location from place
-                    let from_location = device_location || map_location;
-
-                    place.distance = {
-                        use_km: useKM(),
-                        meters: getDistanceMeters(from_location, {
-                            lat: place.location_lat,
-                            lon: place.location_lon,
-                        }),
-                    };
-
-                    place.distance.miles_km = getMilesOrKmFromMeters(place.distance.meters);
-
-                    places_organized.push(place);
-                }
-
                 //organize return data
                 try {
                     await module.exports.sortPlaces(places_organized, search_radius_meters);
@@ -239,6 +247,30 @@ module.exports = {
             } catch (e) {
                 console.error(e);
                 return reject(e);
+            }
+        });
+    },
+    getCachedCategoryPlaces: function (categories_geo) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let conn = await dbService.conn();
+
+                 let ids = categories_geo.map(x=>x.id);
+
+                 let places_qry = await conn('categories_geo_places AS cgp')
+                     .join('places AS p', 'p.id', '=', 'cgp.place_id')
+                     .whereIn('category_geo_id', ids)
+                     .select('fsq_place_id')
+                     .groupBy('place_id');
+
+                 let fsq_place_ids = places_qry.map(x=>x.fsq_place_id);
+
+                 let places = await module.exports.getBatchPlacesFSQ(fsq_place_ids);
+
+                 return resolve(Object.values(places));
+            } catch(e) {
+                console.error(e);
+                return reject();
             }
         });
     },

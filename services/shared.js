@@ -363,16 +363,28 @@ function getCoordsFromPointDistance(lat, lon, distance_miles_or_km, direction) {
 
     let newLat, newLon;
 
-    if (direction === "east") {
+    if (direction === "east" || direction === 'west') {
         newLat = lat;
 
-        let newLonRad = lonRad + distance_km / (earth_radius_km * Math.cos(latRad));
+        let newLonRad;
+
+        if(direction === 'east') {
+            newLonRad = lonRad + distance_km / (earth_radius_km * Math.cos(latRad));
+        } else {
+            newLonRad = lonRad - distance_km / (earth_radius_km * Math.cos(latRad));
+        }
 
         newLon = rad2deg(newLonRad);
-    } else if (direction === "south") {
+    } else if (direction === "south" || direction === "north") {
         newLon = lon;
 
-        let newLatRad = latRad - distance_km / earth_radius_km;
+        let newLatRad;
+
+        if(direction === "south") {
+            newLatRad = latRad - distance_km / earth_radius_km;
+        } else {
+            newLatRad = latRad + distance_km / earth_radius_km;
+        }
 
         newLat = rad2deg(newLatRad);
     }
