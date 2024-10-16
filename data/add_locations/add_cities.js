@@ -303,7 +303,7 @@ function main() {
                             bbox_lat_min_1000: lat_min_1000,
                             bbox_lat_max_1000: lat_max_1000,
                             bbox_lon_min_1000: lon_min_1000,
-                            bbox_lon_max_1000: lon_max_1000
+                            bbox_lon_max_1000: lon_max_1000,
                         };
 
                         //prevent duplicate cities in same state

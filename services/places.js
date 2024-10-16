@@ -1,6 +1,8 @@
 const cacheService = require("../services/cache");
 const dbService = require("../services/db");
 const fsq = require("../.api/apis/fsq-developers");
+const fsqService = require("../services/fsq");
+
 const {
     getMetersFromMilesOrKm,
     timeNow,
@@ -12,6 +14,8 @@ const {
     getCoordsBoundBox,
     range,
     getTimeZoneFromCoords,
+    getDistanceMilesOrKM,
+    getCoordsFromPointDistance,
 } = require("./shared");
 
 const dayjs = require("dayjs");
@@ -20,10 +24,6 @@ module.exports = {
     refresh_data: 30, //days
     default: {
         radius: 2, //miles or km
-    },
-    fields: {
-        core: `fsq_id,closed_bucket,distance,geocodes,location,name,timezone`, //categories,chains,link,related_places
-        rich: `price,description,hours,hours_popular,rating,popularity,venue_reality_bucket,photos`, //verified,stats,menu,date_closed,photos,tips,tastes,features,store_id,
     },
     weights: {
         distance: {
@@ -133,7 +133,7 @@ module.exports = {
                     ll: `${map_location.lat},${map_location.lon}`,
                     categories: category_ids.join(","),
                     radius: search_radius_meters,
-                    fields: `${module.exports.fields.core},${module.exports.fields.rich}`,
+                    fields: `${fsqService.fields.core},${fsqService.fields.rich}`,
                     limit: 50,
                     // query: 'movie theater',
                     // min_price: 1,
@@ -141,7 +141,7 @@ module.exports = {
                 });
 
                 //no results
-                if(!data.data.results.length) {
+                if (!data.data.results.length) {
                     return resolve([]);
                 }
 
@@ -492,8 +492,6 @@ module.exports = {
     },
     placesAutoComplete: function (session_token, search, location, friends) {
         return new Promise(async (resolve, reject) => {
-            let conn;
-
             // batching
             let fsq_ids = [];
             let fsq_dict = {};
@@ -519,7 +517,7 @@ module.exports = {
                     limit: 10,
                 });
 
-                if(!data.data.results.length) {
+                if (!data.data.results.length) {
                     return resolve([]);
                 }
 
@@ -627,8 +625,8 @@ module.exports = {
                             data = JSON.parse(data);
                             fsq_dict[fsq_id] = data;
 
-                            for(let k in data) {
-                                if(data[k] === 'null') {
+                            for (let k in data) {
+                                if (data[k] === "null") {
                                     data[k] = null;
                                 }
                             }
@@ -648,7 +646,7 @@ module.exports = {
             try {
                 let conn = await dbService.conn();
 
-                if(cache_miss_ids.length) {
+                if (cache_miss_ids.length) {
                     let places = await conn("places").whereIn("fsq_place_id", cache_miss_ids);
 
                     for (let place of places) {
@@ -669,10 +667,10 @@ module.exports = {
     },
     processFSQPlaces: function (fsq_ids, fsq_dict) {
         function placeHasRichData(place) {
-            let rich_keys = module.exports.fields.rich.split(',');
+            let rich_keys = fsqService.fields.rich.split(",");
 
-            for(let key of rich_keys) {
-                if(key in place) {
+            for (let key of rich_keys) {
+                if (key in place) {
                     return true;
                 }
             }
@@ -680,7 +678,7 @@ module.exports = {
         }
 
         return new Promise(async (resolve, reject) => {
-            if(!fsq_ids || !fsq_ids.length) {
+            if (!fsq_ids || !fsq_ids.length) {
                 return resolve({});
             }
 
@@ -757,7 +755,7 @@ module.exports = {
                             } else {
                                 photo_urls = null;
                             }
-                        } catch(e) {
+                        } catch (e) {
                             photo_urls = null;
                         }
                     } catch (e) {
@@ -798,30 +796,30 @@ module.exports = {
                     } else {
                         //possibly update if data added from autocomplete search first
 
-                        if(placeHasRichData(data)) {
+                        if (placeHasRichData(data)) {
                             let db_data = batch_dict[fsq_id];
 
                             //stringify db_data
-                            for(let k in db_data) {
-                                if(typeof db_data[k] === 'object' && db_data[k] !== null) {
+                            for (let k in db_data) {
+                                if (typeof db_data[k] === "object" && db_data[k] !== null) {
                                     db_data[k] = JSON.stringify(db_data[k]);
                                 }
                             }
 
                             let do_update = false;
 
-                            for(let k in place_data) {
+                            for (let k in place_data) {
                                 let v = place_data[k];
 
-                                if(v || db_data[k]) {
-                                    if(db_data[k] !== v) {
+                                if (v || db_data[k]) {
+                                    if (db_data[k] !== v) {
                                         do_update = true;
                                         break;
                                     }
                                 }
                             }
 
-                            if(do_update) {
+                            if (do_update) {
                                 place_data.id = db_data.id;
                                 place_data.created = db_data.created;
                                 place_data.updated = timeNow();
@@ -843,7 +841,7 @@ module.exports = {
                     }
                 }
 
-                if(batch_update.length) {
+                if (batch_update.length) {
                     try {
                         await dbService.batchUpdate(conn, "places", batch_update);
                     } catch (e) {
@@ -852,37 +850,31 @@ module.exports = {
                 }
 
                 //set stringified data back to object
-                for(let fsq_id in batch_dict) {
+                for (let fsq_id in batch_dict) {
                     let data = batch_dict[fsq_id];
 
-                    if(typeof data.hours === 'string') {
+                    if (typeof data.hours === "string") {
                         try {
                             data.hours = JSON.parse(data.hours);
-                        } catch(e) {
-
-                        }
+                        } catch (e) {}
                     }
 
-                    if(typeof data.hours_popular === 'string') {
+                    if (typeof data.hours_popular === "string") {
                         try {
                             data.hours_popular = JSON.parse(data.hours_popular);
-                        } catch(e) {
-
-                        }
+                        } catch (e) {}
                     }
 
-                    if(typeof data.photos === 'string') {
+                    if (typeof data.photos === "string") {
                         try {
                             data.photos = JSON.parse(data.photos);
-                        } catch(e) {
-
-                        }
+                        } catch (e) {}
                     }
                 }
 
                 //cache
                 try {
-                    if(batch_insert.length || batch_update.length) {
+                    if (batch_insert.length || batch_update.length) {
                         let multi = cacheService.conn.multi();
 
                         for (let item of batch_insert.concat(batch_update)) {
@@ -900,6 +892,141 @@ module.exports = {
             }
 
             resolve(batch_dict);
+        });
+    },
+    getPlacesForCity: function (city_id) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let distance_steps = [ //miles/km
+                    15,
+                    10,
+                    5,
+                    3,
+                    1,
+                ];
+
+                let conn = await dbService.conn();
+
+                let city = await conn("open_cities").where("id", city_id).first();
+
+                if (!city) {
+                    return reject();
+                }
+
+                let venue_categories = await conn("activity_type_venues AS atv")
+                    .join("venues_categories AS vc", "vc.id", "=", "atv.venue_category_id")
+                    .groupBy("venue_category_id")
+                    .select("venue_category_id AS category_id", "fsq_id", "category_name");
+
+                let top_left = {
+                    lat: city.bbox_lat_max,
+                    lon: city.bbox_lon_min,
+                };
+
+                let top_right = {
+                    lat: city.bbox_lat_max,
+                    lon: city.bbox_lon_max,
+                };
+
+                let bottom_left = {
+                    lat: city.bbox_lat_min,
+                    lon: city.bbox_lon_min,
+                };
+
+                let lon_distance = getDistanceMilesOrKM(top_left, top_right);
+                let lat_distance = getDistanceMilesOrKM(top_left, bottom_left);
+
+                let starting_coords = top_left;
+
+                let category_distance_dict = {};
+
+                let i = 0;
+
+                for (let category of venue_categories) {
+                    console.log({
+                        category_name: category.category_name,
+                    });
+
+                    if (!(category.category_id in category_distance_dict)) {
+                        category_distance_dict[category.category_id] = {
+                            places: {}
+                        };
+                    }
+
+                    for (let distance_step of distance_steps) {
+                        let break_distance_step = true;
+
+                        console.log({
+                            distance_step,
+                        });
+
+                        if (!(distance_step in category_distance_dict[category.category_id])) {
+                            category_distance_dict[category.category_id][distance_step] = {};
+                        }
+
+                        for (let lat_mkm = 0; lat_mkm < lat_distance; lat_mkm += distance_step) {
+                            let new_coords_lat = getCoordsFromPointDistance(
+                                starting_coords.lat,
+                                starting_coords.lon,
+                                lat_mkm,
+                                "south",
+                            );
+
+                            for (let lon_mkm = 0; lon_mkm < lon_distance; lon_mkm += distance_step) {
+                                let new_coords = getCoordsFromPointDistance(
+                                    new_coords_lat.lat,
+                                    starting_coords.lon,
+                                    lon_mkm,
+                                    "east",
+                                );
+
+                                i++;
+
+                                try {
+                                    let places = await fsqService.getPlacesByCategory(
+                                        new_coords.lat,
+                                        new_coords.lon,
+                                        distance_step,
+                                        category.fsq_id.toString(),
+                                    );
+
+                                    //need to aggregate places by smaller radius
+                                    if (places.length >= fsqService.limit) {
+                                        break_distance_step = false;
+                                    }
+
+                                    for (let place of places) {
+                                        category_distance_dict[category.category_id].places[place.fsq_id] = place;
+                                        category_distance_dict[category.category_id][distance_step][place.fsq_id] = place;
+                                    }
+
+                                    console.log({
+                                        coords: new_coords,
+                                        places: places,
+                                    });
+                                } catch (e) {
+                                    console.error(e);
+                                }
+
+                                console.log(new_coords);
+                            }
+                        }
+
+                        if (break_distance_step) {
+                            break;
+                        }
+                    }
+                }
+
+                console.log({
+                    i,
+                });
+
+                // console.log(venue_category_ids);
+            } catch (e) {
+                console.error(e);
+                return reject();
+            }
         });
     },
 };

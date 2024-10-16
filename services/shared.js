@@ -4,22 +4,21 @@ const fs = require("fs");
 const dayjs = require("dayjs");
 const utc = require("dayjs/plugin/utc");
 const timezone = require("dayjs/plugin/timezone");
-const geoip = require("geoip-lite");
-const geolib = require("geolib");
 const geoplaces = require("geojson-places");
 const tldts = require("tldts");
 const process = require("process");
-const sgMail = require("@sendgrid/mail");
 const { decrypt } = require("./encryption");
 const bcrypt = require("bcryptjs");
-const _ = require("lodash");
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
 global.serverTimezoneString = process.env.TZ || "America/Chicago";
 
+const earth_radius_km = 6371;
+const earth_radius_miles = 3958.762079;
 const meters_to_miles = 0.000621371192;
+const miles_to_km = 1.60934;
 
 Object.defineProperty(String.prototype, "capitalize", {
     value: function () {
@@ -308,9 +307,9 @@ function getCoordsBoundBox(latitude, longitude, distance_miles_or_km) {
     let angular;
 
     if (useKM()) {
-        angular = distance_miles_or_km / 6371;
+        angular = distance_miles_or_km / earth_radius_km;
     } else {
-        angular = distance_miles_or_km / 3958.762079;
+        angular = distance_miles_or_km / earth_radius_miles;
     }
 
     let minLat = radLat - angular;
@@ -356,6 +355,34 @@ function getCoordsBoundBox(latitude, longitude, distance_miles_or_km) {
     };
 }
 
+function getCoordsFromPointDistance(lat, lon, distance_miles_or_km, direction) {
+    let distance_km = useKM() ? distance_miles_or_km : distance_miles_or_km * miles_to_km;
+
+    const latRad = deg2rad(lat);
+    const lonRad = deg2rad(lon);
+
+    let newLat, newLon;
+
+    if (direction === "east") {
+        newLat = lat;
+
+        let newLonRad = lonRad + distance_km / (earth_radius_km * Math.cos(latRad));
+
+        newLon = rad2deg(newLonRad);
+    } else if (direction === "south") {
+        newLon = lon;
+
+        let newLatRad = latRad - distance_km / earth_radius_km;
+
+        newLat = rad2deg(newLatRad);
+    }
+
+    return {
+        lat: newLat,
+        lon: newLon,
+    };
+}
+
 function getDateDiff(date_1, date_2, unit) {
     let dayjs = require("dayjs");
 
@@ -377,8 +404,6 @@ function getDateTimeStr() {
 }
 
 function getDistanceMeters(loc_1, loc_2) {
-    const R = 6371; // Earth's radius in km
-
     const dLat = deg2rad(loc_2.lat - loc_1.lat);
     const dLon = deg2rad(loc_2.lon - loc_1.lon);
 
@@ -391,7 +416,13 @@ function getDistanceMeters(loc_1, loc_2) {
 
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-    return R * c * 1000;
+    return earth_radius_km * c * 1000;
+}
+
+function getDistanceMilesOrKM(loc_1, loc_2) {
+    let distance_meters = getDistanceMeters(loc_1, loc_2);
+
+    return getMilesOrKmFromMeters(distance_meters);
 }
 
 function getExchangeKeysKey(token) {
@@ -991,10 +1022,12 @@ module.exports = {
     getCityState: getCityState,
     getCleanDomain: getCleanDomain,
     getCoordsBoundBox: getCoordsBoundBox,
+    getCoordsFromPointDistance: getCoordsFromPointDistance,
     getDateDiff: getDateDiff,
     getDateStr: getDateStr,
     getDateTimeStr: getDateTimeStr,
     getDistanceMeters: getDistanceMeters,
+    getDistanceMilesOrKM: getDistanceMilesOrKM,
     getExchangeKeysKey: getExchangeKeysKey,
     getIPAddr: getIPAddr,
     getLocalDate: getLocalDate,

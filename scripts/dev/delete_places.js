@@ -34,9 +34,11 @@ loadScriptEnv();
 
         let keys = await cacheService.getKeys(`${cacheService.keys.place_fsq}*`);
 
-        if (keys.length > 0) {
-            await cacheService.deleteKeys(keys);
-        }
+        await cacheService.deleteKeys(keys);
+
+        let keys_cats = await cacheService.getKeys(`places:category:*`);
+
+        await cacheService.deleteKeys(keys_cats);
     }
 
     process.exit();

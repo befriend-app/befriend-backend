@@ -18,6 +18,9 @@ module.exports = {
             cityCountryPrefix: function (country_code, prefix) {
                 return `cities:country:${country_code}:${prefix}`;
             },
+            placesByCategoryCity: function (category_id, city_id) {
+                return `places:category:${category_id}:city:${city_id}`;
+            },
         },
     },
     init: function () {
