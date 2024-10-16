@@ -274,6 +274,15 @@ function main() {
                             population = findPopulation(city);
                         }
 
+                        let lat_min = Math.min(city.bbox[1], city.bbox[3]);
+                        let lat_max = Math.max(city.bbox[1], city.bbox[3]);
+                        let lon_min = Math.min(city.bbox[0], city.bbox[2]);
+                        let lon_max = Math.max(city.bbox[0], city.bbox[2]);
+                        let lat_min_1000 = Math.floor(lat_min * 1000);
+                        let lat_max_1000 = Math.floor(lat_max * 1000);
+                        let lon_min_1000 = Math.floor(lon_min * 1000);
+                        let lon_max_1000 = Math.floor(lon_max * 1000);
+
                         let insert_data = {
                             country_id: country.id,
                             state_id: state_db.id,
@@ -287,6 +296,14 @@ function main() {
                             is_village: city.type === "village",
                             is_hamlet: city.type === "hamlet",
                             is_administrative: city.type === "administrative",
+                            bbox_lat_min: lat_min,
+                            bbox_lat_max: lat_max,
+                            bbox_lon_min: lon_min,
+                            bbox_lon_max: lon_max,
+                            bbox_lat_min_1000: lat_min_1000,
+                            bbox_lat_max_1000: lat_max_1000,
+                            bbox_lon_min_1000: lon_min_1000,
+                            bbox_lon_max_1000: lon_max_1000
                         };
 
                         //prevent duplicate cities in same state
