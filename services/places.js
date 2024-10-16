@@ -897,6 +897,7 @@ module.exports = {
     getPlacesForCity: function (city_id) {
         return new Promise(async (resolve, reject) => {
             try {
+                //loop through city by ever decreasing distances
                 let distance_steps = [ //miles/km
                     15,
                     10,
@@ -913,11 +914,13 @@ module.exports = {
                     return reject();
                 }
 
+                // get unique list of categories
                 let venue_categories = await conn("activity_type_venues AS atv")
                     .join("venues_categories AS vc", "vc.id", "=", "atv.venue_category_id")
                     .groupBy("venue_category_id")
                     .select("venue_category_id AS category_id", "fsq_id", "category_name");
 
+                //calc distance of box
                 let top_left = {
                     lat: city.bbox_lat_max,
                     lon: city.bbox_lon_min,
@@ -936,8 +939,10 @@ module.exports = {
                 let lon_distance = getDistanceMilesOrKM(top_left, top_right);
                 let lat_distance = getDistanceMilesOrKM(top_left, bottom_left);
 
+                //starting point of coords for city
                 let starting_coords = top_left;
 
+                //stores places
                 let category_distance_dict = {};
 
                 let i = 0;
@@ -947,6 +952,7 @@ module.exports = {
                         category_name: category.category_name,
                     });
 
+                    //initiate category
                     if (!(category.category_id in category_distance_dict)) {
                         category_distance_dict[category.category_id] = {
                             places: {}
@@ -954,35 +960,42 @@ module.exports = {
                     }
 
                     for (let distance_step of distance_steps) {
+                        //default to break loop
                         let break_distance_step = true;
 
                         console.log({
                             distance_step,
                         });
 
+                        //initiate places for distance of category
                         if (!(distance_step in category_distance_dict[category.category_id])) {
                             category_distance_dict[category.category_id][distance_step] = {};
                         }
 
+                        //latitude loop
                         for (let lat_mkm = 0; lat_mkm < lat_distance; lat_mkm += distance_step) {
                             let new_coords_lat = getCoordsFromPointDistance(
                                 starting_coords.lat,
                                 starting_coords.lon,
-                                lat_mkm,
+                                lat_mkm, //search with new latitude from this point
                                 "south",
                             );
 
+                            //longitude loop
+                            //search with new longitude from this point
                             for (let lon_mkm = 0; lon_mkm < lon_distance; lon_mkm += distance_step) {
                                 let new_coords = getCoordsFromPointDistance(
-                                    new_coords_lat.lat,
+                                    new_coords_lat.lat, //from above
                                     starting_coords.lon,
-                                    lon_mkm,
+                                    lon_mkm, //search with new longitude from this point
                                     "east",
                                 );
 
+                                //calculate number of loops
                                 i++;
 
                                 try {
+                                    //get places
                                     let places = await fsqService.getPlacesByCategory(
                                         new_coords.lat,
                                         new_coords.lon,
@@ -995,6 +1008,7 @@ module.exports = {
                                         break_distance_step = false;
                                     }
 
+                                    //save to dictionary
                                     for (let place of places) {
                                         category_distance_dict[category.category_id].places[place.fsq_id] = place;
                                         category_distance_dict[category.category_id][distance_step][place.fsq_id] = place;
@@ -1012,6 +1026,7 @@ module.exports = {
                             }
                         }
 
+                        //break distance_step loop
                         if (break_distance_step) {
                             break;
                         }
@@ -1022,7 +1037,7 @@ module.exports = {
                     i,
                 });
 
-                // console.log(venue_category_ids);
+                resolve();
             } catch (e) {
                 console.error(e);
                 return reject();
