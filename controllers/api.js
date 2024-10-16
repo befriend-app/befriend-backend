@@ -1404,7 +1404,7 @@ module.exports = {
                     return resolve();
                 }
 
-                if(!location || !location.map || !(location.map.lat && location.map.lon)) {
+                if (!location || !location.map || !(location.map.lat && location.map.lon)) {
                     res.json(
                         {
                             message: "Location required",

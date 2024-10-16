@@ -60,6 +60,10 @@ module.exports = {
             let places_organized = [];
             let conn, category_geo_id, categories_key, search_radius_meters, searchBox;
 
+            // batching
+            let fsq_ids = [];
+            let fsq_dict = {};
+
             if (!radius) {
                 radius = module.exports.default.radius;
             }
@@ -96,7 +100,7 @@ module.exports = {
                 //categories key is a string, sorted from lowest category_id to highest
                 categories_key = cloneObj(category_ids).sort().join(",");
                 search_radius_meters = getMetersFromMilesOrKm(radius, true);
-                searchBox = getCoordsBoundBox(location.lat, location.lon, radius);
+                searchBox = getCoordsBoundBox(map_location.lat, map_location.lon, radius);
 
                 //todo
                 let lats = range(searchBox.minLat1000, searchBox.maxLat1000);
@@ -136,13 +140,20 @@ module.exports = {
                     // max_price: 3
                 });
 
-                let places = data.data.results;
+                //no results
+                if(!data.data.results.length) {
+                    return resolve([]);
+                }
 
-                //update rating from scale of 10 to 5
-                for (let place of places) {
+                for (let place of data.data.results) {
+                    //update rating from scale of 10 to 5
                     if (place.rating) {
                         place.rating = place.rating / 2;
                     }
+
+                    //for batching
+                    fsq_ids.push(place.fsq_id);
+                    fsq_dict[place.fsq_id] = place;
                 }
 
                 //save data to db/cache
@@ -176,26 +187,11 @@ module.exports = {
                     console.error(e);
                 }
 
-                //todo - refactor for batch get/insert
-                for (let data of places) {
-                    //2. places
-                    let place;
+                let batch_dict = await module.exports.processFSQPlaces(fsq_ids, fsq_dict);
 
-                    try {
-                        place = await module.exports.getPlaceFSQ(data.fsq_id);
+                let places = Object.values(batch_dict);
 
-                        if (place) {
-                            //update
-                            await module.exports.addOrUpdatePlace(data, place.id);
-                        } else {
-                            //insert
-                            place = await module.exports.addOrUpdatePlace(data);
-                        }
-                    } catch (e) {
-                        console.error(e);
-                        continue;
-                    }
-
+                for (let place of places) {
                     //3. categories_geo_places
                     try {
                         let check = await conn("categories_geo_places")
@@ -306,7 +302,7 @@ module.exports = {
             }
 
             //try cache first
-            let cache_key = `${cacheService.keys.place_fsq}:${fsq_id}`;
+            let cache_key = `${cacheService.keys.place_fsq}${fsq_id}`;
 
             try {
                 let cache_data = await cacheService.get(cache_key, true);
@@ -348,85 +344,9 @@ module.exports = {
             }
         });
     },
-    getBatchPlacesFSQ: function (fsq_ids) {
-        return new Promise(async (resolve, reject) => {
-            if (!fsq_ids || !fsq_ids.length) {
-                return reject("No ids provided");
-            }
-
-            let fsq_dict = {};
-
-            let cache_miss_ids = [];
-
-            let multi = cacheService.conn.multi();
-
-            for (let fsq_id of fsq_ids) {
-                let cache_key = `${cacheService.keys.place_fsq}${fsq_id}`;
-
-                multi.get(cache_key);
-            }
-
-            //try cache first
-            try {
-                let cache_data = await cacheService.execRedisMulti(multi);
-
-                for (let i = 0; i < cache_data.length; i++) {
-                    let data = cache_data[i];
-                    let fsq_id = fsq_ids[i];
-
-                    if (data) {
-                        try {
-                            data = JSON.parse(data);
-                            fsq_dict[fsq_id] = data;
-                        } catch (e) {
-                            console.error(e);
-                        }
-                    } else {
-                        // use in db query
-                        cache_miss_ids.push(fsq_id);
-                    }
-                }
-            } catch (e) {
-                console.error(e);
-            }
-
-            //db backup
-            try {
-                let conn = await dbService.conn();
-
-                let places = await conn("places").whereIn("fsq_place_id", cache_miss_ids);
-
-                for (let place of places) {
-                    let cache_key = `${cacheService.keys.place_fsq}:${place.fsq_place_id}`;
-
-                    //parse json
-                    if (place.hours) {
-                        place.hours = JSON.parse(place.hours);
-                    }
-
-                    if (place.hours_popular) {
-                        place.hours_popular = JSON.parse(place.hours_popular);
-                    }
-
-                    if (place.photos) {
-                        place.photos = JSON.parse(place.photos);
-                    }
-
-                    fsq_dict[place.fsq_place_id] = place;
-
-                    await cacheService.setCache(cache_key, place);
-                }
-            } catch (e) {
-                console.error(e);
-                return reject();
-            }
-
-            resolve(fsq_dict);
-        });
-    },
     addOrUpdatePlace: function (data, place_id = null) {
         return new Promise(async (resolve, reject) => {
-            let cache_key = `${cacheService.keys.place_fsq}:${data.fsq_id}`;
+            let cache_key = `${cacheService.keys.place_fsq}${data.fsq_id}`;
 
             let lat,
                 lon,
@@ -573,16 +493,15 @@ module.exports = {
     placesAutoComplete: function (session_token, search, location, friends) {
         return new Promise(async (resolve, reject) => {
             let conn;
+
+            // batching
+            let fsq_ids = [];
+            let fsq_dict = {};
+
             let search_type = "place";
 
             if (friends.type.is_existing) {
                 search_type = "place,address";
-            }
-
-            try {
-                conn = await dbService.conn();
-            } catch (e) {
-                console.error(e);
             }
 
             let lat = location.map.lat;
@@ -600,12 +519,11 @@ module.exports = {
                     limit: 10,
                 });
 
-                let results = [];
+                if(!data.data.results.length) {
+                    return resolve([]);
+                }
 
-                // batch logic
-                let batch_dict = {};
-                let fsq_ids = [];
-                let fsq_dict = {};
+                let results = [];
 
                 for (let result of data.data.results) {
                     if (result.place) {
@@ -614,69 +532,7 @@ module.exports = {
                     }
                 }
 
-                try {
-                    batch_dict = await module.exports.getBatchPlacesFSQ(fsq_ids);
-
-                    let batch_insert = [];
-
-                    for (let fsq_id of fsq_ids) {
-                        if (!(fsq_id in batch_dict)) {
-                            let data = fsq_dict[fsq_id];
-
-                            let lat = data.geocodes.main.latitude;
-                            let lon = data.geocodes.main.longitude;
-                            let lat_1000 = parseInt(Math.floor(lat * 1000));
-                            let lon_1000 = parseInt(Math.floor(lon * 1000));
-
-                            let insert_data = {
-                                fsq_place_id: fsq_id,
-                                name: data.name,
-                                location_address: data.location.address,
-                                location_address_2: data.location.address_extended,
-                                location_locality: data.location.locality,
-                                location_postcode: data.location.postcode,
-                                location_region: data.location.region,
-                                location_lat: lat,
-                                location_lat_1000: lat_1000,
-                                location_lon: lon,
-                                location_lon_1000: lon_1000,
-                                timezone: getTimeZoneFromCoords(lat, lon),
-                                created: timeNow(),
-                                updated: timeNow(),
-                            };
-
-                            batch_insert.push(insert_data);
-
-                            batch_dict[fsq_id] = insert_data;
-                        }
-                    }
-
-                    if (batch_insert.length) {
-                        //db
-                        try {
-                            await dbService.batchInsert(conn, "places", batch_insert, true);
-                        } catch (e) {
-                            console.error(e);
-                        }
-
-                        //cache
-                        try {
-                            let multi = cacheService.conn.multi();
-
-                            for (let item of batch_insert) {
-                                let cache_key = cacheService.keys.place_fsq + item.fsq_place_id;
-
-                                multi.set(cache_key, JSON.stringify(item));
-                            }
-
-                            await cacheService.execRedisMulti(multi);
-                        } catch (e) {
-                            console.error(e);
-                        }
-                    }
-                } catch (e) {
-                    console.error(e);
-                }
+                let batch_dict = await module.exports.processFSQPlaces(fsq_ids, fsq_dict);
 
                 // organize data
                 for (let result of data.data.results) {
@@ -693,7 +549,7 @@ module.exports = {
                             let from_lat = lat;
                             let from_lon = lon;
 
-                            if(location.device && (location.device.lat && location.device.lon)) {
+                            if (location.device && location.device.lat && location.device.lon) {
                                 from_lat = location.device.lat;
                                 from_lon = location.device.lon;
                             }
@@ -738,6 +594,312 @@ module.exports = {
                 console.error(e);
                 return reject();
             }
+        });
+    },
+    getBatchPlacesFSQ: function (fsq_ids) {
+        return new Promise(async (resolve, reject) => {
+            if (!fsq_ids || !fsq_ids.length) {
+                return reject("No ids provided");
+            }
+
+            let fsq_dict = {};
+
+            let cache_miss_ids = [];
+
+            let multi = cacheService.conn.multi();
+
+            for (let fsq_id of fsq_ids) {
+                let cache_key = `${cacheService.keys.place_fsq}${fsq_id}`;
+
+                multi.get(cache_key);
+            }
+
+            //try cache first
+            try {
+                let cache_data = await cacheService.execRedisMulti(multi);
+
+                for (let i = 0; i < cache_data.length; i++) {
+                    let data = cache_data[i];
+                    let fsq_id = fsq_ids[i];
+
+                    if (data) {
+                        try {
+                            data = JSON.parse(data);
+                            fsq_dict[fsq_id] = data;
+
+                            for(let k in data) {
+                                if(data[k] === 'null') {
+                                    data[k] = null;
+                                }
+                            }
+                        } catch (e) {
+                            console.error(e);
+                        }
+                    } else {
+                        // use in db query
+                        cache_miss_ids.push(fsq_id);
+                    }
+                }
+            } catch (e) {
+                console.error(e);
+            }
+
+            //db backup
+            try {
+                let conn = await dbService.conn();
+
+                if(cache_miss_ids.length) {
+                    let places = await conn("places").whereIn("fsq_place_id", cache_miss_ids);
+
+                    for (let place of places) {
+                        let cache_key = `${cacheService.keys.place_fsq}${place.fsq_place_id}`;
+
+                        fsq_dict[place.fsq_place_id] = place;
+
+                        await cacheService.setCache(cache_key, place);
+                    }
+                }
+            } catch (e) {
+                console.error(e);
+                return reject();
+            }
+
+            resolve(fsq_dict);
+        });
+    },
+    processFSQPlaces: function (fsq_ids, fsq_dict) {
+        function placeHasRichData(place) {
+            let rich_keys = module.exports.fields.rich.split(',');
+
+            for(let key of rich_keys) {
+                if(key in place) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        return new Promise(async (resolve, reject) => {
+            if(!fsq_ids || !fsq_ids.length) {
+                return resolve({});
+            }
+
+            let batch_dict = {};
+            let batch_insert = [];
+            let batch_update = [];
+
+            try {
+                let conn = await dbService.conn();
+
+                batch_dict = await module.exports.getBatchPlacesFSQ(fsq_ids);
+
+                for (let fsq_id of fsq_ids) {
+                    let lat,
+                        lon,
+                        lat_1000,
+                        lon_1000,
+                        hours,
+                        hours_popular,
+                        address,
+                        address_2,
+                        country,
+                        locality,
+                        postcode,
+                        region,
+                        timezone,
+                        photo_urls = [];
+
+                    let data = fsq_dict[fsq_id];
+
+                    try {
+                        address = data.location.address;
+                        address_2 = data.location.address_extended || null;
+                        locality = data.location.locality || null;
+                        postcode = data.location.postcode || null;
+                        region = data.location.region || null;
+                        country = data.location.country || null;
+
+                        lat = data.geocodes.main.latitude;
+                        lon = data.geocodes.main.longitude;
+                        lat_1000 = parseInt(Math.floor(lat * 1000));
+                        lon_1000 = parseInt(Math.floor(lon * 1000));
+
+                        timezone = data.timezone;
+
+                        if (!timezone) {
+                            timezone = getTimeZoneFromCoords(lat, lon);
+                        }
+
+                        try {
+                            hours = JSON.stringify(data.hours.regular) || null;
+                        } catch (e) {
+                            hours = null;
+                        }
+
+                        try {
+                            hours_popular = JSON.stringify(data.hours_popular) || null;
+                        } catch (e) {
+                            hours_popular = null;
+                        }
+
+                        try {
+                            for (let photo of data.photos) {
+                                let photo_url = {
+                                    prefix: photo.prefix,
+                                    suffix: photo.suffix,
+                                };
+
+                                photo_urls.push(photo_url);
+                            }
+
+                            if (photo_urls.length) {
+                                photo_urls = JSON.stringify(photo_urls);
+                            } else {
+                                photo_urls = null;
+                            }
+                        } catch(e) {
+                            photo_urls = null;
+                        }
+                    } catch (e) {
+                        console.error(e);
+                    }
+
+                    let place_data = {
+                        fsq_place_id: fsq_id,
+                        name: data.name,
+                        business_open: data.closed_bucket,
+                        hours: hours,
+                        hours_popular: hours_popular,
+                        location_address: address,
+                        location_address_2: address_2,
+                        location_locality: locality,
+                        location_postcode: postcode,
+                        location_region: region,
+                        location_country: country,
+                        location_lat: lat,
+                        location_lat_1000: lat_1000,
+                        location_lon: lon,
+                        location_lon_1000: lon_1000,
+                        photos: photo_urls,
+                        popularity: data.popularity || null,
+                        price: data.price || null,
+                        rating: data.rating || null,
+                        reality: data.venue_reality_bucket || null,
+                        timezone: timezone,
+                    };
+
+                    if (!(fsq_id in batch_dict)) {
+                        place_data.created = timeNow();
+                        place_data.updated = timeNow();
+
+                        batch_insert.push(place_data);
+
+                        batch_dict[fsq_id] = place_data;
+                    } else {
+                        //possibly update if data added from autocomplete search first
+
+                        if(placeHasRichData(data)) {
+                            let db_data = batch_dict[fsq_id];
+
+                            //stringify db_data
+                            for(let k in db_data) {
+                                if(typeof db_data[k] === 'object' && db_data[k] !== null) {
+                                    db_data[k] = JSON.stringify(db_data[k]);
+                                }
+                            }
+
+                            let do_update = false;
+
+                            for(let k in place_data) {
+                                let v = place_data[k];
+
+                                if(v || db_data[k]) {
+                                    if(db_data[k] !== v) {
+                                        do_update = true;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            if(do_update) {
+                                place_data.id = db_data.id;
+                                place_data.created = db_data.created;
+                                place_data.updated = timeNow();
+
+                                batch_dict[fsq_id] = place_data;
+
+                                batch_update.push(place_data);
+                            }
+                        }
+                    }
+                }
+
+                //db
+                if (batch_insert.length) {
+                    try {
+                        await dbService.batchInsert(conn, "places", batch_insert, true);
+                    } catch (e) {
+                        console.error(e);
+                    }
+                }
+
+                if(batch_update.length) {
+                    try {
+                        await dbService.batchUpdate(conn, "places", batch_update);
+                    } catch (e) {
+                        console.error(e);
+                    }
+                }
+
+                //set stringified data back to object
+                for(let fsq_id in batch_dict) {
+                    let data = batch_dict[fsq_id];
+
+                    if(typeof data.hours === 'string') {
+                        try {
+                            data.hours = JSON.parse(data.hours);
+                        } catch(e) {
+
+                        }
+                    }
+
+                    if(typeof data.hours_popular === 'string') {
+                        try {
+                            data.hours_popular = JSON.parse(data.hours_popular);
+                        } catch(e) {
+
+                        }
+                    }
+
+                    if(typeof data.photos === 'string') {
+                        try {
+                            data.photos = JSON.parse(data.photos);
+                        } catch(e) {
+
+                        }
+                    }
+                }
+
+                //cache
+                try {
+                    if(batch_insert.length || batch_update.length) {
+                        let multi = cacheService.conn.multi();
+
+                        for (let item of batch_insert.concat(batch_update)) {
+                            let cache_key = cacheService.keys.place_fsq + item.fsq_place_id;
+                            multi.set(cache_key, JSON.stringify(item));
+                        }
+
+                        await cacheService.execRedisMulti(multi);
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            } catch (e) {
+                console.error(e);
+            }
+
+            resolve(batch_dict);
         });
     },
 };
