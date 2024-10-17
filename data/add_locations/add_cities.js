@@ -209,7 +209,7 @@ function main() {
 
                         let name = getCityName(city);
 
-                        let state, state_short;
+                        let state = null, state_short = null;
 
                         let population = city.population;
 
@@ -232,7 +232,7 @@ function main() {
                         } else if ("municipality" in city.address) {
                             state = city.address.municipality;
                             state_short = state;
-                        } else {
+                        } else if(city.type !== 'city') {
                             continue;
                         }
 
@@ -242,7 +242,7 @@ function main() {
 
                         let state_db = states_dict[country.country_code][state_short];
 
-                        if (!state_db) {
+                        if (!state_db && state) {
                             let id = await conn("open_states").insert({
                                 country_id: country.id,
                                 state_name: state,
@@ -262,12 +262,14 @@ function main() {
                             cities_dict[country.id] = {};
                         }
 
-                        if (!(state_db.id in cities_dict[country.id])) {
-                            cities_dict[country.id][state_db.id] = {};
-                        }
+                        if(state) {
+                            if (!(state_db.id in cities_dict[country.id])) {
+                                cities_dict[country.id][state_db.id] = {};
+                            }
 
-                        if (name.toLowerCase() in cities_dict[country.id][state_db.id]) {
-                            continue;
+                            if (name.toLowerCase() in cities_dict[country.id][state_db.id]) {
+                                continue;
+                            }
                         }
 
                         if (!population) {
@@ -285,7 +287,7 @@ function main() {
 
                         let insert_data = {
                             country_id: country.id,
-                            state_id: state_db.id,
+                            state_id: state_db ? state_db.id : null,
                             city_name: name,
                             population: population,
                             lat: city.location[1],
@@ -307,7 +309,9 @@ function main() {
                         };
 
                         //prevent duplicate cities in same state
-                        cities_dict[country.id][state_db.id][name.toLowerCase()] = insert_data;
+                        if(state_db) {
+                            cities_dict[country.id][state_db.id][name.toLowerCase()] = insert_data;
+                        }
 
                         batch_insert.push(insert_data);
 
