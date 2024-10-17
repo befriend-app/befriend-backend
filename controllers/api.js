@@ -1278,7 +1278,7 @@ module.exports = {
                 let activity_fsq_ids = await cacheService.get(cache_key, true);
 
                 if (!activity_fsq_ids) {
-                    //get activity type
+                    //get activity type by token
                     activity_type = await activitiesService.getActivityType(activity_type_token);
 
                     if (!activity_type) {
@@ -1292,6 +1292,7 @@ module.exports = {
                         return resolve();
                     }
 
+                    //get fsq ids for activity type
                     let categories_qry = await conn("activity_type_venues AS atv")
                         .join("venues_categories AS vc", "vc.id", "=", "atv.venue_category_id")
                         .where("atv.activity_type_id", activity_type.id)

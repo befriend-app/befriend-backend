@@ -77,11 +77,6 @@ module.exports = {
                 try {
                     let places = await fsqService.getPlacesByCategory(map_location.lat, map_location.lon, radius, category_ids.join(','));
 
-                    //no results
-                    if (!places.length) {
-                        return resolve([]);
-                    }
-
                     for (let place of places) {
                         //update rating from scale of 10 to 5
                         if (place.rating) {
@@ -122,6 +117,11 @@ module.exports = {
                         category_geo_id = category_geo_id[0];
                     } catch (e) {
                         console.error(e);
+                    }
+
+                    //no results cached above - return empty array
+                    if (!places.length) {
+                        return resolve([]);
                     }
 
                     let batch_dict = await module.exports.processFSQPlaces(fsq_ids, fsq_dict);
