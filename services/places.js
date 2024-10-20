@@ -57,6 +57,9 @@ module.exports = {
             },
         },
     },
+    cols: {
+        json: ['hours', 'hours_popular', 'photos'] //these cols are stringified in the db
+    },
     getCategoriesPlaces: function (category_ids, location, radius) {
         let conn, categories_key, search_radius_meters, map_location, device_location, searchBox;
 
@@ -353,17 +356,11 @@ module.exports = {
                 let qry = await conn("places").where("fsq_place_id", fsq_id).first();
 
                 if (qry) {
-                    //parse json
-                    if (qry.hours) {
-                        qry.hours = JSON.parse(qry.hours);
-                    }
-
-                    if (qry.hours_popular) {
-                        qry.hours_popular = JSON.parse(qry.hours_popular);
-                    }
-
-                    if (qry.photos) {
-                        qry.photos = JSON.parse(qry.photos);
+                    //parse json for stringified cols
+                    for(let col of module.exports.cols.json) {
+                        if(qry[col]) {
+                            qry[col] = JSON.parse(qry[col]);
+                        }
                     }
 
                     await cacheService.setCache(cache_key, qry);
@@ -697,18 +694,18 @@ module.exports = {
             resolve(fsq_dict);
         });
     },
-    processFSQPlaces: function (fsq_ids, fsq_dict) {
-        function placeHasRichData(place) {
-            let rich_keys = fsqService.fields.rich.split(",");
+    placeHasRichData: function(place) {
+        let rich_keys = fsqService.fields.rich.split(",");
 
-            for (let key of rich_keys) {
-                if (key in place) {
-                    return true;
-                }
+        for (let key of rich_keys) {
+            if (key in place) {
+                return true;
             }
-            return false;
         }
 
+        return false;
+    },
+    processFSQPlaces: function (fsq_ids, fsq_dict) {
         return new Promise(async (resolve, reject) => {
             if (!fsq_ids || !fsq_ids.length) {
                 return resolve({});
@@ -828,7 +825,7 @@ module.exports = {
                     } else {
                         //possibly update if data added from autocomplete search first
 
-                        if (placeHasRichData(data)) {
+                        if (module.exports.placeHasRichData(data)) {
                             let db_data = batch_dict[fsq_id];
 
                             //stringify db_data
@@ -885,22 +882,14 @@ module.exports = {
                 for (let fsq_id in batch_dict) {
                     let data = batch_dict[fsq_id];
 
-                    if (typeof data.hours === "string") {
-                        try {
-                            data.hours = JSON.parse(data.hours);
-                        } catch (e) {}
-                    }
+                    for(let col of module.exports.cols.json) {
+                        if(typeof data[col] === 'string') {
+                            try {
+                                data[col] = JSON.parse(data[col]);
+                            } catch(e) {
 
-                    if (typeof data.hours_popular === "string") {
-                        try {
-                            data.hours_popular = JSON.parse(data.hours_popular);
-                        } catch (e) {}
-                    }
-
-                    if (typeof data.photos === "string") {
-                        try {
-                            data.photos = JSON.parse(data.photos);
-                        } catch (e) {}
+                            }
+                        }
                     }
                 }
 
