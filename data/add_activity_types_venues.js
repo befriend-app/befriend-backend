@@ -43,6 +43,16 @@ function processActivity(activity, int, parent_ids, bool) {
             console.error(e);
         }
 
+        let notification_name = activity.notification;
+
+        if(bool === 'is_eat' && !notification_name) {
+            notification_name = activity.title.replace('Restaurants', 'Restaurant');
+        }
+
+        if(!notification_name) {
+            console.error(activity.name);
+        }
+
         let insert;
 
         if (!at_check) {
@@ -52,6 +62,7 @@ function processActivity(activity, int, parent_ids, bool) {
                 activity_name: activity.name,
                 activity_name_full: activity_full_name,
                 activity_title: activity.title,
+                notification_name: notification_name,
                 activity_image: activity.image || null,
                 activity_emoji: activity.emoji || null,
                 sort_position: int,
@@ -91,6 +102,7 @@ function processActivity(activity, int, parent_ids, bool) {
                     updated: timeNow(),
                 });
             } catch (e) {
+                console.error(activity.name);
                 console.error(e);
             }
         }
