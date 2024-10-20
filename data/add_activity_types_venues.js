@@ -45,11 +45,11 @@ function processActivity(activity, int, parent_ids, bool) {
 
         let notification_name = activity.notification;
 
-        if(bool === 'is_eat' && !notification_name) {
-            notification_name = activity.title.replace('Restaurants', 'Restaurant');
+        if (bool === "is_eat" && !notification_name) {
+            notification_name = activity.title.replace("Restaurants", "Restaurant");
         }
 
-        if(!notification_name) {
+        if (!notification_name) {
             console.error(activity.name);
         }
 

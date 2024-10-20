@@ -209,7 +209,8 @@ function main() {
 
                         let name = getCityName(city);
 
-                        let state = null, state_short = null;
+                        let state = null,
+                            state_short = null;
 
                         let population = city.population;
 
@@ -232,7 +233,7 @@ function main() {
                         } else if ("municipality" in city.address) {
                             state = city.address.municipality;
                             state_short = state;
-                        } else if(city.type !== 'city') {
+                        } else if (city.type !== "city") {
                             continue;
                         }
 
@@ -262,7 +263,7 @@ function main() {
                             cities_dict[country.id] = {};
                         }
 
-                        if(state) {
+                        if (state) {
                             if (!(state_db.id in cities_dict[country.id])) {
                                 cities_dict[country.id][state_db.id] = {};
                             }
@@ -309,7 +310,7 @@ function main() {
                         };
 
                         //prevent duplicate cities in same state
-                        if(state_db) {
+                        if (state_db) {
                             cities_dict[country.id][state_db.id][name.toLowerCase()] = insert_data;
                         }
 

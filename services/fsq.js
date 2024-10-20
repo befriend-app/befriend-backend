@@ -1,7 +1,7 @@
 const axios = require("axios");
 const { getMetersFromMilesOrKm } = require("./shared");
 module.exports = {
-    base_url: 'https://api.foursquare.com/v3/places/search',
+    base_url: "https://api.foursquare.com/v3/places/search",
     limit: 50,
     fields: {
         core: `fsq_id,closed_bucket,distance,geocodes,location,name,timezone`, //categories,chains,link,related_places
@@ -90,23 +90,23 @@ module.exports = {
 
             while (true) {
                 try {
-                     results = await getPlaces(radius);
+                    results = await getPlaces(radius);
 
-                     if(results.length) {
-                         break;
-                     }
+                    if (results.length) {
+                        break;
+                    }
 
-                     //increase search radius on next call if no results
-                     if(radius < 5) {
-                         radius = 5;
-                     } else if(radius < 15) {
-                         radius = 15;
-                     } else if(radius < 30) {
-                         radius = 30;
-                     } else {
-                         break;
-                     }
-                } catch(e) {
+                    //increase search radius on next call if no results
+                    if (radius < 5) {
+                        radius = 5;
+                    } else if (radius < 15) {
+                        radius = 15;
+                    } else if (radius < 30) {
+                        radius = 30;
+                    } else {
+                        break;
+                    }
+                } catch (e) {
                     console.error(e);
                     break;
                 }

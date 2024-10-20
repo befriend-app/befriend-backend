@@ -39,7 +39,7 @@ function indexCities() {
                     id: city.id,
                     name: city.city_name,
                     country_id: city.country_id,
-                    state_id: city.state_id ? city.state_id : '',
+                    state_id: city.state_id ? city.state_id : "",
                     population: city.population,
                     lat: city.lat,
                     lon: city.lon,

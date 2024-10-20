@@ -19,11 +19,11 @@ const {
 } = require("./shared");
 
 const dayjs = require("dayjs");
-const {batchInsert} = require("./db");
+const { batchInsert, batchUpdate } = require("./db");
 
 module.exports = {
     refresh_data: 30, //days
-    cache_distance: .5, //mi/km
+    cache_distance: 0.5, //mi/km
     default: {
         radius: 2, //mi/km
     },
@@ -58,7 +58,7 @@ module.exports = {
         },
     },
     cols: {
-        json: ['hours', 'hours_popular', 'photos'] //these cols are stringified in the db
+        json: ["hours", "hours_popular", "photos"], //these cols are stringified in the db
     },
     getCategoriesPlaces: function (category_ids, location, radius) {
         let conn, categories_key, search_radius_meters, map_location, device_location, searchBox;
@@ -67,7 +67,7 @@ module.exports = {
             radius = module.exports.default.radius;
         }
 
-        function searchCategoryPlaces () {
+        function searchCategoryPlaces() {
             return new Promise(async (resolve, reject) => {
                 let category_geo_id;
 
@@ -78,7 +78,12 @@ module.exports = {
                 let batch_geo_place_insert = [];
 
                 try {
-                    let places = await fsqService.getPlacesByCategory(map_location.lat, map_location.lon, radius, category_ids.join(','));
+                    let places = await fsqService.getPlacesByCategory(
+                        map_location.lat,
+                        map_location.lon,
+                        radius,
+                        category_ids.join(","),
+                    );
 
                     for (let place of places) {
                         //update rating from scale of 10 to 5
@@ -142,13 +147,13 @@ module.exports = {
                     }
 
                     try {
-                        await batchInsert(conn, 'categories_geo_places', batch_geo_place_insert);
-                    } catch(e) {
+                        await batchInsert(conn, "categories_geo_places", batch_geo_place_insert);
+                    } catch (e) {
                         console.error(e);
                     }
 
                     resolve(batch_places);
-                } catch(e) {
+                } catch (e) {
                     console.error(e);
                     return reject();
                 }
@@ -195,14 +200,14 @@ module.exports = {
                 let lons = range(searchBox.minLon1000, searchBox.maxLon1000);
 
                 try {
-                    categories_geo = await conn('categories_geo')
-                        .whereIn('location_lat_1000', lats)
-                        .whereIn('location_lon_1000', lons)
-                        .where('categories_key', categories_key)
-                        .whereRaw('(ST_Distance_Sphere(point(location_lon, location_lat), point(?,?))) <= ?', [
+                    categories_geo = await conn("categories_geo")
+                        .whereIn("location_lat_1000", lats)
+                        .whereIn("location_lon_1000", lons)
+                        .where("categories_key", categories_key)
+                        .whereRaw("(ST_Distance_Sphere(point(location_lon, location_lat), point(?,?))) <= ?", [
                             search_lon,
                             search_lat,
-                            getMetersFromMilesOrKm(module.exports.cache_distance)
+                            getMetersFromMilesOrKm(module.exports.cache_distance),
                         ]);
                 } catch (e) {
                     console.log(e);
@@ -212,20 +217,20 @@ module.exports = {
             }
 
             //use cached data
-            if(categories_geo.length) {
+            if (categories_geo.length) {
                 places_organized = await module.exports.getCachedCategoryPlaces(categories_geo);
             } else {
                 places_organized = await searchCategoryPlaces();
             }
 
-            if(!places_organized.length) {
+            if (!places_organized.length) {
                 return resolve([]);
             }
 
             //set distance of device/map/custom location from place
             let from_location = device_location || map_location;
 
-            for(let place of places_organized) {
+            for (let place of places_organized) {
                 place.distance = {
                     use_km: useKM(),
                     meters: getDistanceMeters(from_location, {
@@ -258,20 +263,20 @@ module.exports = {
             try {
                 let conn = await dbService.conn();
 
-                 let ids = categories_geo.map(x=>x.id);
+                let ids = categories_geo.map((x) => x.id);
 
-                 let places_qry = await conn('categories_geo_places AS cgp')
-                     .join('places AS p', 'p.id', '=', 'cgp.place_id')
-                     .whereIn('category_geo_id', ids)
-                     .select('fsq_place_id')
-                     .groupBy('place_id');
+                let places_qry = await conn("categories_geo_places AS cgp")
+                    .join("places AS p", "p.id", "=", "cgp.place_id")
+                    .whereIn("category_geo_id", ids)
+                    .select("fsq_place_id")
+                    .groupBy("place_id");
 
-                 let fsq_place_ids = places_qry.map(x=>x.fsq_place_id);
+                let fsq_place_ids = places_qry.map((x) => x.fsq_place_id);
 
-                 let places = await module.exports.getBatchPlacesFSQ(fsq_place_ids);
+                let places = await module.exports.getBatchPlacesFSQ(fsq_place_ids);
 
-                 return resolve(Object.values(places));
-            } catch(e) {
+                return resolve(Object.values(places));
+            } catch (e) {
                 console.error(e);
                 return reject();
             }
@@ -357,8 +362,8 @@ module.exports = {
 
                 if (qry) {
                     //parse json for stringified cols
-                    for(let col of module.exports.cols.json) {
-                        if(qry[col]) {
+                    for (let col of module.exports.cols.json) {
+                        if (qry[col]) {
                             qry[col] = JSON.parse(qry[col]);
                         }
                     }
@@ -694,7 +699,7 @@ module.exports = {
             resolve(fsq_dict);
         });
     },
-    placeHasRichData: function(place) {
+    placeHasRichData: function (place) {
         let rich_keys = fsqService.fields.rich.split(",");
 
         for (let key of rich_keys) {
@@ -864,7 +869,7 @@ module.exports = {
                 //db
                 if (batch_insert.length) {
                     try {
-                        await dbService.batchInsert(conn, "places", batch_insert, true);
+                        await batchInsert(conn, "places", batch_insert, true);
                     } catch (e) {
                         console.error(e);
                     }
@@ -872,7 +877,7 @@ module.exports = {
 
                 if (batch_update.length) {
                     try {
-                        await dbService.batchUpdate(conn, "places", batch_update);
+                        await batchUpdate(conn, "places", batch_update);
                     } catch (e) {
                         console.error(e);
                     }
@@ -882,13 +887,11 @@ module.exports = {
                 for (let fsq_id in batch_dict) {
                     let data = batch_dict[fsq_id];
 
-                    for(let col of module.exports.cols.json) {
-                        if(typeof data[col] === 'string') {
+                    for (let col of module.exports.cols.json) {
+                        if (typeof data[col] === "string") {
                             try {
                                 data[col] = JSON.parse(data[col]);
-                            } catch(e) {
-
-                            }
+                            } catch (e) {}
                         }
                     }
                 }
@@ -919,12 +922,9 @@ module.exports = {
         return new Promise(async (resolve, reject) => {
             try {
                 //loop through city by ever decreasing distances
-                let distance_steps = [ //miles/km
-                    15,
-                    10,
-                    5,
-                    3,
-                    1,
+                let distance_steps = [
+                    //miles/km
+                    15, 10, 5, 3, 1,
                 ];
 
                 let conn = await dbService.conn();
@@ -976,7 +976,7 @@ module.exports = {
                     //initiate category
                     if (!(category.category_id in category_distance_dict)) {
                         category_distance_dict[category.category_id] = {
-                            places: {}
+                            places: {},
                         };
                     }
 
@@ -1032,7 +1032,8 @@ module.exports = {
                                     //save to dictionary
                                     for (let place of places) {
                                         category_distance_dict[category.category_id].places[place.fsq_id] = place;
-                                        category_distance_dict[category.category_id][distance_step][place.fsq_id] = place;
+                                        category_distance_dict[category.category_id][distance_step][place.fsq_id] =
+                                            place;
                                     }
 
                                     console.log({
