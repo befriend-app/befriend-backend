@@ -1,6 +1,7 @@
 const cache = require("../../services/cache");
 const db = require("../../services/db");
 const { loadScriptEnv } = require("../../services/shared");
+const cacheService = require("../../services/cache");
 
 loadScriptEnv();
 
@@ -62,7 +63,10 @@ loadScriptEnv();
     }
 
     //delete cache
-    let keys = await cache.getKeys(cache.keys.place_fsq + "*");
+    let keys = [];
+    //keys = await cache.getKeys(cache.keys.place_fsq + "*");
+
+    keys.push(cacheService.keys.activity_types);
 
     await cache.deleteKeys(keys);
 

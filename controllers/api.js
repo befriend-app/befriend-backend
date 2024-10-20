@@ -1138,6 +1138,7 @@ module.exports = {
                 let data = {
                     name: activity.activity_name,
                     title: activity.activity_title,
+                    notification: activity.notification_name,
                     token: activity.activity_type_token,
                     image: activity.activity_image,
                     emoji: activity.activity_emoji,
@@ -1165,9 +1166,8 @@ module.exports = {
                 let data = await cacheService.get(cache_key, true);
 
                 if (data) {
-                    // res.json(data);
-                    //
-                    // return resolve();
+                    res.json(data);
+                    return resolve();
                 }
 
                 let conn = await dbService.conn();
