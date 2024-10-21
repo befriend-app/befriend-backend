@@ -115,4 +115,29 @@ module.exports = {
             resolve(results);
         });
     },
+    getGeoForAddress: function (address_id) {
+        return new Promise(async (resolve, reject) => {
+            let api_key = process.env.FSQ_KEY;
+
+            let url = `https://api.foursquare.com/v3/address/${address_id}`;
+
+            try {
+                let r = await axios.get(url, {
+                    headers: {
+                        Accept: "application/json",
+                        Authorization: api_key,
+                    },
+                    params: {},
+                });
+
+                resolve({
+                    lat: r.data.geocodes.main.latitude,
+                    lon: r.data.geocodes.main.longitude,
+                });
+            } catch (e) {
+                console.error(e);
+                return reject();
+            }
+        });
+    },
 };

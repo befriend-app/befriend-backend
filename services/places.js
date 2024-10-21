@@ -613,6 +613,7 @@ module.exports = {
                             place_data.location_locality = secondary_split[0];
                             place_data.location_region = secondary_split[1];
                             place_data.location_postcode = secondary_split[2];
+                            place_data.location_country = place_data.fsq_address_id.split("-")[0];
                         } catch (e) {
                             console.error(e);
                         }
@@ -1064,6 +1065,11 @@ module.exports = {
                 console.error(e);
                 return reject();
             }
+        });
+    },
+    travelTimes: function (from, to) {
+        return new Promise(async (resolve, reject) => {
+            debugger;
         });
     },
 };

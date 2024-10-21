@@ -191,6 +191,30 @@ router.post("/autocomplete/cities", function (req, res, next) {
     });
 });
 
+router.post("/geocode", function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await apiController.getGeoCode(req, res);
+        } catch (e) {
+            console.error(e);
+        }
+
+        resolve();
+    });
+});
+
+router.post("/travel-time", function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await apiController.postTravelTime(req, res);
+        } catch (e) {
+            console.error(e);
+        }
+
+        resolve();
+    });
+});
+
 router.get("/review-venues", function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         let conn = await require("../services/db").conn();

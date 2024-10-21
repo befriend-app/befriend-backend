@@ -24,7 +24,7 @@ const { getNetwork, getNetworkSelf } = require("../services/network");
 const { encrypt } = require("../services/encryption");
 const { deleteKeys } = require("../services/cache");
 const { getPersonByEmail } = require("../services/persons");
-const { getCategoriesPlaces, placesAutoComplete } = require("../services/places");
+const { getCategoriesPlaces, placesAutoComplete, travelTimes } = require("../services/places");
 const { cityAutoComplete } = require("../services/locations");
 
 module.exports = {
@@ -1355,7 +1355,7 @@ module.exports = {
             try {
                 const response = await axios.post(
                     `https://api.mapbox.com/tokens/v2/${process.env.MAPBOX_USER}?access_token=${process.env.MAPBOX_SECRET_KEY}`,
-                    tokenConfig
+                    tokenConfig,
                 );
 
                 res.json(
@@ -1463,6 +1463,76 @@ module.exports = {
             }
 
             resolve();
+        });
+    },
+    getGeoCode: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            let token = process.env.MAPBOX_SECRET_KEY;
+            let place = req.body.place;
+
+            let country = "";
+            let locality = "";
+            let region = "";
+            let address_line_1 = "";
+            let postcode = "";
+
+            if (place.location_country) {
+                country = place.location_country;
+            }
+
+            if (place.location_locality) {
+                locality = `&locality=${place.location_locality}`;
+            }
+
+            if (place.location_region) {
+                region = `&region=${place.location_region}`;
+            }
+
+            if (place.location_address) {
+                address_line_1 = `&address_line1=${place.location_address}`;
+            }
+
+            if (place.location_postcode) {
+                postcode = `&postcode=${place.location_postcode}`;
+            }
+
+            let url = `https://api.mapbox.com/search/geocode/v6/forward?country=${country}${locality}${region}${address_line_1}${postcode}&access_token=${token}`;
+
+            try {
+                const response = await axios.get(url);
+
+                if (!response.data.features.length) {
+                    res.json("No coordinates", 400);
+
+                    return resolve();
+                }
+
+                res.json(
+                    {
+                        geo: {
+                            lat: response.data.features[0].geometry.coordinates[1],
+                            lon: response.data.features[0].geometry.coordinates[0],
+                        },
+                    },
+                    200,
+                );
+            } catch (e) {
+                console.error(e);
+
+                res.json("Error getting geocode", 400);
+            }
+        });
+    },
+    postTravelTime: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let travel_times = await travelTimes(req.body.from, req.body.to);
+
+                res.json(travel_times);
+            } catch (e) {
+                console.error(e);
+                res.json("Error getting travel times", 400);
+            }
         });
     },
 };
