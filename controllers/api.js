@@ -1139,6 +1139,7 @@ module.exports = {
                     name: activity.activity_name,
                     title: activity.activity_title,
                     notification: activity.notification_name,
+                    duration: activity.default_duration_min,
                     token: activity.activity_type_token,
                     image: activity.activity_image,
                     emoji: activity.activity_emoji,

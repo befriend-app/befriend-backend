@@ -66,6 +66,7 @@ function processActivity(activity, int, parent_ids, bool) {
                 activity_image: activity.image || null,
                 activity_emoji: activity.emoji || null,
                 sort_position: int,
+                default_duration_min: activity.duration,
                 is_visible: true,
                 created: timeNow(),
                 updated: timeNow(),
