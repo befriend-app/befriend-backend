@@ -1354,14 +1354,8 @@ module.exports = {
 
             try {
                 const response = await axios.post(
-                    "https://api.mapbox.com/tokens/v2/befriend-app", //update username for forks of repo
-                    tokenConfig,
-                    {
-                        headers: {
-                            Authorization: `Bearer ${process.env.MAPBOX_SECRET_KEY}`,
-                            "Content-Type": "application/json",
-                        },
-                    },
+                    `https://api.mapbox.com/tokens/v2/${process.env.MAPBOX_USER}?access_token=${process.env.MAPBOX_SECRET_KEY}`,
+                    tokenConfig
                 );
 
                 res.json(
