@@ -1526,7 +1526,7 @@ module.exports = {
     postTravelTime: function (req, res) {
         return new Promise(async (resolve, reject) => {
             try {
-                let travel_times = await travelTimes(req.body.from, req.body.to);
+                let travel_times = await travelTimes(req.body.when, req.body.from, req.body.to);
 
                 res.json(travel_times);
             } catch (e) {

@@ -198,6 +198,14 @@ function generateToken(length) {
     return b.join("");
 }
 
+function getBicyclingTime(distance_meters) {
+    const AVERAGE_BICYCLING_SPEED = 15; // km/h
+
+    const timeHours = (distance_meters / 1000) / AVERAGE_BICYCLING_SPEED;
+
+    return getTimeFromSeconds(timeHours * 3600);
+}
+
 function getCityState(zip, blnUSA = true) {
     return new Promise(async (resolve, reject) => {
         let url = `https://maps.googleapis.com/maps/api/geocode/json?components=country:US|postal_code:${zip}&key=${process.env.GMAPS_KEY}`;
@@ -599,6 +607,22 @@ function getSessionKey(session) {
     return `session:api:${session}`;
 }
 
+function getTimeFromSeconds(seconds) {
+    if (seconds < 0) {
+        return null;
+    }
+
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const total = hours * 60 + mins;
+
+    return  {
+        hours,
+        mins,
+        total
+    }
+}
+
 function getTimeZoneFromCoords(lat, lon) {
     const { find } = require("geo-tz");
 
@@ -635,6 +659,14 @@ function getURL(raw_domain, endpoint) {
     }
 
     return joinPaths(`https://${raw_domain}`, endpoint);
+}
+
+function getWalkingTime(distance_meters) {
+    const AVERAGE_WALKING_SPEED = 5; // km/h
+
+    const timeHours = (distance_meters / 1000) / AVERAGE_WALKING_SPEED;
+
+    return getTimeFromSeconds(timeHours * 3600);
 }
 
 function hasPort(domain) {
@@ -1031,6 +1063,7 @@ module.exports = {
     encodePassword: encodePassword,
     formatNumberLength: formatNumberLength,
     generateToken: generateToken,
+    getBicyclingTime: getBicyclingTime,
     getCityState: getCityState,
     getCleanDomain: getCleanDomain,
     getCoordsBoundBox: getCoordsBoundBox,
@@ -1053,7 +1086,9 @@ module.exports = {
     getRepoRoot: getRepoRoot,
     getStatesList: getStatesList,
     getSessionKey: getSessionKey,
+    getTimeFromSeconds: getTimeFromSeconds,
     getTimeZoneFromCoords: getTimeZoneFromCoords,
+    getWalkingTime: getWalkingTime,
     getURL: getURL,
     hasPort: hasPort,
     isLocalApp: isLocalApp,

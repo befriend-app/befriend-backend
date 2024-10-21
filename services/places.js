@@ -15,11 +15,12 @@ const {
     range,
     getTimeZoneFromCoords,
     getDistanceMilesOrKM,
-    getCoordsFromPointDistance,
+    getCoordsFromPointDistance, getTimeFromSeconds, getWalkingTime, getBicyclingTime,
 } = require("./shared");
 
 const dayjs = require("dayjs");
 const { batchInsert, batchUpdate } = require("./db");
+const axios = require("axios");
 
 module.exports = {
     refresh_data: 30, //days
@@ -1067,9 +1068,44 @@ module.exports = {
             }
         });
     },
-    travelTimes: function (from, to) {
+    travelTimes: function (when, from, to) {
         return new Promise(async (resolve, reject) => {
-            debugger;
+            try {
+                let token = process.env.MAPBOX_SECRET_KEY;
+
+                let coordinates =  [[from.lon, from.lat], [to.lon, to.lat]];
+
+                let coordinates_str = coordinates.join(';');
+
+                let depart_at_str = `&depart_at=${when}`;
+
+                let url = `https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${coordinates_str}?access_token=${token}${depart_at_str}`;
+
+                const response = await axios.get(
+                    url
+                );
+
+                if(!response.data.routes.length) {
+                    return reject();
+                }
+
+                let route = response.data.routes[0];
+
+                resolve({
+                    distance: {
+                        use_km: useKM(),
+                        miles_km: getMilesOrKmFromMeters(route.distance)
+                    },
+                    modes: {
+                        driving: getTimeFromSeconds(route.duration),
+                        walking: getWalkingTime(route.distance),
+                        bicycle: getBicyclingTime(route.distance)
+                    }
+                });
+            } catch(e) {
+                console.error(e);
+                return reject();
+            }
         });
     },
 };
