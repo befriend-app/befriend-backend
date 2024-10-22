@@ -1,14 +1,14 @@
 const axios = require('axios');
 const yargs = require('yargs');
-const dbService = require('../services/db');
-const { getNetworkSelf } = require('../services/network');
+const dbService = require('../../services/db');
+const { getNetworkSelf } = require('../../services/network');
 const {
     loadScriptEnv,
     generateToken,
     timeNow,
     birthDatePure,
     encodePassword,
-} = require('../services/shared');
+} = require('../../services/shared');
 
 let args = yargs.argv;
 
