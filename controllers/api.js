@@ -1575,7 +1575,7 @@ module.exports = {
             resolve();
         });
     },
-    postTravelTime: function (req, res) {
+    travelTimes: function (req, res) {
         return new Promise(async (resolve, reject) => {
             try {
                 let travel_times = await travelTimes(req.body.when, req.body.from, req.body.to);

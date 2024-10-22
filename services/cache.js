@@ -42,6 +42,9 @@ module.exports = {
         addressGeo: function(address_id) {
             return `geo:address:${address_id}`;
         },
+        travelTimes: function(token) {
+            return `activities:travel:${token}`;
+        },
         person: function(person_token_or_email) {
             if (!person_token_or_email) {
                 throw new Error('No person_token or email provided');

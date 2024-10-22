@@ -206,7 +206,7 @@ router.post('/geocode', function (req, res, next) {
 router.post('/travel-time', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
-            await apiController.postTravelTime(req, res);
+            await apiController.travelTimes(req, res);
         } catch (e) {
             console.error(e);
         }

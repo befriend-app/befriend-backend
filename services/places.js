@@ -17,7 +17,7 @@ const {
     getCoordsFromPointDistance,
     getTimeFromSeconds,
     getWalkingTime,
-    getBicyclingTime,
+    getBicyclingTime, generateToken,
 } = require('./shared');
 
 const dayjs = require('dayjs');
@@ -1090,7 +1090,7 @@ module.exports = {
     travelTimes: function (when, from, to) {
         return new Promise(async (resolve, reject) => {
             try {
-                let token = process.env.MAPBOX_SECRET_KEY;
+                let mapbox_token = process.env.MAPBOX_SECRET_KEY;
 
                 let coordinates = [
                     [from.lon, from.lat],
@@ -1101,7 +1101,7 @@ module.exports = {
 
                 let depart_at_str = `&depart_at=${when}`;
 
-                let url = `https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${coordinates_str}?access_token=${token}${depart_at_str}`;
+                let url = `https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${coordinates_str}?access_token=${mapbox_token}${depart_at_str}`;
 
                 const response = await axios.get(url);
 
@@ -1111,7 +1111,12 @@ module.exports = {
 
                 let route = response.data.routes[0];
 
-                resolve({
+                let travel_token = generateToken();
+
+                let travel_data = {
+                    token: travel_token,
+                    from: from,
+                    to: to,
                     distance: {
                         use_km: useKM(),
                         miles_km: getMilesOrKmFromMeters(route.distance),
@@ -1121,7 +1126,15 @@ module.exports = {
                         walking: getWalkingTime(route.distance),
                         bicycle: getBicyclingTime(route.distance),
                     },
-                });
+                };
+
+                try {
+                     await cacheService.setCache(cacheService.keys.travelTimes(travel_token), travel_data, 7 * 24 * 3600);
+                } catch(e) {
+                    console.error(e);
+                }
+
+                resolve(travel_data);
             } catch (e) {
                 console.error(e);
                 return reject();
