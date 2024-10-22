@@ -619,9 +619,12 @@ module.exports = {
                         try {
                             let secondary_split = result.text.secondary.split(' ');
 
-                            place_data.location_locality = secondary_split[0];
-                            place_data.location_region = secondary_split[1];
-                            place_data.location_postcode = secondary_split[2];
+                            const postcode = secondary_split.pop();
+                            const region = secondary_split.pop();
+
+                            place_data.location_locality = secondary_split.join(' ');
+                            place_data.location_region = region;
+                            place_data.location_postcode = postcode;
                             place_data.location_country = place_data.fsq_address_id.split('-')[0];
                         } catch (e) {
                             console.error(e);
