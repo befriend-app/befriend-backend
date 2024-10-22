@@ -1,8 +1,8 @@
-const dbService = require("../services/db");
-const cacheService = require("../services/cache");
+const dbService = require('../services/db');
+const cacheService = require('../services/cache');
 
 module.exports = {
-    cache_key: "genders",
+    cache_key: 'genders',
     getGender: function (gender_id) {
         return new Promise(async (resolve, reject) => {
             try {
@@ -52,7 +52,7 @@ module.exports = {
                 let conn = await dbService.conn();
 
                 //db backup
-                genders = await conn("genders").orderBy("sort_position");
+                genders = await conn('genders').orderBy('sort_position');
 
                 //save to cache
                 await cacheService.setCache(module.exports.cache_key, genders);

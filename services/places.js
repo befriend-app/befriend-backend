@@ -1,7 +1,7 @@
-const cacheService = require("../services/cache");
-const dbService = require("../services/db");
-const fsq = require("../.api/apis/fsq-developers");
-const fsqService = require("../services/fsq");
+const cacheService = require('../services/cache');
+const dbService = require('../services/db');
+const fsq = require('../.api/apis/fsq-developers');
+const fsqService = require('../services/fsq');
 
 const {
     getMetersFromMilesOrKm,
@@ -15,12 +15,15 @@ const {
     range,
     getTimeZoneFromCoords,
     getDistanceMilesOrKM,
-    getCoordsFromPointDistance, getTimeFromSeconds, getWalkingTime, getBicyclingTime,
-} = require("./shared");
+    getCoordsFromPointDistance,
+    getTimeFromSeconds,
+    getWalkingTime,
+    getBicyclingTime,
+} = require('./shared');
 
-const dayjs = require("dayjs");
-const { batchInsert, batchUpdate } = require("./db");
-const axios = require("axios");
+const dayjs = require('dayjs');
+const { batchInsert, batchUpdate } = require('./db');
+const axios = require('axios');
 
 module.exports = {
     refresh_data: 30, //days
@@ -59,7 +62,7 @@ module.exports = {
         },
     },
     cols: {
-        json: ["hours", "hours_popular", "photos"], //these cols are stringified in the db
+        json: ['hours', 'hours_popular', 'photos'], //these cols are stringified in the db
     },
     getCategoriesPlaces: function (category_ids, location, radius) {
         let conn, categories_key, search_radius_meters, map_location, device_location, searchBox;
@@ -83,7 +86,7 @@ module.exports = {
                         map_location.lat,
                         map_location.lon,
                         radius,
-                        category_ids.join(","),
+                        category_ids.join(','),
                     );
 
                     for (let place of places) {
@@ -101,9 +104,9 @@ module.exports = {
 
                     //1. categories_geo
                     try {
-                        let expires = dayjs().add(module.exports.refresh_data, "days").valueOf();
+                        let expires = dayjs().add(module.exports.refresh_data, 'days').valueOf();
 
-                        category_geo_id = await conn("categories_geo").insert({
+                        category_geo_id = await conn('categories_geo').insert({
                             categories_key: categories_key,
                             location_lat: map_location.lat,
                             location_lon: map_location.lon,
@@ -148,7 +151,7 @@ module.exports = {
                     }
 
                     try {
-                        await batchInsert(conn, "categories_geo_places", batch_geo_place_insert);
+                        await batchInsert(conn, 'categories_geo_places', batch_geo_place_insert);
                     } catch (e) {
                         console.error(e);
                     }
@@ -165,11 +168,11 @@ module.exports = {
             let places_organized = [];
 
             if (!location || !location.map || !(location.map.lat && location.map.lon)) {
-                return reject("Missing location");
+                return reject('Missing location');
             }
 
             if (!category_ids) {
-                return reject("Categories required");
+                return reject('Categories required');
             }
 
             if (!Array.isArray(category_ids)) {
@@ -193,7 +196,7 @@ module.exports = {
                 let search_lon = map_location.lon;
 
                 //categories key is a string, sorted from lowest to highest category_id
-                categories_key = cloneObj(category_ids).sort().join(",");
+                categories_key = cloneObj(category_ids).sort().join(',');
                 search_radius_meters = getMetersFromMilesOrKm(radius, true);
                 searchBox = getCoordsBoundBox(search_lat, search_lon, radius);
 
@@ -201,15 +204,18 @@ module.exports = {
                 let lons = range(searchBox.minLon1000, searchBox.maxLon1000);
 
                 try {
-                    categories_geo = await conn("categories_geo")
-                        .whereIn("location_lat_1000", lats)
-                        .whereIn("location_lon_1000", lons)
-                        .where("categories_key", categories_key)
-                        .whereRaw("(ST_Distance_Sphere(point(location_lon, location_lat), point(?,?))) <= ?", [
-                            search_lon,
-                            search_lat,
-                            getMetersFromMilesOrKm(module.exports.cache_distance),
-                        ]);
+                    categories_geo = await conn('categories_geo')
+                        .whereIn('location_lat_1000', lats)
+                        .whereIn('location_lon_1000', lons)
+                        .where('categories_key', categories_key)
+                        .whereRaw(
+                            '(ST_Distance_Sphere(point(location_lon, location_lat), point(?,?))) <= ?',
+                            [
+                                search_lon,
+                                search_lat,
+                                getMetersFromMilesOrKm(module.exports.cache_distance),
+                            ],
+                        );
                 } catch (e) {
                     console.log(e);
                 }
@@ -266,11 +272,11 @@ module.exports = {
 
                 let ids = categories_geo.map((x) => x.id);
 
-                let places_qry = await conn("categories_geo_places AS cgp")
-                    .join("places AS p", "p.id", "=", "cgp.place_id")
-                    .whereIn("category_geo_id", ids)
-                    .select("fsq_place_id")
-                    .groupBy("place_id");
+                let places_qry = await conn('categories_geo_places AS cgp')
+                    .join('places AS p', 'p.id', '=', 'cgp.place_id')
+                    .whereIn('category_geo_id', ids)
+                    .select('fsq_place_id')
+                    .groupBy('place_id');
 
                 let fsq_place_ids = places_qry.map((x) => x.fsq_place_id);
 
@@ -293,8 +299,8 @@ module.exports = {
                 return resolve(places);
             }
 
-            if (!places || typeof radius_meters === "undefined") {
-                return reject("Invalid sort places params");
+            if (!places || typeof radius_meters === 'undefined') {
+                return reject('Invalid sort places params');
             }
 
             let weights = module.exports.weights;
@@ -314,7 +320,9 @@ module.exports = {
                     score += (a.popularity - b.popularity) * weights.popularity.weight;
 
                     //higher rating first
-                    score += (normalizeRating(a.rating) - normalizeRating(b.rating)) * weights.rating.weight;
+                    score +=
+                        (normalizeRating(a.rating) - normalizeRating(b.rating)) *
+                        weights.rating.weight;
 
                     //in business
                     let aOpen = weights.business_open.values[a.business_open];
@@ -339,7 +347,7 @@ module.exports = {
     getPlaceFSQ: function (fsq_id) {
         return new Promise(async (resolve, reject) => {
             if (!fsq_id) {
-                return reject("No id provided");
+                return reject('No id provided');
             }
 
             //try cache first
@@ -359,7 +367,7 @@ module.exports = {
             try {
                 let conn = await dbService.conn();
 
-                let qry = await conn("places").where("fsq_place_id", fsq_id).first();
+                let qry = await conn('places').where('fsq_place_id', fsq_id).first();
 
                 if (qry) {
                     //parse json for stringified cols
@@ -457,7 +465,7 @@ module.exports = {
                 }
 
                 if (!timezone) {
-                    return reject("No time zone");
+                    return reject('No time zone');
                 }
 
                 let db_data = {
@@ -484,7 +492,7 @@ module.exports = {
                 };
 
                 if (place_id) {
-                    await conn("places").where("id", place_id).update(db_data);
+                    await conn('places').where('id', place_id).update(db_data);
 
                     //prev data
                     let cache_data = await cacheService.get(cache_key, true);
@@ -502,7 +510,7 @@ module.exports = {
                     db_data.fsq_place_id = data.fsq_id;
                     db_data.created = timeNow();
 
-                    let id = await conn("places").insert(db_data);
+                    let id = await conn('places').insert(db_data);
 
                     db_data.id = id[0];
                 }
@@ -531,10 +539,10 @@ module.exports = {
             let fsq_ids = [];
             let fsq_dict = {};
 
-            let search_type = "place";
+            let search_type = 'place';
 
             if (friends.type.is_existing) {
-                search_type = "place,address";
+                search_type = 'place,address';
             }
 
             let lat = location.map.lat;
@@ -571,9 +579,9 @@ module.exports = {
                 for (let result of data.data.results) {
                     let place_data = {};
 
-                    if (result.type === "place") {
+                    if (result.type === 'place') {
                         place_data = batch_dict[result.place.fsq_id];
-                        place_data.type = "place";
+                        place_data.type = 'place';
 
                         // set distance in mi/km
                         if (result.place.geocodes && result.place.geocodes.main) {
@@ -601,20 +609,22 @@ module.exports = {
                                 ),
                             };
 
-                            place_data.distance.miles_km = getMilesOrKmFromMeters(place_data.distance.meters);
+                            place_data.distance.miles_km = getMilesOrKmFromMeters(
+                                place_data.distance.meters,
+                            );
                         }
-                    } else if (result.type === "address") {
-                        place_data.type = "address";
+                    } else if (result.type === 'address') {
+                        place_data.type = 'address';
                         place_data.fsq_address_id = result.address.address_id;
                         place_data.location_address = result.text.primary;
 
                         try {
-                            let secondary_split = result.text.secondary.split(" ");
+                            let secondary_split = result.text.secondary.split(' ');
 
                             place_data.location_locality = secondary_split[0];
                             place_data.location_region = secondary_split[1];
                             place_data.location_postcode = secondary_split[2];
-                            place_data.location_country = place_data.fsq_address_id.split("-")[0];
+                            place_data.location_country = place_data.fsq_address_id.split('-')[0];
                         } catch (e) {
                             console.error(e);
                         }
@@ -633,7 +643,7 @@ module.exports = {
     getBatchPlacesFSQ: function (fsq_ids) {
         return new Promise(async (resolve, reject) => {
             if (!fsq_ids || !fsq_ids.length) {
-                return reject("No ids provided");
+                return reject('No ids provided');
             }
 
             let fsq_dict = {};
@@ -662,7 +672,7 @@ module.exports = {
                             fsq_dict[fsq_id] = data;
 
                             for (let k in data) {
-                                if (data[k] === "null") {
+                                if (data[k] === 'null') {
                                     data[k] = null;
                                 }
                             }
@@ -683,7 +693,7 @@ module.exports = {
                 let conn = await dbService.conn();
 
                 if (cache_miss_ids.length) {
-                    let places = await conn("places").whereIn("fsq_place_id", cache_miss_ids);
+                    let places = await conn('places').whereIn('fsq_place_id', cache_miss_ids);
 
                     for (let place of places) {
                         let cache_key = `${cacheService.keys.place_fsq}${place.fsq_place_id}`;
@@ -702,7 +712,7 @@ module.exports = {
         });
     },
     placeHasRichData: function (place) {
-        let rich_keys = fsqService.fields.rich.split(",");
+        let rich_keys = fsqService.fields.rich.split(',');
 
         for (let key of rich_keys) {
             if (key in place) {
@@ -837,7 +847,7 @@ module.exports = {
 
                             //stringify db_data
                             for (let k in db_data) {
-                                if (typeof db_data[k] === "object" && db_data[k] !== null) {
+                                if (typeof db_data[k] === 'object' && db_data[k] !== null) {
                                     db_data[k] = JSON.stringify(db_data[k]);
                                 }
                             }
@@ -871,7 +881,7 @@ module.exports = {
                 //db
                 if (batch_insert.length) {
                     try {
-                        await batchInsert(conn, "places", batch_insert, true);
+                        await batchInsert(conn, 'places', batch_insert, true);
                     } catch (e) {
                         console.error(e);
                     }
@@ -879,7 +889,7 @@ module.exports = {
 
                 if (batch_update.length) {
                     try {
-                        await batchUpdate(conn, "places", batch_update);
+                        await batchUpdate(conn, 'places', batch_update);
                     } catch (e) {
                         console.error(e);
                     }
@@ -890,7 +900,7 @@ module.exports = {
                     let data = batch_dict[fsq_id];
 
                     for (let col of module.exports.cols.json) {
-                        if (typeof data[col] === "string") {
+                        if (typeof data[col] === 'string') {
                             try {
                                 data[col] = JSON.parse(data[col]);
                             } catch (e) {}
@@ -931,17 +941,17 @@ module.exports = {
 
                 let conn = await dbService.conn();
 
-                let city = await conn("open_cities").where("id", city_id).first();
+                let city = await conn('open_cities').where('id', city_id).first();
 
                 if (!city) {
                     return reject();
                 }
 
                 // get unique list of categories
-                let venue_categories = await conn("activity_type_venues AS atv")
-                    .join("venues_categories AS vc", "vc.id", "=", "atv.venue_category_id")
-                    .groupBy("venue_category_id")
-                    .select("venue_category_id AS category_id", "fsq_id", "category_name");
+                let venue_categories = await conn('activity_type_venues AS atv')
+                    .join('venues_categories AS vc', 'vc.id', '=', 'atv.venue_category_id')
+                    .groupBy('venue_category_id')
+                    .select('venue_category_id AS category_id', 'fsq_id', 'category_name');
 
                 //calc distance of box
                 let top_left = {
@@ -1001,17 +1011,21 @@ module.exports = {
                                 starting_coords.lat,
                                 starting_coords.lon,
                                 lat_mkm, //search with new latitude from this point
-                                "south",
+                                'south',
                             );
 
                             //longitude loop
                             //search with new longitude from this point
-                            for (let lon_mkm = 0; lon_mkm < lon_distance; lon_mkm += distance_step) {
+                            for (
+                                let lon_mkm = 0;
+                                lon_mkm < lon_distance;
+                                lon_mkm += distance_step
+                            ) {
                                 let new_coords = getCoordsFromPointDistance(
                                     new_coords_lat.lat, //from above
                                     starting_coords.lon,
                                     lon_mkm, //search with new longitude from this point
-                                    "east",
+                                    'east',
                                 );
 
                                 //calculate number of loops
@@ -1033,9 +1047,12 @@ module.exports = {
 
                                     //save to dictionary
                                     for (let place of places) {
-                                        category_distance_dict[category.category_id].places[place.fsq_id] = place;
-                                        category_distance_dict[category.category_id][distance_step][place.fsq_id] =
-                                            place;
+                                        category_distance_dict[category.category_id].places[
+                                            place.fsq_id
+                                        ] = place;
+                                        category_distance_dict[category.category_id][distance_step][
+                                            place.fsq_id
+                                        ] = place;
                                     }
 
                                     console.log({
@@ -1073,7 +1090,10 @@ module.exports = {
             try {
                 let token = process.env.MAPBOX_SECRET_KEY;
 
-                let coordinates =  [[from.lon, from.lat], [to.lon, to.lat]];
+                let coordinates = [
+                    [from.lon, from.lat],
+                    [to.lon, to.lat],
+                ];
 
                 let coordinates_str = coordinates.join(';');
 
@@ -1081,11 +1101,9 @@ module.exports = {
 
                 let url = `https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${coordinates_str}?access_token=${token}${depart_at_str}`;
 
-                const response = await axios.get(
-                    url
-                );
+                const response = await axios.get(url);
 
-                if(!response.data.routes.length) {
+                if (!response.data.routes.length) {
                     return reject();
                 }
 
@@ -1094,15 +1112,15 @@ module.exports = {
                 resolve({
                     distance: {
                         use_km: useKM(),
-                        miles_km: getMilesOrKmFromMeters(route.distance)
+                        miles_km: getMilesOrKmFromMeters(route.distance),
                     },
                     modes: {
                         driving: getTimeFromSeconds(route.duration),
                         walking: getWalkingTime(route.distance),
-                        bicycle: getBicyclingTime(route.distance)
-                    }
+                        bicycle: getBicyclingTime(route.distance),
+                    },
                 });
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
                 return reject();
             }

@@ -1,5 +1,5 @@
-const axios = require("axios");
-const dbService = require("../services/db");
+const axios = require('axios');
+const dbService = require('../services/db');
 
 const {
     joinPaths,
@@ -14,29 +14,29 @@ const {
     getURL,
     hasPort,
     isLocalHost,
-} = require("./shared");
+} = require('./shared');
 
 module.exports = {
     cols: [
-        "network_token",
-        "network_name",
-        "network_logo",
-        "base_domain",
-        "api_domain",
-        "priority",
-        "keys_exchanged",
-        "is_network_known",
-        "is_self",
-        "is_befriend",
-        "is_trusted",
-        "is_blocked",
-        "is_online",
-        "last_online",
-        "admin_name",
-        "admin_email",
+        'network_token',
+        'network_name',
+        'network_logo',
+        'base_domain',
+        'api_domain',
+        'priority',
+        'keys_exchanged',
+        'is_network_known',
+        'is_self',
+        'is_befriend',
+        'is_trusted',
+        'is_blocked',
+        'is_online',
+        'last_online',
+        'admin_name',
+        'admin_email',
     ],
     env: {
-        alt_domains_key: "ALT_BEFRIEND_DOMAINS",
+        alt_domains_key: 'ALT_BEFRIEND_DOMAINS',
         network_token_key: `NETWORK_TOKEN`,
     },
     token: null, //network token for self
@@ -126,25 +126,25 @@ module.exports = {
             let network_token = process.env[env_network_key];
 
             if (!network_token) {
-                let env_path = joinPaths(getRepoRoot(), ".env");
+                let env_path = joinPaths(getRepoRoot(), '.env');
                 let env_data;
 
                 try {
                     env_data = await readFile(env_path);
                 } catch (e) {
-                    console.error(".env file required");
+                    console.error('.env file required');
                     process.exit();
                 }
 
                 try {
-                    let env_lines = env_data.split("\n");
+                    let env_lines = env_data.split('\n');
                     network_token = generateToken(24);
                     module.exports.token = network_token;
 
                     let token_line = `${env_network_key}=${network_token}`;
                     env_lines.push(token_line);
 
-                    let new_env_data = env_lines.join("\n");
+                    let new_env_data = env_lines.join('\n');
 
                     await writeFile(env_path, new_env_data);
                 } catch (e) {
@@ -156,9 +156,9 @@ module.exports = {
 
             //check for existence of network token on self
             try {
-                let network_qry = await conn("networks")
-                    .where("network_token", network_token)
-                    .where("is_self", true)
+                let network_qry = await conn('networks')
+                    .where('network_token', network_token)
+                    .where('is_self', true)
                     .first();
 
                 if (!network_qry) {
@@ -183,11 +183,11 @@ module.exports = {
                     };
 
                     if (!network_data.network_name) {
-                        missing.push("NETWORK_NAME");
+                        missing.push('NETWORK_NAME');
                     }
 
                     if (!network_data.api_domain) {
-                        missing.push("NETWORK_API_DOMAIN");
+                        missing.push('NETWORK_API_DOMAIN');
                     }
 
                     if (!network_data.admin_name) {
@@ -198,16 +198,16 @@ module.exports = {
                         // missing.push('ADMIN_EMAIL');
                     }
 
-                    if (network_data.network_name && network_data.network_name.startsWith("<")) {
-                        invalid.push("NETWORK_NAME");
+                    if (network_data.network_name && network_data.network_name.startsWith('<')) {
+                        invalid.push('NETWORK_NAME');
                     }
 
-                    if (network_data.network_logo && network_data.network_logo.startsWith("<")) {
-                        invalid.push("NETWORK_LOGO");
+                    if (network_data.network_logo && network_data.network_logo.startsWith('<')) {
+                        invalid.push('NETWORK_LOGO');
                     }
 
-                    if (network_data.api_domain && network_data.api_domain.startsWith("<")) {
-                        invalid.push("NETWORK_API_DOMAIN");
+                    if (network_data.api_domain && network_data.api_domain.startsWith('<')) {
+                        invalid.push('NETWORK_API_DOMAIN');
                     }
 
                     if (
@@ -215,20 +215,20 @@ module.exports = {
                         !isIPAddress(network_data.api_domain) &&
                         !isLocalHost(network_data.api_domain)
                     ) {
-                        invalid.push("Port not allowed in domain");
+                        invalid.push('Port not allowed in domain');
                     }
 
                     if (missing.length || invalid.length) {
                         if (missing.length) {
                             console.error({
-                                message: ".env keys needed",
+                                message: '.env keys needed',
                                 required: missing,
                             });
                         }
 
                         if (invalid.length) {
                             console.error({
-                                message: "invalid .env key values",
+                                message: 'invalid .env key values',
                                 invalid: invalid,
                             });
                         }
@@ -241,12 +241,12 @@ module.exports = {
                         let is_ip_domain = isIPAddress(network_data.api_domain);
 
                         if (is_ip_domain) {
-                            console.error("IP domain not allowed in production");
+                            console.error('IP domain not allowed in production');
                             process.exit();
                         }
 
                         if (hasPort(network_data.api_domain)) {
-                            console.error("Domain with port not allowed in production");
+                            console.error('Domain with port not allowed in production');
                             process.exit();
                         }
                     }
@@ -254,10 +254,12 @@ module.exports = {
                     //prevent duplicate domains
                     //rare: networks table should be empty
                     try {
-                        let domain_qry = await conn("networks").where("base_domain", network_data.base_domain).first();
+                        let domain_qry = await conn('networks')
+                            .where('base_domain', network_data.base_domain)
+                            .first();
 
                         if (domain_qry) {
-                            console.error("Domain already exists in DB");
+                            console.error('Domain already exists in DB');
                             process.exit();
                         }
                     } catch (e) {
@@ -265,7 +267,7 @@ module.exports = {
                     }
 
                     //create network record
-                    await conn("networks").insert(network_data);
+                    await conn('networks').insert(network_data);
 
                     //notify befriend server(s) of your network
                     try {
@@ -325,20 +327,20 @@ module.exports = {
             try {
                 let conn = await dbService.conn();
 
-                let qry = await conn("networks")
-                    .where("network_token", module.exports.token)
-                    .where("is_self", true)
+                let qry = await conn('networks')
+                    .where('network_token', module.exports.token)
+                    .where('is_self', true)
                     .first();
 
                 if (!qry) {
-                    return reject("Self network not found");
+                    return reject('Self network not found');
                 }
 
                 if (qry && qry.is_network_known) {
-                    return reject("Network already known");
+                    return reject('Network already known');
                 }
 
-                await conn("networks").where("id", qry.id).update({
+                await conn('networks').where('id', qry.id).update({
                     is_network_known: true,
                     updated: timeNow(),
                 });
@@ -352,13 +354,13 @@ module.exports = {
     getNetwork: function (network_token) {
         return new Promise(async (resolve, reject) => {
             if (!network_token) {
-                return reject("No network token");
+                return reject('No network token');
             }
 
             try {
                 let conn = await dbService.conn();
 
-                let qry = await conn("networks").where("network_token", network_token).first();
+                let qry = await conn('networks').where('network_token', network_token).first();
 
                 resolve(qry);
             } catch (e) {
@@ -371,9 +373,9 @@ module.exports = {
             try {
                 let conn = await dbService.conn();
 
-                let qry = await conn("networks")
-                    .where("network_token", process.env[module.exports.env.network_token_key])
-                    .where("is_self", true)
+                let qry = await conn('networks')
+                    .where('network_token', process.env[module.exports.env.network_token_key])
+                    .where('is_self', true)
                     .first();
 
                 resolve(qry);

@@ -1,14 +1,14 @@
 function main() {
     return new Promise(async (resolve, reject) => {
         try {
-            console.log("Loading locations");
+            console.log('Loading locations');
 
-            await require("./add_locations/add_countries").main();
-            await require("./add_locations/add_cities").main();
+            await require('./add_locations/add_countries').main();
+            await require('./add_locations/add_cities').main();
 
-            await require("./add_locations/index_locations").main();
+            await require('./add_locations/index_locations').main();
 
-            console.log("Locations loaded");
+            console.log('Locations loaded');
         } catch (e) {
             console.error(e);
         }

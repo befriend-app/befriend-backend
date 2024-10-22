@@ -1,9 +1,9 @@
-const redis = require("redis");
+const redis = require('redis');
 
 module.exports = {
     conn: null,
     keys: {
-        ws: "ws:messages",
+        ws: 'ws:messages',
         activity_types: `activity_types`,
         activity_type: `activity_type:`,
         activity_type_venue_categories: `activity_type:venue_categories:`,
@@ -39,7 +39,7 @@ module.exports = {
                 return reject(e);
             }
 
-            module.exports.conn.on("error", function (er) {
+            module.exports.conn.on('error', function (er) {
                 console.error(er.stack);
             });
 
@@ -96,7 +96,7 @@ module.exports = {
                 }
             }
 
-            if (typeof data !== "string") {
+            if (typeof data !== 'string') {
                 data = JSON.stringify(data);
             }
 
@@ -127,7 +127,7 @@ module.exports = {
             }
         }
 
-        return new_key.replace(/ /g, "-");
+        return new_key.replace(/ /g, '-');
     },
     deleteKeys: function (keys) {
         return new Promise(async (resolve, reject) => {
@@ -158,9 +158,9 @@ module.exports = {
     addItemToSet(key, item) {
         return new Promise(async (resolve, reject) => {
             try {
-                if (typeof item === "object") {
+                if (typeof item === 'object') {
                     item = JSON.stringify(item);
-                } else if (typeof item !== "string") {
+                } else if (typeof item !== 'string') {
                     item = item.toString();
                 }
 
@@ -181,7 +181,7 @@ module.exports = {
                 for (let i = 0; i < key_items.length; i++) {
                     let item = key_items[i];
 
-                    if (typeof item !== "string") {
+                    if (typeof item !== 'string') {
                         key_items[i] = JSON.stringify(item);
                     }
                 }
@@ -198,7 +198,7 @@ module.exports = {
 
             let max_length = 1000000;
 
-            let chunks = require("lodash").chunk(items, max_length);
+            let chunks = require('lodash').chunk(items, max_length);
 
             for (let chunk of chunks) {
                 // chunk.unshift(key);
@@ -267,7 +267,7 @@ module.exports = {
     },
     addItemToList: function (key, item) {
         return new Promise(async (resolve, reject) => {
-            if (typeof item === "object") {
+            if (typeof item === 'object') {
                 item = JSON.stringify(item);
             }
 
@@ -293,7 +293,7 @@ module.exports = {
     removeListItem: function (key, item) {
         return new Promise(async (resolve, reject) => {
             try {
-                if (typeof item === "object") {
+                if (typeof item === 'object') {
                     item = JSON.stringify(item);
                 }
 
@@ -308,13 +308,13 @@ module.exports = {
     getSortedSet: function (key, start, end) {
         return new Promise(async (resolve, reject) => {
             if (!key) {
-                return reject("No key");
+                return reject('No key');
             }
 
             let results;
 
             try {
-                if (typeof start === "undefined" || typeof end === "undefined") {
+                if (typeof start === 'undefined' || typeof end === 'undefined') {
                     start = 0;
                     end = -1;
                 }
@@ -331,7 +331,7 @@ module.exports = {
     getSortedSetByScore: function (key, limit, lowest_to_highest) {
         return new Promise(async (resolve, reject) => {
             if (!key) {
-                return reject("No key");
+                return reject('No key');
             }
 
             let results;
@@ -348,7 +348,7 @@ module.exports = {
             }
 
             try {
-                results = await module.exports.conn.zRangeByScore(key, "-inf", "+inf", options);
+                results = await module.exports.conn.zRangeByScore(key, '-inf', '+inf', options);
 
                 return resolve(results);
             } catch (e) {

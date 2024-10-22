@@ -1,8 +1,8 @@
 // https://www.geoapify.com/data-share/localities/
 // https://public.opendatasoft.com/explore/dataset/geonames-all-cities-with-a-population-500
 
-const axios = require("axios");
-const AdmZip = require("adm-zip");
+const axios = require('axios');
+const AdmZip = require('adm-zip');
 
 const {
     loadScriptEnv,
@@ -10,8 +10,8 @@ const {
     timeNow,
     getDistanceMeters,
     getMetersFromMilesOrKm,
-} = require("../../services/shared");
-const dbService = require("../../services/db");
+} = require('../../services/shared');
+const dbService = require('../../services/db');
 
 loadScriptEnv();
 
@@ -29,7 +29,7 @@ let populations_dict = {};
 
 function fetchCityPopulations() {
     return new Promise(async (resolve, reject) => {
-        console.log("Download cities with a population > 500");
+        console.log('Download cities with a population > 500');
 
         try {
             let r = await axios.get(cities_population_link);
@@ -96,11 +96,11 @@ function findPopulation(city) {
 function getCityName(city) {
     let name = city.name;
 
-    if ("other_names" in city) {
-        if ("name:en" in city.other_names) {
-            name = city.other_names["name:en"];
-        } else if ("int_name" in city.other_names) {
-            name = city.other_names["int_name"];
+    if ('other_names' in city) {
+        if ('name:en' in city.other_names) {
+            name = city.other_names['name:en'];
+        } else if ('int_name' in city.other_names) {
+            name = city.other_names['int_name'];
         }
     }
 
@@ -110,7 +110,7 @@ function getCityName(city) {
 function main() {
     return new Promise(async (resolve, reject) => {
         try {
-            console.log("Add cities, states, and populations");
+            console.log('Add cities, states, and populations');
 
             let t = timeNow();
 
@@ -118,16 +118,16 @@ function main() {
 
             let conn = await dbService.conn();
 
-            let countries = await conn("open_countries").where("id", ">", 0);
+            let countries = await conn('open_countries').where('id', '>', 0);
 
             for (let country of countries) {
                 countries_dict[country.country_code] = country;
                 countries_id_dict[country.id] = country;
             }
 
-            let states = await conn("open_states AS os")
-                .leftJoin("open_countries AS oc", "os.country_id", "=", "oc.id")
-                .select("os.*", "oc.country_code");
+            let states = await conn('open_states AS os')
+                .leftJoin('open_countries AS oc', 'os.country_id', '=', 'oc.id')
+                .select('os.*', 'oc.country_code');
 
             for (let state of states) {
                 if (!(state.country_code in states_dict)) {
@@ -139,7 +139,7 @@ function main() {
                 states_id_dict[state.id] = state;
             }
 
-            let cities = await conn("open_cities");
+            let cities = await conn('open_cities');
 
             for (let city of cities) {
                 if (!(city.country_id in cities_dict)) {
@@ -153,7 +153,7 @@ function main() {
                 cities_dict[city.country_id][city.state_id][city.city_name.toLowerCase()] = city;
             }
 
-            console.log("Process countries");
+            console.log('Process countries');
 
             for (let country of countries) {
                 let r;
@@ -163,13 +163,13 @@ function main() {
                     country: country.country_name,
                 });
 
-                let url = joinPaths(link_prefix, country.country_code.toLowerCase() + ".zip");
+                let url = joinPaths(link_prefix, country.country_code.toLowerCase() + '.zip');
 
                 try {
                     r = await axios({
-                        method: "get",
+                        method: 'get',
                         url: url,
-                        responseType: "arraybuffer",
+                        responseType: 'arraybuffer',
                     });
                 } catch (e) {
                     //404
@@ -185,13 +185,13 @@ function main() {
                     // console.log('File:', entry.entryName);
 
                     // Get file content as text
-                    const content = entry.getData().toString("utf8");
+                    const content = entry.getData().toString('utf8');
 
                     if (!content) {
                         continue;
                     }
 
-                    const lines = content.split("\n");
+                    const lines = content.split('\n');
 
                     let batch_insert = [];
 
@@ -203,7 +203,7 @@ function main() {
                         }
 
                         //skip administrative
-                        if (city.type === "administrative") {
+                        if (city.type === 'administrative') {
                             continue;
                         }
 
@@ -214,26 +214,26 @@ function main() {
 
                         let population = city.population;
 
-                        if ("state" in city.address) {
+                        if ('state' in city.address) {
                             state = city.address.state;
 
                             try {
-                                if ("ISO3166-2-lvl4" in city.address) {
-                                    state_short = city.address["ISO3166-2-lvl4"].split("-")[1];
-                                } else if ("ISO3166-2-lvl5" in city.address) {
-                                    state_short = city.address["ISO3166-2-lvl5"].split("-")[1];
-                                } else if ("ISO3166-2-lvl6" in city.address) {
-                                    state_short = city.address["ISO3166-2-lvl6"].split("-")[0];
+                                if ('ISO3166-2-lvl4' in city.address) {
+                                    state_short = city.address['ISO3166-2-lvl4'].split('-')[1];
+                                } else if ('ISO3166-2-lvl5' in city.address) {
+                                    state_short = city.address['ISO3166-2-lvl5'].split('-')[1];
+                                } else if ('ISO3166-2-lvl6' in city.address) {
+                                    state_short = city.address['ISO3166-2-lvl6'].split('-')[0];
                                 } else {
                                     state_short = city.address.state;
                                 }
                             } catch (e) {
                                 console.error(e);
                             }
-                        } else if ("municipality" in city.address) {
+                        } else if ('municipality' in city.address) {
                             state = city.address.municipality;
                             state_short = state;
-                        } else if (city.type !== "city") {
+                        } else if (city.type !== 'city') {
                             continue;
                         }
 
@@ -244,7 +244,7 @@ function main() {
                         let state_db = states_dict[country.country_code][state_short];
 
                         if (!state_db && state) {
-                            let id = await conn("open_states").insert({
+                            let id = await conn('open_states').insert({
                                 country_id: country.id,
                                 state_name: state,
                                 state_short: state_short,
@@ -294,11 +294,11 @@ function main() {
                             lat: city.location[1],
                             lon: city.location[0],
                             postcode: city.address.postcode,
-                            is_city: city.type === "city",
-                            is_town: city.type === "town",
-                            is_village: city.type === "village",
-                            is_hamlet: city.type === "hamlet",
-                            is_administrative: city.type === "administrative",
+                            is_city: city.type === 'city',
+                            is_town: city.type === 'town',
+                            is_village: city.type === 'village',
+                            is_hamlet: city.type === 'hamlet',
+                            is_administrative: city.type === 'administrative',
                             bbox_lat_min: lat_min,
                             bbox_lat_max: lat_max,
                             bbox_lon_min: lon_min,
@@ -317,19 +317,19 @@ function main() {
                         batch_insert.push(insert_data);
 
                         if (batch_insert.length > 5000) {
-                            await dbService.batchInsert(conn, "open_cities", batch_insert);
+                            await dbService.batchInsert(conn, 'open_cities', batch_insert);
                             batch_insert = [];
                         }
                     }
 
                     if (batch_insert.length) {
-                        await dbService.batchInsert(conn, "open_cities", batch_insert);
+                        await dbService.batchInsert(conn, 'open_cities', batch_insert);
                     }
                 }
             }
 
             console.log({
-                time: ((timeNow() - t) / 1000).toFixed(1) + " sec",
+                time: ((timeNow() - t) / 1000).toFixed(1) + ' sec',
             });
         } catch (e) {
             console.error(e);

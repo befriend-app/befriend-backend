@@ -1,6 +1,6 @@
-const db = require("../../services/db");
-const cache = require("../../services/cache");
-const { loadScriptEnv } = require("../../services/shared");
+const db = require('../../services/db');
+const cache = require('../../services/cache');
+const { loadScriptEnv } = require('../../services/shared');
 
 loadScriptEnv();
 
@@ -21,13 +21,13 @@ loadScriptEnv();
             connection.port = parseInt(process.env.DB_PORT);
         }
 
-        let knex = require("knex")({
+        let knex = require('knex')({
             client: process.env.DB_CLIENT,
             connection: connection,
         });
 
         //delete db
-        let tables = ["open_cities", "open_states", "open_countries"];
+        let tables = ['open_cities', 'open_states', 'open_countries'];
 
         for (let t of tables) {
             await knex(t).delete();
@@ -45,9 +45,9 @@ loadScriptEnv();
         ];
 
         for (let key of param_keys) {
-            let param_key = key + "*";
+            let param_key = key + '*';
 
-            let keys = await cache.getKeys(param_key + "*");
+            let keys = await cache.getKeys(param_key + '*');
 
             for (let i = 0; i < keys.length; i += batchSize) {
                 const batch = keys.slice(i, i + batchSize);

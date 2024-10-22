@@ -24,8 +24,14 @@
     { "category_id": 10022, "category_label": "Arts and Entertainment > Laser Tag Center" },
     { "category_id": 10023, "category_label": "Arts and Entertainment > Mini Golf Course" },
     { "category_id": 10024, "category_label": "Arts and Entertainment > Movie Theater" },
-    { "category_id": 10025, "category_label": "Arts and Entertainment > Movie Theater > Drive-in Theater" },
-    { "category_id": 10026, "category_label": "Arts and Entertainment > Movie Theater > Indie Movie Theater" },
+    {
+        "category_id": 10025,
+        "category_label": "Arts and Entertainment > Movie Theater > Drive-in Theater"
+    },
+    {
+        "category_id": 10026,
+        "category_label": "Arts and Entertainment > Movie Theater > Indie Movie Theater"
+    },
     { "category_id": 10027, "category_label": "Arts and Entertainment > Museum" },
     { "category_id": 10028, "category_label": "Arts and Entertainment > Museum > Art Museum" },
     { "category_id": 10029, "category_label": "Arts and Entertainment > Museum > Erotic Museum" },
@@ -35,10 +41,22 @@
     { "category_id": 10033, "category_label": "Arts and Entertainment > Pachinko Parlor" },
     { "category_id": 10034, "category_label": "Arts and Entertainment > Party Center" },
     { "category_id": 10035, "category_label": "Arts and Entertainment > Performing Arts Venue" },
-    { "category_id": 10036, "category_label": "Arts and Entertainment > Performing Arts Venue > Amphitheater" },
-    { "category_id": 10037, "category_label": "Arts and Entertainment > Performing Arts Venue > Concert Hall" },
-    { "category_id": 10038, "category_label": "Arts and Entertainment > Performing Arts Venue > Indie Theater" },
-    { "category_id": 10039, "category_label": "Arts and Entertainment > Performing Arts Venue > Music Venue" },
+    {
+        "category_id": 10036,
+        "category_label": "Arts and Entertainment > Performing Arts Venue > Amphitheater"
+    },
+    {
+        "category_id": 10037,
+        "category_label": "Arts and Entertainment > Performing Arts Venue > Concert Hall"
+    },
+    {
+        "category_id": 10038,
+        "category_label": "Arts and Entertainment > Performing Arts Venue > Indie Theater"
+    },
+    {
+        "category_id": 10039,
+        "category_label": "Arts and Entertainment > Performing Arts Venue > Music Venue"
+    },
     {
         "category_id": 10040,
         "category_label": "Arts and Entertainment > Performing Arts Venue > Music Venue > Jazz and Blues Venue"
@@ -47,8 +65,14 @@
         "category_id": 10041,
         "category_label": "Arts and Entertainment > Performing Arts Venue > Music Venue > Rock Club"
     },
-    { "category_id": 10042, "category_label": "Arts and Entertainment > Performing Arts Venue > Opera House" },
-    { "category_id": 10043, "category_label": "Arts and Entertainment > Performing Arts Venue > Theater" },
+    {
+        "category_id": 10042,
+        "category_label": "Arts and Entertainment > Performing Arts Venue > Opera House"
+    },
+    {
+        "category_id": 10043,
+        "category_label": "Arts and Entertainment > Performing Arts Venue > Theater"
+    },
     { "category_id": 10044, "category_label": "Arts and Entertainment > Planetarium" },
     { "category_id": 10045, "category_label": "Arts and Entertainment > Pool Hall" },
     { "category_id": 10046, "category_label": "Arts and Entertainment > Psychic and Astrologer" },
@@ -63,28 +87,64 @@
     { "category_id": 10055, "category_label": "Arts and Entertainment > Water Park" },
     { "category_id": 10056, "category_label": "Arts and Entertainment > Zoo" },
     { "category_id": 10057, "category_label": "Arts and Entertainment > Disc Golf" },
-    { "category_id": 10058, "category_label": "Arts and Entertainment > Amusement Park > Attraction" },
+    {
+        "category_id": 10058,
+        "category_label": "Arts and Entertainment > Amusement Park > Attraction"
+    },
     { "category_id": 10059, "category_label": "Arts and Entertainment > Public Art > Street Art" },
-    { "category_id": 10060, "category_label": "Arts and Entertainment > Stadium > Baseball Stadium" },
-    { "category_id": 10061, "category_label": "Arts and Entertainment > Stadium > Basketball Stadium" },
-    { "category_id": 10062, "category_label": "Arts and Entertainment > Stadium > Football Stadium" },
+    {
+        "category_id": 10060,
+        "category_label": "Arts and Entertainment > Stadium > Baseball Stadium"
+    },
+    {
+        "category_id": 10061,
+        "category_label": "Arts and Entertainment > Stadium > Basketball Stadium"
+    },
+    {
+        "category_id": 10062,
+        "category_label": "Arts and Entertainment > Stadium > Football Stadium"
+    },
     { "category_id": 10063, "category_label": "Arts and Entertainment > Stadium > Hockey Stadium" },
     { "category_id": 10064, "category_label": "Arts and Entertainment > Stadium > Rugby Stadium" },
     { "category_id": 10065, "category_label": "Arts and Entertainment > Stadium > Soccer Stadium" },
     { "category_id": 10066, "category_label": "Arts and Entertainment > Stadium > Tennis Stadium" },
     { "category_id": 10067, "category_label": "Arts and Entertainment > Stadium > Track Stadium" },
     { "category_id": 10068, "category_label": "Arts and Entertainment > Zoo > Zoo Exhibit" },
-    { "category_id": 10069, "category_label": "Arts and Entertainment > Public Art > Outdoor Sculpture" },
+    {
+        "category_id": 10069,
+        "category_label": "Arts and Entertainment > Public Art > Outdoor Sculpture"
+    },
     { "category_id": 11000, "category_label": "Business and Professional Services" },
-    { "category_id": 11001, "category_label": "Business and Professional Services > Advertising Agency" },
-    { "category_id": 11002, "category_label": "Business and Professional Services > Agriculture and Forestry Service" },
-    { "category_id": 11003, "category_label": "Business and Professional Services > Architecture Firm" },
-    { "category_id": 11004, "category_label": "Business and Professional Services > Art Restoration Service" },
+    {
+        "category_id": 11001,
+        "category_label": "Business and Professional Services > Advertising Agency"
+    },
+    {
+        "category_id": 11002,
+        "category_label": "Business and Professional Services > Agriculture and Forestry Service"
+    },
+    {
+        "category_id": 11003,
+        "category_label": "Business and Professional Services > Architecture Firm"
+    },
+    {
+        "category_id": 11004,
+        "category_label": "Business and Professional Services > Art Restoration Service"
+    },
     { "category_id": 11005, "category_label": "Business and Professional Services > Art Studio" },
-    { "category_id": 11006, "category_label": "Business and Professional Services > Audiovisual Service" },
+    {
+        "category_id": 11006,
+        "category_label": "Business and Professional Services > Audiovisual Service"
+    },
     { "category_id": 11007, "category_label": "Business and Professional Services > Auditorium" },
-    { "category_id": 11008, "category_label": "Business and Professional Services > Automation and Control System" },
-    { "category_id": 11009, "category_label": "Business and Professional Services > Automotive Service" },
+    {
+        "category_id": 11008,
+        "category_label": "Business and Professional Services > Automation and Control System"
+    },
+    {
+        "category_id": 11009,
+        "category_label": "Business and Professional Services > Automotive Service"
+    },
     {
         "category_id": 11010,
         "category_label": "Business and Professional Services > Automotive Service > Automotive Repair Shop"
@@ -126,31 +186,79 @@
         "category_id": 11020,
         "category_label": "Business and Professional Services > Office > Business and Strategy Consulting Office"
     },
-    { "category_id": 11021, "category_label": "Business and Professional Services > Business Center" },
-    { "category_id": 11022, "category_label": "Business and Professional Services > Office > Campaign Office" },
-    { "category_id": 11023, "category_label": "Business and Professional Services > Career Counselor" },
+    {
+        "category_id": 11021,
+        "category_label": "Business and Professional Services > Business Center"
+    },
+    {
+        "category_id": 11022,
+        "category_label": "Business and Professional Services > Office > Campaign Office"
+    },
+    {
+        "category_id": 11023,
+        "category_label": "Business and Professional Services > Career Counselor"
+    },
     {
         "category_id": 11024,
         "category_label": "Business and Professional Services > Chemicals and Gasses Manufacturer"
     },
-    { "category_id": 11025, "category_label": "Business and Professional Services > Child Care Service" },
-    { "category_id": 11026, "category_label": "Business and Professional Services > Child Care Service > Daycare" },
-    { "category_id": 11027, "category_label": "Business and Professional Services > Computer Repair Service" },
+    {
+        "category_id": 11025,
+        "category_label": "Business and Professional Services > Child Care Service"
+    },
+    {
+        "category_id": 11026,
+        "category_label": "Business and Professional Services > Child Care Service > Daycare"
+    },
+    {
+        "category_id": 11027,
+        "category_label": "Business and Professional Services > Computer Repair Service"
+    },
     { "category_id": 11028, "category_label": "Business and Professional Services > Construction" },
-    { "category_id": 11029, "category_label": "Business and Professional Services > Convention Center" },
-    { "category_id": 11030, "category_label": "Business and Professional Services > Design Studio" },
-    { "category_id": 11031, "category_label": "Business and Professional Services > Distribution Center" },
-    { "category_id": 11032, "category_label": "Business and Professional Services > Electrical Equipment Supplier" },
-    { "category_id": 11033, "category_label": "Business and Professional Services > Employment Agency" },
+    {
+        "category_id": 11029,
+        "category_label": "Business and Professional Services > Convention Center"
+    },
+    {
+        "category_id": 11030,
+        "category_label": "Business and Professional Services > Design Studio"
+    },
+    {
+        "category_id": 11031,
+        "category_label": "Business and Professional Services > Distribution Center"
+    },
+    {
+        "category_id": 11032,
+        "category_label": "Business and Professional Services > Electrical Equipment Supplier"
+    },
+    {
+        "category_id": 11033,
+        "category_label": "Business and Professional Services > Employment Agency"
+    },
     { "category_id": 11034, "category_label": "Business and Professional Services > Engineer" },
-    { "category_id": 11035, "category_label": "Business and Professional Services > Entertainment Agency" },
-    { "category_id": 11036, "category_label": "Business and Professional Services > Entertainment Service" },
-    { "category_id": 11037, "category_label": "Business and Professional Services > Equipment Rental Service" },
-    { "category_id": 11038, "category_label": "Business and Professional Services > Event Service" },
+    {
+        "category_id": 11035,
+        "category_label": "Business and Professional Services > Entertainment Agency"
+    },
+    {
+        "category_id": 11036,
+        "category_label": "Business and Professional Services > Entertainment Service"
+    },
+    {
+        "category_id": 11037,
+        "category_label": "Business and Professional Services > Equipment Rental Service"
+    },
+    {
+        "category_id": 11038,
+        "category_label": "Business and Professional Services > Event Service"
+    },
     { "category_id": 11039, "category_label": "Business and Professional Services > Event Space" },
     { "category_id": 11040, "category_label": "Business and Professional Services > Factory" },
     { "category_id": 11041, "category_label": "Business and Professional Services > Film Studio" },
-    { "category_id": 11042, "category_label": "Business and Professional Services > Financial Service" },
+    {
+        "category_id": 11042,
+        "category_label": "Business and Professional Services > Financial Service"
+    },
     {
         "category_id": 11043,
         "category_label": "Business and Professional Services > Financial Service > Accounting and Bookkeeping Service"
@@ -195,9 +303,18 @@
         "category_id": 11053,
         "category_label": "Business and Professional Services > Financial Service > Financial Planner"
     },
-    { "category_id": 11054, "category_label": "Business and Professional Services > Financial Service > Loans Agency" },
-    { "category_id": 11055, "category_label": "Business and Professional Services > Financial Service > Stock Broker" },
-    { "category_id": 11056, "category_label": "Business and Professional Services > Food and Beverage Service" },
+    {
+        "category_id": 11054,
+        "category_label": "Business and Professional Services > Financial Service > Loans Agency"
+    },
+    {
+        "category_id": 11055,
+        "category_label": "Business and Professional Services > Financial Service > Stock Broker"
+    },
+    {
+        "category_id": 11056,
+        "category_label": "Business and Professional Services > Food and Beverage Service"
+    },
     {
         "category_id": 11057,
         "category_label": "Business and Professional Services > Food and Beverage Service > Caterer"
@@ -207,8 +324,14 @@
         "category_label": "Business and Professional Services > Food and Beverage Service > Food Distribution Center"
     },
     { "category_id": 11059, "category_label": "Business and Professional Services > Funeral Home" },
-    { "category_id": 11060, "category_label": "Business and Professional Services > Geological Service" },
-    { "category_id": 11061, "category_label": "Business and Professional Services > Health and Beauty Service" },
+    {
+        "category_id": 11060,
+        "category_label": "Business and Professional Services > Geological Service"
+    },
+    {
+        "category_id": 11061,
+        "category_label": "Business and Professional Services > Health and Beauty Service"
+    },
     {
         "category_id": 11062,
         "category_label": "Business and Professional Services > Health and Beauty Service > Barbershop"
@@ -234,7 +357,10 @@
         "category_label": "Business and Professional Services > Health and Beauty Service > Hair Removal Service"
     },
     { "category_id": 11068, "category_label": "Business and Professional Services > Laundromat" },
-    { "category_id": 11069, "category_label": "Business and Professional Services > Laundry Service" },
+    {
+        "category_id": 11069,
+        "category_label": "Business and Professional Services > Laundry Service"
+    },
     {
         "category_id": 11070,
         "category_label": "Business and Professional Services > Health and Beauty Service > Massage Clinic"
@@ -247,7 +373,10 @@
         "category_id": 11072,
         "category_label": "Business and Professional Services > Health and Beauty Service > Skin Care Clinic"
     },
-    { "category_id": 11073, "category_label": "Business and Professional Services > Health and Beauty Service > Spa" },
+    {
+        "category_id": 11073,
+        "category_label": "Business and Professional Services > Health and Beauty Service > Spa"
+    },
     {
         "category_id": 11074,
         "category_label": "Business and Professional Services > Health and Beauty Service > Tanning Salon"
@@ -256,7 +385,10 @@
         "category_id": 11075,
         "category_label": "Business and Professional Services > Health and Beauty Service > Tattoo Parlor"
     },
-    { "category_id": 11076, "category_label": "Business and Professional Services > Home Improvement Service" },
+    {
+        "category_id": 11076,
+        "category_label": "Business and Professional Services > Home Improvement Service"
+    },
     {
         "category_id": 11077,
         "category_label": "Business and Professional Services > Home Improvement Service > Bathroom Contractor"
@@ -321,7 +453,10 @@
         "category_id": 11092,
         "category_label": "Business and Professional Services > Home Improvement Service > Landscaper and Gardener"
     },
-    { "category_id": 11093, "category_label": "Business and Professional Services > Home Improvement Service > Mover" },
+    {
+        "category_id": 11093,
+        "category_label": "Business and Professional Services > Home Improvement Service > Mover"
+    },
     {
         "category_id": 11094,
         "category_label": "Business and Professional Services > Home Improvement Service > Painter"
@@ -358,42 +493,108 @@
         "category_id": 11102,
         "category_label": "Business and Professional Services > Home Improvement Service > Upholstery Service"
     },
-    { "category_id": 11103, "category_label": "Business and Professional Services > Human Resources Agency" },
-    { "category_id": 11104, "category_label": "Business and Professional Services > Import and Export Service" },
-    { "category_id": 11105, "category_label": "Business and Professional Services > Industrial Equipment Supplier" },
-    { "category_id": 11106, "category_label": "Business and Professional Services > Industrial Estate" },
-    { "category_id": 11107, "category_label": "Business and Professional Services > Insurance Agency" },
-    { "category_id": 11108, "category_label": "Business and Professional Services > Technology Business > IT Service" },
+    {
+        "category_id": 11103,
+        "category_label": "Business and Professional Services > Human Resources Agency"
+    },
+    {
+        "category_id": 11104,
+        "category_label": "Business and Professional Services > Import and Export Service"
+    },
+    {
+        "category_id": 11105,
+        "category_label": "Business and Professional Services > Industrial Equipment Supplier"
+    },
+    {
+        "category_id": 11106,
+        "category_label": "Business and Professional Services > Industrial Estate"
+    },
+    {
+        "category_id": 11107,
+        "category_label": "Business and Professional Services > Insurance Agency"
+    },
+    {
+        "category_id": 11108,
+        "category_label": "Business and Professional Services > Technology Business > IT Service"
+    },
     { "category_id": 11109, "category_label": "Business and Professional Services > Laboratory" },
-    { "category_id": 11110, "category_label": "Business and Professional Services > Leather Supplier" },
-    { "category_id": 11111, "category_label": "Business and Professional Services > Legal Service" },
-    { "category_id": 11112, "category_label": "Business and Professional Services > Legal Service > Law Office" },
+    {
+        "category_id": 11110,
+        "category_label": "Business and Professional Services > Leather Supplier"
+    },
+    {
+        "category_id": 11111,
+        "category_label": "Business and Professional Services > Legal Service"
+    },
+    {
+        "category_id": 11112,
+        "category_label": "Business and Professional Services > Legal Service > Law Office"
+    },
     {
         "category_id": 11113,
         "category_label": "Business and Professional Services > Legal Service > Immigration Attorney"
     },
-    { "category_id": 11114, "category_label": "Business and Professional Services > Legal Service > Notary" },
+    {
+        "category_id": 11114,
+        "category_label": "Business and Professional Services > Legal Service > Notary"
+    },
     { "category_id": 11115, "category_label": "Business and Professional Services > Locksmith" },
-    { "category_id": 11116, "category_label": "Business and Professional Services > Logging Service" },
-    { "category_id": 11117, "category_label": "Business and Professional Services > Lottery Retailer" },
+    {
+        "category_id": 11116,
+        "category_label": "Business and Professional Services > Logging Service"
+    },
+    {
+        "category_id": 11117,
+        "category_label": "Business and Professional Services > Lottery Retailer"
+    },
     { "category_id": 11118, "category_label": "Business and Professional Services > Machine Shop" },
-    { "category_id": 11119, "category_label": "Business and Professional Services > Management Consultant" },
+    {
+        "category_id": 11119,
+        "category_label": "Business and Professional Services > Management Consultant"
+    },
     { "category_id": 11120, "category_label": "Business and Professional Services > Manufacturer" },
     { "category_id": 11121, "category_label": "Business and Professional Services > Media Agency" },
-    { "category_id": 11122, "category_label": "Business and Professional Services > Metals Supplier" },
-    { "category_id": 11123, "category_label": "Business and Professional Services > Mobile Company" },
+    {
+        "category_id": 11122,
+        "category_label": "Business and Professional Services > Metals Supplier"
+    },
+    {
+        "category_id": 11123,
+        "category_label": "Business and Professional Services > Mobile Company"
+    },
     { "category_id": 11124, "category_label": "Business and Professional Services > Office" },
-    { "category_id": 11125, "category_label": "Business and Professional Services > Office > Corporate Cafeteria" },
-    { "category_id": 11126, "category_label": "Business and Professional Services > Office > Corporate Coffee Shop" },
+    {
+        "category_id": 11125,
+        "category_label": "Business and Professional Services > Office > Corporate Cafeteria"
+    },
+    {
+        "category_id": 11126,
+        "category_label": "Business and Professional Services > Office > Corporate Coffee Shop"
+    },
     {
         "category_id": 11127,
         "category_label": "Business and Professional Services > Office > Corporate Housing Agency"
     },
-    { "category_id": 11128, "category_label": "Business and Professional Services > Office > Coworking Space" },
-    { "category_id": 11129, "category_label": "Business and Professional Services > Office > Meeting Room" },
-    { "category_id": 11130, "category_label": "Business and Professional Services > Office > Office Building" },
-    { "category_id": 11131, "category_label": "Business and Professional Services > Outdoor Event Space" },
-    { "category_id": 11132, "category_label": "Business and Professional Services > Paper Supplier" },
+    {
+        "category_id": 11128,
+        "category_label": "Business and Professional Services > Office > Coworking Space"
+    },
+    {
+        "category_id": 11129,
+        "category_label": "Business and Professional Services > Office > Meeting Room"
+    },
+    {
+        "category_id": 11130,
+        "category_label": "Business and Professional Services > Office > Office Building"
+    },
+    {
+        "category_id": 11131,
+        "category_label": "Business and Professional Services > Outdoor Event Space"
+    },
+    {
+        "category_id": 11132,
+        "category_label": "Business and Professional Services > Paper Supplier"
+    },
     { "category_id": 11133, "category_label": "Business and Professional Services > Pet Service" },
     {
         "category_id": 11134,
@@ -403,8 +604,14 @@
         "category_id": 11135,
         "category_label": "Business and Professional Services > Pet Service > Pet Sitting and Boarding Service"
     },
-    { "category_id": 11136, "category_label": "Business and Professional Services > Petroleum Supplier" },
-    { "category_id": 11137, "category_label": "Business and Professional Services > Photography Service" },
+    {
+        "category_id": 11136,
+        "category_label": "Business and Professional Services > Petroleum Supplier"
+    },
+    {
+        "category_id": 11137,
+        "category_label": "Business and Professional Services > Photography Service"
+    },
     {
         "category_id": 11138,
         "category_label": "Business and Professional Services > Photography Service > Photographer"
@@ -417,11 +624,20 @@
         "category_id": 11140,
         "category_label": "Business and Professional Services > Photography Service > Photography Studio"
     },
-    { "category_id": 11141, "category_label": "Business and Professional Services > Plastics Supplier" },
+    {
+        "category_id": 11141,
+        "category_label": "Business and Professional Services > Plastics Supplier"
+    },
     { "category_id": 11142, "category_label": "Business and Professional Services > Power Plant" },
     { "category_id": 11143, "category_label": "Business and Professional Services > Publisher" },
-    { "category_id": 11144, "category_label": "Business and Professional Services > Radio Station" },
-    { "category_id": 11145, "category_label": "Business and Professional Services > Real Estate Service" },
+    {
+        "category_id": 11144,
+        "category_label": "Business and Professional Services > Radio Station"
+    },
+    {
+        "category_id": 11145,
+        "category_label": "Business and Professional Services > Real Estate Service"
+    },
     {
         "category_id": 11146,
         "category_label": "Business and Professional Services > Real Estate Service > Building and Land Surveyor"
@@ -446,25 +662,64 @@
         "category_id": 11151,
         "category_label": "Business and Professional Services > Real Estate Service > Real Estate Development and Title Company"
     },
-    { "category_id": 11152, "category_label": "Business and Professional Services > Recording Studio" },
-    { "category_id": 11153, "category_label": "Business and Professional Services > Recycling Facility" },
-    { "category_id": 11154, "category_label": "Business and Professional Services > Refrigeration and Ice Supplier" },
-    { "category_id": 11155, "category_label": "Business and Professional Services > Renewable Energy Service" },
-    { "category_id": 11156, "category_label": "Business and Professional Services > Rental Service" },
-    { "category_id": 11157, "category_label": "Business and Professional Services > Repair Service" },
-    { "category_id": 11158, "category_label": "Business and Professional Services > Research Station" },
-    { "category_id": 11159, "category_label": "Business and Professional Services > Rubber Supplier" },
+    {
+        "category_id": 11152,
+        "category_label": "Business and Professional Services > Recording Studio"
+    },
+    {
+        "category_id": 11153,
+        "category_label": "Business and Professional Services > Recycling Facility"
+    },
+    {
+        "category_id": 11154,
+        "category_label": "Business and Professional Services > Refrigeration and Ice Supplier"
+    },
+    {
+        "category_id": 11155,
+        "category_label": "Business and Professional Services > Renewable Energy Service"
+    },
+    {
+        "category_id": 11156,
+        "category_label": "Business and Professional Services > Rental Service"
+    },
+    {
+        "category_id": 11157,
+        "category_label": "Business and Professional Services > Repair Service"
+    },
+    {
+        "category_id": 11158,
+        "category_label": "Business and Professional Services > Research Station"
+    },
+    {
+        "category_id": 11159,
+        "category_label": "Business and Professional Services > Rubber Supplier"
+    },
     { "category_id": 11160, "category_label": "Business and Professional Services > Salvage Yard" },
-    { "category_id": 11161, "category_label": "Business and Professional Services > Scientific Equipment Supplier" },
-    { "category_id": 11162, "category_label": "Business and Professional Services > Security and Safety" },
+    {
+        "category_id": 11161,
+        "category_label": "Business and Professional Services > Scientific Equipment Supplier"
+    },
+    {
+        "category_id": 11162,
+        "category_label": "Business and Professional Services > Security and Safety"
+    },
     {
         "category_id": 11163,
         "category_label": "Business and Professional Services > Shipping, Freight, and Material Transportation Service"
     },
-    { "category_id": 11164, "category_label": "Business and Professional Services > Shoe Repair Service" },
-    { "category_id": 11165, "category_label": "Business and Professional Services > Storage Facility" },
+    {
+        "category_id": 11164,
+        "category_label": "Business and Professional Services > Shoe Repair Service"
+    },
+    {
+        "category_id": 11165,
+        "category_label": "Business and Professional Services > Storage Facility"
+    },
     { "category_id": 11166, "category_label": "Business and Professional Services > Tailor" },
-    { "category_id": 11167, "category_label": "Business and Professional Services > Technology Business" },
+    {
+        "category_id": 11167,
+        "category_label": "Business and Professional Services > Technology Business"
+    },
     {
         "category_id": 11168,
         "category_label": "Business and Professional Services > Technology Business > Software Company"
@@ -473,24 +728,51 @@
         "category_id": 11169,
         "category_label": "Business and Professional Services > Technology Business > Website Designer"
     },
-    { "category_id": 11170, "category_label": "Business and Professional Services > Telecommunication Service" },
-    { "category_id": 11171, "category_label": "Business and Professional Services > Translation Service" },
-    { "category_id": 11172, "category_label": "Business and Professional Services > Tutoring Service" },
+    {
+        "category_id": 11170,
+        "category_label": "Business and Professional Services > Telecommunication Service"
+    },
+    {
+        "category_id": 11171,
+        "category_label": "Business and Professional Services > Translation Service"
+    },
+    {
+        "category_id": 11172,
+        "category_label": "Business and Professional Services > Tutoring Service"
+    },
     { "category_id": 11173, "category_label": "Business and Professional Services > TV Station" },
     { "category_id": 11174, "category_label": "Business and Professional Services > Warehouse" },
-    { "category_id": 11175, "category_label": "Business and Professional Services > Waste Management Service" },
-    { "category_id": 11176, "category_label": "Business and Professional Services > Water Treatment Service" },
+    {
+        "category_id": 11175,
+        "category_label": "Business and Professional Services > Waste Management Service"
+    },
+    {
+        "category_id": 11176,
+        "category_label": "Business and Professional Services > Water Treatment Service"
+    },
     { "category_id": 11177, "category_label": "Business and Professional Services > Wedding Hall" },
-    { "category_id": 11178, "category_label": "Business and Professional Services > Welding Service" },
+    {
+        "category_id": 11178,
+        "category_label": "Business and Professional Services > Welding Service"
+    },
     { "category_id": 11179, "category_label": "Business and Professional Services > Wholesaler" },
-    { "category_id": 11180, "category_label": "Business and Professional Services > Office > Tech Startup" },
+    {
+        "category_id": 11180,
+        "category_label": "Business and Professional Services > Office > Tech Startup"
+    },
     { "category_id": 11181, "category_label": "Business and Professional Services > Appraiser" },
-    { "category_id": 11182, "category_label": "Business and Professional Services > Business Service" },
+    {
+        "category_id": 11182,
+        "category_label": "Business and Professional Services > Business Service"
+    },
     {
         "category_id": 11183,
         "category_label": "Business and Professional Services > Convention Center > Conference Room"
     },
-    { "category_id": 11184, "category_label": "Business and Professional Services > Creative Service" },
+    {
+        "category_id": 11184,
+        "category_label": "Business and Professional Services > Creative Service"
+    },
     {
         "category_id": 11185,
         "category_label": "Business and Professional Services > Direct Mail and Email Marketing Service"
@@ -499,15 +781,30 @@
         "category_id": 11186,
         "category_label": "Business and Professional Services > Market Research and Consulting Service"
     },
-    { "category_id": 11187, "category_label": "Business and Professional Services > Office > Corporate Amenity" },
-    { "category_id": 11188, "category_label": "Business and Professional Services > Online Advertising Service" },
+    {
+        "category_id": 11187,
+        "category_label": "Business and Professional Services > Office > Corporate Amenity"
+    },
+    {
+        "category_id": 11188,
+        "category_label": "Business and Professional Services > Online Advertising Service"
+    },
     {
         "category_id": 11189,
         "category_label": "Business and Professional Services > Print, TV, Radio and Outdoor Advertising Service"
     },
-    { "category_id": 11190, "category_label": "Business and Professional Services > Promotional Item Service" },
-    { "category_id": 11191, "category_label": "Business and Professional Services > Public Relations Firm" },
-    { "category_id": 11192, "category_label": "Business and Professional Services > Research Laboratory" },
+    {
+        "category_id": 11190,
+        "category_label": "Business and Professional Services > Promotional Item Service"
+    },
+    {
+        "category_id": 11191,
+        "category_label": "Business and Professional Services > Public Relations Firm"
+    },
+    {
+        "category_id": 11192,
+        "category_label": "Business and Professional Services > Research Laboratory"
+    },
     {
         "category_id": 11193,
         "category_label": "Business and Professional Services > Search Engine Marketing and Optimization Service"
@@ -517,19 +814,37 @@
         "category_label": "Business and Professional Services > Writing, Copywriting and Technical Writing Service"
     },
     { "category_id": 12000, "category_label": "Community and Government" },
-    { "category_id": 12001, "category_label": "Community and Government > Addiction Treatment Center" },
+    {
+        "category_id": 12001,
+        "category_label": "Community and Government > Addiction Treatment Center"
+    },
     { "category_id": 12002, "category_label": "Community and Government > Animal Shelter" },
     { "category_id": 12003, "category_label": "Community and Government > Cemetery" },
     { "category_id": 12004, "category_label": "Community and Government > Community Center" },
     { "category_id": 12005, "category_label": "Community and Government > Cultural Center" },
-    { "category_id": 12006, "category_label": "Community and Government > Disabled Persons Service" },
-    { "category_id": 12007, "category_label": "Community and Government > Domestic Abuse Treatment Center" },
+    {
+        "category_id": 12006,
+        "category_label": "Community and Government > Disabled Persons Service"
+    },
+    {
+        "category_id": 12007,
+        "category_label": "Community and Government > Domestic Abuse Treatment Center"
+    },
     { "category_id": 12008, "category_label": "Community and Government > Dump" },
     { "category_id": 12009, "category_label": "Community and Government > Education" },
-    { "category_id": 12010, "category_label": "Community and Government > Education > Adult Education" },
+    {
+        "category_id": 12010,
+        "category_label": "Community and Government > Education > Adult Education"
+    },
     { "category_id": 12011, "category_label": "Community and Government > Education > Art School" },
-    { "category_id": 12012, "category_label": "Community and Government > Education > Circus School" },
-    { "category_id": 12013, "category_label": "Community and Government > Education > College and University" },
+    {
+        "category_id": 12012,
+        "category_label": "Community and Government > Education > Circus School"
+    },
+    {
+        "category_id": 12013,
+        "category_label": "Community and Government > Education > College and University"
+    },
     {
         "category_id": 12014,
         "category_label": "Community and Government > Education > College and University > College Academic Building"
@@ -670,15 +985,39 @@
         "category_id": 12048,
         "category_label": "Community and Government > Education > College and University > Community College"
     },
-    { "category_id": 12049, "category_label": "Community and Government > Education > Computer Training School" },
-    { "category_id": 12050, "category_label": "Community and Government > Education > Culinary School" },
-    { "category_id": 12051, "category_label": "Community and Government > Education > Driving School" },
-    { "category_id": 12052, "category_label": "Community and Government > Education > Flight School" },
-    { "category_id": 12053, "category_label": "Community and Government > Education > Language School" },
-    { "category_id": 12054, "category_label": "Community and Government > Education > Music School" },
-    { "category_id": 12055, "category_label": "Community and Government > Education > Nursery School" },
+    {
+        "category_id": 12049,
+        "category_label": "Community and Government > Education > Computer Training School"
+    },
+    {
+        "category_id": 12050,
+        "category_label": "Community and Government > Education > Culinary School"
+    },
+    {
+        "category_id": 12051,
+        "category_label": "Community and Government > Education > Driving School"
+    },
+    {
+        "category_id": 12052,
+        "category_label": "Community and Government > Education > Flight School"
+    },
+    {
+        "category_id": 12053,
+        "category_label": "Community and Government > Education > Language School"
+    },
+    {
+        "category_id": 12054,
+        "category_label": "Community and Government > Education > Music School"
+    },
+    {
+        "category_id": 12055,
+        "category_label": "Community and Government > Education > Nursery School"
+    },
     { "category_id": 12056, "category_label": "Community and Government > Education > Preschool" },
-    { "category_id": 12057, "category_label": "Community and Government > Education > Primary and Secondary School" },
+    {
+        "category_id": 12057,
+        "category_label": "Community and Government > Education > Primary and Secondary School"
+    },
     {
         "category_id": 12058,
         "category_label": "Community and Government > Education > Primary and Secondary School > Elementary School"
@@ -691,14 +1030,35 @@
         "category_id": 12060,
         "category_label": "Community and Government > Education > Primary and Secondary School > Middle School"
     },
-    { "category_id": 12061, "category_label": "Community and Government > Education > Private School" },
-    { "category_id": 12062, "category_label": "Community and Government > Education > Religious School" },
-    { "category_id": 12063, "category_label": "Community and Government > Education > Trade School" },
+    {
+        "category_id": 12061,
+        "category_label": "Community and Government > Education > Private School"
+    },
+    {
+        "category_id": 12062,
+        "category_label": "Community and Government > Education > Religious School"
+    },
+    {
+        "category_id": 12063,
+        "category_label": "Community and Government > Education > Trade School"
+    },
     { "category_id": 12064, "category_label": "Community and Government > Government Building" },
-    { "category_id": 12065, "category_label": "Community and Government > Government Building > Capitol Building" },
-    { "category_id": 12066, "category_label": "Community and Government > Government Building > City Hall" },
-    { "category_id": 12067, "category_label": "Community and Government > Government Building > Courthouse" },
-    { "category_id": 12068, "category_label": "Community and Government > Government Building > Embassy or Consulate" },
+    {
+        "category_id": 12065,
+        "category_label": "Community and Government > Government Building > Capitol Building"
+    },
+    {
+        "category_id": 12066,
+        "category_label": "Community and Government > Government Building > City Hall"
+    },
+    {
+        "category_id": 12067,
+        "category_label": "Community and Government > Government Building > Courthouse"
+    },
+    {
+        "category_id": 12068,
+        "category_label": "Community and Government > Government Building > Embassy or Consulate"
+    },
     {
         "category_id": 12069,
         "category_label": "Community and Government > Government Building > Government Department"
@@ -715,12 +1075,18 @@
         "category_id": 12072,
         "category_label": "Community and Government > Government Building > Law Enforcement and Public Safety > Police Station"
     },
-    { "category_id": 12073, "category_label": "Community and Government > Government Building > Military" },
+    {
+        "category_id": 12073,
+        "category_label": "Community and Government > Government Building > Military"
+    },
     {
         "category_id": 12074,
         "category_label": "Community and Government > Government Building > Military > Military Base"
     },
-    { "category_id": 12075, "category_label": "Community and Government > Government Building > Post Office" },
+    {
+        "category_id": 12075,
+        "category_label": "Community and Government > Government Building > Post Office"
+    },
     { "category_id": 12076, "category_label": "Community and Government > Government Lobbyist" },
     { "category_id": 12077, "category_label": "Community and Government > Homeless Shelter" },
     { "category_id": 12078, "category_label": "Community and Government > Housing Authority" },
@@ -729,17 +1095,35 @@
     { "category_id": 12081, "category_label": "Community and Government > Observatory" },
     { "category_id": 12082, "category_label": "Community and Government > Organization" },
     { "category_id": 12083, "category_label": "Community and Government > Organization > Charity" },
-    { "category_id": 12084, "category_label": "Community and Government > Organization > Club House" },
-    { "category_id": 12085, "category_label": "Community and Government > Organization > Environmental Organization" },
-    { "category_id": 12086, "category_label": "Community and Government > Organization > Non-Profit Organization" },
+    {
+        "category_id": 12084,
+        "category_label": "Community and Government > Organization > Club House"
+    },
+    {
+        "category_id": 12085,
+        "category_label": "Community and Government > Organization > Environmental Organization"
+    },
+    {
+        "category_id": 12086,
+        "category_label": "Community and Government > Organization > Non-Profit Organization"
+    },
     {
         "category_id": 12087,
         "category_label": "Community and Government > Organization > Social Services Organization"
     },
-    { "category_id": 12088, "category_label": "Community and Government > Organization > Veterans' Organization" },
-    { "category_id": 12089, "category_label": "Community and Government > Organization > Youth Organization" },
+    {
+        "category_id": 12088,
+        "category_label": "Community and Government > Organization > Veterans' Organization"
+    },
+    {
+        "category_id": 12089,
+        "category_label": "Community and Government > Organization > Youth Organization"
+    },
     { "category_id": 12090, "category_label": "Community and Government > Prison" },
-    { "category_id": 12091, "category_label": "Community and Government > Public and Social Service" },
+    {
+        "category_id": 12091,
+        "category_label": "Community and Government > Public and Social Service"
+    },
     { "category_id": 12092, "category_label": "Community and Government > Public Bathroom" },
     { "category_id": 12093, "category_label": "Community and Government > Rehabilitation Center" },
     { "category_id": 12094, "category_label": "Community and Government > Residential Building" },
@@ -747,20 +1131,62 @@
     { "category_id": 12096, "category_label": "Community and Government > Senior Citizen Service" },
     { "category_id": 12097, "category_label": "Community and Government > Social Club" },
     { "category_id": 12098, "category_label": "Community and Government > Spiritual Center" },
-    { "category_id": 12099, "category_label": "Community and Government > Spiritual Center > Buddhist Temple" },
-    { "category_id": 12100, "category_label": "Community and Government > Spiritual Center > Cemevi" },
-    { "category_id": 12101, "category_label": "Community and Government > Spiritual Center > Church" },
-    { "category_id": 12102, "category_label": "Community and Government > Spiritual Center > Confucian Temple" },
-    { "category_id": 12103, "category_label": "Community and Government > Spiritual Center > Hindu Temple" },
-    { "category_id": 12104, "category_label": "Community and Government > Spiritual Center > Kingdom Hall" },
-    { "category_id": 12105, "category_label": "Community and Government > Spiritual Center > Monastery" },
-    { "category_id": 12106, "category_label": "Community and Government > Spiritual Center > Mosque" },
-    { "category_id": 12107, "category_label": "Community and Government > Spiritual Center > Prayer Room" },
-    { "category_id": 12108, "category_label": "Community and Government > Spiritual Center > Shrine" },
-    { "category_id": 12109, "category_label": "Community and Government > Spiritual Center > Sikh Temple" },
-    { "category_id": 12110, "category_label": "Community and Government > Spiritual Center > Synagogue" },
-    { "category_id": 12111, "category_label": "Community and Government > Spiritual Center > Temple" },
-    { "category_id": 12112, "category_label": "Community and Government > Spiritual Center > Terreiro" },
+    {
+        "category_id": 12099,
+        "category_label": "Community and Government > Spiritual Center > Buddhist Temple"
+    },
+    {
+        "category_id": 12100,
+        "category_label": "Community and Government > Spiritual Center > Cemevi"
+    },
+    {
+        "category_id": 12101,
+        "category_label": "Community and Government > Spiritual Center > Church"
+    },
+    {
+        "category_id": 12102,
+        "category_label": "Community and Government > Spiritual Center > Confucian Temple"
+    },
+    {
+        "category_id": 12103,
+        "category_label": "Community and Government > Spiritual Center > Hindu Temple"
+    },
+    {
+        "category_id": 12104,
+        "category_label": "Community and Government > Spiritual Center > Kingdom Hall"
+    },
+    {
+        "category_id": 12105,
+        "category_label": "Community and Government > Spiritual Center > Monastery"
+    },
+    {
+        "category_id": 12106,
+        "category_label": "Community and Government > Spiritual Center > Mosque"
+    },
+    {
+        "category_id": 12107,
+        "category_label": "Community and Government > Spiritual Center > Prayer Room"
+    },
+    {
+        "category_id": 12108,
+        "category_label": "Community and Government > Spiritual Center > Shrine"
+    },
+    {
+        "category_id": 12109,
+        "category_label": "Community and Government > Spiritual Center > Sikh Temple"
+    },
+    {
+        "category_id": 12110,
+        "category_label": "Community and Government > Spiritual Center > Synagogue"
+    },
+    {
+        "category_id": 12111,
+        "category_label": "Community and Government > Spiritual Center > Temple"
+    },
+    {
+        "category_id": 12112,
+        "category_label": "Community and Government > Spiritual Center > Terreiro"
+    },
     { "category_id": 12113, "category_label": "Community and Government > Summer Camp" },
     { "category_id": 12114, "category_label": "Community and Government > Trailer Park" },
     { "category_id": 12115, "category_label": "Community and Government > Utility Company" },
@@ -774,10 +1200,22 @@
         "category_id": 12119,
         "category_label": "Community and Government > Government Building > Law Enforcement and Public Safety > Rescue Service"
     },
-    { "category_id": 12120, "category_label": "Community and Government > Organization > Labor Union" },
-    { "category_id": 12121, "category_label": "Community and Government > Organization > LGBTQ Organization" },
-    { "category_id": 12122, "category_label": "Community and Government > Residential Building > Apartment or Condo" },
-    { "category_id": 12123, "category_label": "Community and Government > Residential Building > Home (private)" },
+    {
+        "category_id": 12120,
+        "category_label": "Community and Government > Organization > Labor Union"
+    },
+    {
+        "category_id": 12121,
+        "category_label": "Community and Government > Organization > LGBTQ Organization"
+    },
+    {
+        "category_id": 12122,
+        "category_label": "Community and Government > Residential Building > Apartment or Condo"
+    },
+    {
+        "category_id": 12123,
+        "category_label": "Community and Government > Residential Building > Home (private)"
+    },
     { "category_id": 12124, "category_label": "Community and Government > Town Hall" },
     {
         "category_id": 12125,
@@ -816,10 +1254,22 @@
     { "category_id": 13030, "category_label": "Dining and Drinking > Restaurant > Buffet" },
     { "category_id": 13031, "category_label": "Dining and Drinking > Restaurant > Burger Joint" },
     { "category_id": 13032, "category_label": "Dining and Drinking > Cafe, Coffee, and Tea House" },
-    { "category_id": 13033, "category_label": "Dining and Drinking > Cafe, Coffee, and Tea House > Bubble Tea Shop" },
-    { "category_id": 13034, "category_label": "Dining and Drinking > Cafe, Coffee, and Tea House > Café" },
-    { "category_id": 13035, "category_label": "Dining and Drinking > Cafe, Coffee, and Tea House > Coffee Shop" },
-    { "category_id": 13036, "category_label": "Dining and Drinking > Cafe, Coffee, and Tea House > Tea Room" },
+    {
+        "category_id": 13033,
+        "category_label": "Dining and Drinking > Cafe, Coffee, and Tea House > Bubble Tea Shop"
+    },
+    {
+        "category_id": 13034,
+        "category_label": "Dining and Drinking > Cafe, Coffee, and Tea House > Café"
+    },
+    {
+        "category_id": 13035,
+        "category_label": "Dining and Drinking > Cafe, Coffee, and Tea House > Coffee Shop"
+    },
+    {
+        "category_id": 13036,
+        "category_label": "Dining and Drinking > Cafe, Coffee, and Tea House > Tea Room"
+    },
     { "category_id": 13037, "category_label": "Dining and Drinking > Cafeteria" },
     { "category_id": 13038, "category_label": "Dining and Drinking > Cidery" },
     { "category_id": 13039, "category_label": "Dining and Drinking > Restaurant > Deli" },
@@ -827,31 +1277,58 @@
     { "category_id": 13041, "category_label": "Dining and Drinking > Creperie" },
     { "category_id": 13042, "category_label": "Dining and Drinking > Dessert Shop > Cupcake Shop" },
     { "category_id": 13043, "category_label": "Dining and Drinking > Donut Shop" },
-    { "category_id": 13044, "category_label": "Dining and Drinking > Dessert Shop > Frozen Yogurt Shop" },
+    {
+        "category_id": 13044,
+        "category_label": "Dining and Drinking > Dessert Shop > Frozen Yogurt Shop"
+    },
     { "category_id": 13045, "category_label": "Dining and Drinking > Dessert Shop > Gelato Shop" },
-    { "category_id": 13046, "category_label": "Dining and Drinking > Dessert Shop > Ice Cream Parlor" },
+    {
+        "category_id": 13046,
+        "category_label": "Dining and Drinking > Dessert Shop > Ice Cream Parlor"
+    },
     { "category_id": 13047, "category_label": "Dining and Drinking > Dessert Shop > Pastry Shop" },
     { "category_id": 13048, "category_label": "Dining and Drinking > Dessert Shop > Pie Shop" },
     { "category_id": 13049, "category_label": "Dining and Drinking > Restaurant > Diner" },
     { "category_id": 13050, "category_label": "Dining and Drinking > Distillery" },
-    { "category_id": 13051, "category_label": "Dining and Drinking > Restaurant > Fish and Chips Shop" },
+    {
+        "category_id": 13051,
+        "category_label": "Dining and Drinking > Restaurant > Fish and Chips Shop"
+    },
     { "category_id": 13052, "category_label": "Dining and Drinking > Food Court" },
     { "category_id": 13053, "category_label": "Dining and Drinking > Food Stand" },
     { "category_id": 13054, "category_label": "Dining and Drinking > Food Truck" },
-    { "category_id": 13055, "category_label": "Dining and Drinking > Restaurant > Fried Chicken Joint" },
+    {
+        "category_id": 13055,
+        "category_label": "Dining and Drinking > Restaurant > Fried Chicken Joint"
+    },
     { "category_id": 13056, "category_label": "Dining and Drinking > Restaurant > Friterie" },
     { "category_id": 13057, "category_label": "Dining and Drinking > Restaurant > Gastropub" },
     { "category_id": 13058, "category_label": "Dining and Drinking > Restaurant > Hot Dog Joint" },
     { "category_id": 13059, "category_label": "Dining and Drinking > Juice Bar" },
-    { "category_id": 13060, "category_label": "Dining and Drinking > Restaurant > Mac and Cheese Joint" },
+    {
+        "category_id": 13060,
+        "category_label": "Dining and Drinking > Restaurant > Mac and Cheese Joint"
+    },
     { "category_id": 13061, "category_label": "Dining and Drinking > Meadery" },
     { "category_id": 13062, "category_label": "Dining and Drinking > Night Market" },
-    { "category_id": 13063, "category_label": "Dining and Drinking > Cafe, Coffee, and Tea House > Pet Café" },
+    {
+        "category_id": 13063,
+        "category_label": "Dining and Drinking > Cafe, Coffee, and Tea House > Pet Café"
+    },
     { "category_id": 13064, "category_label": "Dining and Drinking > Restaurant > Pizzeria" },
     { "category_id": 13065, "category_label": "Dining and Drinking > Restaurant" },
-    { "category_id": 13066, "category_label": "Dining and Drinking > Restaurant > Afghan Restaurant" },
-    { "category_id": 13067, "category_label": "Dining and Drinking > Restaurant > African Restaurant" },
-    { "category_id": 13068, "category_label": "Dining and Drinking > Restaurant > American Restaurant" },
+    {
+        "category_id": 13066,
+        "category_label": "Dining and Drinking > Restaurant > Afghan Restaurant"
+    },
+    {
+        "category_id": 13067,
+        "category_label": "Dining and Drinking > Restaurant > African Restaurant"
+    },
+    {
+        "category_id": 13068,
+        "category_label": "Dining and Drinking > Restaurant > American Restaurant"
+    },
     {
         "category_id": 13069,
         "category_label": "Dining and Drinking > Restaurant > Latin American Restaurant > Arepa Restaurant"
@@ -860,16 +1337,34 @@
         "category_id": 13070,
         "category_label": "Dining and Drinking > Restaurant > Latin American Restaurant > South American Restaurant > Argentinian Restaurant "
     },
-    { "category_id": 13071, "category_label": "Dining and Drinking > Restaurant > Armenian Restaurant" },
-    { "category_id": 13072, "category_label": "Dining and Drinking > Restaurant > Asian Restaurant" },
-    { "category_id": 13073, "category_label": "Dining and Drinking > Restaurant > Australian Restaurant" },
-    { "category_id": 13074, "category_label": "Dining and Drinking > Restaurant > Austrian Restaurant" },
-    { "category_id": 13075, "category_label": "Dining and Drinking > Restaurant > Bangladeshi Restaurant" },
+    {
+        "category_id": 13071,
+        "category_label": "Dining and Drinking > Restaurant > Armenian Restaurant"
+    },
+    {
+        "category_id": 13072,
+        "category_label": "Dining and Drinking > Restaurant > Asian Restaurant"
+    },
+    {
+        "category_id": 13073,
+        "category_label": "Dining and Drinking > Restaurant > Australian Restaurant"
+    },
+    {
+        "category_id": 13074,
+        "category_label": "Dining and Drinking > Restaurant > Austrian Restaurant"
+    },
+    {
+        "category_id": 13075,
+        "category_label": "Dining and Drinking > Restaurant > Bangladeshi Restaurant"
+    },
     {
         "category_id": 13076,
         "category_label": "Dining and Drinking > Restaurant > Eastern European Restaurant > Belarusian Restaurant"
     },
-    { "category_id": 13077, "category_label": "Dining and Drinking > Restaurant > Belgian Restaurant" },
+    {
+        "category_id": 13077,
+        "category_label": "Dining and Drinking > Restaurant > Belgian Restaurant"
+    },
     {
         "category_id": 13078,
         "category_label": "Dining and Drinking > Restaurant > Eastern European Restaurant > Bosnian Restaurant"
@@ -938,13 +1433,22 @@
         "category_id": 13094,
         "category_label": "Dining and Drinking > Restaurant > Asian Restaurant > Burmese Restaurant"
     },
-    { "category_id": 13095, "category_label": "Dining and Drinking > Restaurant > Cajun and Creole Restaurant" },
+    {
+        "category_id": 13095,
+        "category_label": "Dining and Drinking > Restaurant > Cajun and Creole Restaurant"
+    },
     {
         "category_id": 13096,
         "category_label": "Dining and Drinking > Restaurant > Asian Restaurant > Cambodian Restaurant"
     },
-    { "category_id": 13097, "category_label": "Dining and Drinking > Restaurant > Caribbean Restaurant" },
-    { "category_id": 13098, "category_label": "Dining and Drinking > Restaurant > Caucasian Restaurant" },
+    {
+        "category_id": 13097,
+        "category_label": "Dining and Drinking > Restaurant > Caribbean Restaurant"
+    },
+    {
+        "category_id": 13098,
+        "category_label": "Dining and Drinking > Restaurant > Caucasian Restaurant"
+    },
     {
         "category_id": 13099,
         "category_label": "Dining and Drinking > Restaurant > Asian Restaurant > Chinese Restaurant"
@@ -1085,15 +1589,30 @@
         "category_id": 13133,
         "category_label": "Dining and Drinking > Restaurant > Latin American Restaurant > South American Restaurant > Colombian Restaurant"
     },
-    { "category_id": 13134, "category_label": "Dining and Drinking > Restaurant > Comfort Food Restaurant" },
+    {
+        "category_id": 13134,
+        "category_label": "Dining and Drinking > Restaurant > Comfort Food Restaurant"
+    },
     {
         "category_id": 13135,
         "category_label": "Dining and Drinking > Restaurant > Caribbean Restaurant > Cuban Restaurant"
     },
-    { "category_id": 13136, "category_label": "Dining and Drinking > Restaurant > Czech Restaurant" },
-    { "category_id": 13137, "category_label": "Dining and Drinking > Restaurant > Dumpling Restaurant" },
-    { "category_id": 13138, "category_label": "Dining and Drinking > Restaurant > Dutch Restaurant" },
-    { "category_id": 13139, "category_label": "Dining and Drinking > Restaurant > Eastern European Restaurant" },
+    {
+        "category_id": 13136,
+        "category_label": "Dining and Drinking > Restaurant > Czech Restaurant"
+    },
+    {
+        "category_id": 13137,
+        "category_label": "Dining and Drinking > Restaurant > Dumpling Restaurant"
+    },
+    {
+        "category_id": 13138,
+        "category_label": "Dining and Drinking > Restaurant > Dutch Restaurant"
+    },
+    {
+        "category_id": 13139,
+        "category_label": "Dining and Drinking > Restaurant > Eastern European Restaurant"
+    },
     {
         "category_id": 13140,
         "category_label": "Dining and Drinking > Restaurant > Middle Eastern Restaurant > Egyptian Restaurant"
@@ -1102,19 +1621,34 @@
         "category_id": 13141,
         "category_label": "Dining and Drinking > Restaurant > Latin American Restaurant > Empanada Restaurant"
     },
-    { "category_id": 13142, "category_label": "Dining and Drinking > Restaurant > English Restaurant" },
+    {
+        "category_id": 13142,
+        "category_label": "Dining and Drinking > Restaurant > English Restaurant"
+    },
     {
         "category_id": 13143,
         "category_label": "Dining and Drinking > Restaurant > African Restaurant > Ethiopian Restaurant"
     },
-    { "category_id": 13144, "category_label": "Dining and Drinking > Restaurant > Falafel Restaurant" },
-    { "category_id": 13145, "category_label": "Dining and Drinking > Restaurant > Fast Food Restaurant" },
+    {
+        "category_id": 13144,
+        "category_label": "Dining and Drinking > Restaurant > Falafel Restaurant"
+    },
+    {
+        "category_id": 13145,
+        "category_label": "Dining and Drinking > Restaurant > Fast Food Restaurant"
+    },
     {
         "category_id": 13146,
         "category_label": "Dining and Drinking > Restaurant > Asian Restaurant > Filipino Restaurant"
     },
-    { "category_id": 13147, "category_label": "Dining and Drinking > Restaurant > Fondue Restaurant" },
-    { "category_id": 13148, "category_label": "Dining and Drinking > Restaurant > French Restaurant" },
+    {
+        "category_id": 13147,
+        "category_label": "Dining and Drinking > Restaurant > Fondue Restaurant"
+    },
+    {
+        "category_id": 13148,
+        "category_label": "Dining and Drinking > Restaurant > French Restaurant"
+    },
     {
         "category_id": 13149,
         "category_label": "Dining and Drinking > Restaurant > French Restaurant > Alsatian Restaurant"
@@ -1127,7 +1661,10 @@
         "category_id": 13151,
         "category_label": "Dining and Drinking > Restaurant > French Restaurant > Basque Restaurant"
     },
-    { "category_id": 13152, "category_label": "Dining and Drinking > Restaurant > French Restaurant > Brasserie" },
+    {
+        "category_id": 13152,
+        "category_label": "Dining and Drinking > Restaurant > French Restaurant > Brasserie"
+    },
     {
         "category_id": 13153,
         "category_label": "Dining and Drinking > Restaurant > French Restaurant > Breton Restaurant"
@@ -1148,8 +1685,14 @@
         "category_id": 13157,
         "category_label": "Dining and Drinking > Restaurant > French Restaurant > Corsican Restaurant"
     },
-    { "category_id": 13158, "category_label": "Dining and Drinking > Restaurant > French Restaurant > Estaminet" },
-    { "category_id": 13159, "category_label": "Dining and Drinking > Restaurant > French Restaurant > Labour Canteen" },
+    {
+        "category_id": 13158,
+        "category_label": "Dining and Drinking > Restaurant > French Restaurant > Estaminet"
+    },
+    {
+        "category_id": 13159,
+        "category_label": "Dining and Drinking > Restaurant > French Restaurant > Labour Canteen"
+    },
     {
         "category_id": 13160,
         "category_label": "Dining and Drinking > Restaurant > French Restaurant > Lyonese Bouchon"
@@ -1170,8 +1713,14 @@
         "category_id": 13164,
         "category_label": "Dining and Drinking > Restaurant > French Restaurant > Southwestern French Restaurant"
     },
-    { "category_id": 13165, "category_label": "Dining and Drinking > Restaurant > German Restaurant" },
-    { "category_id": 13166, "category_label": "Dining and Drinking > Restaurant > German Restaurant > Apple Wine Pub" },
+    {
+        "category_id": 13165,
+        "category_label": "Dining and Drinking > Restaurant > German Restaurant"
+    },
+    {
+        "category_id": 13166,
+        "category_label": "Dining and Drinking > Restaurant > German Restaurant > Apple Wine Pub"
+    },
     {
         "category_id": 13167,
         "category_label": "Dining and Drinking > Restaurant > German Restaurant > Bavarian Restaurant"
@@ -1212,37 +1761,70 @@
         "category_id": 13176,
         "category_label": "Dining and Drinking > Restaurant > German Restaurant > Swabian Restaurant"
     },
-    { "category_id": 13177, "category_label": "Dining and Drinking > Restaurant > Greek Restaurant" },
-    { "category_id": 13178, "category_label": "Dining and Drinking > Restaurant > Greek Restaurant > Bougatsa Shop" },
+    {
+        "category_id": 13177,
+        "category_label": "Dining and Drinking > Restaurant > Greek Restaurant"
+    },
+    {
+        "category_id": 13178,
+        "category_label": "Dining and Drinking > Restaurant > Greek Restaurant > Bougatsa Shop"
+    },
     {
         "category_id": 13179,
         "category_label": "Dining and Drinking > Restaurant > Greek Restaurant > Cretan Restaurant"
     },
-    { "category_id": 13180, "category_label": "Dining and Drinking > Restaurant > Greek Restaurant > Fish Taverna" },
+    {
+        "category_id": 13180,
+        "category_label": "Dining and Drinking > Restaurant > Greek Restaurant > Fish Taverna"
+    },
     {
         "category_id": 13181,
         "category_label": "Dining and Drinking > Restaurant > Greek Restaurant > Grilled Meat Restaurant"
     },
-    { "category_id": 13182, "category_label": "Dining and Drinking > Restaurant > Greek Restaurant > Kafenio" },
-    { "category_id": 13183, "category_label": "Dining and Drinking > Restaurant > Greek Restaurant > Magirio" },
-    { "category_id": 13184, "category_label": "Dining and Drinking > Restaurant > Greek Restaurant > Meze Restaurant" },
+    {
+        "category_id": 13182,
+        "category_label": "Dining and Drinking > Restaurant > Greek Restaurant > Kafenio"
+    },
+    {
+        "category_id": 13183,
+        "category_label": "Dining and Drinking > Restaurant > Greek Restaurant > Magirio"
+    },
+    {
+        "category_id": 13184,
+        "category_label": "Dining and Drinking > Restaurant > Greek Restaurant > Meze Restaurant"
+    },
     {
         "category_id": 13185,
         "category_label": "Dining and Drinking > Restaurant > Greek Restaurant > Modern Greek Restaurant"
     },
-    { "category_id": 13186, "category_label": "Dining and Drinking > Restaurant > Greek Restaurant > Ouzeri" },
+    {
+        "category_id": 13186,
+        "category_label": "Dining and Drinking > Restaurant > Greek Restaurant > Ouzeri"
+    },
     {
         "category_id": 13187,
         "category_label": "Dining and Drinking > Restaurant > Greek Restaurant > Patsa Restaurant"
     },
-    { "category_id": 13188, "category_label": "Dining and Drinking > Restaurant > Greek Restaurant > Souvlaki Shop" },
-    { "category_id": 13189, "category_label": "Dining and Drinking > Restaurant > Greek Restaurant > Taverna" },
+    {
+        "category_id": 13188,
+        "category_label": "Dining and Drinking > Restaurant > Greek Restaurant > Souvlaki Shop"
+    },
+    {
+        "category_id": 13189,
+        "category_label": "Dining and Drinking > Restaurant > Greek Restaurant > Taverna"
+    },
     {
         "category_id": 13190,
         "category_label": "Dining and Drinking > Restaurant > Greek Restaurant > Tsipouro Restaurant"
     },
-    { "category_id": 13191, "category_label": "Dining and Drinking > Restaurant > Halal Restaurant" },
-    { "category_id": 13192, "category_label": "Dining and Drinking > Restaurant > Hawaiian Restaurant" },
+    {
+        "category_id": 13191,
+        "category_label": "Dining and Drinking > Restaurant > Halal Restaurant"
+    },
+    {
+        "category_id": 13192,
+        "category_label": "Dining and Drinking > Restaurant > Hawaiian Restaurant"
+    },
     {
         "category_id": 13193,
         "category_label": "Dining and Drinking > Restaurant > Hawaiian Restaurant > Poke Restaurant"
@@ -1259,9 +1841,18 @@
         "category_id": 13196,
         "category_label": "Dining and Drinking > Restaurant > Asian Restaurant > Hotpot Restaurant"
     },
-    { "category_id": 13197, "category_label": "Dining and Drinking > Restaurant > Hungarian Restaurant" },
-    { "category_id": 13198, "category_label": "Dining and Drinking > Restaurant > Indian Chinese Restaurant" },
-    { "category_id": 13199, "category_label": "Dining and Drinking > Restaurant > Indian Restaurant" },
+    {
+        "category_id": 13197,
+        "category_label": "Dining and Drinking > Restaurant > Hungarian Restaurant"
+    },
+    {
+        "category_id": 13198,
+        "category_label": "Dining and Drinking > Restaurant > Indian Chinese Restaurant"
+    },
+    {
+        "category_id": 13199,
+        "category_label": "Dining and Drinking > Restaurant > Indian Restaurant"
+    },
     {
         "category_id": 13200,
         "category_label": "Dining and Drinking > Restaurant > Indian Restaurant > Andhra Restaurant"
@@ -1274,13 +1865,22 @@
         "category_id": 13202,
         "category_label": "Dining and Drinking > Restaurant > Indian Restaurant > Bengali Restaurant"
     },
-    { "category_id": 13203, "category_label": "Dining and Drinking > Restaurant > Indian Restaurant > Chaat Place" },
+    {
+        "category_id": 13203,
+        "category_label": "Dining and Drinking > Restaurant > Indian Restaurant > Chaat Place"
+    },
     {
         "category_id": 13204,
         "category_label": "Dining and Drinking > Restaurant > Indian Restaurant > Chettinad Restaurant"
     },
-    { "category_id": 13205, "category_label": "Dining and Drinking > Restaurant > Indian Restaurant > Dhaba" },
-    { "category_id": 13206, "category_label": "Dining and Drinking > Restaurant > Indian Restaurant > Dosa Place" },
+    {
+        "category_id": 13205,
+        "category_label": "Dining and Drinking > Restaurant > Indian Restaurant > Dhaba"
+    },
+    {
+        "category_id": 13206,
+        "category_label": "Dining and Drinking > Restaurant > Indian Restaurant > Dosa Place"
+    },
     {
         "category_id": 13207,
         "category_label": "Dining and Drinking > Restaurant > Indian Restaurant > Goan Restaurant"
@@ -1297,7 +1897,10 @@
         "category_id": 13210,
         "category_label": "Dining and Drinking > Restaurant > Indian Restaurant > Indian Sweet Shop"
     },
-    { "category_id": 13211, "category_label": "Dining and Drinking > Restaurant > Indian Restaurant > Irani Cafe" },
+    {
+        "category_id": 13211,
+        "category_label": "Dining and Drinking > Restaurant > Indian Restaurant > Irani Cafe"
+    },
     {
         "category_id": 13212,
         "category_label": "Dining and Drinking > Restaurant > Indian Restaurant > Jain Restaurant"
@@ -1394,12 +1997,18 @@
         "category_id": 13235,
         "category_label": "Dining and Drinking > Restaurant > Middle Eastern Restaurant > Israeli Restaurant"
     },
-    { "category_id": 13236, "category_label": "Dining and Drinking > Restaurant > Italian Restaurant" },
+    {
+        "category_id": 13236,
+        "category_label": "Dining and Drinking > Restaurant > Italian Restaurant"
+    },
     {
         "category_id": 13237,
         "category_label": "Dining and Drinking > Restaurant > Italian Restaurant > Abruzzo Restaurant"
     },
-    { "category_id": 13238, "category_label": "Dining and Drinking > Restaurant > Italian Restaurant > Agriturismo" },
+    {
+        "category_id": 13238,
+        "category_label": "Dining and Drinking > Restaurant > Italian Restaurant > Agriturismo"
+    },
     {
         "category_id": 13239,
         "category_label": "Dining and Drinking > Restaurant > Italian Restaurant > Aosta Restaurant"
@@ -1432,7 +2041,10 @@
         "category_id": 13246,
         "category_label": "Dining and Drinking > Restaurant > Italian Restaurant > Lombard Restaurant"
     },
-    { "category_id": 13247, "category_label": "Dining and Drinking > Restaurant > Italian Restaurant > Malga" },
+    {
+        "category_id": 13247,
+        "category_label": "Dining and Drinking > Restaurant > Italian Restaurant > Malga"
+    },
     {
         "category_id": 13248,
         "category_label": "Dining and Drinking > Restaurant > Italian Restaurant > Marche Restaurant"
@@ -1441,7 +2053,10 @@
         "category_id": 13249,
         "category_label": "Dining and Drinking > Restaurant > Italian Restaurant > Molise Restaurant"
     },
-    { "category_id": 13250, "category_label": "Dining and Drinking > Restaurant > Italian Restaurant > Piadineria" },
+    {
+        "category_id": 13250,
+        "category_label": "Dining and Drinking > Restaurant > Italian Restaurant > Piadineria"
+    },
     {
         "category_id": 13251,
         "category_label": "Dining and Drinking > Restaurant > Italian Restaurant > Piedmontese Restaurant"
@@ -1470,7 +2085,10 @@
         "category_id": 13257,
         "category_label": "Dining and Drinking > Restaurant > Italian Restaurant > South Tyrolean Restaurant"
     },
-    { "category_id": 13258, "category_label": "Dining and Drinking > Restaurant > Italian Restaurant > Trattoria" },
+    {
+        "category_id": 13258,
+        "category_label": "Dining and Drinking > Restaurant > Italian Restaurant > Trattoria"
+    },
     {
         "category_id": 13259,
         "category_label": "Dining and Drinking > Restaurant > Italian Restaurant > Trentino Restaurant"
@@ -1579,12 +2197,18 @@
         "category_id": 13285,
         "category_label": "Dining and Drinking > Restaurant > Asian Restaurant > Japanese Restaurant > Yoshoku Restaurant"
     },
-    { "category_id": 13286, "category_label": "Dining and Drinking > Restaurant > Jewish Restaurant" },
+    {
+        "category_id": 13286,
+        "category_label": "Dining and Drinking > Restaurant > Jewish Restaurant"
+    },
     {
         "category_id": 13287,
         "category_label": "Dining and Drinking > Restaurant > Jewish Restaurant > Kosher Restaurant"
     },
-    { "category_id": 13288, "category_label": "Dining and Drinking > Restaurant > Kebab Restaurant" },
+    {
+        "category_id": 13288,
+        "category_label": "Dining and Drinking > Restaurant > Kebab Restaurant"
+    },
     {
         "category_id": 13289,
         "category_label": "Dining and Drinking > Restaurant > Asian Restaurant > Korean Restaurant"
@@ -1617,7 +2241,10 @@
         "category_id": 13296,
         "category_label": "Dining and Drinking > Restaurant > Middle Eastern Restaurant > Kurdish Restaurant"
     },
-    { "category_id": 13297, "category_label": "Dining and Drinking > Restaurant > Latin American Restaurant" },
+    {
+        "category_id": 13297,
+        "category_label": "Dining and Drinking > Restaurant > Latin American Restaurant"
+    },
     {
         "category_id": 13298,
         "category_label": "Dining and Drinking > Restaurant > Middle Eastern Restaurant > Lebanese Restaurant"
@@ -1634,9 +2261,18 @@
         "category_id": 13301,
         "category_label": "Dining and Drinking > Restaurant > African Restaurant > Mauritian Restaurant"
     },
-    { "category_id": 13302, "category_label": "Dining and Drinking > Restaurant > Mediterranean Restaurant" },
-    { "category_id": 13303, "category_label": "Dining and Drinking > Restaurant > Mexican Restaurant" },
-    { "category_id": 13304, "category_label": "Dining and Drinking > Restaurant > Mexican Restaurant > Botanero" },
+    {
+        "category_id": 13302,
+        "category_label": "Dining and Drinking > Restaurant > Mediterranean Restaurant"
+    },
+    {
+        "category_id": 13303,
+        "category_label": "Dining and Drinking > Restaurant > Mexican Restaurant"
+    },
+    {
+        "category_id": 13304,
+        "category_label": "Dining and Drinking > Restaurant > Mexican Restaurant > Botanero"
+    },
     {
         "category_id": 13305,
         "category_label": "Dining and Drinking > Restaurant > Mexican Restaurant > Burrito Restaurant"
@@ -1653,14 +2289,26 @@
         "category_id": 13308,
         "category_label": "Dining and Drinking > Restaurant > Mexican Restaurant > Yucatecan Restaurant"
     },
-    { "category_id": 13309, "category_label": "Dining and Drinking > Restaurant > Middle Eastern Restaurant" },
-    { "category_id": 13310, "category_label": "Dining and Drinking > Restaurant > Modern European Restaurant" },
-    { "category_id": 13311, "category_label": "Dining and Drinking > Restaurant > Molecular Gastronomy Restaurant" },
+    {
+        "category_id": 13309,
+        "category_label": "Dining and Drinking > Restaurant > Middle Eastern Restaurant"
+    },
+    {
+        "category_id": 13310,
+        "category_label": "Dining and Drinking > Restaurant > Modern European Restaurant"
+    },
+    {
+        "category_id": 13311,
+        "category_label": "Dining and Drinking > Restaurant > Molecular Gastronomy Restaurant"
+    },
     {
         "category_id": 13312,
         "category_label": "Dining and Drinking > Restaurant > Asian Restaurant > Mongolian Restaurant"
     },
-    { "category_id": 13313, "category_label": "Dining and Drinking > Restaurant > Moroccan Restaurant" },
+    {
+        "category_id": 13313,
+        "category_label": "Dining and Drinking > Restaurant > Moroccan Restaurant"
+    },
     {
         "category_id": 13314,
         "category_label": "Dining and Drinking > Restaurant > American Restaurant > New American Restaurant"
@@ -1669,7 +2317,10 @@
         "category_id": 13315,
         "category_label": "Dining and Drinking > Restaurant > Asian Restaurant > Noodle Restaurant"
     },
-    { "category_id": 13316, "category_label": "Dining and Drinking > Restaurant > Pakistani Restaurant" },
+    {
+        "category_id": 13316,
+        "category_label": "Dining and Drinking > Restaurant > Pakistani Restaurant"
+    },
     {
         "category_id": 13317,
         "category_label": "Dining and Drinking > Restaurant > Middle Eastern Restaurant > Persian Restaurant"
@@ -1698,9 +2349,18 @@
         "category_id": 13323,
         "category_label": "Dining and Drinking > Restaurant > Latin American Restaurant > South American Restaurant > Peruvian Restaurant > Peruvian Roast Chicken Joint"
     },
-    { "category_id": 13324, "category_label": "Dining and Drinking > Restaurant > Polish Restaurant" },
-    { "category_id": 13325, "category_label": "Dining and Drinking > Restaurant > Portuguese Restaurant" },
-    { "category_id": 13326, "category_label": "Dining and Drinking > Restaurant > Poutine Restaurant" },
+    {
+        "category_id": 13324,
+        "category_label": "Dining and Drinking > Restaurant > Polish Restaurant"
+    },
+    {
+        "category_id": 13325,
+        "category_label": "Dining and Drinking > Restaurant > Portuguese Restaurant"
+    },
+    {
+        "category_id": 13326,
+        "category_label": "Dining and Drinking > Restaurant > Poutine Restaurant"
+    },
     {
         "category_id": 13327,
         "category_label": "Dining and Drinking > Restaurant > Caribbean Restaurant > Puerto Rican Restaurant"
@@ -1709,10 +2369,22 @@
         "category_id": 13328,
         "category_label": "Dining and Drinking > Restaurant > Eastern European Restaurant > Romanian Restaurant"
     },
-    { "category_id": 13329, "category_label": "Dining and Drinking > Restaurant > Russian Restaurant" },
-    { "category_id": 13330, "category_label": "Dining and Drinking > Restaurant > Russian Restaurant > Blini House" },
-    { "category_id": 13331, "category_label": "Dining and Drinking > Restaurant > Russian Restaurant > Pelmeni House" },
-    { "category_id": 13332, "category_label": "Dining and Drinking > Restaurant > Salad Restaurant" },
+    {
+        "category_id": 13329,
+        "category_label": "Dining and Drinking > Restaurant > Russian Restaurant"
+    },
+    {
+        "category_id": 13330,
+        "category_label": "Dining and Drinking > Restaurant > Russian Restaurant > Blini House"
+    },
+    {
+        "category_id": 13331,
+        "category_label": "Dining and Drinking > Restaurant > Russian Restaurant > Pelmeni House"
+    },
+    {
+        "category_id": 13332,
+        "category_label": "Dining and Drinking > Restaurant > Salad Restaurant"
+    },
     {
         "category_id": 13333,
         "category_label": "Dining and Drinking > Restaurant > Latin American Restaurant > Salvadoran Restaurant"
@@ -1722,9 +2394,18 @@
         "category_id": 13335,
         "category_label": "Dining and Drinking > Restaurant > Asian Restaurant > Satay Restaurant"
     },
-    { "category_id": 13336, "category_label": "Dining and Drinking > Restaurant > Scandinavian Restaurant" },
-    { "category_id": 13337, "category_label": "Dining and Drinking > Restaurant > Scottish Restaurant" },
-    { "category_id": 13338, "category_label": "Dining and Drinking > Restaurant > Seafood Restaurant" },
+    {
+        "category_id": 13336,
+        "category_label": "Dining and Drinking > Restaurant > Scandinavian Restaurant"
+    },
+    {
+        "category_id": 13337,
+        "category_label": "Dining and Drinking > Restaurant > Scottish Restaurant"
+    },
+    {
+        "category_id": 13338,
+        "category_label": "Dining and Drinking > Restaurant > Seafood Restaurant"
+    },
     {
         "category_id": 13339,
         "category_label": "Dining and Drinking > Restaurant > Middle Eastern Restaurant > Shawarma Restaurant"
@@ -1733,14 +2414,23 @@
         "category_id": 13340,
         "category_label": "Dining and Drinking > Restaurant > Asian Restaurant > Singaporean Restaurant"
     },
-    { "category_id": 13341, "category_label": "Dining and Drinking > Restaurant > Slovak Restaurant" },
+    {
+        "category_id": 13341,
+        "category_label": "Dining and Drinking > Restaurant > Slovak Restaurant"
+    },
     { "category_id": 13342, "category_label": "Dining and Drinking > Restaurant > Soup Spot" },
     {
         "category_id": 13343,
         "category_label": "Dining and Drinking > Restaurant > Latin American Restaurant > South American Restaurant"
     },
-    { "category_id": 13344, "category_label": "Dining and Drinking > Restaurant > Southern Food Restaurant" },
-    { "category_id": 13345, "category_label": "Dining and Drinking > Restaurant > Spanish Restaurant" },
+    {
+        "category_id": 13344,
+        "category_label": "Dining and Drinking > Restaurant > Southern Food Restaurant"
+    },
+    {
+        "category_id": 13345,
+        "category_label": "Dining and Drinking > Restaurant > Spanish Restaurant"
+    },
     {
         "category_id": 13346,
         "category_label": "Dining and Drinking > Restaurant > Spanish Restaurant > Paella Restaurant"
@@ -1749,8 +2439,14 @@
         "category_id": 13347,
         "category_label": "Dining and Drinking > Restaurant > Spanish Restaurant > Tapas Restaurant"
     },
-    { "category_id": 13348, "category_label": "Dining and Drinking > Restaurant > Sri Lankan Restaurant" },
-    { "category_id": 13349, "category_label": "Dining and Drinking > Restaurant > Swiss Restaurant" },
+    {
+        "category_id": 13348,
+        "category_label": "Dining and Drinking > Restaurant > Sri Lankan Restaurant"
+    },
+    {
+        "category_id": 13349,
+        "category_label": "Dining and Drinking > Restaurant > Swiss Restaurant"
+    },
     {
         "category_id": 13350,
         "category_label": "Dining and Drinking > Restaurant > Middle Eastern Restaurant > Syrian Restaurant"
@@ -1759,29 +2455,50 @@
         "category_id": 13351,
         "category_label": "Dining and Drinking > Restaurant > Eastern European Restaurant > Tatar Restaurant"
     },
-    { "category_id": 13352, "category_label": "Dining and Drinking > Restaurant > Asian Restaurant > Thai Restaurant" },
+    {
+        "category_id": 13352,
+        "category_label": "Dining and Drinking > Restaurant > Asian Restaurant > Thai Restaurant"
+    },
     {
         "category_id": 13353,
         "category_label": "Dining and Drinking > Restaurant > Asian Restaurant > Thai Restaurant > Som Tum Restaurant"
     },
-    { "category_id": 13354, "category_label": "Dining and Drinking > Restaurant > Theme Restaurant" },
+    {
+        "category_id": 13354,
+        "category_label": "Dining and Drinking > Restaurant > Theme Restaurant"
+    },
     {
         "category_id": 13355,
         "category_label": "Dining and Drinking > Restaurant > Asian Restaurant > Tibetan Restaurant"
     },
-    { "category_id": 13356, "category_label": "Dining and Drinking > Restaurant > Turkish Restaurant" },
-    { "category_id": 13357, "category_label": "Dining and Drinking > Restaurant > Turkish Restaurant > Borek Place" },
+    {
+        "category_id": 13356,
+        "category_label": "Dining and Drinking > Restaurant > Turkish Restaurant"
+    },
+    {
+        "category_id": 13357,
+        "category_label": "Dining and Drinking > Restaurant > Turkish Restaurant > Borek Place"
+    },
     {
         "category_id": 13358,
         "category_label": "Dining and Drinking > Restaurant > Turkish Restaurant > Cigkofte Place"
     },
-    { "category_id": 13359, "category_label": "Dining and Drinking > Restaurant > Turkish Restaurant > Çöp Şiş Place" },
+    {
+        "category_id": 13359,
+        "category_label": "Dining and Drinking > Restaurant > Turkish Restaurant > Çöp Şiş Place"
+    },
     {
         "category_id": 13360,
         "category_label": "Dining and Drinking > Restaurant > Turkish Restaurant > Doner Restaurant"
     },
-    { "category_id": 13361, "category_label": "Dining and Drinking > Restaurant > Turkish Restaurant > Gozleme Place" },
-    { "category_id": 13362, "category_label": "Dining and Drinking > Restaurant > Turkish Restaurant > Kofte Place" },
+    {
+        "category_id": 13361,
+        "category_label": "Dining and Drinking > Restaurant > Turkish Restaurant > Gozleme Place"
+    },
+    {
+        "category_id": 13362,
+        "category_label": "Dining and Drinking > Restaurant > Turkish Restaurant > Kofte Place"
+    },
     {
         "category_id": 13363,
         "category_label": "Dining and Drinking > Restaurant > Turkish Restaurant > Kokoreç Restaurant"
@@ -1794,11 +2511,26 @@
         "category_id": 13365,
         "category_label": "Dining and Drinking > Restaurant > Turkish Restaurant > Kumru Restaurant"
     },
-    { "category_id": 13366, "category_label": "Dining and Drinking > Restaurant > Turkish Restaurant > Manti Place" },
-    { "category_id": 13367, "category_label": "Dining and Drinking > Restaurant > Turkish Restaurant > Meyhane" },
-    { "category_id": 13368, "category_label": "Dining and Drinking > Restaurant > Turkish Restaurant > Pide Place" },
-    { "category_id": 13369, "category_label": "Dining and Drinking > Restaurant > Turkish Restaurant > Pilavcı" },
-    { "category_id": 13370, "category_label": "Dining and Drinking > Restaurant > Turkish Restaurant > Söğüş Place" },
+    {
+        "category_id": 13366,
+        "category_label": "Dining and Drinking > Restaurant > Turkish Restaurant > Manti Place"
+    },
+    {
+        "category_id": 13367,
+        "category_label": "Dining and Drinking > Restaurant > Turkish Restaurant > Meyhane"
+    },
+    {
+        "category_id": 13368,
+        "category_label": "Dining and Drinking > Restaurant > Turkish Restaurant > Pide Place"
+    },
+    {
+        "category_id": 13369,
+        "category_label": "Dining and Drinking > Restaurant > Turkish Restaurant > Pilavcı"
+    },
+    {
+        "category_id": 13370,
+        "category_label": "Dining and Drinking > Restaurant > Turkish Restaurant > Söğüş Place"
+    },
     {
         "category_id": 13371,
         "category_label": "Dining and Drinking > Restaurant > Turkish Restaurant > Tantuni Restaurant"
@@ -1811,7 +2543,10 @@
         "category_id": 13373,
         "category_label": "Dining and Drinking > Restaurant > Turkish Restaurant > Turkish Home Cooking Restaurant"
     },
-    { "category_id": 13374, "category_label": "Dining and Drinking > Restaurant > Ukrainian Restaurant" },
+    {
+        "category_id": 13374,
+        "category_label": "Dining and Drinking > Restaurant > Ukrainian Restaurant"
+    },
     {
         "category_id": 13375,
         "category_label": "Dining and Drinking > Restaurant > Ukrainian Restaurant > Varenyky Restaurant"
@@ -1820,7 +2555,10 @@
         "category_id": 13376,
         "category_label": "Dining and Drinking > Restaurant > Ukrainian Restaurant > West-Ukrainian Restaurant"
     },
-    { "category_id": 13377, "category_label": "Dining and Drinking > Restaurant > Vegan and Vegetarian Restaurant" },
+    {
+        "category_id": 13377,
+        "category_label": "Dining and Drinking > Restaurant > Vegan and Vegetarian Restaurant"
+    },
     {
         "category_id": 13378,
         "category_label": "Dining and Drinking > Restaurant > Latin American Restaurant > South American Restaurant > Venezuelan Restaurant"
@@ -1844,7 +2582,10 @@
     { "category_id": 13387, "category_label": "Dining and Drinking > Winery" },
     { "category_id": 13388, "category_label": "Dining and Drinking > Restaurant > Wings Joint" },
     { "category_id": 13389, "category_label": "Dining and Drinking > Bar > Irish Pub" },
-    { "category_id": 13390, "category_label": "Dining and Drinking > Restaurant > Gluten-Free Restaurant" },
+    {
+        "category_id": 13390,
+        "category_label": "Dining and Drinking > Restaurant > Gluten-Free Restaurant"
+    },
     { "category_id": 13392, "category_label": "Dining and Drinking > Dessert Shop > Waffle Shop" },
     { "category_id": 14000, "category_label": "Event" },
     { "category_id": 14001, "category_label": "Event > Conference" },
@@ -1862,7 +2603,10 @@
     { "category_id": 14013, "category_label": "Event > Marketplace > Street Food Gathering" },
     { "category_id": 14014, "category_label": "Event > Marketplace > Trade Fair" },
     { "category_id": 14015, "category_label": "Event > Other Event" },
-    { "category_id": 14016, "category_label": "Event > Entertainment Event > Festival > Beer Festival" },
+    {
+        "category_id": 14016,
+        "category_label": "Event > Entertainment Event > Festival > Beer Festival"
+    },
     { "category_id": 15000, "category_label": "Health and Medicine" },
     { "category_id": 15001, "category_label": "Health and Medicine > Acupuncture Clinic" },
     { "category_id": 15002, "category_label": "Health and Medicine > AIDS Resource" },
@@ -1872,8 +2616,14 @@
     { "category_id": 15006, "category_label": "Health and Medicine > Chiropractor" },
     { "category_id": 15007, "category_label": "Health and Medicine > Dentist" },
     { "category_id": 15008, "category_label": "Health and Medicine > Emergency Service" },
-    { "category_id": 15009, "category_label": "Health and Medicine > Emergency Service > Ambulance Service" },
-    { "category_id": 15010, "category_label": "Health and Medicine > Emergency Service > Emergency Room" },
+    {
+        "category_id": 15009,
+        "category_label": "Health and Medicine > Emergency Service > Ambulance Service"
+    },
+    {
+        "category_id": 15010,
+        "category_label": "Health and Medicine > Emergency Service > Emergency Room"
+    },
     { "category_id": 15011, "category_label": "Health and Medicine > Healthcare Clinic" },
     { "category_id": 15012, "category_label": "Health and Medicine > Home Health Care Service" },
     { "category_id": 15013, "category_label": "Health and Medicine > Hospice" },
@@ -1882,37 +2632,73 @@
     { "category_id": 15016, "category_label": "Health and Medicine > Medical Center" },
     { "category_id": 15017, "category_label": "Health and Medicine > Medical Lab" },
     { "category_id": 15018, "category_label": "Health and Medicine > Mental Health Service" },
-    { "category_id": 15019, "category_label": "Health and Medicine > Mental Health Service > Mental Health Clinic" },
-    { "category_id": 15020, "category_label": "Health and Medicine > Mental Health Service > Psychologist" },
+    {
+        "category_id": 15019,
+        "category_label": "Health and Medicine > Mental Health Service > Mental Health Clinic"
+    },
+    {
+        "category_id": 15020,
+        "category_label": "Health and Medicine > Mental Health Service > Psychologist"
+    },
     { "category_id": 15021, "category_label": "Health and Medicine > Nurse" },
     { "category_id": 15022, "category_label": "Health and Medicine > Nursing Home" },
     { "category_id": 15023, "category_label": "Health and Medicine > Nutritionist" },
     { "category_id": 15024, "category_label": "Health and Medicine > Optometrist" },
-    { "category_id": 15025, "category_label": "Health and Medicine > Other Healthcare Professional" },
+    {
+        "category_id": 15025,
+        "category_label": "Health and Medicine > Other Healthcare Professional"
+    },
     { "category_id": 15026, "category_label": "Health and Medicine > Physical Therapy Clinic" },
     { "category_id": 15027, "category_label": "Health and Medicine > Physician" },
-    { "category_id": 15028, "category_label": "Health and Medicine > Physician > Anesthesiologist" },
+    {
+        "category_id": 15028,
+        "category_label": "Health and Medicine > Physician > Anesthesiologist"
+    },
     { "category_id": 15029, "category_label": "Health and Medicine > Physician > Cardiologist" },
     { "category_id": 15030, "category_label": "Health and Medicine > Physician > Dermatologist" },
     { "category_id": 15031, "category_label": "Health and Medicine > Physician > Doctor's Office" },
-    { "category_id": 15032, "category_label": "Health and Medicine > Physician > Ear, Nose and Throat Doctor" },
-    { "category_id": 15033, "category_label": "Health and Medicine > Physician > Family Medicine Doctor" },
-    { "category_id": 15034, "category_label": "Health and Medicine > Physician > Gastroenterologist" },
+    {
+        "category_id": 15032,
+        "category_label": "Health and Medicine > Physician > Ear, Nose and Throat Doctor"
+    },
+    {
+        "category_id": 15033,
+        "category_label": "Health and Medicine > Physician > Family Medicine Doctor"
+    },
+    {
+        "category_id": 15034,
+        "category_label": "Health and Medicine > Physician > Gastroenterologist"
+    },
     { "category_id": 15035, "category_label": "Health and Medicine > Physician > General Surgeon" },
-    { "category_id": 15036, "category_label": "Health and Medicine > Physician > Geriatric Doctor" },
-    { "category_id": 15037, "category_label": "Health and Medicine > Physician > Internal Medicine Doctor" },
+    {
+        "category_id": 15036,
+        "category_label": "Health and Medicine > Physician > Geriatric Doctor"
+    },
+    {
+        "category_id": 15037,
+        "category_label": "Health and Medicine > Physician > Internal Medicine Doctor"
+    },
     { "category_id": 15038, "category_label": "Health and Medicine > Physician > Neurologist" },
-    { "category_id": 15039, "category_label": "Health and Medicine > Physician > Obstetrician Gynecologist (Ob-gyn)" },
+    {
+        "category_id": 15039,
+        "category_label": "Health and Medicine > Physician > Obstetrician Gynecologist (Ob-gyn)"
+    },
     { "category_id": 15040, "category_label": "Health and Medicine > Physician > Oncologist" },
     { "category_id": 15041, "category_label": "Health and Medicine > Physician > Ophthalmologist" },
     { "category_id": 15042, "category_label": "Health and Medicine > Physician > Oral Surgeon" },
-    { "category_id": 15043, "category_label": "Health and Medicine > Physician > Orthopedic Surgeon" },
+    {
+        "category_id": 15043,
+        "category_label": "Health and Medicine > Physician > Orthopedic Surgeon"
+    },
     { "category_id": 15044, "category_label": "Health and Medicine > Physician > Pathologist" },
     { "category_id": 15045, "category_label": "Health and Medicine > Physician > Pediatrician" },
     { "category_id": 15046, "category_label": "Health and Medicine > Physician > Plastic Surgeon" },
     { "category_id": 15047, "category_label": "Health and Medicine > Physician > Psychiatrist" },
     { "category_id": 15048, "category_label": "Health and Medicine > Physician > Radiologist" },
-    { "category_id": 15049, "category_label": "Health and Medicine > Physician > Respiratory Doctor" },
+    {
+        "category_id": 15049,
+        "category_label": "Health and Medicine > Physician > Respiratory Doctor"
+    },
     { "category_id": 15050, "category_label": "Health and Medicine > Physician > Urologist" },
     { "category_id": 15051, "category_label": "Health and Medicine > Podiatrist" },
     { "category_id": 15052, "category_label": "Health and Medicine > Sports Medicine Clinic" },
@@ -1920,7 +2706,10 @@
     { "category_id": 15054, "category_label": "Health and Medicine > Veterinarian" },
     { "category_id": 15055, "category_label": "Health and Medicine > Weight Loss Center" },
     { "category_id": 15056, "category_label": "Health and Medicine > Women's Health Clinic" },
-    { "category_id": 15058, "category_label": "Health and Medicine > Hospital > Children's Hospital" },
+    {
+        "category_id": 15058,
+        "category_label": "Health and Medicine > Hospital > Children's Hospital"
+    },
     { "category_id": 15059, "category_label": "Health and Medicine > Hospital > Hospital Unit" },
     { "category_id": 16000, "category_label": "Landmarks and Outdoors" },
     { "category_id": 16001, "category_label": "Landmarks and Outdoors > Bathing Area" },
@@ -1942,7 +2731,10 @@
     { "category_id": 16017, "category_label": "Landmarks and Outdoors > Garden" },
     { "category_id": 16018, "category_label": "Landmarks and Outdoors > Harbor or Marina" },
     { "category_id": 16019, "category_label": "Landmarks and Outdoors > Hiking Trail" },
-    { "category_id": 16020, "category_label": "Landmarks and Outdoors > Historic and Protected Site" },
+    {
+        "category_id": 16020,
+        "category_label": "Landmarks and Outdoors > Historic and Protected Site"
+    },
     { "category_id": 16021, "category_label": "Landmarks and Outdoors > Hot Spring" },
     { "category_id": 16022, "category_label": "Landmarks and Outdoors > Island" },
     { "category_id": 16023, "category_label": "Landmarks and Outdoors > Lake" },
@@ -1960,7 +2752,10 @@
     { "category_id": 16035, "category_label": "Landmarks and Outdoors > Park > Natural Park" },
     { "category_id": 16036, "category_label": "Landmarks and Outdoors > Park > Picnic Area" },
     { "category_id": 16037, "category_label": "Landmarks and Outdoors > Park > Playground" },
-    { "category_id": 16038, "category_label": "Landmarks and Outdoors > Park > State or Provincial Park" },
+    {
+        "category_id": 16038,
+        "category_label": "Landmarks and Outdoors > Park > State or Provincial Park"
+    },
     { "category_id": 16039, "category_label": "Landmarks and Outdoors > Park > Urban Park" },
     { "category_id": 16040, "category_label": "Landmarks and Outdoors > Pedestrian Plaza" },
     { "category_id": 16041, "category_label": "Landmarks and Outdoors > Plaza" },
@@ -1983,14 +2778,38 @@
     { "category_id": 16058, "category_label": "Landmarks and Outdoors > Hill" },
     { "category_id": 16059, "category_label": "Landmarks and Outdoors > Mountain Hut" },
     { "category_id": 16060, "category_label": "Landmarks and Outdoors > Picnic Shelter" },
-    { "category_id": 16061, "category_label": "Landmarks and Outdoors > States and Municipalities" },
-    { "category_id": 16062, "category_label": "Landmarks and Outdoors > States and Municipalities > City" },
-    { "category_id": 16063, "category_label": "Landmarks and Outdoors > States and Municipalities > Country" },
-    { "category_id": 16064, "category_label": "Landmarks and Outdoors > States and Municipalities > County" },
-    { "category_id": 16065, "category_label": "Landmarks and Outdoors > States and Municipalities > Neighborhood" },
-    { "category_id": 16066, "category_label": "Landmarks and Outdoors > States and Municipalities > State" },
-    { "category_id": 16067, "category_label": "Landmarks and Outdoors > States and Municipalities > Town" },
-    { "category_id": 16068, "category_label": "Landmarks and Outdoors > States and Municipalities > Village" },
+    {
+        "category_id": 16061,
+        "category_label": "Landmarks and Outdoors > States and Municipalities"
+    },
+    {
+        "category_id": 16062,
+        "category_label": "Landmarks and Outdoors > States and Municipalities > City"
+    },
+    {
+        "category_id": 16063,
+        "category_label": "Landmarks and Outdoors > States and Municipalities > Country"
+    },
+    {
+        "category_id": 16064,
+        "category_label": "Landmarks and Outdoors > States and Municipalities > County"
+    },
+    {
+        "category_id": 16065,
+        "category_label": "Landmarks and Outdoors > States and Municipalities > Neighborhood"
+    },
+    {
+        "category_id": 16066,
+        "category_label": "Landmarks and Outdoors > States and Municipalities > State"
+    },
+    {
+        "category_id": 16067,
+        "category_label": "Landmarks and Outdoors > States and Municipalities > Town"
+    },
+    {
+        "category_id": 16068,
+        "category_label": "Landmarks and Outdoors > States and Municipalities > Village"
+    },
     { "category_id": 16069, "category_label": "Landmarks and Outdoors > Tree" },
     { "category_id": 16070, "category_label": "Landmarks and Outdoors > Well" },
     { "category_id": 17000, "category_label": "Retail" },
@@ -2004,14 +2823,26 @@
         "category_id": 17007,
         "category_label": "Retail > Automotive Retail > Car Dealership > Classic and Antique Car Dealership"
     },
-    { "category_id": 17008, "category_label": "Retail > Automotive Retail > Car Dealership > New Car Dealership" },
+    {
+        "category_id": 17008,
+        "category_label": "Retail > Automotive Retail > Car Dealership > New Car Dealership"
+    },
     {
         "category_id": 17009,
         "category_label": "Retail > Automotive Retail > Car Dealership > RV and Motorhome Dealership"
     },
-    { "category_id": 17010, "category_label": "Retail > Automotive Retail > Car Dealership > Used Car Dealership" },
-    { "category_id": 17011, "category_label": "Retail > Automotive Retail > Car Parts and Accessories" },
-    { "category_id": 17012, "category_label": "Retail > Automotive Retail > Motorcycle Dealership" },
+    {
+        "category_id": 17010,
+        "category_label": "Retail > Automotive Retail > Car Dealership > Used Car Dealership"
+    },
+    {
+        "category_id": 17011,
+        "category_label": "Retail > Automotive Retail > Car Parts and Accessories"
+    },
+    {
+        "category_id": 17012,
+        "category_label": "Retail > Automotive Retail > Motorcycle Dealership"
+    },
     { "category_id": 17013, "category_label": "Retail > Automotive Retail > Motorsports Store" },
     { "category_id": 17014, "category_label": "Retail > Baby Store" },
     { "category_id": 17015, "category_label": "Retail > Betting Shop" },
@@ -2023,10 +2854,22 @@
     { "category_id": 17021, "category_label": "Retail > Cannabis Store" },
     { "category_id": 17022, "category_label": "Retail > Comic Book Store" },
     { "category_id": 17023, "category_label": "Retail > Computers and Electronics Retail" },
-    { "category_id": 17024, "category_label": "Retail > Computers and Electronics Retail > Camera Store" },
-    { "category_id": 17025, "category_label": "Retail > Computers and Electronics Retail > Electronics Store" },
-    { "category_id": 17026, "category_label": "Retail > Computers and Electronics Retail > Mobile Phone Store" },
-    { "category_id": 17027, "category_label": "Retail > Computers and Electronics Retail > Video Games Store" },
+    {
+        "category_id": 17024,
+        "category_label": "Retail > Computers and Electronics Retail > Camera Store"
+    },
+    {
+        "category_id": 17025,
+        "category_label": "Retail > Computers and Electronics Retail > Electronics Store"
+    },
+    {
+        "category_id": 17026,
+        "category_label": "Retail > Computers and Electronics Retail > Mobile Phone Store"
+    },
+    {
+        "category_id": 17027,
+        "category_label": "Retail > Computers and Electronics Retail > Video Games Store"
+    },
     { "category_id": 17028, "category_label": "Retail > Construction Supplies Store" },
     { "category_id": 17029, "category_label": "Retail > Convenience Store" },
     { "category_id": 17030, "category_label": "Retail > Cosmetics Store" },
@@ -2041,9 +2884,15 @@
     { "category_id": 17039, "category_label": "Retail > Fashion Retail" },
     { "category_id": 17040, "category_label": "Retail > Fashion Retail > Batik Store" },
     { "category_id": 17041, "category_label": "Retail > Fashion Retail > Bridal Store" },
-    { "category_id": 17042, "category_label": "Retail > Fashion Retail > Children's Clothing Store" },
+    {
+        "category_id": 17042,
+        "category_label": "Retail > Fashion Retail > Children's Clothing Store"
+    },
     { "category_id": 17043, "category_label": "Retail > Fashion Retail > Clothing Store" },
-    { "category_id": 17044, "category_label": "Retail > Fashion Retail > Fashion Accessories Store" },
+    {
+        "category_id": 17044,
+        "category_label": "Retail > Fashion Retail > Fashion Accessories Store"
+    },
     { "category_id": 17045, "category_label": "Retail > Fashion Retail > Jewelry Store" },
     { "category_id": 17046, "category_label": "Retail > Fashion Retail > Lingerie Store" },
     { "category_id": 17047, "category_label": "Retail > Fashion Retail > Men's Store" },
@@ -2061,33 +2910,78 @@
     { "category_id": 17059, "category_label": "Retail > Food and Beverage Retail > Butcher" },
     { "category_id": 17060, "category_label": "Retail > Food and Beverage Retail > Candy Store" },
     { "category_id": 17061, "category_label": "Retail > Food and Beverage Retail > Cheese Store" },
-    { "category_id": 17062, "category_label": "Retail > Food and Beverage Retail > Chocolate Store" },
-    { "category_id": 17063, "category_label": "Retail > Food and Beverage Retail > Coffee Roaster" },
+    {
+        "category_id": 17062,
+        "category_label": "Retail > Food and Beverage Retail > Chocolate Store"
+    },
+    {
+        "category_id": 17063,
+        "category_label": "Retail > Food and Beverage Retail > Coffee Roaster"
+    },
     { "category_id": 17064, "category_label": "Retail > Food and Beverage Retail > Dairy Store" },
-    { "category_id": 17065, "category_label": "Retail > Food and Beverage Retail > Farmers Market" },
+    {
+        "category_id": 17065,
+        "category_label": "Retail > Food and Beverage Retail > Farmers Market"
+    },
     { "category_id": 17066, "category_label": "Retail > Food and Beverage Retail > Fish Market" },
-    { "category_id": 17067, "category_label": "Retail > Food and Beverage Retail > Fruit and Vegetable Store" },
+    {
+        "category_id": 17067,
+        "category_label": "Retail > Food and Beverage Retail > Fruit and Vegetable Store"
+    },
     { "category_id": 17068, "category_label": "Retail > Food and Beverage Retail > Gourmet Store" },
     { "category_id": 17069, "category_label": "Retail > Food and Beverage Retail > Grocery Store" },
-    { "category_id": 17070, "category_label": "Retail > Food and Beverage Retail > Grocery Store > Organic Grocery" },
-    { "category_id": 17071, "category_label": "Retail > Food and Beverage Retail > Health Food Store" },
-    { "category_id": 17072, "category_label": "Retail > Food and Beverage Retail > Herbs and Spices Store" },
-    { "category_id": 17073, "category_label": "Retail > Food and Beverage Retail > Imported Food Store" },
+    {
+        "category_id": 17070,
+        "category_label": "Retail > Food and Beverage Retail > Grocery Store > Organic Grocery"
+    },
+    {
+        "category_id": 17071,
+        "category_label": "Retail > Food and Beverage Retail > Health Food Store"
+    },
+    {
+        "category_id": 17072,
+        "category_label": "Retail > Food and Beverage Retail > Herbs and Spices Store"
+    },
+    {
+        "category_id": 17073,
+        "category_label": "Retail > Food and Beverage Retail > Imported Food Store"
+    },
     { "category_id": 17074, "category_label": "Retail > Food and Beverage Retail > Kosher Store" },
-    { "category_id": 17075, "category_label": "Retail > Food and Beverage Retail > Kuruyemişçi Shop" },
+    {
+        "category_id": 17075,
+        "category_label": "Retail > Food and Beverage Retail > Kuruyemişçi Shop"
+    },
     { "category_id": 17076, "category_label": "Retail > Food and Beverage Retail > Liquor Store" },
-    { "category_id": 17077, "category_label": "Retail > Food and Beverage Retail > Meat and Seafood Store" },
+    {
+        "category_id": 17077,
+        "category_label": "Retail > Food and Beverage Retail > Meat and Seafood Store"
+    },
     { "category_id": 17078, "category_label": "Retail > Food and Beverage Retail > Sausage Store" },
     { "category_id": 17079, "category_label": "Retail > Food and Beverage Retail > Turşucu Shop" },
     { "category_id": 17080, "category_label": "Retail > Food and Beverage Retail > Wine Store" },
     { "category_id": 17081, "category_label": "Retail > Framing Store" },
     { "category_id": 17082, "category_label": "Retail > Furniture and Home Store" },
     { "category_id": 17083, "category_label": "Retail > Furniture and Home Store > Carpet Store" },
-    { "category_id": 17084, "category_label": "Retail > Furniture and Home Store > Home Appliance Store" },
-    { "category_id": 17085, "category_label": "Retail > Furniture and Home Store > Housewares Store" },
-    { "category_id": 17086, "category_label": "Retail > Furniture and Home Store > Kitchen Supply Store" },
-    { "category_id": 17087, "category_label": "Retail > Furniture and Home Store > Lighting Store" },
-    { "category_id": 17088, "category_label": "Retail > Furniture and Home Store > Mattress Store" },
+    {
+        "category_id": 17084,
+        "category_label": "Retail > Furniture and Home Store > Home Appliance Store"
+    },
+    {
+        "category_id": 17085,
+        "category_label": "Retail > Furniture and Home Store > Housewares Store"
+    },
+    {
+        "category_id": 17086,
+        "category_label": "Retail > Furniture and Home Store > Kitchen Supply Store"
+    },
+    {
+        "category_id": 17087,
+        "category_label": "Retail > Furniture and Home Store > Lighting Store"
+    },
+    {
+        "category_id": 17088,
+        "category_label": "Retail > Furniture and Home Store > Mattress Store"
+    },
     { "category_id": 17089, "category_label": "Retail > Gift Store" },
     { "category_id": 17090, "category_label": "Retail > Hardware Store" },
     { "category_id": 17091, "category_label": "Retail > Hobby Store" },
@@ -2123,7 +3017,10 @@
     { "category_id": 17121, "category_label": "Retail > Sporting Goods Retail > Fishing Store" },
     { "category_id": 17122, "category_label": "Retail > Sporting Goods Retail > Golf Store" },
     { "category_id": 17123, "category_label": "Retail > Sporting Goods Retail > Gun Store" },
-    { "category_id": 17124, "category_label": "Retail > Sporting Goods Retail > Hunting Supply Store" },
+    {
+        "category_id": 17124,
+        "category_label": "Retail > Sporting Goods Retail > Hunting Supply Store"
+    },
     { "category_id": 17125, "category_label": "Retail > Sporting Goods Retail > Running Store" },
     { "category_id": 17126, "category_label": "Retail > Sporting Goods Retail > Skate Store" },
     { "category_id": 17127, "category_label": "Retail > Sporting Goods Retail > Ski Store" },
@@ -2140,7 +3037,10 @@
     { "category_id": 17138, "category_label": "Retail > Vintage and Thrift Store" },
     { "category_id": 17139, "category_label": "Retail > Warehouse or Wholesale Store" },
     { "category_id": 17140, "category_label": "Retail > Automotive Retail > Moped Dealership" },
-    { "category_id": 17141, "category_label": "Retail > Automotive Retail > Motor Scooter Dealership" },
+    {
+        "category_id": 17141,
+        "category_label": "Retail > Automotive Retail > Motor Scooter Dealership"
+    },
     { "category_id": 17142, "category_label": "Retail > Food and Beverage Retail > Supermarket" },
     { "category_id": 17143, "category_label": "Retail > Marijuana Dispensary" },
     { "category_id": 17144, "category_label": "Retail > Market" },
@@ -2153,8 +3053,14 @@
     { "category_id": 18004, "category_label": "Sports and Recreation > Baseball > Baseball Field" },
     { "category_id": 18005, "category_label": "Sports and Recreation > Baseball > Batting Cages" },
     { "category_id": 18006, "category_label": "Sports and Recreation > Basketball" },
-    { "category_id": 18007, "category_label": "Sports and Recreation > Basketball > Basketball Club" },
-    { "category_id": 18008, "category_label": "Sports and Recreation > Basketball > Basketball Court" },
+    {
+        "category_id": 18007,
+        "category_label": "Sports and Recreation > Basketball > Basketball Club"
+    },
+    {
+        "category_id": 18008,
+        "category_label": "Sports and Recreation > Basketball > Basketball Court"
+    },
     { "category_id": 18009, "category_label": "Sports and Recreation > Bowling Green" },
     { "category_id": 18010, "category_label": "Sports and Recreation > Cricket Ground" },
     { "category_id": 18011, "category_label": "Sports and Recreation > Curling Ice" },
@@ -2168,15 +3074,39 @@
     { "category_id": 18019, "category_label": "Sports and Recreation > Golf > Golf Driving Range" },
     { "category_id": 18020, "category_label": "Sports and Recreation > Gun Range" },
     { "category_id": 18021, "category_label": "Sports and Recreation > Gym and Studio" },
-    { "category_id": 18022, "category_label": "Sports and Recreation > Gym and Studio > Boxing Gym" },
-    { "category_id": 18023, "category_label": "Sports and Recreation > Gym and Studio > Climbing Gym" },
-    { "category_id": 18024, "category_label": "Sports and Recreation > Gym and Studio > Cycle Studio" },
-    { "category_id": 18025, "category_label": "Sports and Recreation > Gym and Studio > Dance Studio" },
-    { "category_id": 18026, "category_label": "Sports and Recreation > Gym and Studio > Outdoor Gym" },
-    { "category_id": 18027, "category_label": "Sports and Recreation > Gym and Studio > Pilates Studio" },
-    { "category_id": 18028, "category_label": "Sports and Recreation > Gym and Studio > Yoga Studio" },
+    {
+        "category_id": 18022,
+        "category_label": "Sports and Recreation > Gym and Studio > Boxing Gym"
+    },
+    {
+        "category_id": 18023,
+        "category_label": "Sports and Recreation > Gym and Studio > Climbing Gym"
+    },
+    {
+        "category_id": 18024,
+        "category_label": "Sports and Recreation > Gym and Studio > Cycle Studio"
+    },
+    {
+        "category_id": 18025,
+        "category_label": "Sports and Recreation > Gym and Studio > Dance Studio"
+    },
+    {
+        "category_id": 18026,
+        "category_label": "Sports and Recreation > Gym and Studio > Outdoor Gym"
+    },
+    {
+        "category_id": 18027,
+        "category_label": "Sports and Recreation > Gym and Studio > Pilates Studio"
+    },
+    {
+        "category_id": 18028,
+        "category_label": "Sports and Recreation > Gym and Studio > Yoga Studio"
+    },
     { "category_id": 18029, "category_label": "Sports and Recreation > Gymnastics" },
-    { "category_id": 18030, "category_label": "Sports and Recreation > Gymnastics > Gymnastics Center" },
+    {
+        "category_id": 18030,
+        "category_label": "Sports and Recreation > Gymnastics > Gymnastics Center"
+    },
     { "category_id": 18031, "category_label": "Sports and Recreation > Hockey" },
     { "category_id": 18032, "category_label": "Sports and Recreation > Hockey > Hockey Club" },
     { "category_id": 18033, "category_label": "Sports and Recreation > Hockey > Hockey Field" },
@@ -2187,18 +3117,39 @@
     { "category_id": 18038, "category_label": "Sports and Recreation > Personal Trainer" },
     { "category_id": 18039, "category_label": "Sports and Recreation > Race Track" },
     { "category_id": 18040, "category_label": "Sports and Recreation > Racquet Sports" },
-    { "category_id": 18041, "category_label": "Sports and Recreation > Racquet Sports > Badminton Court" },
-    { "category_id": 18042, "category_label": "Sports and Recreation > Racquet Sports > Racquet Sport Club" },
-    { "category_id": 18043, "category_label": "Sports and Recreation > Racquet Sports > Racquetball Club" },
-    { "category_id": 18044, "category_label": "Sports and Recreation > Racquet Sports > Squash Court" },
+    {
+        "category_id": 18041,
+        "category_label": "Sports and Recreation > Racquet Sports > Badminton Court"
+    },
+    {
+        "category_id": 18042,
+        "category_label": "Sports and Recreation > Racquet Sports > Racquet Sport Club"
+    },
+    {
+        "category_id": 18043,
+        "category_label": "Sports and Recreation > Racquet Sports > Racquetball Club"
+    },
+    {
+        "category_id": 18044,
+        "category_label": "Sports and Recreation > Racquet Sports > Squash Court"
+    },
     { "category_id": 18045, "category_label": "Sports and Recreation > Racquet Sports > Tennis" },
-    { "category_id": 18046, "category_label": "Sports and Recreation > Racquet Sports > Tennis > Tennis Club" },
-    { "category_id": 18047, "category_label": "Sports and Recreation > Racquet Sports > Tennis > Tennis Court" },
+    {
+        "category_id": 18046,
+        "category_label": "Sports and Recreation > Racquet Sports > Tennis > Tennis Club"
+    },
+    {
+        "category_id": 18047,
+        "category_label": "Sports and Recreation > Racquet Sports > Tennis > Tennis Court"
+    },
     { "category_id": 18048, "category_label": "Sports and Recreation > Recreation Center" },
     { "category_id": 18049, "category_label": "Sports and Recreation > Rugby" },
     { "category_id": 18050, "category_label": "Sports and Recreation > Rugby > Rugby Pitch" },
     { "category_id": 18051, "category_label": "Sports and Recreation > Running and Track" },
-    { "category_id": 18052, "category_label": "Sports and Recreation > Running and Track > Running Club" },
+    {
+        "category_id": 18052,
+        "category_label": "Sports and Recreation > Running and Track > Running Club"
+    },
     { "category_id": 18053, "category_label": "Sports and Recreation > Running and Track > Track" },
     { "category_id": 18054, "category_label": "Sports and Recreation > Skating" },
     { "category_id": 18055, "category_label": "Sports and Recreation > Skating > Skate Park" },
@@ -2207,34 +3158,67 @@
     { "category_id": 18058, "category_label": "Sports and Recreation > Snow Sports" },
     { "category_id": 18059, "category_label": "Sports and Recreation > Snow Sports > Ski Chalet" },
     { "category_id": 18060, "category_label": "Sports and Recreation > Snow Sports > Ski Lodge" },
-    { "category_id": 18061, "category_label": "Sports and Recreation > Snow Sports > Ski Resort and Area" },
+    {
+        "category_id": 18061,
+        "category_label": "Sports and Recreation > Snow Sports > Ski Resort and Area"
+    },
     { "category_id": 18062, "category_label": "Sports and Recreation > Soccer" },
     { "category_id": 18063, "category_label": "Sports and Recreation > Soccer > Soccer Club" },
     { "category_id": 18064, "category_label": "Sports and Recreation > Soccer > Soccer Field" },
     { "category_id": 18065, "category_label": "Sports and Recreation > Sports Club" },
     { "category_id": 18066, "category_label": "Sports and Recreation > Volleyball Court" },
     { "category_id": 18067, "category_label": "Sports and Recreation > Water Sports" },
-    { "category_id": 18068, "category_label": "Sports and Recreation > Water Sports > Canoe and Kayak Rental" },
-    { "category_id": 18069, "category_label": "Sports and Recreation > Water Sports > Rafting Outfitter" },
-    { "category_id": 18070, "category_label": "Sports and Recreation > Water Sports > Sailing Club" },
-    { "category_id": 18071, "category_label": "Sports and Recreation > Water Sports > Scuba Diving Instructor" },
+    {
+        "category_id": 18068,
+        "category_label": "Sports and Recreation > Water Sports > Canoe and Kayak Rental"
+    },
+    {
+        "category_id": 18069,
+        "category_label": "Sports and Recreation > Water Sports > Rafting Outfitter"
+    },
+    {
+        "category_id": 18070,
+        "category_label": "Sports and Recreation > Water Sports > Sailing Club"
+    },
+    {
+        "category_id": 18071,
+        "category_label": "Sports and Recreation > Water Sports > Scuba Diving Instructor"
+    },
     { "category_id": 18072, "category_label": "Sports and Recreation > Water Sports > Surfing" },
     { "category_id": 18073, "category_label": "Sports and Recreation > Water Sports > Swimming" },
-    { "category_id": 18074, "category_label": "Sports and Recreation > Water Sports > Swimming > Swimming Club" },
-    { "category_id": 18075, "category_label": "Sports and Recreation > Water Sports > Swimming > Swimming Pool" },
-    { "category_id": 18076, "category_label": "Sports and Recreation > Water Sports > Swimming > Swim School" },
+    {
+        "category_id": 18074,
+        "category_label": "Sports and Recreation > Water Sports > Swimming > Swimming Club"
+    },
+    {
+        "category_id": 18075,
+        "category_label": "Sports and Recreation > Water Sports > Swimming > Swimming Pool"
+    },
+    {
+        "category_id": 18076,
+        "category_label": "Sports and Recreation > Water Sports > Swimming > Swim School"
+    },
     { "category_id": 18077, "category_label": "Sports and Recreation > Gym and Studio > Gym" },
     { "category_id": 18078, "category_label": "Sports and Recreation > Gym and Studio > Gym Pool" },
     { "category_id": 18079, "category_label": "Sports and Recreation > Hunting Area" },
     { "category_id": 18080, "category_label": "Sports and Recreation > Race Track > Racecourse" },
     { "category_id": 18081, "category_label": "Sports and Recreation > Sauna" },
-    { "category_id": 18082, "category_label": "Sports and Recreation > Skydiving Center > Skydiving Drop Zone" },
+    {
+        "category_id": 18082,
+        "category_label": "Sports and Recreation > Skydiving Center > Skydiving Drop Zone"
+    },
     {
         "category_id": 18083,
         "category_label": "Sports and Recreation > Snow Sports > Ski Resort and Area > Ski Chairlift"
     },
-    { "category_id": 18084, "category_label": "Sports and Recreation > Snow Sports > Ski Resort and Area > Ski Trail" },
-    { "category_id": 18085, "category_label": "Sports and Recreation > Water Sports > Rafting Spot" },
+    {
+        "category_id": 18084,
+        "category_label": "Sports and Recreation > Snow Sports > Ski Resort and Area > Ski Trail"
+    },
+    {
+        "category_id": 18085,
+        "category_label": "Sports and Recreation > Water Sports > Rafting Spot"
+    },
     { "category_id": 18086, "category_label": "Sports and Recreation > Fishing Area" },
     { "category_id": 19000, "category_label": "Travel and Transportation" },
     { "category_id": 19001, "category_label": "Travel and Transportation > Baggage Locker" },
@@ -2242,12 +3226,24 @@
     { "category_id": 19003, "category_label": "Travel and Transportation > Boat Rental" },
     { "category_id": 19004, "category_label": "Travel and Transportation > Border Crossing" },
     { "category_id": 19005, "category_label": "Travel and Transportation > Cruise" },
-    { "category_id": 19006, "category_label": "Travel and Transportation > Electric Vehicle Charging Station" },
+    {
+        "category_id": 19006,
+        "category_label": "Travel and Transportation > Electric Vehicle Charging Station"
+    },
     { "category_id": 19007, "category_label": "Travel and Transportation > Fuel Station" },
-    { "category_id": 19008, "category_label": "Travel and Transportation > Hot Air Balloon Tour Agency" },
+    {
+        "category_id": 19008,
+        "category_label": "Travel and Transportation > Hot Air Balloon Tour Agency"
+    },
     { "category_id": 19009, "category_label": "Travel and Transportation > Lodging" },
-    { "category_id": 19010, "category_label": "Travel and Transportation > Lodging > Bed and Breakfast" },
-    { "category_id": 19011, "category_label": "Travel and Transportation > Lodging > Boarding House" },
+    {
+        "category_id": 19010,
+        "category_label": "Travel and Transportation > Lodging > Bed and Breakfast"
+    },
+    {
+        "category_id": 19011,
+        "category_label": "Travel and Transportation > Lodging > Boarding House"
+    },
     { "category_id": 19012, "category_label": "Travel and Transportation > Lodging > Cabin" },
     { "category_id": 19013, "category_label": "Travel and Transportation > Lodging > Hostel" },
     { "category_id": 19014, "category_label": "Travel and Transportation > Lodging > Hotel" },
@@ -2255,7 +3251,10 @@
     { "category_id": 19016, "category_label": "Travel and Transportation > Lodging > Lodge" },
     { "category_id": 19017, "category_label": "Travel and Transportation > Lodging > Motel" },
     { "category_id": 19018, "category_label": "Travel and Transportation > Lodging > Resort" },
-    { "category_id": 19019, "category_label": "Travel and Transportation > Lodging > Vacation Rental" },
+    {
+        "category_id": 19019,
+        "category_label": "Travel and Transportation > Lodging > Vacation Rental"
+    },
     { "category_id": 19020, "category_label": "Travel and Transportation > Parking" },
     { "category_id": 19021, "category_label": "Travel and Transportation > Pier" },
     { "category_id": 19022, "category_label": "Travel and Transportation > Platform" },
@@ -2264,21 +3263,39 @@
     { "category_id": 19025, "category_label": "Travel and Transportation > RV Park" },
     { "category_id": 19026, "category_label": "Travel and Transportation > Toll Booth" },
     { "category_id": 19027, "category_label": "Travel and Transportation > Toll Plaza" },
-    { "category_id": 19028, "category_label": "Travel and Transportation > Tourist Information and Service" },
+    {
+        "category_id": 19028,
+        "category_label": "Travel and Transportation > Tourist Information and Service"
+    },
     {
         "category_id": 19029,
         "category_label": "Travel and Transportation > Tourist Information and Service > Tour Provider"
     },
     { "category_id": 19030, "category_label": "Travel and Transportation > Transport Hub" },
-    { "category_id": 19031, "category_label": "Travel and Transportation > Transport Hub > Airport" },
-    { "category_id": 19032, "category_label": "Travel and Transportation > Transport Hub > Airport > Airfield" },
+    {
+        "category_id": 19031,
+        "category_label": "Travel and Transportation > Transport Hub > Airport"
+    },
+    {
+        "category_id": 19032,
+        "category_label": "Travel and Transportation > Transport Hub > Airport > Airfield"
+    },
     {
         "category_id": 19033,
         "category_label": "Travel and Transportation > Transport Hub > Airport > Airport Food Court"
     },
-    { "category_id": 19034, "category_label": "Travel and Transportation > Transport Hub > Airport > Airport Gate" },
-    { "category_id": 19035, "category_label": "Travel and Transportation > Transport Hub > Airport > Airport Lounge" },
-    { "category_id": 19036, "category_label": "Travel and Transportation > Transport Hub > Airport > Airport Service" },
+    {
+        "category_id": 19034,
+        "category_label": "Travel and Transportation > Transport Hub > Airport > Airport Gate"
+    },
+    {
+        "category_id": 19035,
+        "category_label": "Travel and Transportation > Transport Hub > Airport > Airport Lounge"
+    },
+    {
+        "category_id": 19036,
+        "category_label": "Travel and Transportation > Transport Hub > Airport > Airport Service"
+    },
     {
         "category_id": 19037,
         "category_label": "Travel and Transportation > Transport Hub > Airport > Airport Terminal"
@@ -2287,24 +3304,66 @@
         "category_id": 19038,
         "category_label": "Travel and Transportation > Transport Hub > Airport > Airport Tram Station"
     },
-    { "category_id": 19039, "category_label": "Travel and Transportation > Transport Hub > Airport > Baggage Claim" },
+    {
+        "category_id": 19039,
+        "category_label": "Travel and Transportation > Transport Hub > Airport > Baggage Claim"
+    },
     {
         "category_id": 19040,
         "category_label": "Travel and Transportation > Transport Hub > Airport > International Airport"
     },
-    { "category_id": 19041, "category_label": "Travel and Transportation > Transport Hub > Airport > Private Airport" },
-    { "category_id": 19042, "category_label": "Travel and Transportation > Transport Hub > Bus Station" },
-    { "category_id": 19043, "category_label": "Travel and Transportation > Transport Hub > Bus Stop" },
-    { "category_id": 19044, "category_label": "Travel and Transportation > Transport Hub > Heliport" },
-    { "category_id": 19045, "category_label": "Travel and Transportation > Transport Hub > Marine Terminal" },
-    { "category_id": 19046, "category_label": "Travel and Transportation > Transport Hub > Metro Station" },
-    { "category_id": 19047, "category_label": "Travel and Transportation > Transport Hub > Rail Station" },
-    { "category_id": 19048, "category_label": "Travel and Transportation > Transport Hub > Rental Car Location" },
-    { "category_id": 19049, "category_label": "Travel and Transportation > Transport Hub > Taxi Stand" },
-    { "category_id": 19050, "category_label": "Travel and Transportation > Transport Hub > Tram Station" },
-    { "category_id": 19051, "category_label": "Travel and Transportation > Transportation Service" },
-    { "category_id": 19052, "category_label": "Travel and Transportation > Transportation Service > Charter Bus" },
-    { "category_id": 19053, "category_label": "Travel and Transportation > Transportation Service > Limo Service" },
+    {
+        "category_id": 19041,
+        "category_label": "Travel and Transportation > Transport Hub > Airport > Private Airport"
+    },
+    {
+        "category_id": 19042,
+        "category_label": "Travel and Transportation > Transport Hub > Bus Station"
+    },
+    {
+        "category_id": 19043,
+        "category_label": "Travel and Transportation > Transport Hub > Bus Stop"
+    },
+    {
+        "category_id": 19044,
+        "category_label": "Travel and Transportation > Transport Hub > Heliport"
+    },
+    {
+        "category_id": 19045,
+        "category_label": "Travel and Transportation > Transport Hub > Marine Terminal"
+    },
+    {
+        "category_id": 19046,
+        "category_label": "Travel and Transportation > Transport Hub > Metro Station"
+    },
+    {
+        "category_id": 19047,
+        "category_label": "Travel and Transportation > Transport Hub > Rail Station"
+    },
+    {
+        "category_id": 19048,
+        "category_label": "Travel and Transportation > Transport Hub > Rental Car Location"
+    },
+    {
+        "category_id": 19049,
+        "category_label": "Travel and Transportation > Transport Hub > Taxi Stand"
+    },
+    {
+        "category_id": 19050,
+        "category_label": "Travel and Transportation > Transport Hub > Tram Station"
+    },
+    {
+        "category_id": 19051,
+        "category_label": "Travel and Transportation > Transportation Service"
+    },
+    {
+        "category_id": 19052,
+        "category_label": "Travel and Transportation > Transportation Service > Charter Bus"
+    },
+    {
+        "category_id": 19053,
+        "category_label": "Travel and Transportation > Transportation Service > Limo Service"
+    },
     {
         "category_id": 19054,
         "category_label": "Travel and Transportation > Transportation Service > Public Transportation"
@@ -2312,12 +3371,21 @@
     { "category_id": 19055, "category_label": "Travel and Transportation > Travel Agency" },
     { "category_id": 19056, "category_label": "Travel and Transportation > Travel Lounge" },
     { "category_id": 19057, "category_label": "Travel and Transportation > Truck Stop" },
-    { "category_id": 19058, "category_label": "Travel and Transportation > Lodging > Hotel > Hotel Pool" },
+    {
+        "category_id": 19058,
+        "category_label": "Travel and Transportation > Lodging > Hotel > Hotel Pool"
+    },
     { "category_id": 19059, "category_label": "Travel and Transportation > Moving Target" },
     { "category_id": 19060, "category_label": "Travel and Transportation > Road" },
     { "category_id": 19061, "category_label": "Travel and Transportation > Road > Intersection" },
-    { "category_id": 19062, "category_label": "Travel and Transportation > Transport Hub > Airport > Plane" },
-    { "category_id": 19063, "category_label": "Travel and Transportation > Transport Hub > Light Rail Station" },
+    {
+        "category_id": 19062,
+        "category_label": "Travel and Transportation > Transport Hub > Airport > Plane"
+    },
+    {
+        "category_id": 19063,
+        "category_label": "Travel and Transportation > Transport Hub > Light Rail Station"
+    },
     { "category_id": 19064, "category_label": "Travel and Transportation > Boat or Ferry" },
     { "category_id": 19065, "category_label": "Travel and Transportation > Cable Car" },
     { "category_id": 19066, "category_label": "Travel and Transportation > Train" },
@@ -2325,7 +3393,10 @@
         "category_id": 19067,
         "category_label": "Travel and Transportation > Transportation Service > Public Transportation > Bus Line"
     },
-    { "category_id": 19068, "category_label": "Travel and Transportation > Transportation Service > Taxi" },
+    {
+        "category_id": 19068,
+        "category_label": "Travel and Transportation > Transportation Service > Taxi"
+    },
     {
         "category_id": 19070,
         "category_label": "Travel and Transportation > Transport Hub > Airport > Airport Ticket Counter"

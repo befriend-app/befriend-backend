@@ -5,21 +5,21 @@ const {
     timeNow,
     getDateTimeStr,
     getSessionKey,
-} = require("../services/shared");
+} = require('../services/shared');
 
 loadScriptEnv();
 
-const cacheService = require("../services/cache");
-const dbService = require("../services/db");
+const cacheService = require('../services/cache');
+const dbService = require('../services/db');
 
-const _ = require("lodash");
-const fs = require("fs");
-const http = require("http");
-const https = require("https");
-const process = require("process");
-const query_string = require("query-string");
+const _ = require('lodash');
+const fs = require('fs');
+const http = require('http');
+const https = require('https');
+const process = require('process');
+const query_string = require('query-string');
 
-const WebSocket = require("ws");
+const WebSocket = require('ws');
 
 const port_num = process.env.WS_PORT || 8080;
 
@@ -36,16 +36,16 @@ let server;
 
 let options = {};
 
-if (process.env.APP_ENV !== "local") {
+if (process.env.APP_ENV !== 'local') {
     if (isProdApp()) {
         options = {
-            cert: fs.readFileSync("/etc/ssl/certs/befriend.crt"),
-            key: fs.readFileSync("/etc/ssl/private/befriend.key"),
+            cert: fs.readFileSync('/etc/ssl/certs/befriend.crt'),
+            key: fs.readFileSync('/etc/ssl/private/befriend.key'),
         };
     } else {
         options = {
-            cert: fs.readFileSync("/etc/ssl/certs/dev.befriend.crt"),
-            key: fs.readFileSync("/etc/ssl/private/dev.befriend.key"),
+            cert: fs.readFileSync('/etc/ssl/certs/dev.befriend.crt'),
+            key: fs.readFileSync('/etc/ssl/private/dev.befriend.key'),
         };
     }
 
@@ -56,17 +56,17 @@ if (process.env.APP_ENV !== "local") {
 
 const wss = new WebSocket.Server({ server: server });
 
-process.on("uncaughtException", function (err) {
-    if (err.code === "EADDRINUSE") {
-        let exec = require("child_process").exec;
+process.on('uncaughtException', function (err) {
+    if (err.code === 'EADDRINUSE') {
+        let exec = require('child_process').exec;
 
         exec(`sudo lsof -i :${port_num}`, function callback(error, stdout, stderr) {
-            let lines = stdout.split("\n");
+            let lines = stdout.split('\n');
 
             let pid;
 
             lines.forEach(function (line) {
-                if (line.indexOf("node") > -1) {
+                if (line.indexOf('node') > -1) {
                     pid = line.split(/[ ]+/)[1];
                     return false;
                 }
@@ -82,7 +82,7 @@ process.on("uncaughtException", function (err) {
 function initDB() {
     return new Promise(async (resolve, reject) => {
         try {
-            console.log("Init DB");
+            console.log('Init DB');
 
             conn = await dbService.conn();
             resolve();
@@ -95,7 +95,7 @@ function initDB() {
 function initRedis() {
     return new Promise(async (resolve, reject) => {
         try {
-            console.log("Init Redis");
+            console.log('Init Redis');
 
             await cacheService.init();
 
@@ -135,10 +135,10 @@ function terminate(ws, logout) {
 function getSession(url) {
     return new Promise(async (resolve, reject) => {
         if (url.length > 1000) {
-            return reject("URL too long");
+            return reject('URL too long');
         }
 
-        const parsed = query_string.parse(url.replace("/", ""));
+        const parsed = query_string.parse(url.replace('/', ''));
 
         try {
             let data = await cacheService.get(getSessionKey(parsed.session), true);
@@ -168,13 +168,13 @@ function sendRecentMessages(ws) {
 
 function initWS() {
     return new Promise((resolve, reject) => {
-        console.log("Init WS");
+        console.log('Init WS');
 
         function heartBeat() {
             this.isAlive = true;
         }
 
-        wss.on("connection", async function connection(ws, req) {
+        wss.on('connection', async function connection(ws, req) {
             let session_data = null;
 
             try {
@@ -186,7 +186,7 @@ function initWS() {
             let session_id = session_data.key;
             let person_token = session_data.person_token ? session_data.person_token : null;
 
-            console.log("Connection", {
+            console.log('Connection', {
                 session_id: session_id,
                 person_token: person_token,
             });
@@ -202,13 +202,13 @@ function initWS() {
             persons_connections[person_token].push(ws);
 
             //do not allow incoming messages
-            ws.on("message", function incoming(message) {
+            ws.on('message', function incoming(message) {
                 terminate(ws, true);
             });
 
-            ws.on("pong", heartBeat);
+            ws.on('pong', heartBeat);
 
-            ws.on("close", function () {
+            ws.on('close', function () {
                 removeConnections(ws);
             });
 
@@ -261,11 +261,11 @@ function addPersonMessage(data) {
 
 function initSubscribe() {
     return new Promise(async (resolve, reject) => {
-        console.log("Init Subscribe");
+        console.log('Init Subscribe');
 
         const subscriber = cacheService.conn;
 
-        subscriber.on("message", (channel, message) => {
+        subscriber.on('message', (channel, message) => {
             if (channel === cacheService.keys.ws) {
                 try {
                     let data = JSON.parse(message.toString());
@@ -275,7 +275,7 @@ function initSubscribe() {
                         return;
                     }
 
-                    console.log("processing ws message", getDateTimeStr());
+                    console.log('processing ws message', getDateTimeStr());
 
                     let message_sent = false;
                     let person_token = data.person_token;
@@ -285,7 +285,7 @@ function initSubscribe() {
                             let client = persons_connections[person_token][k];
 
                             if (client.readyState === WebSocket.OPEN) {
-                                console.log("Message sent");
+                                console.log('Message sent');
 
                                 client.send(JSON.stringify(data));
                                 message_sent = true;

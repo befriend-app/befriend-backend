@@ -1,6 +1,6 @@
-const cacheService = require("../services/cache");
-const dbService = require("../services/db");
-const { timeNow } = require("./shared");
+const cacheService = require('../services/cache');
+const dbService = require('../services/db');
+const { timeNow } = require('./shared');
 
 module.exports = {
     getActivityType: function (activity_type_token) {
@@ -16,7 +16,9 @@ module.exports = {
 
                 let conn = await dbService.conn();
 
-                let qry = await conn("activity_types").where("activity_type_token", activity_type_token).first();
+                let qry = await conn('activity_types')
+                    .where('activity_type_token', activity_type_token)
+                    .first();
 
                 if (!qry) {
                     return resolve(null);

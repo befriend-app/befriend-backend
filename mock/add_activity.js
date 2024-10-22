@@ -1,8 +1,8 @@
-const axios = require("axios");
-const yargs = require("yargs");
-const dbService = require("../services/db");
-const { getNetworkSelf } = require("../services/network");
-const { loadScriptEnv, timeNow, getURL } = require("../services/shared");
+const axios = require('axios');
+const yargs = require('yargs');
+const dbService = require('../services/db');
+const { getNetworkSelf } = require('../services/network');
+const { loadScriptEnv, timeNow, getURL } = require('../services/shared');
 
 let args = yargs.argv;
 
@@ -13,13 +13,13 @@ let args = yargs.argv;
     let person_token = args.pt;
 
     try {
-        let activities_url = getURL(process.env.NETWORK_API_DOMAIN, "persons/activities");
+        let activities_url = getURL(process.env.NETWORK_API_DOMAIN, 'persons/activities');
 
         let activity_insert = {
             activity_type_id: 1,
             location_lat: 41.299,
             location_lon: 43.174,
-            location_name: "Capital One Cafe",
+            location_name: 'Capital One Cafe',
             activity_start: 10000,
             activity_duration_min: 60,
             no_end_time: true,

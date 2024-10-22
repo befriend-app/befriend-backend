@@ -1,5 +1,5 @@
-const { confirmDecryptedNetworkToken } = require("../services/shared");
-const { getNetwork } = require("../services/network");
+const { confirmDecryptedNetworkToken } = require('../services/shared');
+const { getNetwork } = require('../services/network');
 
 module.exports = function (req, res, next) {
     return new Promise(async (resolve, reject) => {
@@ -8,19 +8,19 @@ module.exports = function (req, res, next) {
 
         try {
             if (!network_token) {
-                res.json("network_token required", 401);
+                res.json('network_token required', 401);
                 return resolve();
             }
 
             let network = await getNetwork(network_token);
 
             if (!network) {
-                res.json("network_token invalid", 401);
+                res.json('network_token invalid', 401);
                 return resolve();
             }
 
             if (network.is_blocked) {
-                res.json("Cannot provide data to your network", 401);
+                res.json('Cannot provide data to your network', 401);
                 return resolve();
             }
 
@@ -28,11 +28,14 @@ module.exports = function (req, res, next) {
 
             req.from_network = network;
 
-            res.header("Access-Control-Allow-Origin", "*");
-            res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+            res.header('Access-Control-Allow-Origin', '*');
+            res.header(
+                'Access-Control-Allow-Headers',
+                'Origin, X-Requested-With, Content-Type, Accept',
+            );
             next();
         } catch (e) {
-            res.json("Invalid network_token", 401);
+            res.json('Invalid network_token', 401);
         }
 
         resolve();

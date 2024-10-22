@@ -1,7 +1,7 @@
-const axios = require("axios");
-const { getMetersFromMilesOrKm } = require("./shared");
+const axios = require('axios');
+const { getMetersFromMilesOrKm } = require('./shared');
 module.exports = {
-    base_url: "https://api.foursquare.com/v3/places/search",
+    base_url: 'https://api.foursquare.com/v3/places/search',
     limit: 50,
     fields: {
         core: `fsq_id,closed_bucket,distance,geocodes,location,name,timezone`, //categories,chains,link,related_places
@@ -16,7 +16,7 @@ module.exports = {
             }
 
             try {
-                return string.substring(1).split(">;")[0];
+                return string.substring(1).split('>;')[0];
             } catch (e) {}
 
             return null;
@@ -35,7 +35,7 @@ module.exports = {
                         try {
                             response = await axios.get(next_url, {
                                 headers: {
-                                    Accept: "application/json",
+                                    Accept: 'application/json',
                                     Authorization: api_key,
                                 },
                                 params: {},
@@ -48,7 +48,7 @@ module.exports = {
                         try {
                             response = await axios.get(module.exports.base_url, {
                                 headers: {
-                                    Accept: "application/json",
+                                    Accept: 'application/json',
                                     Authorization: api_key,
                                 },
                                 params: {
@@ -124,7 +124,7 @@ module.exports = {
             try {
                 let r = await axios.get(url, {
                     headers: {
-                        Accept: "application/json",
+                        Accept: 'application/json',
                         Authorization: api_key,
                     },
                     params: {},

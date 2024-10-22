@@ -1,7 +1,7 @@
-const axios = require("axios");
-const { loadScriptEnv } = require("../../services/shared");
-const cacheService = require("../../services/cache");
-const dbService = require("../../services/db");
+const axios = require('axios');
+const { loadScriptEnv } = require('../../services/shared');
+const cacheService = require('../../services/cache');
+const dbService = require('../../services/db');
 
 loadScriptEnv();
 
@@ -10,9 +10,9 @@ function indexCities() {
         try {
             let conn = await dbService.conn();
 
-            console.log("Cities");
+            console.log('Cities');
 
-            let countries = await conn("open_countries");
+            let countries = await conn('open_countries');
 
             let countries_dict = {};
 
@@ -20,7 +20,7 @@ function indexCities() {
                 countries_dict[country.id] = country;
             });
 
-            let cities = await conn("open_cities").whereNotNull("population");
+            let cities = await conn('open_cities').whereNotNull('population');
 
             let pipeline = cacheService.conn.multi();
 
@@ -39,7 +39,7 @@ function indexCities() {
                     id: city.id,
                     name: city.city_name,
                     country_id: city.country_id,
-                    state_id: city.state_id ? city.state_id : "",
+                    state_id: city.state_id ? city.state_id : '',
                     population: city.population,
                     lat: city.lat,
                     lon: city.lon,
@@ -81,7 +81,7 @@ function indexCities() {
                 }
 
                 //split name into words
-                const nameSplit = nameLower.split(" ");
+                const nameSplit = nameLower.split(' ');
 
                 for (let word of nameSplit) {
                     for (let i = 1; i <= word.length; i++) {
@@ -96,12 +96,15 @@ function indexCities() {
 
                         //add to country prefix for small number of characters
                         if (i < 4) {
-                            pipeline.zAdd(cacheService.keys.multi.cityCountryPrefix(country_code, prefix), [
-                                {
-                                    value: city.id.toString(),
-                                    score: city.population,
-                                },
-                            ]);
+                            pipeline.zAdd(
+                                cacheService.keys.multi.cityCountryPrefix(country_code, prefix),
+                                [
+                                    {
+                                        value: city.id.toString(),
+                                        score: city.population,
+                                    },
+                                ],
+                            );
                         }
                     }
                 }
@@ -126,11 +129,11 @@ function indexCities() {
 function indexStates() {
     return new Promise(async (resolve, reject) => {
         try {
-            console.log("States");
+            console.log('States');
 
             let conn = await dbService.conn();
 
-            let states = await conn("open_states");
+            let states = await conn('open_states');
 
             let pipeline = cacheService.conn.multi();
 
@@ -142,9 +145,9 @@ function indexStates() {
                     name: state.state_name,
                     short: state.state_short,
                     country_id: state.country_id,
-                    population: state.population ? state.population : "",
-                    lat: state.lat ? state.lat : "",
-                    lon: state.lon ? state.lon : "",
+                    population: state.population ? state.population : '',
+                    lat: state.lat ? state.lat : '',
+                    lon: state.lon ? state.lon : '',
                 });
             }
 
@@ -161,13 +164,13 @@ function indexStates() {
 function indexCountries() {
     return new Promise(async (resolve, reject) => {
         try {
-            console.log("Countries");
+            console.log('Countries');
 
             let conn = await dbService.conn();
 
             let pipeline = cacheService.conn.multi();
 
-            let countries = await conn("open_countries");
+            let countries = await conn('open_countries');
 
             for (let country of countries) {
                 const country_key = `${cacheService.keys.country}${country.id}`;
@@ -176,7 +179,7 @@ function indexCountries() {
                     id: country.id,
                     name: country.country_name,
                     code: country.country_code,
-                    population: country.population ? country.population : "",
+                    population: country.population ? country.population : '',
                     lat: country.lat,
                     lon: country.lon,
                 });
@@ -195,7 +198,7 @@ function indexCountries() {
 function main() {
     return new Promise(async (resolve, reject) => {
         try {
-            console.log("Indexing Locations");
+            console.log('Indexing Locations');
 
             await cacheService.init();
 

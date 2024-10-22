@@ -1,26 +1,26 @@
-const axios = require("axios");
-const dbService = require("../services/db");
-const fs = require("fs");
-const dayjs = require("dayjs");
-const utc = require("dayjs/plugin/utc");
-const timezone = require("dayjs/plugin/timezone");
-const geoplaces = require("geojson-places");
-const tldts = require("tldts");
-const process = require("process");
-const { decrypt } = require("./encryption");
-const bcrypt = require("bcryptjs");
+const axios = require('axios');
+const dbService = require('../services/db');
+const fs = require('fs');
+const dayjs = require('dayjs');
+const utc = require('dayjs/plugin/utc');
+const timezone = require('dayjs/plugin/timezone');
+const geoplaces = require('geojson-places');
+const tldts = require('tldts');
+const process = require('process');
+const { decrypt } = require('./encryption');
+const bcrypt = require('bcryptjs');
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-global.serverTimezoneString = process.env.TZ || "America/Chicago";
+global.serverTimezoneString = process.env.TZ || 'America/Chicago';
 
 const earth_radius_km = 6371;
 const earth_radius_miles = 3958.762079;
 const meters_to_miles = 0.000621371192;
 const miles_to_km = 1.60934;
 
-Object.defineProperty(String.prototype, "capitalize", {
+Object.defineProperty(String.prototype, 'capitalize', {
     value: function () {
         return this.charAt(0).toUpperCase() + this.slice(1);
     },
@@ -37,7 +37,7 @@ function birthDatePure(birth_date) {
 
 function changeTimezone(date, ianatz) {
     let invdate = new Date(
-        date.toLocaleString("en-US", {
+        date.toLocaleString('en-US', {
             timeZone: ianatz,
         }),
     );
@@ -62,25 +62,25 @@ function confirmDecryptedNetworkToken(encrypted_message, network) {
             let conn = await dbService.conn();
 
             //get secret key for encrypted message
-            let secret_key_qry = await conn("networks_secret_keys")
-                .where("network_id", network.id)
-                .where("is_active", true)
+            let secret_key_qry = await conn('networks_secret_keys')
+                .where('network_id', network.id)
+                .where('is_active', true)
                 .first();
 
             if (!secret_key_qry) {
-                return reject("Error validating network");
+                return reject('Error validating network');
             }
 
             //ensure can decrypt message and it matches my network token
             let decoded = await decrypt(secret_key_qry.secret_key_from, encrypted_message);
 
             if (!decoded || decoded !== network.network_token) {
-                return reject("Invalid network_token");
+                return reject('Invalid network_token');
             }
 
             resolve(true);
         } catch (e) {
-            return reject("Error decrypting message");
+            return reject('Error decrypting message');
         }
     });
 }
@@ -88,36 +88,36 @@ function confirmDecryptedNetworkToken(encrypted_message, network) {
 function confirmDecryptedRegistrationNetworkToken(encrypted_message) {
     return new Promise(async (resolve, reject) => {
         try {
-            let networkService = require("../services/network");
+            let networkService = require('../services/network');
 
             let conn = await dbService.conn();
 
             let my_network = await networkService.getNetworkSelf();
 
             if (!my_network || !my_network.registration_network_id) {
-                return reject("Error finding my registration network");
+                return reject('Error finding my registration network');
             }
 
             //get secret key for the registration network
-            let secret_key_qry = await conn("networks_secret_keys")
-                .where("network_id", my_network.registration_network_id)
-                .where("is_active", true)
+            let secret_key_qry = await conn('networks_secret_keys')
+                .where('network_id', my_network.registration_network_id)
+                .where('is_active', true)
                 .first();
 
             if (!secret_key_qry) {
-                return reject("Error finding keys");
+                return reject('Error finding keys');
             }
 
             //ensure can decrypt message and it matches my network token
             let decoded = await decrypt(secret_key_qry.secret_key_from, encrypted_message);
 
             if (!decoded || decoded !== networkService.token) {
-                return reject("Invalid keys exchange request");
+                return reject('Invalid keys exchange request');
             }
 
             resolve(true);
         } catch (e) {
-            return reject("Error decrypting message");
+            return reject('Error decrypting message');
         }
     });
 }
@@ -127,20 +127,20 @@ function dateTimeNow(date) {
         date = new Date();
     }
 
-    return date.toISOString().slice(0, 10) + " " + date.toISOString().substring(11, 19);
+    return date.toISOString().slice(0, 10) + ' ' + date.toISOString().substring(11, 19);
 }
 
 function downloadURL(url, output_path) {
     return new Promise(async (resolve, reject) => {
         try {
             let response = await axios({
-                method: "get",
+                method: 'get',
                 url: url,
-                responseType: "stream",
+                responseType: 'stream',
                 headers: {
-                    "Cache-Control": "no-cache",
-                    Pragma: "no-cache",
-                    Expires: "0",
+                    'Cache-Control': 'no-cache',
+                    Pragma: 'no-cache',
+                    Expires: '0',
                 },
             });
 
@@ -148,7 +148,7 @@ function downloadURL(url, output_path) {
 
             response.data.pipe(w);
 
-            w.on("finish", function () {
+            w.on('finish', function () {
                 resolve();
             });
         } catch (e) {
@@ -173,10 +173,10 @@ function encodePassword(unencrypted_password) {
 }
 
 function formatNumberLength(num, length) {
-    let r = "" + num;
+    let r = '' + num;
 
     while (r.length < length) {
-        r = "0" + r;
+        r = '0' + r;
     }
     return r;
 }
@@ -187,7 +187,7 @@ function generateToken(length) {
     }
 
     //edit the token allowed characters
-    let a = "abcdefghijklmnopqrstuvwxyz1234567890".split("");
+    let a = 'abcdefghijklmnopqrstuvwxyz1234567890'.split('');
     let b = [];
 
     for (let i = 0; i < length; i++) {
@@ -195,13 +195,13 @@ function generateToken(length) {
         b[i] = a[j];
     }
 
-    return b.join("");
+    return b.join('');
 }
 
 function getBicyclingTime(distance_meters) {
     const AVERAGE_BICYCLING_SPEED = 15; // km/h
 
-    const timeHours = (distance_meters / 1000) / AVERAGE_BICYCLING_SPEED;
+    const timeHours = distance_meters / 1000 / AVERAGE_BICYCLING_SPEED;
 
     return getTimeFromSeconds(timeHours * 3600);
 }
@@ -216,9 +216,9 @@ function getCityState(zip, blnUSA = true) {
             return reject(e);
         }
 
-        let city = "";
-        let state = "";
-        let country = "";
+        let city = '';
+        let state = '';
+        let country = '';
 
         let data = address_info.data;
 
@@ -226,20 +226,20 @@ function getCityState(zip, blnUSA = true) {
             for (let component of data.results[0].address_components) {
                 let type = component.types[0];
 
-                if ((city === "" && type === "sublocality_level_1") || type === "locality") {
+                if ((city === '' && type === 'sublocality_level_1') || type === 'locality') {
                     city = component.short_name.trim();
                 }
 
-                if (state === "" && type === "administrative_area_level_1") {
+                if (state === '' && type === 'administrative_area_level_1') {
                     state = component.short_name.trim();
                 }
 
-                if (country === "" && type === "country") {
+                if (country === '' && type === 'country') {
                     country = component.short_name.trim();
 
-                    if (blnUSA && country !== "US") {
-                        city = "";
-                        state = "";
+                    if (blnUSA && country !== 'US') {
+                        city = '';
+                        state = '';
                         break;
                     }
                 }
@@ -264,8 +264,8 @@ function getCleanDomain(domain, remove_subdomain, allow_local) {
         return null;
     }
 
-    if (typeof domain !== "string") {
-        throw Error("Domain should be a string");
+    if (typeof domain !== 'string') {
+        throw Error('Domain should be a string');
     }
 
     if (!isProdApp() && allow_local) {
@@ -280,7 +280,7 @@ function getCleanDomain(domain, remove_subdomain, allow_local) {
 
     //remove http, https
     if (!isIPAddress(clean_domain)) {
-        clean_domain = clean_domain.replace("https://", "").replace("http://", "");
+        clean_domain = clean_domain.replace('https://', '').replace('http://', '');
     }
 
     if (remove_subdomain) {
@@ -307,8 +307,13 @@ function getCoordsBoundBox(latitude, longitude, distance_miles_or_km) {
     const radLat = deg2rad(latitude);
     const radLon = deg2rad(longitude);
 
-    if (radLat < latLimits[0] || radLat > latLimits[1] || radLon < lonLimits[0] || radLon > lonLimits[1]) {
-        throw new Error("Invalid Argument");
+    if (
+        radLat < latLimits[0] ||
+        radLat > latLimits[1] ||
+        radLon < lonLimits[0] ||
+        radLon > lonLimits[1]
+    ) {
+        throw new Error('Invalid Argument');
     }
 
     // Angular distance in radians on a great circle,
@@ -371,24 +376,24 @@ function getCoordsFromPointDistance(lat, lon, distance_miles_or_km, direction) {
 
     let newLat, newLon;
 
-    if (direction === "east" || direction === "west") {
+    if (direction === 'east' || direction === 'west') {
         newLat = lat;
 
         let newLonRad;
 
-        if (direction === "east") {
+        if (direction === 'east') {
             newLonRad = lonRad + distance_km / (earth_radius_km * Math.cos(latRad));
         } else {
             newLonRad = lonRad - distance_km / (earth_radius_km * Math.cos(latRad));
         }
 
         newLon = rad2deg(newLonRad);
-    } else if (direction === "south" || direction === "north") {
+    } else if (direction === 'south' || direction === 'north') {
         newLon = lon;
 
         let newLatRad;
 
-        if (direction === "south") {
+        if (direction === 'south') {
             newLatRad = latRad - distance_km / earth_radius_km;
         } else {
             newLatRad = latRad + distance_km / earth_radius_km;
@@ -404,7 +409,7 @@ function getCoordsFromPointDistance(lat, lon, distance_miles_or_km, direction) {
 }
 
 function getDateDiff(date_1, date_2, unit) {
-    let dayjs = require("dayjs");
+    let dayjs = require('dayjs');
 
     date_1 = dayjs(date_1);
     date_2 = dayjs(date_2);
@@ -413,14 +418,14 @@ function getDateDiff(date_1, date_2, unit) {
 }
 
 function getDateStr(date) {
-    let dayjs = require("dayjs");
+    let dayjs = require('dayjs');
     let obj = dayjs(date);
-    return obj.format("YYYY-MM-DD");
+    return obj.format('YYYY-MM-DD');
 }
 
 function getDateTimeStr() {
     let date = new Date();
-    return date.toISOString().slice(0, 10) + " " + date.toISOString().substring(11, 19);
+    return date.toISOString().slice(0, 10) + ' ' + date.toISOString().substring(11, 19);
 }
 
 function getDistanceMeters(loc_1, loc_2) {
@@ -450,7 +455,7 @@ function getExchangeKeysKey(token) {
 }
 
 function getIPAddr(req) {
-    return req.headers["x-forwarded-for"] || req.socket.remoteAddress || null;
+    return req.headers['x-forwarded-for'] || req.socket.remoteAddress || null;
 }
 
 function getLocalDate() {
@@ -465,8 +470,8 @@ function getLocalDateStr(date) {
     const offset = date.getTimezoneOffset();
     const offsetAbs = Math.abs(offset);
     const isoString = new Date(date.getTime() - offset * 60 * 1000).toISOString();
-    let str = `${isoString.slice(0, -1)}${offset > 0 ? "-" : "+"}${String(Math.floor(offsetAbs / 60)).padStart(2, "0")}:${String(offsetAbs % 60).padStart(2, "0")}`;
-    str = str.replace("T", " ").substring(0, 19);
+    let str = `${isoString.slice(0, -1)}${offset > 0 ? '-' : '+'}${String(Math.floor(offsetAbs / 60)).padStart(2, '0')}:${String(offsetAbs % 60).padStart(2, '0')}`;
+    str = str.replace('T', ' ').substring(0, 19);
     return str;
 }
 
@@ -475,11 +480,11 @@ function getLocalDateTimeStr(date) {
         date = new Date();
     }
 
-    let dayjs = require("dayjs");
+    let dayjs = require('dayjs');
 
     dayjs = dayjs(date);
 
-    return dayjs.format("MM-DD-YY HH:mm:ss");
+    return dayjs.format('MM-DD-YY HH:mm:ss');
 }
 
 function getMetersFromMilesOrKm(miles_or_km, to_int) {
@@ -508,7 +513,7 @@ function getMilesOrKmFromMeters(meters) {
 
 function getPersonCacheKey(person_token_or_email) {
     if (!person_token_or_email) {
-        throw new Error("No person_token or email provided");
+        throw new Error('No person_token or email provided');
     }
 
     person_token_or_email = person_token_or_email.toLowerCase();
@@ -520,7 +525,7 @@ function getPersonLoginCacheKey(person_token) {
     //set
 
     if (!person_token) {
-        throw new Error("No person_token provided");
+        throw new Error('No person_token provided');
     }
 
     person_token = person_token.toLowerCase();
@@ -535,7 +540,7 @@ function getRandomInRange(from, to, fixed) {
 function getRepoRoot() {
     let slash = `/`;
 
-    if (process.platform.startsWith("win")) {
+    if (process.platform.startsWith('win')) {
         slash = `\\`;
     }
 
@@ -548,58 +553,58 @@ function getRepoRoot() {
 
 function getStatesList() {
     return {
-        AL: "Alabama",
-        AK: "Alaska",
-        AZ: "Arizona",
-        AR: "Arkansas",
-        CA: "California",
-        CO: "Colorado",
-        CT: "Connecticut",
-        DE: "Delaware",
-        DC: "District Of Columbia",
-        FL: "Florida",
-        GA: "Georgia",
-        HI: "Hawaii",
-        ID: "Idaho",
-        IL: "Illinois",
-        IN: "Indiana",
-        IA: "Iowa",
-        KS: "Kansas",
-        KY: "Kentucky",
-        LA: "Louisiana",
-        ME: "Maine",
-        MD: "Maryland",
-        MA: "Massachusetts",
-        MI: "Michigan",
-        MN: "Minnesota",
-        MS: "Mississippi",
-        MO: "Missouri",
-        MT: "Montana",
-        NE: "Nebraska",
-        NV: "Nevada",
-        NH: "New Hampshire",
-        NJ: "New Jersey",
-        NM: "New Mexico",
-        NY: "New York",
-        NC: "North Carolina",
-        ND: "North Dakota",
-        OH: "Ohio",
-        OK: "Oklahoma",
-        OR: "Oregon",
-        PA: "Pennsylvania",
-        PR: "Puerto Rico",
-        RI: "Rhode Island",
-        SC: "South Carolina",
-        SD: "South Dakota",
-        TN: "Tennessee",
-        TX: "Texas",
-        UT: "Utah",
-        VT: "Vermont",
-        VA: "Virginia",
-        WA: "Washington",
-        WV: "West Virginia",
-        WI: "Wisconsin",
-        WY: "Wyoming",
+        AL: 'Alabama',
+        AK: 'Alaska',
+        AZ: 'Arizona',
+        AR: 'Arkansas',
+        CA: 'California',
+        CO: 'Colorado',
+        CT: 'Connecticut',
+        DE: 'Delaware',
+        DC: 'District Of Columbia',
+        FL: 'Florida',
+        GA: 'Georgia',
+        HI: 'Hawaii',
+        ID: 'Idaho',
+        IL: 'Illinois',
+        IN: 'Indiana',
+        IA: 'Iowa',
+        KS: 'Kansas',
+        KY: 'Kentucky',
+        LA: 'Louisiana',
+        ME: 'Maine',
+        MD: 'Maryland',
+        MA: 'Massachusetts',
+        MI: 'Michigan',
+        MN: 'Minnesota',
+        MS: 'Mississippi',
+        MO: 'Missouri',
+        MT: 'Montana',
+        NE: 'Nebraska',
+        NV: 'Nevada',
+        NH: 'New Hampshire',
+        NJ: 'New Jersey',
+        NM: 'New Mexico',
+        NY: 'New York',
+        NC: 'North Carolina',
+        ND: 'North Dakota',
+        OH: 'Ohio',
+        OK: 'Oklahoma',
+        OR: 'Oregon',
+        PA: 'Pennsylvania',
+        PR: 'Puerto Rico',
+        RI: 'Rhode Island',
+        SC: 'South Carolina',
+        SD: 'South Dakota',
+        TN: 'Tennessee',
+        TX: 'Texas',
+        UT: 'Utah',
+        VT: 'Vermont',
+        VA: 'Virginia',
+        WA: 'Washington',
+        WV: 'West Virginia',
+        WI: 'Wisconsin',
+        WY: 'Wyoming',
     };
 }
 
@@ -616,15 +621,15 @@ function getTimeFromSeconds(seconds) {
     const mins = Math.floor((seconds % 3600) / 60);
     const total = hours * 60 + mins;
 
-    return  {
+    return {
         hours,
         mins,
-        total
-    }
+        total,
+    };
 }
 
 function getTimeZoneFromCoords(lat, lon) {
-    const { find } = require("geo-tz");
+    const { find } = require('geo-tz');
 
     let tz = find(lat, lon);
 
@@ -635,18 +640,18 @@ function getTimeZoneFromCoords(lat, lon) {
 
 function getURL(raw_domain, endpoint) {
     if (!raw_domain) {
-        throw new Error("Domain required");
+        throw new Error('Domain required');
     }
 
-    if (typeof endpoint === "undefined") {
-        throw new Error("No endpoint provided");
+    if (typeof endpoint === 'undefined') {
+        throw new Error('No endpoint provided');
     }
 
     //use provided protocol for dev
     if (!isProdApp()) {
         if (isIPAddress(raw_domain) || isLocalHost(raw_domain)) {
             // use http if only ip/localhost string
-            if (raw_domain.startsWith("http")) {
+            if (raw_domain.startsWith('http')) {
                 return joinPaths(raw_domain, endpoint);
             }
 
@@ -654,7 +659,7 @@ function getURL(raw_domain, endpoint) {
         }
     }
 
-    if (raw_domain.startsWith("http")) {
+    if (raw_domain.startsWith('http')) {
         return joinPaths(raw_domain, endpoint);
     }
 
@@ -664,7 +669,7 @@ function getURL(raw_domain, endpoint) {
 function getWalkingTime(distance_meters) {
     const AVERAGE_WALKING_SPEED = 5; // km/h
 
-    const timeHours = (distance_meters / 1000) / AVERAGE_WALKING_SPEED;
+    const timeHours = distance_meters / 1000 / AVERAGE_WALKING_SPEED;
 
     return getTimeFromSeconds(timeHours * 3600);
 }
@@ -676,22 +681,23 @@ function hasPort(domain) {
 
     let pure_domain = getCleanDomain(domain);
 
-    let split = pure_domain.split(":");
+    let split = pure_domain.split(':');
 
     return split.length > 1;
 }
 
 function isIPAddress(address) {
-    if (!address || typeof address !== "string") {
+    if (!address || typeof address !== 'string') {
         return false;
     }
 
     //remove https, http
-    address = address.replace("https://", "").replace("http://", "");
+    address = address.replace('https://', '').replace('http://', '');
 
     //remove port
-    let domain_no_port = address.split(":")[0];
-    let ip_re = /^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+    let domain_no_port = address.split(':')[0];
+    let ip_re =
+        /^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
 
     return !!domain_no_port.match(ip_re);
 }
@@ -701,21 +707,21 @@ function isLocalHost(address) {
         return false;
     }
 
-    if (typeof address !== "string") {
-        throw "Address is not a string";
+    if (typeof address !== 'string') {
+        throw 'Address is not a string';
     }
 
     let domain = address.toLowerCase();
 
-    domain = domain.replace("https://", "").replace("http://", "");
+    domain = domain.replace('https://', '').replace('http://', '');
 
     let parsed = tldts.parse(domain);
 
-    return parsed.publicSuffix && parsed.publicSuffix === "localhost";
+    return parsed.publicSuffix && parsed.publicSuffix === 'localhost';
 }
 
 function isLocalApp() {
-    return process.env.APP_ENV.includes("local");
+    return process.env.APP_ENV.includes('local');
 }
 
 function isNumeric(val) {
@@ -723,7 +729,7 @@ function isNumeric(val) {
 }
 
 function isProdApp() {
-    return process.env.APP_ENV && process.env.APP_ENV.includes("prod");
+    return process.env.APP_ENV && process.env.APP_ENV.includes('prod');
 }
 
 function isValidEmail(email) {
@@ -741,38 +747,38 @@ function joinPaths() {
     let args = [];
 
     for (let i = 0; i < arguments.length; i++) {
-        let arg = arguments[i] + "";
+        let arg = arguments[i] + '';
         if (!arg) {
             continue;
         }
 
-        if (typeof arg === "number") {
+        if (typeof arg === 'number') {
             arg = arg.toString();
         }
 
         args.push(arg);
     }
 
-    let slash = "/";
+    let slash = '/';
 
-    if (process.platform === "win32" && args[0].includes("\\")) {
-        slash = "\\";
+    if (process.platform === 'win32' && args[0].includes('\\')) {
+        slash = '\\';
     }
 
     let url = args
         .map((part, i) => {
             if (i === 0) {
-                let re = new RegExp(`[\\${slash}]*$`, "g");
-                return part.trim().replace(re, "");
+                let re = new RegExp(`[\\${slash}]*$`, 'g');
+                return part.trim().replace(re, '');
             } else {
-                let re = new RegExp(`(^[\\${slash}]*|[\\/]*$)`, "g");
-                return part.trim().replace(re, "");
+                let re = new RegExp(`(^[\\${slash}]*|[\\/]*$)`, 'g');
+                return part.trim().replace(re, '');
             }
         })
         .filter((x) => x.length)
         .join(slash);
 
-    if (!url.startsWith("http") && !url.startsWith("/")) {
+    if (!url.startsWith('http') && !url.startsWith('/')) {
         url = `/${url}`;
     }
 
@@ -792,7 +798,7 @@ function loadScriptEnv() {
 
     process.chdir(repo_root);
 
-    require("dotenv").config();
+    require('dotenv').config();
 }
 
 function normalizeDistance(distance, radius_meters) {
@@ -827,12 +833,12 @@ function normalizeSearch(search, skip_lowercase) {
     }
 
     //remove extra space
-    clean_search = clean_search.trim().replace(/\s+/g, " ");
+    clean_search = clean_search.trim().replace(/\s+/g, ' ');
 
     //remove non-allowed characters
     let regex = /[^a-zA-Z0-9 ,.'-]+/;
 
-    clean_search = clean_search.replace(regex, "");
+    clean_search = clean_search.replace(regex, '');
 
     return clean_search;
 }
@@ -846,7 +852,7 @@ function numberWithCommas(x, to_integer) {
         x = Number.parseInt(x);
     }
 
-    return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
 function range(min, max) {
@@ -861,7 +867,7 @@ function range(min, max) {
 
 function readFile(p, json) {
     return new Promise((resolve, reject) => {
-        require("fs").readFile(p, function (err, data) {
+        require('fs').readFile(p, function (err, data) {
             if (err) {
                 return reject(err);
             }
@@ -889,7 +895,7 @@ function sendEmail(subject, html, email, from, cc, attachment_alt) {
             from = process.env.EMAIL_FROM;
         }
 
-        const sgMail = require("@sendgrid/mail");
+        const sgMail = require('@sendgrid/mail');
 
         sgMail.setApiKey(process.env.SENDGRID_KEY);
 
@@ -932,14 +938,14 @@ function setSystemProcessRan(system_key) {
         try {
             let conn = await dbService.conn();
 
-            let qry = await conn("system").where("system_key", system_key).first();
+            let qry = await conn('system').where('system_key', system_key).first();
 
             if (qry) {
-                await conn("system").where("id", qry.id).update({
+                await conn('system').where('id', qry.id).update({
                     updated: timeNow(),
                 });
             } else {
-                await conn("system").insert({
+                await conn('system').insert({
                     system_key: system_key,
                     system_value: 1,
                     created: timeNow(),
@@ -976,7 +982,7 @@ function shuffleFunc(array) {
 }
 
 function slugName(name) {
-    return require("slugify")(name, {
+    return require('slugify')(name, {
         lower: true,
         strict: true,
     });
@@ -987,7 +993,7 @@ function systemProcessRan(system_key) {
         try {
             let conn = await dbService.conn();
 
-            let qry = await conn("system").where("system_key", system_key).first();
+            let qry = await conn('system').where('system_key', system_key).first();
 
             if (!qry || !qry.system_value) {
                 return resolve(false);
@@ -995,7 +1001,7 @@ function systemProcessRan(system_key) {
 
             let value = qry.system_value.toLowerCase();
 
-            if (value === "true") {
+            if (value === 'true') {
                 return resolve(true);
             }
 
@@ -1036,7 +1042,7 @@ function timeoutAwait(ms, f) {
 function useKM() {
     let value = process.env.DISPLAY_KM;
 
-    return value && (value === "true" || value === "1");
+    return value && (value === 'true' || value === '1');
 }
 
 function writeFile(file_path, data) {

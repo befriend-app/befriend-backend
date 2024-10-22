@@ -1,8 +1,14 @@
-const axios = require("axios");
-const yargs = require("yargs");
-const dbService = require("../services/db");
-const { getNetworkSelf } = require("../services/network");
-const { loadScriptEnv, generateToken, timeNow, birthDatePure, encodePassword } = require("../services/shared");
+const axios = require('axios');
+const yargs = require('yargs');
+const dbService = require('../services/db');
+const { getNetworkSelf } = require('../services/network');
+const {
+    loadScriptEnv,
+    generateToken,
+    timeNow,
+    birthDatePure,
+    encodePassword,
+} = require('../services/shared');
 
 let args = yargs.argv;
 
@@ -21,14 +27,14 @@ if (args._ && args._.length) {
         let r = await axios.get(`https://randomuser.me/api/?results=${num_persons}`);
 
         for (let person of r.data.results) {
-            let gender_qry = await conn("genders").where("gender_name", person.gender).first();
+            let gender_qry = await conn('genders').where('gender_name', person.gender).first();
 
             if (!gender_qry) {
-                console.error("Missing gender row");
+                console.error('Missing gender row');
                 continue;
             }
 
-            let person_password = await encodePassword("password");
+            let person_password = await encodePassword('password');
 
             let person_insert = {
                 person_token: generateToken(),
@@ -42,18 +48,20 @@ if (args._ && args._.length) {
                 is_online: true,
                 image_url: person.picture.large,
                 location_lat: person.location.coordinates.latitude,
-                location_lat_1000: Math.floor(parseFloat(person.location.coordinates.latitude) * 1000),
+                location_lat_1000: Math.floor(
+                    parseFloat(person.location.coordinates.latitude) * 1000,
+                ),
                 location_lon: person.location.coordinates.longitude,
                 birth_date: birthDatePure(person.dob.date),
                 created: timeNow(),
                 updated: timeNow(),
             };
 
-            let person_id = await conn("persons").insert(person_insert);
+            let person_id = await conn('persons').insert(person_insert);
 
             person_id = person_id[0];
 
-            await conn("persons_networks").insert({
+            await conn('persons_networks').insert({
                 person_id: person_id,
                 network_id: self_network.id,
                 created: timeNow(),

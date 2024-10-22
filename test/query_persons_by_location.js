@@ -1,8 +1,14 @@
-const { loadScriptEnv, getCoordsBoundBox, range, timeNow, getMetersFromMilesOrKm } = require("../services/shared");
-const axios = require("axios");
+const {
+    loadScriptEnv,
+    getCoordsBoundBox,
+    range,
+    timeNow,
+    getMetersFromMilesOrKm,
+} = require('../services/shared');
+const axios = require('axios');
 loadScriptEnv();
 
-const dbService = require("../services/db");
+const dbService = require('../services/db');
 
 // # step 1
 // run mock/add_person or mock/add_bulk_persons
@@ -11,15 +17,14 @@ const dbService = require("../services/db");
     function testQuery() {
         return new Promise(async (resolve, reject) => {
             try {
-                items = await conn("persons")
-                    .whereIn("location_lat_1000", lats)
+                items = await conn('persons')
+                    .whereIn('location_lat_1000', lats)
                     // .whereBetween('location_lat', [box.minLat, box.maxLon])
-                    .whereBetween("location_lon", [box.minLon, box.maxLon])
-                    .whereRaw("(ST_Distance_Sphere(point(location_lon, location_lat), point(?,?))) <= ?", [
-                        coords.lon,
-                        coords.lat,
-                        getMetersFromMilesOrKm(max_miles),
-                    ]);
+                    .whereBetween('location_lon', [box.minLon, box.maxLon])
+                    .whereRaw(
+                        '(ST_Distance_Sphere(point(location_lon, location_lat), point(?,?))) <= ?',
+                        [coords.lon, coords.lat, getMetersFromMilesOrKm(max_miles)],
+                    );
 
                 resolve();
             } catch (e) {

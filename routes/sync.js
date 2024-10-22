@@ -1,10 +1,10 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const syncController = require("../controllers/sync");
+const syncController = require('../controllers/sync');
 
-router.use(require("../middleware/sync"));
+router.use(require('../middleware/sync'));
 
-router.post("/persons", function (req, res, next) {
+router.post('/persons', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await syncController.syncPersons(req, res);

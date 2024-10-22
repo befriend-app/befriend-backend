@@ -1,5 +1,5 @@
-const cacheService = require("../services/cache");
-const { getPersonLoginCacheKey } = require("../services/shared");
+const cacheService = require('../services/cache');
+const { getPersonLoginCacheKey } = require('../services/shared');
 
 // authentication middleware
 module.exports = function (req, res, next) {
@@ -15,7 +15,7 @@ module.exports = function (req, res, next) {
             if (!is_valid_token) {
                 res.json(
                     {
-                        message: "unauthenticated request",
+                        message: 'unauthenticated request',
                     },
                     401,
                 );
@@ -26,7 +26,7 @@ module.exports = function (req, res, next) {
             //continue request to auth route
             next();
         } catch (e) {
-            res.json("Invalid network_token", 401);
+            res.json('Invalid network_token', 401);
         }
 
         resolve();

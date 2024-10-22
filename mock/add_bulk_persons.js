@@ -1,7 +1,7 @@
-const axios = require("axios");
-const yargs = require("yargs");
-const dbService = require("../services/db");
-const { getNetworkSelf } = require("../services/network");
+const axios = require('axios');
+const yargs = require('yargs');
+const dbService = require('../services/db');
+const { getNetworkSelf } = require('../services/network');
 const {
     loadScriptEnv,
     generateToken,
@@ -9,8 +9,8 @@ const {
     birthDatePure,
     encodePassword,
     getRandomInRange,
-} = require("../services/shared");
-const { batchInsert } = require("../services/db");
+} = require('../services/shared');
+const { batchInsert } = require('../services/db');
 
 loadScriptEnv();
 
@@ -31,7 +31,7 @@ let max_request_count = 1000;
 
     let current_count = 0;
 
-    let genders = await conn("genders");
+    let genders = await conn('genders');
 
     let genders_dict = {};
 
@@ -40,11 +40,13 @@ let max_request_count = 1000;
     }
 
     try {
-        let r = await axios.get(`https://randomuser.me/api/?results=${Math.min(num_persons, max_request_count)}`);
+        let r = await axios.get(
+            `https://randomuser.me/api/?results=${Math.min(num_persons, max_request_count)}`,
+        );
 
         results = r.data.results;
 
-        let person_password = await encodePassword("password");
+        let person_password = await encodePassword('password');
 
         while (current_count < num_persons) {
             current_count += max_request_count;
@@ -90,7 +92,7 @@ let max_request_count = 1000;
                 batch_insert.push(person_insert);
             }
 
-            let ids_output = await batchInsert(conn, "persons", batch_insert);
+            let ids_output = await batchInsert(conn, 'persons', batch_insert);
 
             for (let ids of ids_output) {
                 for (let person_id = ids[0]; person_id < ids[1]; person_id++) {
@@ -104,7 +106,7 @@ let max_request_count = 1000;
             }
 
             try {
-                await batchInsert(conn, "persons_networks", person_network_insert);
+                await batchInsert(conn, 'persons_networks', person_network_insert);
             } catch (e) {
                 console.error(e);
             }

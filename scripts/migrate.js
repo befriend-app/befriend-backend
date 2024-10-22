@@ -1,14 +1,14 @@
-const Knex = require("knex");
-const { loadScriptEnv } = require("../services/shared");
-const color = require("colorette");
+const Knex = require('knex');
+const { loadScriptEnv } = require('../services/shared');
+const color = require('colorette');
 
 loadScriptEnv();
 
 function main() {
     return new Promise(async (resolve, reject) => {
-        console.log("Migrate DB");
+        console.log('Migrate DB');
 
-        let required = ["DB_NAME", "DB_HOST", "DB_USER", "DB_PASSWORD"];
+        let required = ['DB_NAME', 'DB_HOST', 'DB_USER', 'DB_PASSWORD'];
 
         let missing = [];
 
@@ -20,7 +20,7 @@ function main() {
 
         if (missing.length) {
             console.error({
-                message: ".env keys needed",
+                message: '.env keys needed',
                 keys: missing,
             });
 
@@ -42,7 +42,7 @@ function main() {
             connection: connection,
         });
 
-        await knex.raw("CREATE DATABASE IF NOT EXISTS ??", process.env.DB_NAME);
+        await knex.raw('CREATE DATABASE IF NOT EXISTS ??', process.env.DB_NAME);
 
         connection.database = process.env.DB_NAME;
 
@@ -54,10 +54,12 @@ function main() {
         let output = await knex.migrate.latest();
 
         if (!output[1].length) {
-            console.log(color.cyan("Already up to date"));
+            console.log(color.cyan('Already up to date'));
         } else {
             console.log(
-                color.green(`Batch ${output[0]} run: ${output[1].length} migration${output[1].length > 1 ? "s" : ""}`),
+                color.green(
+                    `Batch ${output[0]} run: ${output[1].length} migration${output[1].length > 1 ? 's' : ''}`,
+                ),
             );
         }
 

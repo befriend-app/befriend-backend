@@ -1,6 +1,6 @@
-let cacheService = require("../services/cache");
+let cacheService = require('../services/cache');
 
-const { generateToken, getSessionKey, timeNow } = require("../services/shared");
+const { generateToken, getSessionKey, timeNow } = require('../services/shared');
 
 function getSessionData(key) {
     return new Promise(async (resolve, reject) => {
@@ -26,11 +26,11 @@ function isSessionExpired(session_check) {
 
 async function handleSession(req, res, next) {
     return new Promise(async (resolve, reject) => {
-        res.header("Access-Control-Allow-Origin", "*");
-        res.setHeader("Access-Control-Allow-Methods", "GET,HEAD,OPTIONS,POST,PUT");
+        res.header('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,OPTIONS,POST,PUT');
         res.setHeader(
-            "Access-Control-Allow-Headers",
-            "Access-Control-Allow-Headers, Origin,Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers",
+            'Access-Control-Allow-Headers',
+            'Access-Control-Allow-Headers, Origin,Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers',
         );
 
         function createSession() {
@@ -98,15 +98,15 @@ async function handleSession(req, res, next) {
 
         let session_str = null;
 
-        let cookie = req.cookies["SESSION"];
+        let cookie = req.cookies['SESSION'];
 
         if (cookie) {
             session_str = cookie;
         }
 
-        let user_agent = req.headers["user-agent"];
+        let user_agent = req.headers['user-agent'];
 
-        if (user_agent && user_agent.includes("ELB-HealthChecker")) {
+        if (user_agent && user_agent.includes('ELB-HealthChecker')) {
             return resolve(next());
         }
 
@@ -148,11 +148,11 @@ async function handleSession(req, res, next) {
 function setCookie(res, session_str, expires_in) {
     return new Promise(async (resolve, reject) => {
         if (!session_str) {
-            return reject("No session str");
+            return reject('No session str');
         }
 
         if (!expires_in) {
-            return reject("No expires in");
+            return reject('No expires in');
         }
 
         let options = {
@@ -160,7 +160,7 @@ function setCookie(res, session_str, expires_in) {
         };
 
         // Set cookie
-        res.cookie("SESSION", session_str, options);
+        res.cookie('SESSION', session_str, options);
 
         return resolve();
     });

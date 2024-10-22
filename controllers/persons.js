@@ -1,10 +1,10 @@
-const dbService = require("../services/db");
+const dbService = require('../services/db');
 
-const { timeNow, generateToken } = require("../services/shared");
+const { timeNow, generateToken } = require('../services/shared');
 
-const { getPersonByToken } = require("../services/persons");
+const { getPersonByToken } = require('../services/persons');
 
-const { findMatches, notifyMatches, validateActivityOrThrow } = require("../services/activities");
+const { findMatches, notifyMatches, validateActivityOrThrow } = require('../services/activities');
 
 module.exports = {
     createActivity: function (req, res) {
@@ -37,7 +37,7 @@ module.exports = {
                 if (!person_obj) {
                     res.json(
                         {
-                            message: "person token not found",
+                            message: 'person token not found',
                         },
                         400,
                     );
@@ -47,7 +47,7 @@ module.exports = {
 
                 let person_id = person_obj.id;
 
-                let id = await conn("activities").insert({
+                let id = await conn('activities').insert({
                     activity_token: activity_token,
                     activity_type_id: activity.activity_type_id,
                     person_id: person_id,
@@ -83,7 +83,7 @@ module.exports = {
                         console.error(e);
                         res.json(
                             {
-                                message: "Error notifying matches",
+                                message: 'Error notifying matches',
                             },
                             400,
                         );
@@ -98,7 +98,8 @@ module.exports = {
                 } else {
                     res.json(
                         {
-                            message: "No persons found. Please check your filters or try again later.",
+                            message:
+                                'No persons found. Please check your filters or try again later.',
                         },
                         400,
                     );

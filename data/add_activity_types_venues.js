@@ -1,10 +1,10 @@
-const cacheService = require("../services/cache");
-const dbService = require("../services/db");
+const cacheService = require('../services/cache');
+const dbService = require('../services/db');
 
-let activity_types = require("./activity_type_venues/activity-types");
-let venue_categories = require("./activity_type_venues/add_venues_categories");
+let activity_types = require('./activity_type_venues/activity-types');
+let venue_categories = require('./activity_type_venues/add_venues_categories');
 
-const { timeNow, loadScriptEnv, generateToken, cloneObj } = require("../services/shared");
+const { timeNow, loadScriptEnv, generateToken, cloneObj } = require('../services/shared');
 
 loadScriptEnv();
 
@@ -34,19 +34,21 @@ function processActivity(activity, int, parent_ids, bool) {
                 activity_full_add.push(activity_dict[_id].activity_name);
             }
 
-            activity_full_name += `: ${activity_full_add.join(" - ")}`;
+            activity_full_name += `: ${activity_full_add.join(' - ')}`;
         }
 
         try {
-            at_check = await conn("activity_types").where("activity_name_full", activity_full_name).first();
+            at_check = await conn('activity_types')
+                .where('activity_name_full', activity_full_name)
+                .first();
         } catch (e) {
             console.error(e);
         }
 
         let notification_name = activity.notification;
 
-        if (bool === "is_eat" && !notification_name) {
-            notification_name = activity.title.replace("Restaurants", "Restaurant");
+        if (bool === 'is_eat' && !notification_name) {
+            notification_name = activity.title.replace('Restaurants', 'Restaurant');
         }
 
         if (!notification_name) {
@@ -76,7 +78,7 @@ function processActivity(activity, int, parent_ids, bool) {
                 insert[bool] = true;
             }
 
-            id = await conn("activity_types").insert(insert);
+            id = await conn('activity_types').insert(insert);
 
             id = id[0];
         } else {
@@ -95,7 +97,7 @@ function processActivity(activity, int, parent_ids, bool) {
             }
 
             try {
-                await conn("activity_type_venues").insert({
+                await conn('activity_type_venues').insert({
                     activity_type_id: id,
                     venue_category_id: db_id,
                     sort_position: i,
@@ -128,23 +130,23 @@ function processActivity(activity, int, parent_ids, bool) {
 
 function main() {
     return new Promise(async (resolve, reject) => {
-        console.log("Add activity types");
+        console.log('Add activity types');
 
         let bools = [
             `is_meet`,
-            "is_eat",
-            "is_drink",
-            "is_walk",
-            "is_exercise",
-            "is_watch",
-            "is_fun",
-            "is_dance",
-            "is_attend",
-            "is_relax",
+            'is_eat',
+            'is_drink',
+            'is_walk',
+            'is_exercise',
+            'is_watch',
+            'is_fun',
+            'is_dance',
+            'is_attend',
+            'is_relax',
             `is_discover`,
-            "is_travel",
-            "is_shop",
-            "is_kids",
+            'is_travel',
+            'is_shop',
+            'is_kids',
         ];
 
         try {
@@ -159,13 +161,13 @@ function main() {
             await venue_categories.main();
 
             //organize for performance
-            let qry = await conn("venues_categories");
+            let qry = await conn('venues_categories');
 
             for (let item of qry) {
                 venues_dict[item.fsq_id] = item;
             }
 
-            let venue_qry = await conn("activity_type_venues");
+            let venue_qry = await conn('activity_type_venues');
 
             for (let item of venue_qry) {
                 if (!(item.activity_type_id in activities_venues_dict)) {
@@ -198,7 +200,7 @@ function main() {
             }
         }
 
-        console.log("Activity types added");
+        console.log('Activity types added');
 
         resolve();
     });

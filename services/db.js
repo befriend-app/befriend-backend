@@ -22,7 +22,7 @@ module.exports = {
                     connection.port = parseInt(process.env.DB_PORT);
                 }
 
-                knex = require("knex")({
+                knex = require('knex')({
                     client: process.env.DB_CLIENT,
                     connection: connection,
                 });
@@ -40,9 +40,10 @@ module.exports = {
             try {
                 let cols = await to_conn(table_name).columnInfo();
 
-                let chunk_items_count = Number.parseInt(module.exports.max_placeholders / Object.keys(cols).length) - 1;
+                let chunk_items_count =
+                    Number.parseInt(module.exports.max_placeholders / Object.keys(cols).length) - 1;
 
-                let chunks = require("lodash").chunk(insert_rows, chunk_items_count);
+                let chunks = require('lodash').chunk(insert_rows, chunk_items_count);
 
                 for (let chunk of chunks) {
                     let id = await to_conn.batchInsert(table_name, chunk);
@@ -63,7 +64,7 @@ module.exports = {
             return resolve(output);
         });
     },
-    batchUpdate: function (to_conn, table_name, update_rows, id_column = "id") {
+    batchUpdate: function (to_conn, table_name, update_rows, id_column = 'id') {
         return new Promise(async (resolve, reject) => {
             if (!Array.isArray(update_rows) || update_rows.length === 0) {
                 return resolve();
@@ -73,7 +74,7 @@ module.exports = {
                 const cols = await to_conn(table_name).columnInfo();
                 const chunk_items_count =
                     Number.parseInt(module.exports.max_placeholders / Object.keys(cols).length) - 1;
-                const chunks = require("lodash").chunk(update_rows, chunk_items_count);
+                const chunks = require('lodash').chunk(update_rows, chunk_items_count);
                 let output;
 
                 for (let chunk of chunks) {
@@ -84,12 +85,12 @@ module.exports = {
                     let columnNames = Object.keys(chunk[0]);
 
                     const updateSQL = `
-                          INSERT INTO ?? (${columnNames.map(() => "??").join(", ")})
-                          VALUES ${chunk.map(() => `(${columnNames.map(() => "?").join(", ")})`).join(", ")}
+                          INSERT INTO ?? (${columnNames.map(() => '??').join(', ')})
+                          VALUES ${chunk.map(() => `(${columnNames.map(() => '?').join(', ')})`).join(', ')}
                           ON DUPLICATE KEY UPDATE ${columnNames
                               .filter((name) => name !== id_column)
                               .map((name) => `?? = VALUES(??)`)
-                              .join(", ")}
+                              .join(', ')}
                         `;
 
                     // Prepare the bindings
@@ -97,7 +98,9 @@ module.exports = {
                         table_name,
                         ...columnNames,
                         ...chunk.flatMap((row) => columnNames.map((name) => row[name])),
-                        ...columnNames.filter((name) => name !== id_column).flatMap((name) => [name, name]),
+                        ...columnNames
+                            .filter((name) => name !== id_column)
+                            .flatMap((name) => [name, name]),
                     ];
 
                     // Execute the query

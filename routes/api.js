@@ -1,19 +1,19 @@
-let express = require("express");
+let express = require('express');
 let router = express.Router();
 
-let apiController = require("../controllers/api");
+let apiController = require('../controllers/api');
 
-router.get("/", function (req, res, next) {
+router.get('/', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         res.json({
-            happiness: "unlimited",
+            happiness: 'unlimited',
         });
 
         resolve();
     });
 });
 
-router.post("/login", function (req, res, next) {
+router.post('/login', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         //person login
         try {
@@ -26,17 +26,17 @@ router.post("/login", function (req, res, next) {
     });
 });
 
-router.get("/happy-connect", function (req, res, next) {
+router.get('/happy-connect', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         res.json({
-            happiness: "unlimited",
+            happiness: 'unlimited',
         });
 
         resolve();
     });
 });
 
-router.get("/networks", function (req, res, next) {
+router.get('/networks', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await apiController.getNetworks(req, res);
@@ -48,7 +48,7 @@ router.get("/networks", function (req, res, next) {
     });
 });
 
-router.post("/network-add", function (req, res, next) {
+router.post('/network-add', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await apiController.addNetwork(req, res);
@@ -60,7 +60,7 @@ router.post("/network-add", function (req, res, next) {
     });
 });
 
-router.post("/keys/home/from", function (req, res, next) {
+router.post('/keys/home/from', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await apiController.exchangeKeysHomeFrom(req, res);
@@ -72,7 +72,7 @@ router.post("/keys/home/from", function (req, res, next) {
     });
 });
 
-router.post("/keys/home/to", function (req, res, next) {
+router.post('/keys/home/to', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await apiController.exchangeKeysHomeTo(req, res);
@@ -84,7 +84,7 @@ router.post("/keys/home/to", function (req, res, next) {
     });
 });
 
-router.post("/keys/home/save", function (req, res, next) {
+router.post('/keys/home/save', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await apiController.exchangeKeysHomeSave(req, res);
@@ -96,7 +96,7 @@ router.post("/keys/home/save", function (req, res, next) {
     });
 });
 
-router.post("/keys/exchange/encrypt", function (req, res, next) {
+router.post('/keys/exchange/encrypt', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await apiController.keysExchangeEncrypt(req, res);
@@ -108,7 +108,7 @@ router.post("/keys/exchange/encrypt", function (req, res, next) {
     });
 });
 
-router.post("/keys/exchange/decrypt", function (req, res, next) {
+router.post('/keys/exchange/decrypt', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await apiController.keysExchangeDecrypt(req, res);
@@ -120,7 +120,7 @@ router.post("/keys/exchange/decrypt", function (req, res, next) {
     });
 });
 
-router.post("/keys/exchange/save", function (req, res, next) {
+router.post('/keys/exchange/save', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await apiController.keysExchangeSave(req, res);
@@ -132,7 +132,7 @@ router.post("/keys/exchange/save", function (req, res, next) {
     });
 });
 
-router.get("/activity_types", function (req, res, next) {
+router.get('/activity_types', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await apiController.getActivityTypes(req, res);
@@ -144,7 +144,7 @@ router.get("/activity_types", function (req, res, next) {
     });
 });
 
-router.put("/activity_type/:activity_type_token/places", function (req, res, next) {
+router.put('/activity_type/:activity_type_token/places', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await apiController.getActivityTypePlaces(req, res);
@@ -155,7 +155,7 @@ router.put("/activity_type/:activity_type_token/places", function (req, res, nex
     });
 });
 
-router.get("/mapbox/token", function (req, res, next) {
+router.get('/mapbox/token', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await apiController.getMapboxToken(req, res);
@@ -167,7 +167,7 @@ router.get("/mapbox/token", function (req, res, next) {
     });
 });
 
-router.post("/autocomplete/places", function (req, res, next) {
+router.post('/autocomplete/places', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await apiController.postAutoCompletePlaces(req, res);
@@ -179,7 +179,7 @@ router.post("/autocomplete/places", function (req, res, next) {
     });
 });
 
-router.post("/autocomplete/cities", function (req, res, next) {
+router.post('/autocomplete/cities', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await apiController.postAutoCompleteCities(req, res);
@@ -191,7 +191,7 @@ router.post("/autocomplete/cities", function (req, res, next) {
     });
 });
 
-router.post("/geocode", function (req, res, next) {
+router.post('/geocode', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await apiController.getGeoCode(req, res);
@@ -203,7 +203,7 @@ router.post("/geocode", function (req, res, next) {
     });
 });
 
-router.post("/travel-time", function (req, res, next) {
+router.post('/travel-time', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await apiController.postTravelTime(req, res);
@@ -215,14 +215,14 @@ router.post("/travel-time", function (req, res, next) {
     });
 });
 
-router.get("/review-venues", function (req, res, next) {
+router.get('/review-venues', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
-        let conn = await require("../services/db").conn();
+        let conn = await require('../services/db').conn();
 
-        let qry = await conn("activity_type_venues AS atv")
-            .join("activity_types AS at", "at.id", "=", "atv.activity_type_id")
-            .join("venues_categories AS vc", "vc.id", "=", "atv.venue_category_id")
-            .orderBy("atv.sort_position");
+        let qry = await conn('activity_type_venues AS atv')
+            .join('activity_types AS at', 'at.id', '=', 'atv.activity_type_id')
+            .join('venues_categories AS vc', 'vc.id', '=', 'atv.venue_category_id')
+            .orderBy('atv.sort_position');
 
         let organized = {};
 

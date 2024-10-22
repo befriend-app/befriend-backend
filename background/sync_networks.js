@@ -1,6 +1,6 @@
-const axios = require("axios");
+const axios = require('axios');
 
-const dbService = require("../services/db");
+const dbService = require('../services/db');
 
 const {
     timeoutAwait,
@@ -10,9 +10,9 @@ const {
     timeNow,
     generateToken,
     getExchangeKeysKey,
-} = require("../services/shared");
-const { homeDomains, cols, getNetworkSelf } = require("../services/network");
-const { setCache } = require("../services/cache");
+} = require('../services/shared');
+const { homeDomains, cols, getNetworkSelf } = require('../services/network');
+const { setCache } = require('../services/cache');
 
 const runInterval = 3600 * 1000; //every hour
 
@@ -31,7 +31,7 @@ loadScriptEnv();
 
             let my_network = await getNetworkSelf();
 
-            let all_networks_qry = await conn("networks");
+            let all_networks_qry = await conn('networks');
 
             let all_networks_dict = {};
 
@@ -61,7 +61,8 @@ loadScriptEnv();
 
                                 let keys_exchanged = false;
 
-                                let registering_network = all_networks_dict[network.registration_network_token];
+                                let registering_network =
+                                    all_networks_dict[network.registration_network_token];
 
                                 //registering network required for keys exchange
                                 if (!registering_network) {
@@ -80,19 +81,21 @@ loadScriptEnv();
                                             }
                                         }
 
-                                        network_insert.registration_network_id = registering_network.id;
+                                        network_insert.registration_network_id =
+                                            registering_network.id;
                                         network_insert.is_self = false;
                                         network_insert.keys_exchanged = false;
                                         network_insert.created = timeNow();
                                         network_insert.updated = timeNow();
 
-                                        let id = await conn("networks").insert(network_insert);
+                                        let id = await conn('networks').insert(network_insert);
 
                                         network_insert.id = id[0];
 
                                         all_networks_dict[network.network_token] = network_insert;
                                     } else {
-                                        keys_exchanged = all_networks_dict[network.network_token].keys_exchanged;
+                                        keys_exchanged =
+                                            all_networks_dict[network.network_token].keys_exchanged;
                                     }
                                 } catch (e) {
                                     console.error(e);
@@ -136,7 +139,10 @@ loadScriptEnv();
                                     // if value matches self_network_token, begin key exchange process
 
                                     let r2 = await axios.post(
-                                        getURL(registering_network.api_domain, `keys/exchange/encrypt`),
+                                        getURL(
+                                            registering_network.api_domain,
+                                            `keys/exchange/encrypt`,
+                                        ),
                                         {
                                             exchange_token: keys_exchange_token,
                                             network_tokens: {

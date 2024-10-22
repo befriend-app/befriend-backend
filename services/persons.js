@@ -1,6 +1,6 @@
-const cacheService = require("../services/cache");
-const dbService = require("../services/db");
-const { getPersonCacheKey } = require("./shared");
+const cacheService = require('../services/cache');
+const dbService = require('../services/db');
+const { getPersonCacheKey } = require('./shared');
 
 module.exports = {
     getPersonByEmail: function (person_email) {
@@ -19,7 +19,7 @@ module.exports = {
 
                 let conn = await dbService.conn();
 
-                person = await conn("persons").where("email", person_email).first();
+                person = await conn('persons').where('email', person_email).first();
 
                 if (person) {
                     await cacheService.setCache(cache_key, person);
@@ -47,7 +47,7 @@ module.exports = {
 
                 let conn = await dbService.conn();
 
-                person = await conn("persons").where("person_token", person_token).first();
+                person = await conn('persons').where('person_token', person_token).first();
 
                 if (person) {
                     await cacheService.setCache(cache_key, person);

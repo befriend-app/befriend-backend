@@ -1,6 +1,6 @@
-const cacheService = require("../../services/cache");
-const db = require("../../services/db");
-const { loadScriptEnv } = require("../../services/shared");
+const cacheService = require('../../services/cache');
+const db = require('../../services/db');
+const { loadScriptEnv } = require('../../services/shared');
 
 loadScriptEnv();
 
@@ -21,16 +21,16 @@ loadScriptEnv();
             connection.port = parseInt(process.env.DB_PORT);
         }
 
-        let knex = require("knex")({
+        let knex = require('knex')({
             client: process.env.DB_CLIENT,
             connection: connection,
         });
 
-        await knex("categories_geo_places").delete();
+        await knex('categories_geo_places').delete();
 
-        await knex("categories_geo").delete();
+        await knex('categories_geo').delete();
 
-        await knex("places").delete();
+        await knex('places').delete();
 
         let keys = await cacheService.getKeys(`${cacheService.keys.place_fsq}*`);
 
