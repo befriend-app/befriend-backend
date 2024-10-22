@@ -1177,7 +1177,7 @@ module.exports = {
 
             try {
                 //use existing data in cache if exists
-                let data = await cacheService.get(cache_key, true);
+                let data = await cacheService.getObj(cache_key);
 
                 if (data) {
                     res.json(data);
@@ -1296,7 +1296,7 @@ module.exports = {
                 //get fsq_ids from cache or db
                 let cache_key = cacheService.keys.activity_type_venue_categories(activity_type_token);
 
-                let activity_fsq_ids = await cacheService.get(cache_key, true);
+                let activity_fsq_ids = await cacheService.getObj(cache_key);
 
                 if (!activity_fsq_ids) {
                     //get activity type by token
@@ -1487,8 +1487,27 @@ module.exports = {
     },
     getGeoCode: function (req, res) {
         return new Promise(async (resolve, reject) => {
-            let token = process.env.MAPBOX_SECRET_KEY;
             let place = req.body.place;
+
+            if(!place || !place.fsq_address_id) {
+                return reject("Address id required");
+            }
+
+            let token = process.env.MAPBOX_SECRET_KEY;
+
+            let cache_key = cacheService.keys.addressGeo(place.fsq_address_id);
+
+            try {
+                 let cache_data = await cacheService.getObj(cache_key);
+
+                 if(cache_data && cache_data.geo) {
+                     return resolve({
+                         geo: cache_data.geo
+                     });
+                 }
+            } catch(e) {
+                console.error(e);
+            }
 
             let country = '';
             let locality = '';
@@ -1527,12 +1546,18 @@ module.exports = {
                     return resolve();
                 }
 
+                let geo = {
+                    lat: response.data.features[0].geometry.coordinates[1],
+                    lon: response.data.features[0].geometry.coordinates[0]
+                };
+
+                place.geo = geo;
+
+                await cacheService.setCache(cache_key, place);
+
                 res.json(
                     {
-                        geo: {
-                            lat: response.data.features[0].geometry.coordinates[1],
-                            lon: response.data.features[0].geometry.coordinates[0],
-                        },
+                        geo: geo
                     },
                     200,
                 );

@@ -43,7 +43,7 @@ module.exports = {
         return new Promise(async (resolve, reject) => {
             try {
                 //from cache first
-                let genders = await cacheService.get(module.exports.cache_key, true);
+                let genders = await cacheService.getObj(module.exports.cache_key);
 
                 if (genders) {
                     return resolve(genders);

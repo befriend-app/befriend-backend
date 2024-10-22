@@ -6,6 +6,9 @@ module.exports = {
         ws: 'ws:messages',
         activity_types: `activity_types`,
         cities_population: `cities:by_population`,
+        activity: function(activity_token) {
+            return `activity:${activity_token}`;
+        },
         activity_type: function(token) {
             return `activity_type:${token}`;
         },
@@ -35,6 +38,9 @@ module.exports = {
         },
         exchangeKeysKey: function(token) {
             return `networks:keys:exchange:${token}`;
+        },
+        addressGeo: function(address_id) {
+            return `geo:address:${address_id}`;
         },
         person: function(person_token_or_email) {
             if (!person_token_or_email) {
@@ -112,6 +118,30 @@ module.exports = {
                 if (!json) {
                     return resolve(data);
                 }
+
+                try {
+                    return resolve(JSON.parse(data));
+                } catch (e) {
+                    return resolve(null);
+                }
+            } catch (e) {
+                return reject(e);
+            }
+        });
+    },
+    getObj: function (key) {
+        return new Promise(async (resolve, reject) => {
+            //init conn in case first time
+            if (!module.exports.conn) {
+                try {
+                    await module.exports.init();
+                } catch (e) {
+                    return reject(e);
+                }
+            }
+
+            try {
+                let data = await module.exports.conn.get(key);
 
                 try {
                     return resolve(JSON.parse(data));

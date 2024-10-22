@@ -361,7 +361,7 @@ module.exports = {
             let cache_key = cacheService.keys.place_fsq(fsq_id);
 
             try {
-                let cache_data = await cacheService.get(cache_key, true);
+                let cache_data = await cacheService.getObj(cache_key);
 
                 if (cache_data) {
                     return resolve(cache_data);
@@ -502,7 +502,7 @@ module.exports = {
                     await conn('places').where('id', place_id).update(db_data);
 
                     //prev data
-                    let cache_data = await cacheService.get(cache_key, true);
+                    let cache_data = await cacheService.getObj(cache_key);
 
                     //include all properties for re-saving to cache
                     for (let k in cache_data) {

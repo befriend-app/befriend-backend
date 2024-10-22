@@ -8,7 +8,7 @@ module.exports = {
             try {
                 let cache_key = cacheService.keys.activity_type(activity_type_token);
 
-                let cached_data = await cacheService.get(cache_key, true);
+                let cached_data = await cacheService.getObj(cache_key);
 
                 if (cached_data) {
                     return resolve(cached_data);
@@ -35,6 +35,13 @@ module.exports = {
     },
     validateActivityOrThrow: function (person, activity) {
         return new Promise(async (resolve, reject) => {
+            //activity type/name
+            //duration
+            //place
+            //when / distance
+            //friends
+            //number_persons
+
             return resolve(true);
 
             //todo: implement validation logic

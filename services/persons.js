@@ -14,7 +14,7 @@ module.exports = {
                 //use cached data
                 let cache_key = cacheService.keys.person(email || person_token);
 
-                person = await cacheService.get(cache_key, true);
+                person = await cacheService.getObj(cache_key);
 
                 if (person) {
                     return resolve(person);

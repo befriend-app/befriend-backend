@@ -5,7 +5,7 @@ const { generateToken, timeNow } = require('../services/shared');
 function getSessionData(key) {
     return new Promise(async (resolve, reject) => {
         try {
-            let data = await cacheService.get(cacheService.keys.session(key), true);
+            let data = await cacheService.getObj(cacheService.keys.session(key));
 
             resolve(data);
         } catch (e) {
@@ -32,7 +32,7 @@ async function handleSession(req, res, next) {
 
                 //check for existence in rare  cases
                 try {
-                    let check = await cacheService.get(cacheService.keys.session(session_str));
+                    let check = await cacheService.getObj(cacheService.keys.session(session_str));
 
                     if (check) {
                         await createSession();
@@ -170,7 +170,7 @@ function getSessionKeyValue(req, key) {
         let session_key = cacheService.keys.session(session_data.key);
 
         try {
-            let session = await cacheService.get(session_key, true);
+            let session = await cacheService.getObj(session_key);
 
             return resolve(session[key]);
         } catch (e) {
@@ -191,7 +191,7 @@ function setSessionKeyValue(req, key, val) {
         let session_key = cacheService.keys.session(session_data.key);
 
         try {
-            let session = await cacheService.get(session_key, true);
+            let session = await cacheService.getObj(session_key);
             session[key] = val;
 
             await cacheService.setCache(session_key, session, session.expires - timeNow());

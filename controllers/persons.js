@@ -1,3 +1,4 @@
+const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 
 const { timeNow, generateToken } = require('../services/shared');
@@ -16,7 +17,7 @@ module.exports = {
 
                 let person_token = req.body.person_token;
                 let activity = req.body.activity;
-                let circles = req.body.circles; //todo
+                let friends = req.body.friends; //todo
 
                 //todo validate activity
                 try {
@@ -28,6 +29,7 @@ module.exports = {
 
                 // unique across systems
                 let activity_token = generateToken();
+                let cache_key = cacheService.keys.activity(activity_token);
 
                 let conn = await dbService.conn();
 
@@ -47,7 +49,7 @@ module.exports = {
 
                 let person_id = person_obj.id;
 
-                let id = await conn('activities').insert({
+                let insert_activity = {
                     activity_token: activity_token,
                     activity_type_id: activity.activity_type_id,
                     person_id: person_id,
@@ -64,9 +66,20 @@ module.exports = {
                     custom_filters: activity.custom_filters,
                     created: timeNow(),
                     updated: timeNow(),
-                });
+                };
+
+                let id = await conn('activities').insert();
 
                 id = id[0];
+
+                insert_activity.id = id;
+
+                //save to cache
+                try {
+                    await cacheService.setCache(cache_key, insert_activity);
+                } catch(e) {
+                    console.error(e);;
+                }
 
                 //todo: algorithm/logic to select persons to send this activity to
                 try {
