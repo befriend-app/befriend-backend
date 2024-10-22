@@ -24,9 +24,6 @@ https://drawsql.app/teams/befriend/diagrams/befriend-backend
 
 `npm run format`
 
-- Read more about the configuration file [here](https://prettier.io/docs/en/configuration.html)
-- Read more about the options that can be used [here](https://prettier.io/docs/en/options)
-
 ### Linting
 
 `npm run lint`

@@ -28,11 +28,6 @@ module.exports = function (req, res, next) {
 
             req.from_network = network;
 
-            res.header('Access-Control-Allow-Origin', '*');
-            res.header(
-                'Access-Control-Allow-Headers',
-                'Origin, X-Requested-With, Content-Type, Accept',
-            );
             next();
         } catch (e) {
             res.json('Invalid network_token', 401);

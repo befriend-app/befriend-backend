@@ -2,6 +2,7 @@ const { getRepoRoot, joinPaths, normalizePort } = require('../services/shared');
 
 const cookieParser = require('cookie-parser');
 const createError = require('http-errors');
+const cors = require('cors');
 const express = require('express');
 const http = require('http');
 const logger = require('morgan');
@@ -23,8 +24,17 @@ server.set('trust proxy', true);
 
 server.disable('x-powered-by');
 
+server.use(cors());
+
+server.use(cors({
+    origin: '*', // Replace with your frontend domain
+    methods: ['GET', 'POST', 'PUT'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
+}));
+
 server.use(function (req, res, next) {
-    req.start_req_time = timeNow(true);
+    req.start_req_time = timeNow();
     next();
 });
 
