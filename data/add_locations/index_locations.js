@@ -97,7 +97,7 @@ function indexCities() {
                         //add to country prefix for small number of characters
                         if (i < 4) {
                             pipeline.zAdd(
-                                cacheService.keys.multi.cityCountryPrefix(country_code, prefix),
+                                cacheService.keys.cityCountryPrefix(country_code, prefix),
                                 [
                                     {
                                         value: city.id.toString(),

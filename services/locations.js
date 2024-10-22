@@ -130,7 +130,7 @@ function getCityIds(parsed, locationCountry) {
             let cityIds = new Set();
 
             if (locationCountry && parsed.city) {
-                let countryPrefixKey = cacheService.keys.multi.cityCountryPrefix(
+                let countryPrefixKey = cacheService.keys.cityCountryPrefix(
                     locationCountry.country_a2,
                     parsed.city,
                 );
