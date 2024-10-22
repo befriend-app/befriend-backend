@@ -1,13 +1,16 @@
 const axios = require('axios');
-const { getMetersFromMilesOrKm } = require('./shared');
+const { getMetersFromMilesOrKm, joinPaths } = require('./shared');
+
 module.exports = {
-    base_url: 'https://api.foursquare.com/v3/places/search',
+    base_url: 'https://api.foursquare.com/v3',
     limit: 50,
     fields: {
         core: `fsq_id,closed_bucket,distance,geocodes,location,name,timezone`, //categories,chains,link,related_places
         rich: `price,description,hours,hours_popular,rating,popularity,venue_reality_bucket,photos`, //verified,stats,menu,date_closed,photos,tips,tastes,features,store_id,
     },
     getPlacesByCategory: function (lat, lon, radius_mkm, category_id) {
+        let route = '/places/search';
+
         const api_key = process.env.FSQ_KEY;
 
         function getUrlFromHeader(string) {
@@ -46,7 +49,7 @@ module.exports = {
                         }
                     } else {
                         try {
-                            response = await axios.get(module.exports.base_url, {
+                            response = await axios.get(joinPaths(module.exports.base_url, route), {
                                 headers: {
                                     Accept: 'application/json',
                                     Authorization: api_key,
@@ -115,11 +118,43 @@ module.exports = {
             resolve(results);
         });
     },
+    getAutoComplete: function(session_token, lat, lon, search_type, search, radius, limit) {
+        let route = `/autocomplete`;
+
+        let api_key = process.env.FSQ_KEY;
+
+        let url = joinPaths(module.exports.base_url, route);
+
+        return new Promise(async (resolve, reject) => {
+            try {
+                let response = await axios.get(url, {
+                    headers: {
+                        Accept: 'application/json',
+                        Authorization: api_key,
+                    },
+                    params: {
+                        session_token: session_token,
+                        ll: `${lat},${lon}`,
+                        types: search_type,
+                        query: search,
+                        radius: radius,
+                    },
+                });
+
+                resolve(response.data.results);
+            } catch (e) {
+                console.error(e);
+                return reject();
+            }
+        });
+    },
     getGeoForAddress: function (address_id) {
         return new Promise(async (resolve, reject) => {
             let api_key = process.env.FSQ_KEY;
 
-            let url = `https://api.foursquare.com/v3/address/${address_id}`;
+            let route = `/address/${address_id}`;
+
+            let url = joinPaths(module.exports.base_url, route);
 
             try {
                 let r = await axios.get(url, {

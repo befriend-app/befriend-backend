@@ -543,6 +543,8 @@ module.exports = {
     },
     placesAutoComplete: function (session_token, search, location, friends) {
         return new Promise(async (resolve, reject) => {
+            let organized = [];
+
             // batching
             let fsq_ids = [];
             let fsq_dict = {};
@@ -557,24 +559,13 @@ module.exports = {
             let lon = location.map.lon;
 
             try {
-                fsq.auth(process.env.FSQ_KEY);
+                let results = await fsqService.getAutoComplete(session_token, lat, lon, search_type, search, 50000, 10);
 
-                let data = await fsq.autocomplete({
-                    session_token: session_token,
-                    ll: `${lat},${lon}`,
-                    types: search_type,
-                    query: search,
-                    radius: 50000,
-                    limit: 10,
-                });
-
-                if (!data.data.results.length) {
+                if (!results.length) {
                     return resolve([]);
                 }
 
-                let results = [];
-
-                for (let result of data.data.results) {
+                for (let result of results) {
                     if (result.place) {
                         fsq_ids.push(result.place.fsq_id);
                         fsq_dict[result.place.fsq_id] = result.place;
@@ -584,7 +575,7 @@ module.exports = {
                 let batch_dict = await module.exports.processFSQPlaces(fsq_ids, fsq_dict);
 
                 // organize data
-                for (let result of data.data.results) {
+                for (let result of results) {
                     let place_data = {};
 
                     if (result.type === 'place') {
@@ -638,10 +629,10 @@ module.exports = {
                         }
                     }
 
-                    results.push(place_data);
+                    organized.push(place_data);
                 }
 
-                return resolve(results);
+                return resolve(organized);
             } catch (e) {
                 console.error(e);
                 return reject();
