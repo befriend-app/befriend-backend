@@ -14,7 +14,7 @@ module.exports = function (req, res, next) {
             if (!is_valid_token) {
                 res.json(
                     {
-                        message: 'unauthenticated request',
+                        message: 'Invalid login',
                     },
                     401,
                 );

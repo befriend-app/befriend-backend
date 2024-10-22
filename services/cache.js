@@ -273,6 +273,10 @@ module.exports = {
     },
     isSetMember: function (key, member) {
         return new Promise(async (resolve, reject) => {
+            if(!key || !member) {
+                return resolve(false);
+            }
+
             try {
                 let data = await module.exports.conn.sIsMember(key, member);
                 resolve(data);
