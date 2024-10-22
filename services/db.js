@@ -66,23 +66,26 @@ module.exports = {
     },
     batchUpdate: function (to_conn, table_name, update_rows, id_column = 'id') {
         return new Promise(async (resolve, reject) => {
+            let output;
+
             if (!Array.isArray(update_rows) || update_rows.length === 0) {
                 return resolve();
             }
 
             try {
                 const cols = await to_conn(table_name).columnInfo();
+
                 const chunk_items_count =
                     Number.parseInt(module.exports.max_placeholders / Object.keys(cols).length) - 1;
+
                 const chunks = require('lodash').chunk(update_rows, chunk_items_count);
-                let output;
+
+                let columnNames = Object.keys(chunks[0][0]);
 
                 for (let chunk of chunks) {
                     if (!chunk.length) {
                         continue;
                     }
-
-                    let columnNames = Object.keys(chunk[0]);
 
                     const updateSQL = `
                           INSERT INTO ?? (${columnNames.map(() => '??').join(', ')})
