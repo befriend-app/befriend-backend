@@ -359,7 +359,7 @@ module.exports = {
             }
 
             //try cache first
-            let cache_key = `${cacheService.keys.place_fsq}${fsq_id}`;
+            let cache_key = cacheService.keys.place_fsq(fsq_id);
 
             try {
                 let cache_data = await cacheService.get(cache_key, true);
@@ -397,7 +397,7 @@ module.exports = {
     },
     addOrUpdatePlace: function (data, place_id = null) {
         return new Promise(async (resolve, reject) => {
-            let cache_key = `${cacheService.keys.place_fsq}${data.fsq_id}`;
+            let cache_key = cacheService.keys.place_fsq(data.fsq_id);
 
             let lat,
                 lon,
@@ -661,7 +661,7 @@ module.exports = {
             let multi = cacheService.conn.multi();
 
             for (let fsq_id of fsq_ids) {
-                let cache_key = `${cacheService.keys.place_fsq}${fsq_id}`;
+                let cache_key = cacheService.keys.place_fsq(fsq_id);
 
                 multi.get(cache_key);
             }
@@ -704,7 +704,7 @@ module.exports = {
                     let places = await conn('places').whereIn('fsq_place_id', cache_miss_ids);
 
                     for (let place of places) {
-                        let cache_key = `${cacheService.keys.place_fsq}${place.fsq_place_id}`;
+                        let cache_key = cacheService.keys.place_fsq(place.fsq_place_id);
 
                         fsq_dict[place.fsq_place_id] = place;
 
@@ -922,7 +922,8 @@ module.exports = {
                         let multi = cacheService.conn.multi();
 
                         for (let item of batch_insert.concat(batch_update)) {
-                            let cache_key = cacheService.keys.place_fsq + item.fsq_place_id;
+                            let cache_key = cacheService.keys.place_fsq(item.fsq_place_id);
+
                             multi.set(cache_key, JSON.stringify(item));
                         }
 

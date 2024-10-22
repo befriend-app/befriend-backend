@@ -5,15 +5,55 @@ module.exports = {
     keys: {
         ws: 'ws:messages',
         activity_types: `activity_types`,
-        activity_type: `activity_type:`,
-        activity_type_venue_categories: `activity_type:venue_categories:`,
-        place_fsq: `place:fsq:`,
-        city: `city:`,
-        cities_country: `cities:country:`,
         cities_population: `cities:by_population`,
-        cities_prefix: `cities:prefix:`,
-        state: `state:`,
-        country: `country:`,
+        activity_type: function(token) {
+            return `activity_type:${token}`;
+        },
+        activity_type_venue_categories: function(token) {
+            return `activity_type:venue_categories:${token}`;
+        },
+        place_fsq: function(fsq_id) {
+            return `place:fsq:${fsq_id}`;
+        },
+        city: function(id) {
+            return `city:${id}`;
+        },
+        cities_country: function(code) {
+            return `cities:country:${code}`;
+        },
+        cities_prefix: function(prefix) {
+            return `cities:prefix:${prefix}`;
+        },
+        state: function(id) {
+            return `state:${id}`;
+        },
+        country: function(id) {
+            return `country:${id}`;
+        },
+        session: function(session) {
+            return `session:api:${session}`;
+        },
+        exchangeKeysKey: function(token) {
+            return `networks:keys:exchange:${token}`;
+        },
+        person: function(person_token_or_email) {
+            if (!person_token_or_email) {
+                throw new Error('No person_token or email provided');
+            }
+
+            person_token_or_email = person_token_or_email.toLowerCase();
+
+            return `persons:${person_token_or_email}`;
+        },
+        personLoginTokens: function(person_token) {
+            if (!person_token) {
+                throw new Error('No person_token provided');
+            }
+
+            person_token = person_token.toLowerCase();
+
+            return `persons:${person_token}:login_tokens`;
+        },
         multi: {
             cityCountryPrefix: function (country_code, prefix) {
                 return `cities:country:${country_code}:${prefix}`;

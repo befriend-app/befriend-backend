@@ -32,7 +32,7 @@ loadScriptEnv();
 
         await knex('places').delete();
 
-        let keys = await cacheService.getKeys(`${cacheService.keys.place_fsq}*`);
+        let keys = await cacheService.getKeys(`${cacheService.keys.place_fsq('')}*`);
 
         await cacheService.deleteKeys(keys);
 

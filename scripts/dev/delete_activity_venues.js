@@ -64,7 +64,6 @@ loadScriptEnv();
 
     //delete cache
     let keys = [];
-    //keys = await cache.getKeys(cache.keys.place_fsq + "*");
 
     keys.push(cacheService.keys.activity_types);
 

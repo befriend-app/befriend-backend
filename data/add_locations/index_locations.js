@@ -33,7 +33,7 @@ function indexCities() {
 
                 let city = cities[int];
 
-                const city_key = `${cacheService.keys.city}${city.id}`;
+                const city_key = cacheService.keys.city(city.id);
 
                 pipeline.hSet(city_key, {
                     id: city.id,
@@ -59,7 +59,7 @@ function indexCities() {
                 //add to country set
                 let country_code = countries_dict[city.country_id].country_code;
 
-                pipeline.zAdd(`${cacheService.keys.cities_country}${country_code}`, [
+                pipeline.zAdd(cacheService.keys.cities_country(country_code), [
                     {
                         value: city.id.toString(),
                         score: city.population,
@@ -72,7 +72,7 @@ function indexCities() {
                 for (let i = 1; i <= nameLower.length; i++) {
                     const prefix = nameLower.slice(0, i);
 
-                    pipeline.zAdd(`${cacheService.keys.cities_prefix}${prefix}`, [
+                    pipeline.zAdd(cacheService.keys.cities_prefix(prefix), [
                         {
                             value: city.id.toString(),
                             score: city.population,
@@ -87,7 +87,7 @@ function indexCities() {
                     for (let i = 1; i <= word.length; i++) {
                         const prefix = word.slice(0, i);
 
-                        pipeline.zAdd(`${cacheService.keys.cities_prefix}${prefix}`, [
+                        pipeline.zAdd(cacheService.keys.cities_prefix(prefix), [
                             {
                                 value: city.id.toString(),
                                 score: city.population,
@@ -138,7 +138,7 @@ function indexStates() {
             let pipeline = cacheService.conn.multi();
 
             for (let state of states) {
-                const state_key = `${cacheService.keys.state}${state.id}`;
+                const state_key = cacheService.keys.state(state.id);
 
                 pipeline.hSet(state_key, {
                     id: state.id,
@@ -173,7 +173,7 @@ function indexCountries() {
             let countries = await conn('open_countries');
 
             for (let country of countries) {
-                const country_key = `${cacheService.keys.country}${country.id}`;
+                const country_key = cacheService.keys.country(country.id);
 
                 pipeline.hSet(country_key, {
                     id: country.id,

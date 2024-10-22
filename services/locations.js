@@ -98,7 +98,11 @@ function addLocationData(results, dataType) {
             let pipeline = cacheService.conn.multi();
 
             for (let result of results) {
-                pipeline.hGetAll(`${cacheService.keys[dataType]}${result[`${dataType}_id`]}`);
+                if(dataType === 'state') {
+                    pipeline.hGetAll(cacheService.keys.state(result[`${dataType}_id`]));
+                } else if(dataType === 'country') {
+                    pipeline.hGetAll(cacheService.keys.country(result[`${dataType}_id`]));
+                }
             }
 
             let data = await cacheService.execRedisMulti(pipeline);
@@ -134,7 +138,7 @@ function getCityIds(parsed, locationCountry) {
                 countryCityIds.forEach((id) => cityIds.add(id));
             }
 
-            let cityKey = `${cacheService.keys.cities_prefix}${parsed.city}`;
+            let cityKey = cacheService.keys.cities_prefix(parsed.city);
             let globalCityIds = await cacheService.getSortedSetByScore(cityKey, 1000);
             globalCityIds.forEach((id) => cityIds.add(id));
 
@@ -152,7 +156,7 @@ function fetchCityDetails(cityIds) {
             let pipeline = cacheService.conn.multi();
 
             for (let id of cityIds) {
-                pipeline.hGetAll(`${cacheService.keys.city}${id}`);
+                pipeline.hGetAll(cacheService.keys.city(id));
             }
 
             let cities = await cacheService.execRedisMulti(pipeline);

@@ -3,6 +3,7 @@ const tldts = require('tldts');
 
 const activitiesService = require('../services/activities');
 const cacheService = require('../services/cache');
+
 const dbService = require('../services/db');
 const networkService = require('../services/network');
 const bcrypt = require('bcryptjs');
@@ -15,15 +16,12 @@ const {
     timeNow,
     generateToken,
     joinPaths,
-    getExchangeKeysKey,
     confirmDecryptedRegistrationNetworkToken,
-    getPersonLoginCacheKey,
 } = require('../services/shared');
 
 const { getNetwork, getNetworkSelf } = require('../services/network');
 const { encrypt } = require('../services/encryption');
-const { deleteKeys } = require('../services/cache');
-const { getPersonByEmail } = require('../services/persons');
+const { getPerson } = require('../services/persons');
 const { getCategoriesPlaces, placesAutoComplete, travelTimes } = require('../services/places');
 const { cityAutoComplete } = require('../services/locations');
 
@@ -971,7 +969,7 @@ module.exports = {
 
             try {
                 //retrieve to_network_token from exchange_token cache key
-                cache_key = getExchangeKeysKey(exchange_token);
+                cache_key = cacheService.keys.exchangeKeysKey(exchange_token);
 
                 let to_network_token = await cacheService.get(cache_key);
 
@@ -1052,7 +1050,7 @@ module.exports = {
                 );
 
                 //delete exchange_token from cache
-                await deleteKeys(cache_key);
+                await cacheService.deleteKeys(cache_key);
 
                 return resolve();
             } catch (e) {
@@ -1072,13 +1070,13 @@ module.exports = {
     doLogin: function (req, res) {
         return new Promise(async (resolve, reject) => {
             try {
-                let person_email = req.body.email;
-                let person_password = req.body.password;
+                let email = req.body.email;
+                let password = req.body.password;
 
-                let person = await getPersonByEmail(person_email);
+                let person = await getPerson(email);
 
                 // check if passwords are equal
-                const validPassword = await bcrypt.compare(person_password, person.password);
+                const validPassword = await bcrypt.compare(password, person.password);
 
                 if (!validPassword) {
                     res.json('Invalid login', 403);
@@ -1099,7 +1097,7 @@ module.exports = {
                     updated: timeNow(),
                 });
 
-                let cache_key = getPersonLoginCacheKey(person.person_token);
+                let cache_key = cacheService.keys.personLoginTokens(person.person_token);
 
                 await cacheService.addItemToSet(cache_key, login_token);
 
@@ -1296,7 +1294,7 @@ module.exports = {
                 let conn = await dbService.conn();
 
                 //get fsq_ids from cache or db
-                let cache_key = `${cacheService.keys.activity_type_venue_categories}${activity_type_token}`;
+                let cache_key = cacheService.keys.activity_type_venue_categories(activity_type_token);
 
                 let activity_fsq_ids = await cacheService.get(cache_key, true);
 

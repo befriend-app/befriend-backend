@@ -2,7 +2,7 @@ const dbService = require('../services/db');
 
 const { timeNow, generateToken } = require('../services/shared');
 
-const { getPersonByToken } = require('../services/persons');
+const { getPerson } = require('../services/persons');
 
 const { findMatches, notifyMatches, validateActivityOrThrow } = require('../services/activities');
 
@@ -20,7 +20,7 @@ module.exports = {
 
                 //todo validate activity
                 try {
-                    await validateActivityOrThrow(activity, person_token);
+                    await validateActivityOrThrow(person_token, activity);
                 } catch (e) {
                     res.json(e, 400);
                     return resolve();
@@ -32,7 +32,7 @@ module.exports = {
                 let conn = await dbService.conn();
 
                 // get person id from person token
-                let person_obj = await getPersonByToken(person_token);
+                let person_obj = await getPerson(person_token);
 
                 if (!person_obj) {
                     res.json(

@@ -450,10 +450,6 @@ function getDistanceMilesOrKM(loc_1, loc_2) {
     return getMilesOrKmFromMeters(distance_meters);
 }
 
-function getExchangeKeysKey(token) {
-    return `networks:keys:exchange:${token}`;
-}
-
 function getIPAddr(req) {
     return req.headers['x-forwarded-for'] || req.socket.remoteAddress || null;
 }
@@ -509,28 +505,6 @@ function getMilesOrKmFromMeters(meters) {
     } else {
         return meters * meters_to_miles;
     }
-}
-
-function getPersonCacheKey(person_token_or_email) {
-    if (!person_token_or_email) {
-        throw new Error('No person_token or email provided');
-    }
-
-    person_token_or_email = person_token_or_email.toLowerCase();
-
-    return `persons:${person_token_or_email}`;
-}
-
-function getPersonLoginCacheKey(person_token) {
-    //set
-
-    if (!person_token) {
-        throw new Error('No person_token provided');
-    }
-
-    person_token = person_token.toLowerCase();
-
-    return `persons:${person_token}:login_tokens`;
 }
 
 function getRandomInRange(from, to, fixed) {
@@ -606,10 +580,6 @@ function getStatesList() {
         WI: 'Wisconsin',
         WY: 'Wyoming',
     };
-}
-
-function getSessionKey(session) {
-    return `session:api:${session}`;
 }
 
 function getTimeFromSeconds(seconds) {
@@ -1079,19 +1049,15 @@ module.exports = {
     getDateTimeStr: getDateTimeStr,
     getDistanceMeters: getDistanceMeters,
     getDistanceMilesOrKM: getDistanceMilesOrKM,
-    getExchangeKeysKey: getExchangeKeysKey,
     getIPAddr: getIPAddr,
     getLocalDate: getLocalDate,
     getLocalDateStr: getLocalDateStr,
     getLocalDateTimeStr: getLocalDateTimeStr,
     getMetersFromMilesOrKm: getMetersFromMilesOrKm,
     getMilesOrKmFromMeters: getMilesOrKmFromMeters,
-    getPersonCacheKey: getPersonCacheKey,
-    getPersonLoginCacheKey: getPersonLoginCacheKey,
     getRandomInRange: getRandomInRange,
     getRepoRoot: getRepoRoot,
     getStatesList: getStatesList,
-    getSessionKey: getSessionKey,
     getTimeFromSeconds: getTimeFromSeconds,
     getTimeZoneFromCoords: getTimeZoneFromCoords,
     getWalkingTime: getWalkingTime,

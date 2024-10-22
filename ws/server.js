@@ -4,7 +4,6 @@ const {
     generateToken,
     timeNow,
     getDateTimeStr,
-    getSessionKey,
 } = require('../services/shared');
 
 loadScriptEnv();
@@ -141,7 +140,7 @@ function getSession(url) {
         const parsed = query_string.parse(url.replace('/', ''));
 
         try {
-            let data = await cacheService.get(getSessionKey(parsed.session), true);
+            let data = await cacheService.get(cacheService.keys.session(parsed.session), true);
 
             return resolve(data);
         } catch (e) {

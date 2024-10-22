@@ -1,5 +1,4 @@
 const cacheService = require('../services/cache');
-const { getPersonLoginCacheKey } = require('../services/shared');
 
 // authentication middleware
 module.exports = function (req, res, next) {
@@ -8,7 +7,7 @@ module.exports = function (req, res, next) {
         let login_token = req.body.login_token;
 
         try {
-            let cache_key = getPersonLoginCacheKey(person_token);
+            let cache_key = cacheService.keys.personLoginTokens(person_token);
 
             let is_valid_token = await cacheService.isSetMember(cache_key, login_token);
 

@@ -1,5 +1,6 @@
 const axios = require('axios');
 
+const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 
 const {
@@ -9,10 +10,9 @@ const {
     getURL,
     timeNow,
     generateToken,
-    getExchangeKeysKey,
 } = require('../services/shared');
+
 const { homeDomains, cols, getNetworkSelf } = require('../services/network');
-const { setCache } = require('../services/cache');
 
 const runInterval = 3600 * 1000; //every hour
 
@@ -122,10 +122,10 @@ loadScriptEnv();
                                     //unique token to start process
                                     let keys_exchange_token = generateToken(40);
 
-                                    let cache_key = getExchangeKeysKey(keys_exchange_token);
+                                    let cache_key = cacheService.keys.exchangeKeysKey(keys_exchange_token);
 
                                     //save cache key with value of to_network_token to auth/validate request in /keys/exchange/save
-                                    await setCache(cache_key, network.network_token);
+                                    await cacheService.setCache(cache_key, network.network_token);
 
                                     //registration_network_token
                                     //self

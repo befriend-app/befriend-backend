@@ -6,7 +6,7 @@ module.exports = {
     getActivityType: function (activity_type_token) {
         return new Promise(async (resolve, reject) => {
             try {
-                let cache_key = cacheService.keys.activity_type + activity_type_token;
+                let cache_key = cacheService.keys.activity_type(activity_type_token);
 
                 let cached_data = await cacheService.get(cache_key, true);
 
