@@ -1501,9 +1501,14 @@ module.exports = {
                  let cache_data = await cacheService.getObj(cache_key);
 
                  if(cache_data && cache_data.geo) {
-                     return resolve({
-                         geo: cache_data.geo
-                     });
+                     res.json(
+                         {
+                             geo: cache_data.geo
+                         },
+                         200,
+                     );
+
+                     return resolve();
                  }
             } catch(e) {
                 console.error(e);
@@ -1566,6 +1571,8 @@ module.exports = {
 
                 res.json('Error getting geocode', 400);
             }
+
+            resolve();
         });
     },
     postTravelTime: function (req, res) {
