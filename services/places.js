@@ -225,9 +225,17 @@ module.exports = {
 
             //use cached data
             if (categories_geo.length) {
-                places_organized = await module.exports.getCachedCategoryPlaces(categories_geo);
+                try {
+                    places_organized = await module.exports.getCachedCategoryPlaces(categories_geo);
+                } catch(e) {
+                    console.error(e);
+                }
             } else {
-                places_organized = await searchCategoryPlaces();
+                try {
+                    places_organized = await searchCategoryPlaces();
+                } catch(e) {
+                    console.error(e);
+                }
             }
 
             if (!places_organized.length) {
@@ -643,7 +651,7 @@ module.exports = {
     getBatchPlacesFSQ: function (fsq_ids) {
         return new Promise(async (resolve, reject) => {
             if (!fsq_ids || !fsq_ids.length) {
-                return reject('No ids provided');
+                return resolve({});
             }
 
             let fsq_dict = {};
