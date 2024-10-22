@@ -25,7 +25,7 @@ module.exports = function (req, res, next) {
             //continue request to auth route
             next();
         } catch (e) {
-            res.json('Invalid network_token', 401);
+            res.json('Invalid login', 401);
         }
 
         resolve();
