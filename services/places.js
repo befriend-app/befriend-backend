@@ -1,6 +1,5 @@
 const cacheService = require('../services/cache');
 const dbService = require('../services/db');
-const fsq = require('../.api/apis/fsq-developers');
 const fsqService = require('../services/fsq');
 
 const {
