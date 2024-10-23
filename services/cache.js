@@ -36,13 +36,13 @@ module.exports = {
         session: function(session) {
             return `session:api:${session}`;
         },
-        exchangeKeysKey: function(token) {
+        exchange_keys: function(token) {
             return `networks:keys:exchange:${token}`;
         },
-        addressGeo: function(address_id) {
-            return `geo:address:${address_id}`;
+        address_geo: function(address_id) {
+            return `address:geo:${address_id}`;
         },
-        travelTimes: function(token) {
+        travel_times: function(token) {
             return `activities:travel:${token}`;
         },
         person: function(person_token_or_email) {
@@ -54,7 +54,7 @@ module.exports = {
 
             return `persons:${person_token_or_email}`;
         },
-        personLoginTokens: function(person_token) {
+        person_login_tokens: function(person_token) {
             if (!person_token) {
                 throw new Error('No person_token provided');
             }
@@ -63,10 +63,10 @@ module.exports = {
 
             return `persons:${person_token}:login_tokens`;
         },
-        cityCountryPrefix: function (country_code, prefix) {
+        city_country_prefix: function (country_code, prefix) {
             return `cities:country:${country_code}:${prefix}`;
         },
-        placesByCategoryCity: function (category_id, city_id) {
+        places_category_city: function (category_id, city_id) {
             return `places:category:${category_id}:city:${city_id}`;
         },
     },

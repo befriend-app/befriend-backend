@@ -969,7 +969,7 @@ module.exports = {
 
             try {
                 //retrieve to_network_token from exchange_token cache key
-                cache_key = cacheService.keys.exchangeKeysKey(exchange_token);
+                cache_key = cacheService.keys.exchange_keys(exchange_token);
 
                 let to_network_token = await cacheService.get(cache_key);
 
@@ -1097,7 +1097,7 @@ module.exports = {
                     updated: timeNow(),
                 });
 
-                let cache_key = cacheService.keys.personLoginTokens(person.person_token);
+                let cache_key = cacheService.keys.person_login_tokens(person.person_token);
 
                 await cacheService.addItemToSet(cache_key, login_token);
 
@@ -1495,7 +1495,7 @@ module.exports = {
 
             let token = process.env.MAPBOX_SECRET_KEY;
 
-            let cache_key = cacheService.keys.addressGeo(place.fsq_address_id);
+            let cache_key = cacheService.keys.address_geo(place.fsq_address_id);
 
             try {
                  let cache_data = await cacheService.getObj(cache_key);

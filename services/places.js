@@ -1129,7 +1129,7 @@ module.exports = {
                 };
 
                 try {
-                     await cacheService.setCache(cacheService.keys.travelTimes(travel_token), travel_data, 7 * 24 * 3600);
+                     await cacheService.setCache(cacheService.keys.travel_times(travel_token), travel_data, 7 * 24 * 3600);
                 } catch(e) {
                     console.error(e);
                 }

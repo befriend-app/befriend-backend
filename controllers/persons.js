@@ -5,7 +5,7 @@ const { timeNow, generateToken } = require('../services/shared');
 
 const { getPerson } = require('../services/persons');
 
-const { findMatches, notifyMatches, validateActivityOrThrow } = require('../services/activities');
+const { findMatches, notifyMatches, prepareActivity } = require('../services/activities');
 
 module.exports = {
     createActivity: function (req, res) {
@@ -13,17 +13,17 @@ module.exports = {
             let matches;
 
             try {
-                //person token, activity object
-
+                //person token, activity
                 let person_token = req.body.person_token;
                 let activity = req.body.activity;
-                let friends = req.body.friends; //todo
 
-                //todo validate activity
+                //throws rejection if invalid
                 try {
-                    await validateActivityOrThrow(person_token, activity);
+                    await prepareActivity(person_token, activity);
                 } catch (e) {
-                    res.json(e, 400);
+                    res.json({
+                        error: e
+                    }, 400);
                     return resolve();
                 }
 

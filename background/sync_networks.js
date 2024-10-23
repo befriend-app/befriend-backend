@@ -122,7 +122,7 @@ loadScriptEnv();
                                     //unique token to start process
                                     let keys_exchange_token = generateToken(40);
 
-                                    let cache_key = cacheService.keys.exchangeKeysKey(keys_exchange_token);
+                                    let cache_key = cacheService.keys.exchange_keys(keys_exchange_token);
 
                                     //save cache key with value of to_network_token to auth/validate request in /keys/exchange/save
                                     await cacheService.setCache(cache_key, network.network_token);

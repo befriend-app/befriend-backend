@@ -3,6 +3,11 @@ const dbService = require('../services/db');
 const { timeNow } = require('./shared');
 
 module.exports = {
+    durations: {
+        min: 10,
+        max: 360,
+        options: [10, 15, 20, 30, 40, 45, 50, 60, 70, 80, 90, 100, 110, 120, 150, 180, 210, 240, 270, 300, 330, 360],
+    },
     getActivityType: function (activity_type_token) {
         return new Promise(async (resolve, reject) => {
             try {
@@ -33,11 +38,73 @@ module.exports = {
             }
         });
     },
-    validateActivityOrThrow: function (person, activity) {
+    prepareActivity: function (person_token, activity) {
         return new Promise(async (resolve, reject) => {
+            //validation
+
+            let errors = [];
+
+            if(!person_token) {
+                return reject("Person token required");
+            }
+
+            if(!activity) {
+                return reject("Activity data required");
+            }
+
             //activity type/name
+            if(!(activity.activity)) {
+                errors.push("Missing activity");
+            } else {
+                if(activity.activity.token) {
+                    try {
+                         let activity_type = await cacheService.getObj(cacheService.keys.activity_type(activity.activity.token));
+
+                         if(!activity_type) {
+                             errors.push("Invalid activity type");
+                         } else {
+                             activity.activity.name = activity_type.notification_name;
+                         }
+                    } catch(e) {
+                        console.error(e);
+                    }
+                } else {
+                    activity.activity.name = 'Meet';
+                }
+            }
+
             //duration
+            if(!activity.duration) {
+                errors.push('Duration required');
+            } else if(activity.duration < module.exports.durations.min) {
+                errors.push(`Minimum duration is ${module.exports.durations.min} min`);
+            } else if(activity.duration > module.exports.durations.max) {
+                errors.push(`Max duration is ${(module.exports.durations.max / 60).toFixed(0)} hours`);
+            } else if(!(module.exports.durations.options.includes(activity.duration))) {
+                errors.push(`Invalid duration`);
+            }
+
             //place
+            if(!activity.place || !activity.place.id) {
+                errors.push('Place id required');
+            } else {
+                let place;
+
+                if(activity.place.is_address) {
+                    try {
+                        place = await cacheService.getObj(cacheService.keys.address_geo(activity.place.id));
+                    } catch(e) {
+                        console.error(e);
+                    }
+                } else {
+                    try {
+                        place = await cacheService.getObj(cacheService.keys.place_fsq(activity.place.id));
+                    } catch(e) {
+                        console.error(e);
+                    }
+                }
+            }
+
             //when / distance
             //friends
             //number_persons
