@@ -17,7 +17,8 @@ const {
     getCoordsFromPointDistance,
     getTimeFromSeconds,
     getWalkingTime,
-    getBicyclingTime, generateToken,
+    getBicyclingTime,
+    generateToken,
 } = require('./shared');
 
 const dayjs = require('dayjs');
@@ -226,13 +227,13 @@ module.exports = {
             if (categories_geo.length) {
                 try {
                     places_organized = await module.exports.getCachedCategoryPlaces(categories_geo);
-                } catch(e) {
+                } catch (e) {
                     console.error(e);
                 }
             } else {
                 try {
                     places_organized = await searchCategoryPlaces();
-                } catch(e) {
+                } catch (e) {
                     console.error(e);
                 }
             }
@@ -558,7 +559,15 @@ module.exports = {
             let lon = location.map.lon;
 
             try {
-                let results = await fsqService.getAutoComplete(session_token, lat, lon, search_type, search, 50000, 10);
+                let results = await fsqService.getAutoComplete(
+                    session_token,
+                    lat,
+                    lon,
+                    search_type,
+                    search,
+                    50000,
+                    10,
+                );
 
                 if (!results.length) {
                     return resolve([]);
@@ -1113,10 +1122,18 @@ module.exports = {
 
                 let travel_token = generateToken();
 
+                let tz = getTimeZoneFromCoords(to.lat, to.lon);
+
                 let travel_data = {
                     token: travel_token,
-                    from: from,
-                    to: to,
+                    from: {
+                        ...from,
+                        tz,
+                    },
+                    to: {
+                        ...to,
+                        tz,
+                    },
                     distance: {
                         use_km: useKM(),
                         miles_km: getMilesOrKmFromMeters(route.distance),
@@ -1129,8 +1146,12 @@ module.exports = {
                 };
 
                 try {
-                     await cacheService.setCache(cacheService.keys.travel_times(travel_token), travel_data, 7 * 24 * 3600);
-                } catch(e) {
+                    await cacheService.setCache(
+                        cacheService.keys.travel_times(travel_token),
+                        travel_data,
+                        7 * 24 * 3600,
+                    );
+                } catch (e) {
                     console.error(e);
                 }
 

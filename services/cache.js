@@ -5,47 +5,48 @@ module.exports = {
     keys: {
         ws: 'ws:messages',
         activity_types: `activity_types`,
+        activity_type_default: `activity_type:default`,
         cities_population: `cities:by_population`,
-        activity: function(activity_token) {
+        activity: function (activity_token) {
             return `activity:${activity_token}`;
         },
-        activity_type: function(token) {
+        activity_type: function (token) {
             return `activity_type:${token}`;
         },
-        activity_type_venue_categories: function(token) {
+        activity_type_venue_categories: function (token) {
             return `activity_type:venue_categories:${token}`;
         },
-        place_fsq: function(fsq_id) {
+        place_fsq: function (fsq_id) {
             return `place:fsq:${fsq_id}`;
         },
-        city: function(id) {
+        city: function (id) {
             return `city:${id}`;
         },
-        cities_country: function(code) {
+        cities_country: function (code) {
             return `cities:country:${code}`;
         },
-        cities_prefix: function(prefix) {
+        cities_prefix: function (prefix) {
             return `cities:prefix:${prefix}`;
         },
-        state: function(id) {
+        state: function (id) {
             return `state:${id}`;
         },
-        country: function(id) {
+        country: function (id) {
             return `country:${id}`;
         },
-        session: function(session) {
+        session: function (session) {
             return `session:api:${session}`;
         },
-        exchange_keys: function(token) {
+        exchange_keys: function (token) {
             return `networks:keys:exchange:${token}`;
         },
-        address_geo: function(address_id) {
+        address_geo: function (address_id) {
             return `address:geo:${address_id}`;
         },
-        travel_times: function(token) {
+        travel_times: function (token) {
             return `activities:travel:${token}`;
         },
-        person: function(person_token_or_email) {
+        person: function (person_token_or_email) {
             if (!person_token_or_email) {
                 throw new Error('No person_token or email provided');
             }
@@ -54,7 +55,7 @@ module.exports = {
 
             return `persons:${person_token_or_email}`;
         },
-        person_login_tokens: function(person_token) {
+        person_login_tokens: function (person_token) {
             if (!person_token) {
                 throw new Error('No person_token provided');
             }
@@ -306,7 +307,7 @@ module.exports = {
     },
     isSetMember: function (key, member) {
         return new Promise(async (resolve, reject) => {
-            if(!key || !member) {
+            if (!key || !member) {
                 return resolve(false);
             }
 

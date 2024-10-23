@@ -118,7 +118,7 @@ module.exports = {
             resolve(results);
         });
     },
-    getAutoComplete: function(session_token, lat, lon, search_type, search, radius, limit) {
+    getAutoComplete: function (session_token, lat, lon, search_type, search, radius, limit) {
         let route = `/autocomplete`;
 
         let api_key = process.env.FSQ_KEY;

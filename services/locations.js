@@ -98,9 +98,9 @@ function addLocationData(results, dataType) {
             let pipeline = cacheService.conn.multi();
 
             for (let result of results) {
-                if(dataType === 'state') {
+                if (dataType === 'state') {
                     pipeline.hGetAll(cacheService.keys.state(result[`${dataType}_id`]));
-                } else if(dataType === 'country') {
+                } else if (dataType === 'country') {
                     pipeline.hGetAll(cacheService.keys.country(result[`${dataType}_id`]));
                 }
             }

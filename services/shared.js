@@ -507,6 +507,43 @@ function getMilesOrKmFromMeters(meters) {
     }
 }
 
+function roundTimeMinutes(time, minutes) {
+    let timeToReturn = new Date(time);
+
+    timeToReturn.setMilliseconds(Math.round(timeToReturn.getMilliseconds() / 1000) * 1000);
+    timeToReturn.setSeconds(Math.round(timeToReturn.getSeconds() / 60) * 60);
+    timeToReturn.setMinutes(Math.round(timeToReturn.getMinutes() / minutes) * minutes);
+
+    return timeToReturn;
+}
+
+function getOptionDateTime(option) {
+    if (!option) {
+        throw new Error('No option provided');
+    }
+
+    let date_now = dayjs();
+
+    let date = date_now.add(option.in_mins, 'minutes');
+
+    let round_minutes = 5;
+
+    //make time round
+    let js_date = roundTimeMinutes(date, round_minutes);
+    date = dayjs(js_date);
+
+    //add more time if activity starts in less than an hour
+    let minutes_diff = date.diff(date_now, 'minutes') - option.in_mins;
+
+    if (minutes_diff < 0) {
+        let add_mins = Math.ceil(Math.abs(minutes_diff) / 5) * 5;
+
+        date = date.add(add_mins, 'minutes');
+    }
+
+    return date;
+}
+
 function getRandomInRange(from, to, fixed) {
     return (Math.random() * (to - from) + from).toFixed(fixed) * 1;
 }
@@ -1055,6 +1092,7 @@ module.exports = {
     getLocalDateTimeStr: getLocalDateTimeStr,
     getMetersFromMilesOrKm: getMetersFromMilesOrKm,
     getMilesOrKmFromMeters: getMilesOrKmFromMeters,
+    getOptionDateTime: getOptionDateTime,
     getRandomInRange: getRandomInRange,
     getRepoRoot: getRepoRoot,
     getStatesList: getStatesList,

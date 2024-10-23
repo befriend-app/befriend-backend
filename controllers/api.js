@@ -1073,7 +1073,7 @@ module.exports = {
                 let email = req.body.email;
                 let password = req.body.password;
 
-                let person = await getPerson(email);
+                let person = await getPerson(null, email);
 
                 // check if passwords are equal
                 const validPassword = await bcrypt.compare(password, person.password);
@@ -1294,7 +1294,8 @@ module.exports = {
                 let conn = await dbService.conn();
 
                 //get fsq_ids from cache or db
-                let cache_key = cacheService.keys.activity_type_venue_categories(activity_type_token);
+                let cache_key =
+                    cacheService.keys.activity_type_venue_categories(activity_type_token);
 
                 let activity_fsq_ids = await cacheService.getObj(cache_key);
 
@@ -1489,8 +1490,8 @@ module.exports = {
         return new Promise(async (resolve, reject) => {
             let place = req.body.place;
 
-            if(!place || !place.fsq_address_id) {
-                return reject("Address id required");
+            if (!place || !place.fsq_address_id) {
+                return reject('Address id required');
             }
 
             let token = process.env.MAPBOX_SECRET_KEY;
@@ -1498,19 +1499,19 @@ module.exports = {
             let cache_key = cacheService.keys.address_geo(place.fsq_address_id);
 
             try {
-                 let cache_data = await cacheService.getObj(cache_key);
+                let cache_data = await cacheService.getObj(cache_key);
 
-                 if(cache_data && cache_data.geo) {
-                     res.json(
-                         {
-                             geo: cache_data.geo
-                         },
-                         200,
-                     );
+                if (cache_data && cache_data.geo) {
+                    res.json(
+                        {
+                            geo: cache_data.geo,
+                        },
+                        200,
+                    );
 
-                     return resolve();
-                 }
-            } catch(e) {
+                    return resolve();
+                }
+            } catch (e) {
                 console.error(e);
             }
 
@@ -1553,7 +1554,7 @@ module.exports = {
 
                 let geo = {
                     lat: response.data.features[0].geometry.coordinates[1],
-                    lon: response.data.features[0].geometry.coordinates[0]
+                    lon: response.data.features[0].geometry.coordinates[0],
                 };
 
                 place.location_lat = geo.lat;
@@ -1563,7 +1564,7 @@ module.exports = {
 
                 res.json(
                     {
-                        geo: geo
+                        geo: geo,
                     },
                     200,
                 );

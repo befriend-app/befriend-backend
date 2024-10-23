@@ -58,7 +58,11 @@ async function handleSession(req, res, next) {
                 };
 
                 try {
-                    await cacheService.setCache(cacheService.keys.session(session_str), data, session_lifetime);
+                    await cacheService.setCache(
+                        cacheService.keys.session(session_str),
+                        data,
+                        session_lifetime,
+                    );
                 } catch (e) {
                     return reject(e);
                 }
