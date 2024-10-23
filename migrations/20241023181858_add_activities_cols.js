@@ -5,12 +5,16 @@
 
 let table_name = 'activities';
 
-exports.up = function(knex) {
-    return knex.schema.alterTable(table_name, async table => {
-        if (!await knex.schema.hasColumn(table_name, 'persons_qty')) {
-            table.renameColumn('number_persons', 'persons_qty')
-        }
+exports.up = async function(knex) {
+    let has_persons_qty_col = await knex.schema.hasColumn(table_name, 'persons_qty');
 
+    if(!has_persons_qty_col) {
+        await knex.schema.alterTable(table_name, table => {
+            table.renameColumn('number_persons', 'persons_qty');
+        });
+    }
+
+    return knex.schema.alterTable(table_name, table => {
         table.integer('persons_qty').notNullable().after('person_id').alter();
         table.string('location_name').nullable().after('custom_filters').alter();
 
@@ -46,7 +50,7 @@ exports.down = async function(knex) {
         cols.map(col => knex.schema.hasColumn(table_name, col))
     );
 
-    return knex.schema.alterTable(table_name, async table => {
+    return knex.schema.alterTable(table_name, table => {
         cols.forEach((col, index) => {
             if (existingCols[index]) {
                 table.dropColumn(col);
