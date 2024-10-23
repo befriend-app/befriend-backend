@@ -174,11 +174,11 @@ module.exports = {
 
             try {
                 if (cache_lifetime) {
-                    module.exports.conn.set(key, data, {
+                    await module.exports.conn.set(key, data, {
                         EX: cache_lifetime,
                     });
                 } else {
-                    module.exports.conn.set(key, data);
+                    await module.exports.conn.set(key, data);
                 }
             } catch (e) {
                 console.error(e);

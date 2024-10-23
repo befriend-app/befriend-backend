@@ -110,6 +110,8 @@ module.exports = {
             }
 
             //duration
+            let duration_valid = false;
+
             if (!activity.duration) {
                 errors.push('Duration required');
             } else if (activity.duration < module.exports.durations.min) {
@@ -120,6 +122,8 @@ module.exports = {
                 );
             } else if (!module.exports.durations.options.includes(activity.duration)) {
                 errors.push(`Invalid duration`);
+            } else {
+                duration_valid = true;
             }
 
             //place
@@ -194,6 +198,8 @@ module.exports = {
                 !(activity.when.id in module.exports.when.options)
             ) {
                 errors.push('Invalid activity start time');
+            } else if(!duration_valid) {
+                //do nothing
             } else {
                 let date;
 
@@ -208,7 +214,7 @@ module.exports = {
                     is_schedule: !!when_option.is_schedule,
                     in_mins: when_option.in_mins ? when_option.in_mins : null,
                     start: date.unix(),
-                    end: date.add(when_option.in_mins, 'minutes').unix(),
+                    end: date.add(activity.duration, 'minutes').unix(),
                     human: {
                         time: date.tz(activity.travel.data.to.tz).format(`h:mm a`),
                         datetime: date
@@ -251,7 +257,39 @@ module.exports = {
                 return reject(errors);
             }
 
-            //todo: add logic to prevent person from creating activities with overlapping times
+            try {
+                let conn = await dbService.conn();
+
+                let time = activity.when.data;
+
+                const overlapping = await conn('activities')
+                    .where('person_id', person.id)
+                    .where('is_cancelled', false)
+                    .where(function() {
+                        this.where(function() {
+                            // New activity starts during an existing activity
+                            this.where('activity_start', '<=', time.start)
+                                .where('activity_end', '>', time.start)
+                        })
+                        .orWhere(function() {
+                            // New activity ends during an existing activity
+                            this.where('activity_start', '<', time.end)
+                                .where('activity_end', '>=', time.end)
+                        })
+                        .orWhere(function() {
+                            // New activity completely contains an existing activity
+                            this.where('activity_start', '>=', time.start)
+                                .where('activity_end', '<=', time.end)
+                        });
+                    });
+
+                if(overlapping.length) {
+                    return reject(['New activity would overlap with existing activity'])
+                }
+            } catch(e) {
+                console.error(e);
+                return reject(['Error validating activity times'])
+            }
 
             return resolve(true);
         });

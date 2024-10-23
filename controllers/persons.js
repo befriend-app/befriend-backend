@@ -34,10 +34,10 @@ module.exports = {
                 //throws rejection if invalid
                 try {
                     await prepareActivity(person, activity);
-                } catch (e) {
+                } catch (errs) {
                     res.json(
                         {
-                            error: e,
+                            error: errs,
                         },
                         400,
                     );
