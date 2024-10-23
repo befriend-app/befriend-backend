@@ -1556,7 +1556,8 @@ module.exports = {
                     lon: response.data.features[0].geometry.coordinates[0]
                 };
 
-                place.geo = geo;
+                place.location_lat = geo.lat;
+                place.location_lon = geo.lon;
 
                 await cacheService.setCache(cache_key, place);
 
