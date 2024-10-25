@@ -67,8 +67,10 @@ let max_request_count = 1000;
 
                 let gender_id = genders_dict[person.gender.toLowerCase()];
 
-                let lat = getRandomInRange(-180, 180, 4);
-                let lon = getRandomInRange(-180, 180, 4);
+                let lat = 41.881;
+                let lon = -87.624;
+                // let lat = getRandomInRange(-180, 180, 4);
+                // let lon = getRandomInRange(-180, 180, 4);
 
                 let person_insert = {
                     person_token: generateToken(),

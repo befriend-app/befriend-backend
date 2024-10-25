@@ -25,27 +25,20 @@ loadScriptEnv();
 
         let bulk_delete_count = 50000;
 
-        while (true) {
-            let pn_qry = await knex('persons_networks').select('id').limit(bulk_delete_count);
+        //delete activities
+        let activity_tables = ['activities_persons', 'activities_filters', 'activities', 'persons_login_tokens', 'persons_networks', 'persons'];
 
-            if (!pn_qry.length) {
-                break;
-            } else {
-                let ids = pn_qry.map((x) => x.id);
+        for(let activity_table of activity_tables) {
+            while (true) {
+                let pn_qry = await knex(activity_table).select('id').limit(bulk_delete_count);
 
-                await knex('persons_networks').whereIn('id', ids).delete();
-            }
-        }
+                if (!pn_qry.length) {
+                    break;
+                } else {
+                    let ids = pn_qry.map((x) => x.id);
 
-        while (true) {
-            let p_qry = await knex('persons').select('id').limit(bulk_delete_count);
-
-            if (!p_qry.length) {
-                break;
-            } else {
-                let ids = p_qry.map((x) => x.id);
-
-                await knex('persons').whereIn('id', ids).delete();
+                    await knex(activity_table).whereIn('id', ids).delete();
+                }
             }
         }
 

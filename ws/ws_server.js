@@ -10,6 +10,7 @@ loadScriptEnv();
 
 const cacheService = require('../services/cache');
 const dbService = require('../services/db');
+const personsService = require('../services/persons');
 
 const _ = require('lodash');
 const fs = require('fs');
@@ -21,6 +22,7 @@ const query_string = require('query-string');
 const WebSocket = require('ws');
 
 const port_num = process.env.WS_PORT || 8080;
+const ws_channel_key = cacheService.keys.ws;
 
 const message_timeout = 3600; //seconds
 
@@ -31,7 +33,7 @@ let persons_connections = {};
 let persons_messages = {};
 
 //setup server
-let server;
+let ws_server;
 
 let options = {};
 
@@ -48,12 +50,12 @@ if (process.env.APP_ENV !== 'local') {
         };
     }
 
-    server = https.createServer(options);
+    ws_server = https.createServer(options);
 } else {
-    server = http.createServer(options);
+    ws_server = http.createServer(options);
 }
 
-const wss = new WebSocket.Server({ server: server });
+const wss = new WebSocket.Server({ server: ws_server });
 
 process.on('uncaughtException', function (err) {
     if (err.code === 'EADDRINUSE') {
@@ -72,7 +74,7 @@ process.on('uncaughtException', function (err) {
             });
 
             exec(`sudo kill -9 ${pid}`, function (error, stdout) {
-                server.listen(port_num);
+                ws_server.listen(port_num);
             });
         });
     }
@@ -131,22 +133,8 @@ function terminate(ws, logout) {
     removeConnections(ws);
 }
 
-function getSession(url) {
-    return new Promise(async (resolve, reject) => {
-        if (url.length > 1000) {
-            return reject('URL too long');
-        }
-
-        const parsed = query_string.parse(url.replace('/', ''));
-
-        try {
-            let data = await cacheService.get(cacheService.keys.session(parsed.session), true);
-
-            return resolve(data);
-        } catch (e) {
-            return reject(e);
-        }
-    });
+function parseUrlParams(url) {
+    return query_string.parse(url.replace('/', ''));
 }
 
 function sendRecentMessages(ws) {
@@ -174,25 +162,36 @@ function initWS() {
         }
 
         wss.on('connection', async function connection(ws, req) {
-            let session_data = null;
+            //prevent long url strings
+            if (req.url.length > 1000) {
+                return terminate(ws, true);
+            }
+
+            let params = parseUrlParams(req.url);
+
+            if(!params.person_token || !params.login_token) {
+                return terminate(ws, true);
+            }
+
+            let person_token = params.person_token;
+            let login_token = params.login_token;
 
             try {
-                session_data = await getSession(req.url);
+                let is_authenticated = await personsService.isAuthenticated(person_token, login_token);
+
+                if(!is_authenticated) {
+                    return terminate(ws, true);
+                }
             } catch (e) {
                 return terminate(ws, true);
             }
 
-            let session_id = session_data.key;
-            let person_token = session_data.person_token ? session_data.person_token : null;
-
             console.log('Connection', {
-                session_id: session_id,
                 person_token: person_token,
             });
 
             ws.isAlive = true;
-            ws.person_token = person_token;
-            ws.session_id = session_id;
+            ws.person_token =person_token;
 
             if (!(person_token in persons_connections)) {
                 persons_connections[person_token] = [];
@@ -232,7 +231,7 @@ function initWS() {
             });
         }, 5000);
 
-        server.listen(port_num);
+        ws_server.listen(port_num);
 
         resolve();
     });
@@ -262,46 +261,47 @@ function initSubscribe() {
     return new Promise(async (resolve, reject) => {
         console.log('Init Subscribe');
 
-        const subscriber = cacheService.conn;
+        const publisher = cacheService.publisher;
 
-        subscriber.on('message', (channel, message) => {
-            if (channel === cacheService.keys.ws) {
-                try {
-                    let data = JSON.parse(message.toString());
+        publisher.subscribe(ws_channel_key, (message) => {
+            try {
+                let data = JSON.parse(message.toString());
 
-                    //skip sending messages without a process key
-                    if (data && !data.process_key && data.data) {
-                        return;
-                    }
+                //skip sending messages without a process key
+                // if(data && !data.process_key) {
+                //     return;
+                // }
 
-                    console.log('processing ws message', getDateTimeStr());
+                console.log("processing ws message", getDateTimeStr());
 
-                    let message_sent = false;
-                    let person_token = data.person_token;
+                if(data.matches && data.matches.length) {
+                    for(let match of data.matches) {
+                        let message_sent = false;
 
-                    if (person_token in persons_connections) {
-                        for (let k in persons_connections[person_token]) {
-                            let client = persons_connections[person_token][k];
+                        let person_token = match.person_token;
 
-                            if (client.readyState === WebSocket.OPEN) {
-                                console.log('Message sent');
+                        if(person_token in persons_connections) {
+                            for(let k in persons_connections[person_token]) {
+                                let client = persons_connections[person_token][k];
 
-                                client.send(JSON.stringify(data));
-                                message_sent = true;
+                                if(client.readyState === WebSocket.OPEN) {
+                                    console.log("Message sent");
+
+                                    client.send(JSON.stringify(data));
+                                    message_sent = true;
+                                }
                             }
                         }
-                    }
 
-                    if (!message_sent) {
-                        addPersonMessage(data);
+                        if(!message_sent) {
+                            addPersonMessage(data);
+                        }
                     }
-                } catch (e) {
-                    console.error(e);
                 }
+            } catch (e) {
+                console.error(e);
             }
         });
-
-        subscriber.subscribe(cacheService.keys.ws);
 
         resolve();
     });

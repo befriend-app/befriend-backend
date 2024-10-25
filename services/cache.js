@@ -2,6 +2,7 @@ const redis = require('redis');
 
 module.exports = {
     conn: null,
+    publisher: null,
     keys: {
         ws: 'ws:messages',
         activity_types: `activity_types`,
@@ -81,10 +82,20 @@ module.exports = {
                 },
             });
 
+            //connect to redis server
             try {
                 await module.exports.conn.connect();
             } catch (e) {
                 return reject(e);
+            }
+
+            //setup publisher
+            module.exports.publisher = module.exports.conn.duplicate();
+
+            try {
+                await module.exports.publisher.connect();
+            } catch(e) {
+                console.error(e);
             }
 
             module.exports.conn.on('error', function (er) {

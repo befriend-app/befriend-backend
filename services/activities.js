@@ -1,7 +1,7 @@
 const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 const dayjs = require('dayjs');
-const { timeNow, getOptionDateTime } = require('./shared');
+const { timeNow, getOptionDateTime, generateToken } = require('./shared');
 const { unix } = require('dayjs');
 
 module.exports = {
@@ -24,7 +24,7 @@ module.exports = {
     },
     when: {
         options: {
-            now: { id: 'now', name: 'Now', is_now: true, in_mins: 5 },
+            now: { id: 'now', name: 'Now', value: "Now", is_now: true, in_mins: 5 },
             schedule: { id: 'schedule', name: 'Schedule', is_schedule: true },
             15: { id: 15, value: '15', unit: 'mins', in_mins: 15 },
             30: { id: 30, value: '30', unit: 'mins', in_mins: 30 },
@@ -284,7 +284,7 @@ module.exports = {
                     });
 
                 if(overlapping.length) {
-                    return reject(['New activity would overlap with existing activity'])
+                    // return reject(['New activity would overlap with existing activity'])
                 }
             } catch(e) {
                 console.error(e);
@@ -323,11 +323,38 @@ module.exports = {
     },
     findMatches: function (person, activity) {
         return new Promise(async (resolve, reject) => {
-            resolve();
+            //tmp
+            try {
+                let conn = await dbService.conn();
+
+                 let qry = await conn('persons')
+                     .limit(2);
+
+                 let matches = [qry[1]];
+
+                 resolve(matches);
+            } catch(e) {
+                console.error(e);
+                return reject(e);
+            }
         });
     },
     notifyMatches: function (person, activity, matches) {
         return new Promise(async (resolve, reject) => {
+            let notification_obj = {
+                action: 'notification',
+                process_key: generateToken(20),
+                person: person,
+                activity: activity,
+                matches: matches
+            };
+
+            try {
+                await cacheService.publisher.publish(cacheService.keys.ws, JSON.stringify(notification_obj));
+            } catch(e) {
+                console.error(e);
+            }
+
             resolve();
         });
     },

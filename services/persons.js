@@ -2,6 +2,20 @@ const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 
 module.exports = {
+    isAuthenticated: function (person_token, login_token) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let cache_key = cacheService.keys.person_login_tokens(person_token);
+
+                let is_valid_token = await cacheService.isSetMember(cache_key, login_token);
+
+                return resolve(is_valid_token);
+            } catch(e) {
+                console.error(e);
+                return reject(e);
+            }
+        });
+    },
     getPerson: function (person_token, email) {
         return new Promise(async (resolve, reject) => {
             if (!email && !person_token) {

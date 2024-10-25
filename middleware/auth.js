@@ -1,17 +1,13 @@
 const cacheService = require('../services/cache');
+const personsService = require('../services/persons');
 
 // authentication middleware
 module.exports = function (req, res, next) {
     return new Promise(async (resolve, reject) => {
-        let person_token = req.body.person_token;
-        let login_token = req.body.login_token;
-
         try {
-            let cache_key = cacheService.keys.person_login_tokens(person_token);
+            let is_authenticated = await personsService.isAuthenticated(req.body.person_token, req.body.login_token);
 
-            let is_valid_token = await cacheService.isSetMember(cache_key, login_token);
-
-            if (!is_valid_token) {
+            if (!is_authenticated) {
                 res.json(
                     {
                         message: 'Invalid login',
