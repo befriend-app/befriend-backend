@@ -47,6 +47,8 @@ module.exports = {
                 // unique across systems
                 let activity_token = generateToken();
 
+                activity.activity_token = activity_token;
+
                 let conn = await dbService.conn();
 
                 let insert_activity = {

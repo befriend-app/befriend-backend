@@ -351,10 +351,44 @@ module.exports = {
                 matches: matches
             };
 
-            try {
-                 await notificationService.ios.sendBatch();
-            } catch(e) {
-                console.error(e);
+            //title, body, data
+            let plus_str = '';
+
+            if(activity.friends.qty > 1) {
+                plus_str = ` + ${activity.friends.qty - 1}`;
+            }
+
+            let payload = {
+                title: `Invite: ${activity.activity.name} at ${activity.when.time.formatted}`,
+                body: `Join ${person.first_name}${plus_str}`,
+                data: {
+                    activity_token: activity.activity_token
+                }
+            };
+
+            let tokens = {
+                ios: []
+            };
+
+            for(let match of matches) {
+                try {
+                    let personDevices = await cacheService.getObj(cacheService.keys.person_devices(match.person_token));
+                    let currentDevice = personDevices.find(device => device.is_current);
+
+                    if(currentDevice && currentDevice.platform === 'ios') {
+                        tokens.ios.push(currentDevice.token);
+                    }
+                } catch(e) {
+                    console.error(e);
+                }
+            }
+
+            if(tokens.ios.length) {
+                try {
+                    await notificationService.ios.sendBatch(tokens.ios, payload, true);
+                } catch(e) {
+                    console.error(e);
+                }
             }
 
             resolve();

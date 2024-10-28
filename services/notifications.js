@@ -1,7 +1,7 @@
 const http2 = require('http2');
 const fs = require('fs');
 const jwt = require('jsonwebtoken');
-const { joinPaths, getRepoRoot } = require('./shared');
+const { joinPaths, getRepoRoot, timeNow } = require('./shared');
 
 let provider = null;
 let ios_private_key_name = 'push-ios.p8';
@@ -267,7 +267,7 @@ function getAPNSProvider(options) {
     });
 }
 
-function sendIOSBatch (deviceTokens, payload)  {
+function sendIOSBatch (deviceTokens, payload, time_sensitive)  {
     return new Promise(async (resolve, reject) => {
         const options = {
             token: {
@@ -279,19 +279,30 @@ function sendIOSBatch (deviceTokens, payload)  {
         };
 
         try {
+            let t = timeNow();
             const apnProvider = await getAPNSProvider(options);
 
+            console.log({
+                apnProvider: timeNow() - t
+            });
+
+            let notifyData = {
+                topic: process.env.PUSH_IOS_APP_ID,
+                expiry: Math.floor(Date.now() / 1000) + 3600,
+                sound: "ping.aiff",
+                alert: {
+                    title: payload.title,
+                    body: payload.body
+                },
+                payload: payload.data || {},
+            };
+
+            if(time_sensitive) {
+                notifyData['interruption-level'] = 'time-sensitive';
+            }
+
             let results = await Promise.allSettled(
-                deviceTokens.map(token => apnProvider.send({
-                    topic: process.env.PUSH_IOS_APP_ID,
-                    expiry: Math.floor(Date.now() / 1000) + 3600,
-                    sound: "ping.aiff",
-                    alert: {
-                        title: payload.title,
-                        body: payload.body
-                    },
-                    payload: payload.data || {},
-                }, token))
+                deviceTokens.map(token => apnProvider.send(notifyData, token))
             );
 
             // Process results to handle both fulfilled and rejected promises
