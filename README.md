@@ -18,14 +18,18 @@ https://drawsql.app/teams/befriend/diagrams/befriend-backend
 
 `node server.js`
 
-## Formatting and Linting
+### Push Notifications
 
-### Formatting
+#### iOS
 
-`npm run format`
+1. Download Private Key
+   
+    a. Save as `push-ios.p8` in project root
+2. Set environment variables
+   
+    a. `PUSH_IOS_APP_ID`
+    
+    b. `PUSH_IOS_KEY_ID`
 
-### Linting
+    c. `PUSH_IOS_TEAM_ID`
 
-`npm run lint`
-
-Read more about configuration [here](https://eslint.org/docs/latest/use/configure/)

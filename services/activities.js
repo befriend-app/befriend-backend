@@ -1,5 +1,7 @@
 const cacheService = require('../services/cache');
 const dbService = require('../services/db');
+const notificationService = require('../services/notifications');
+
 const dayjs = require('dayjs');
 const { timeNow, getOptionDateTime, generateToken } = require('./shared');
 const { unix } = require('dayjs');
@@ -328,9 +330,9 @@ module.exports = {
                 let conn = await dbService.conn();
 
                  let qry = await conn('persons')
-                     .limit(2);
+                     .limit(3);
 
-                 let matches = [qry[1]];
+                 let matches = [qry[1], qry[2]];
 
                  resolve(matches);
             } catch(e) {
@@ -350,7 +352,7 @@ module.exports = {
             };
 
             try {
-                await cacheService.publisher.publish(cacheService.keys.ws, JSON.stringify(notification_obj));
+                 await notificationService.ios.sendBatch();
             } catch(e) {
                 console.error(e);
             }
