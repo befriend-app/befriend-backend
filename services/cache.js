@@ -65,6 +65,9 @@ module.exports = {
 
             return `persons:${person_token}:login_tokens`;
         },
+        person_devices: function (person_token) {
+            return `persons:devices:${person_token}`;
+        },
         city_country_prefix: function (country_code, prefix) {
             return `cities:country:${country_code}:${prefix}`;
         },

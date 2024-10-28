@@ -16,4 +16,16 @@ router.post('/activities', function (req, res, next) {
     });
 });
 
+router.post('/devices', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await personsController.addDevice(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
 module.exports = router;

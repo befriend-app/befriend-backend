@@ -78,7 +78,7 @@ let max_request_count = 1000;
                     first_name: person.name.first,
                     last_name: person.name.last,
                     gender_id: gender_id.id,
-                    email: person.email,
+                    email: `user-${i+1}@befriend.app`,
                     password: person_password,
                     phone: person.phone,
                     is_online: true,

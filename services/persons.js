@@ -5,6 +5,10 @@ module.exports = {
     isAuthenticated: function (person_token, login_token) {
         return new Promise(async (resolve, reject) => {
             try {
+                if(!person_token) {
+                    return resolve(false);
+                }
+
                 let cache_key = cacheService.keys.person_login_tokens(person_token);
 
                 let is_valid_token = await cacheService.isSetMember(cache_key, login_token);

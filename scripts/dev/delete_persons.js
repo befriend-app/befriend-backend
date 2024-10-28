@@ -26,7 +26,7 @@ loadScriptEnv();
         let bulk_delete_count = 50000;
 
         //delete activities
-        let activity_tables = ['activities_persons', 'activities_filters', 'activities', 'persons_login_tokens', 'persons_networks', 'persons'];
+        let activity_tables = ['activities_persons', 'activities_filters', 'activities', 'persons_login_tokens', 'persons_devices', 'persons_networks', 'persons'];
 
         for(let activity_table of activity_tables) {
             while (true) {
@@ -42,7 +42,11 @@ loadScriptEnv();
             }
         }
 
-        await knex('sync').where('sync_process', 'persons').delete();
+        try {
+            await knex('sync').where('sync_process', 'persons').delete();
+        } catch(e) {
+            console.error(e);
+        }
     }
 
     process.exit();

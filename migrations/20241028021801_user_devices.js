@@ -11,6 +11,7 @@ exports.up = function(knex) {
 
         table.boolean('is_current').defaultTo(false);
 
+        table.bigInteger('last_updated').notNullable();
         table.bigInteger('created').notNullable();
         table.bigInteger('updated').notNullable();
 
