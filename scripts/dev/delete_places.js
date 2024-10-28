@@ -1,10 +1,15 @@
 const cacheService = require('../../services/cache');
 const db = require('../../services/db');
-const { loadScriptEnv } = require('../../services/shared');
+const { loadScriptEnv, isProdApp } = require('../../services/shared');
 
 loadScriptEnv();
 
 (async function () {
+    if(isProdApp()) {
+        console.error("App env: [prod]", 'exiting');
+        process.exit();
+    }
+
     await cacheService.init();
 
     let dbs = [process.env.DB_NAME];

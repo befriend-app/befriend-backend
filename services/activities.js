@@ -329,10 +329,9 @@ module.exports = {
             try {
                 let conn = await dbService.conn();
 
-                 let qry = await conn('persons')
-                     .limit(3);
-
-                 let matches = [qry[1], qry[2]];
+                 let matches = await conn('persons')
+                     .where('id', '<>', person.id)
+                     .limit(2);
 
                  resolve(matches);
             } catch(e) {
@@ -343,24 +342,39 @@ module.exports = {
     },
     notifyMatches: function (person, activity, matches) {
         return new Promise(async (resolve, reject) => {
-            let notification_obj = {
-                action: 'notification',
-                process_key: generateToken(20),
-                person: person,
-                activity: activity,
-                matches: matches
-            };
-
             //title, body, data
+            let title_arr = [];
             let plus_str = '';
+            let emoji_str = '';
+            let time_str = activity.when.time.formatted;
+            let place_str = '';
 
             if(activity.friends.qty > 1) {
-                plus_str = ` + ${activity.friends.qty - 1}`;
+                plus_str = ` (+${activity.friends.qty - 1})`;
+            }
+
+            if(activity.place.data.name) {
+                place_str = `at ${activity.place.data.name}`;
+            }
+
+            if(activity.place.is_address) {
+
+            } else {
+                if(activity.activity.data.activity_emoji) {
+                    emoji_str = activity.activity.data.activity_emoji + ' ';
+                }
+
+                if(activity.activity.name) {
+                    title_arr.push(activity.activity.name);
+                }
+
+                title_arr.push(`at ${time_str}`);
+
             }
 
             let payload = {
-                title: `Invite: ${activity.activity.name} at ${activity.when.time.formatted}`,
-                body: `Join ${person.first_name}${plus_str}`,
+                title: `${emoji_str}Invite: ${title_arr.join(' ')}`,
+                body: `Join ${person.first_name}${plus_str} ${place_str}`,
                 data: {
                     activity_token: activity.activity_token
                 }
@@ -373,6 +387,11 @@ module.exports = {
             for(let match of matches) {
                 try {
                     let personDevices = await cacheService.getObj(cacheService.keys.person_devices(match.person_token));
+
+                    if(!personDevices || !personDevices.length) {
+                        continue;
+                    }
+
                     let currentDevice = personDevices.find(device => device.is_current);
 
                     if(currentDevice && currentDevice.platform === 'ios') {

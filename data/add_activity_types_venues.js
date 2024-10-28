@@ -60,7 +60,7 @@ function processActivity(activity, int, parent_ids, bool) {
         if (!at_check) {
             insert = {
                 parent_activity_type_id: parent_id,
-                activity_type_token: generateToken(24),
+                activity_type_token: activity.token,
                 activity_name: activity.name,
                 activity_name_full: activity_full_name,
                 activity_title: activity.title,
@@ -155,7 +155,11 @@ function main() {
             await cacheService.init();
 
             //remove previous cache if any
-            await cacheService.deleteKeys(cacheService.keys.activity_types);
+            let delete_keys = await cacheService.getKeys(`${cacheService.keys.activity_type('')}*`);
+
+            delete_keys.push(cacheService.keys.activity_types);
+
+            await cacheService.deleteKeys(delete_keys);
 
             //add venue categories
             await venue_categories.main();

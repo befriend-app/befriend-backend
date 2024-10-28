@@ -1,9 +1,14 @@
 const db = require('../../services/db');
-const { loadScriptEnv } = require('../../services/shared');
+const { loadScriptEnv, isProdApp } = require('../../services/shared');
 
 loadScriptEnv();
 
 (async function () {
+    if(isProdApp()) {
+        console.error("App env: [prod]", 'exiting');
+        process.exit();
+    }
+
     let dbs = [process.env.DB_NAME, 'befriend-4001', 'befriend-4002'];
 
     for (let db of dbs) {

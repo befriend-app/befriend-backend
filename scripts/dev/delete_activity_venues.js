@@ -1,11 +1,16 @@
 const cache = require('../../services/cache');
 const db = require('../../services/db');
-const { loadScriptEnv } = require('../../services/shared');
+const { loadScriptEnv, isProdApp } = require('../../services/shared');
 const cacheService = require('../../services/cache');
 
 loadScriptEnv();
 
 (async function () {
+    if(isProdApp()) {
+        console.error("App env: [prod]", 'exiting');
+        process.exit();
+    }
+
     await cache.init();
 
     let dbs = [process.env.DB_NAME];
@@ -26,6 +31,10 @@ loadScriptEnv();
             client: process.env.DB_CLIENT,
             connection: connection,
         });
+
+        await knex('activities_persons').delete();
+        await knex('activities_filters').delete();
+        await knex('activities').delete();
 
         await knex('activity_type_venues').delete();
 
@@ -63,7 +72,7 @@ loadScriptEnv();
     }
 
     //delete cache
-    let keys = [];
+    let keys = await cacheService.getKeys(`${cacheService.keys.activity_type('')}*`);
 
     keys.push(cacheService.keys.activity_types);
 
