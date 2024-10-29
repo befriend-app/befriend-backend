@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 const { joinPaths, getRepoRoot, timeNow } = require('./shared');
 
 let provider = null;
-let ios_private_key_name = 'push-ios.p8';
+let ios_private_key_name = 'ios-push.p8';
 
 const createAPNSConnection = async (baseURL) => {
     const connect = () => {
