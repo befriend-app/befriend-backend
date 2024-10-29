@@ -286,6 +286,7 @@ module.exports = {
                     });
 
                 if(overlapping.length) {
+                    //todo
                     // return reject(['New activity would overlap with existing activity'])
                 }
             } catch(e) {
