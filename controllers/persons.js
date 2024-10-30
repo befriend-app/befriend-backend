@@ -8,6 +8,24 @@ const { getPerson } = require('../services/persons');
 const { findMatches, notifyMatches, prepareActivity } = require('../services/activities');
 
 module.exports = {
+    getMe: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            let person_token = req.query.person_token;
+
+            try {
+                 let person = await getPerson(person_token);
+
+                 res.json({
+                     me: person
+                 });
+
+                 resolve();
+            } catch(e) {
+                console.error(e);
+                res.json("Error getting person", 400);
+            }
+        });
+    },
     createActivity: function (req, res) {
         return new Promise(async (resolve, reject) => {
             let matches;

@@ -34,12 +34,14 @@ module.exports = {
 
                 person = await cacheService.getObj(cache_key);
 
-                if (person) {
+                //todo remove to use cache
+                if (person && false) {
                     return resolve(person);
                 }
 
                 let conn = await dbService.conn();
 
+                //todo filter cols
                 if (email) {
                     person = await conn('persons').where('email', email).first();
                 } else {
