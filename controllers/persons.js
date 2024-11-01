@@ -34,9 +34,9 @@ module.exports = {
             try {
                 let me = await getPerson(req.body.person_token);
 
-                await addMeSection(me, req.body.key);
+                let data = await addMeSection(me, req.body.key);
 
-                res.json('Section added successfully', 201);
+                res.json(data, 201);
 
                 resolve();
             } catch (e) {

@@ -467,7 +467,7 @@ module.exports = {
         let pipeline = module.exports.conn.multi();
 
         function getScore(item) {
-            if(score_key.includes('is_')) {
+            if (score_key.includes('is_')) {
                 return item[score_key] ? 1 : 0;
             } else if (score_key in item) {
                 return item[score_key];
@@ -484,8 +484,8 @@ module.exports = {
             pipeline.zAdd(keyGenerator(prefix), [
                 {
                     value: getId(item),
-                    score: getScore(item)
-                }
+                    score: getScore(item),
+                },
             ]);
         }
 
@@ -503,7 +503,7 @@ module.exports = {
             }
 
             // Index individual word prefixes
-            nameLower.split(' ').forEach(word => {
+            nameLower.split(' ').forEach((word) => {
                 for (let i = 1; i <= word.length; i++) {
                     const prefix = word.slice(0, i);
                     addPrefixToIndex(prefix, item, prefixKey);
@@ -512,7 +512,7 @@ module.exports = {
         }
 
         return new Promise(async (resolve, reject) => {
-            for(let i = 0; i < items.length; i++) {
+            for (let i = 0; i < items.length; i++) {
                 let item = items[i];
 
                 if (i % logFrequency === 0) {
@@ -527,7 +527,7 @@ module.exports = {
                         await pipeline.execAsPipeline();
                         pipeline = module.exports.conn.multi();
                     }
-                } catch(e) {
+                } catch (e) {
                     console.error(e);
                 }
             }
@@ -535,12 +535,12 @@ module.exports = {
             if (items.length > 0) {
                 try {
                     await pipeline.execAsPipeline();
-                } catch(e) {
+                } catch (e) {
                     console.error(e);
                 }
             }
 
             resolve();
         });
-    }
+    },
 };

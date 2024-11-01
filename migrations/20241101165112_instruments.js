@@ -9,6 +9,10 @@ exports.up = function (knex) {
                 table.increments('id').primary();
                 table.string('token').notNullable();
                 table.string('name', 255).notNullable();
+                table.integer('popularity').notNullable();
+
+                table.boolean('is_common').defaultTo(false);
+
                 table
                     .enum('category', [
                         'String',
@@ -19,7 +23,6 @@ exports.up = function (knex) {
                         'Electronic',
                     ])
                     .notNullable();
-                table.boolean('is_common').defaultTo(false);
 
                 table.bigInteger('created').notNullable();
                 table.bigInteger('updated').notNullable();
@@ -31,7 +34,13 @@ exports.up = function (knex) {
 
                 table.bigInteger('person_id').unsigned().notNullable();
                 table.integer('instrument_id').unsigned().notNullable();
-                table.enum('skill_level', ['Beginner', 'Intermediate', 'Advanced', 'Expert']);
+                table.enum('skill_level', [
+                    'Beginner',
+                    'Intermediate',
+                    'Advanced',
+                    'Expert',
+                    'Virtuoso',
+                ]);
 
                 table.bigInteger('created').notNullable();
                 table.bigInteger('updated').notNullable();

@@ -4,6 +4,12 @@ const { timeNow } = require('./shared');
 const { setCache } = require('./cache');
 
 module.exports = {
+    sections: {
+        instruments: {
+            categories: ['String', 'Wind', 'Brass', 'Percussion', 'Keyboard', 'Electronic'],
+            secondary: ['Beginner', 'Intermediate', 'Advanced', 'Professional'],
+        },
+    },
     addMeSection: function (person, section_key) {
         return new Promise(async (resolve, reject) => {
             if (!person || !person.person_token || !section_key) {
@@ -69,7 +75,11 @@ module.exports = {
 
                     await setCache(cache_key, person_sections);
 
-                    resolve();
+                    if (section_key === 'instruments') {
+                        data.data = await module.exports.instruments();
+                    }
+
+                    resolve(data);
                 } else {
                     return reject('Section added previously');
                 }
@@ -164,17 +174,74 @@ module.exports = {
                     organized.active[section_key] = person_sections[section_key];
                 }
 
-                //options
+                //available sections
                 for (let section of all_me_sections) {
                     if (!(section.section_key in organized.active)) {
                         organized.options[section.section_key] = section;
                     }
                 }
 
+                //add data options to active
+                if ('instruments' in organized.active) {
+                    organized.active.instruments.data = await module.exports.instruments();
+                }
+
                 return resolve(organized);
             } catch (e) {
                 console.error(e);
                 return reject(e);
+            }
+        });
+    },
+    sectionData: function (table_name, cache_key, filter) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let cached_obj = await cacheService.getObj(cache_key);
+
+                if (cached_obj && false) {
+                    return resolve(cached_obj);
+                }
+
+                let conn = await dbService.conn();
+
+                let data = await conn(table_name);
+
+                if (filter) {
+                    data = data.filter((item) => item[filter]);
+                }
+
+                await cacheService.setCache(cache_key, data);
+
+                resolve(data);
+            } catch (e) {
+                console.error(e);
+                return reject();
+            }
+        });
+    },
+    instruments: function () {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let options = await module.exports.sectionData(
+                    'instruments',
+                    cacheService.keys.instruments_common,
+                    'is_common',
+                );
+
+                let data = {
+                    autocomplete: {
+                        string: 'Search instruments',
+                        endpoint: '/autocomplete/instruments',
+                    },
+                    options: options,
+                    categories: module.exports.sections.instruments.categories,
+                    secondary: module.exports.sections.instruments.secondary,
+                };
+
+                resolve(data);
+            } catch (e) {
+                console.error(e);
+                return reject();
             }
         });
     },
