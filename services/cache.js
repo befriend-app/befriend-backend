@@ -8,6 +8,7 @@ module.exports = {
         activity_types: `activity_types`,
         activity_type_default: `activity_type:default`,
         cities_population: `cities:by_population`,
+        me_sections: `sections:me`,
         activity: function (activity_token) {
             return `activity:${activity_token}`;
         },

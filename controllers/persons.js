@@ -15,11 +15,13 @@ module.exports = {
             let person_token = req.query.person_token;
 
             try {
-                 let person = await getPerson(person_token);
-                 person.sections = await getMeSections(person_token);
+                 let me = await getPerson(person_token);
+
+                 let sections = await getMeSections(me);
 
                  res.json({
-                     me: person
+                     me,
+                     sections
                  });
 
                  resolve();

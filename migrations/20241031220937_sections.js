@@ -11,9 +11,7 @@ exports.up = function(knex) {
             table.text('icon').nullable();
             table.integer('position').notNullable().defaultTo(0);
             table.boolean('active').notNullable().defaultTo(true);
-
             table.string('data_table').nullable();
-
             table.bigInteger('created').notNullable();
             table.bigInteger('updated').notNullable();
         }).createTable("persons_sections", (table) => {
@@ -31,17 +29,20 @@ exports.up = function(knex) {
             table.foreign('section_id').references('id').inTable('me_sections');
         }).createTable("movies", (table) => {
             table.increments('id').primary();
+            table.integer('tmdb_id').nullable().unique();
+            table.string('tmdb_poster_path').nullable();
             table.string('movie_token', 255).notNullable();
-
             table.string('name').notNullable();
+            table.string('original_language').nullable();
             table.date('release_date').notNullable();
             table.float('popularity', 10,4).nullable()
             table.integer('users_added_count').notNullable().defaultTo(0);
-
             table.enum('type', ['movie', 'genre']).notNullable();
 
             table.bigInteger('created').notNullable();
             table.bigInteger('updated').notNullable();
+
+            table.index('movie_token');
 
         }).createTable("persons_movies", (table) => {
             table.bigIncrements('id').primary();
