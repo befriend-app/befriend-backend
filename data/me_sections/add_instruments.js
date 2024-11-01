@@ -73,7 +73,7 @@ module.exports = {
         {
             token: 'oz1cmtk73vljcaorqt5b',
             name: 'Accordion',
-            category: 'Wind',
+            category: 'Keyboard',
             is_common: 1,
             popularity: 650,
         },
@@ -81,7 +81,7 @@ module.exports = {
             token: 'fuvrd7xe0yjljk14vk0q',
             name: 'Acoustic bass guitar',
             category: 'String',
-            is_common: 1,
+            is_common: 0,
             popularity: 550,
         },
         {
@@ -151,14 +151,14 @@ module.exports = {
             token: 'hv1o8f6zm9n4yy5bw8fu',
             name: 'Alto clarinet',
             category: 'Wind',
-            is_common: 1,
+            is_common: 0,
             popularity: 280,
         },
         {
             token: '7c8kewp6ohucwc14n6uh',
             name: 'Alto flute',
             category: 'Wind',
-            is_common: 1,
+            is_common: 0,
             popularity: 250,
         },
         {
@@ -179,7 +179,7 @@ module.exports = {
             token: 'kawtlep26ko5lsjukam7',
             name: 'Alto saxophone',
             category: 'Wind',
-            is_common: 1,
+            is_common: 0,
             popularity: 750,
         },
         {
@@ -333,7 +333,7 @@ module.exports = {
             token: 'pszfzab8rpgfej2je0k1',
             name: 'Baritone saxophone',
             category: 'Wind',
-            is_common: 1,
+            is_common: 0,
             popularity: 400,
         },
         {
@@ -354,7 +354,7 @@ module.exports = {
             token: '5t5nicu74sl1h6j5zw1x',
             name: 'Bass Clarinet',
             category: 'Wind',
-            is_common: 1,
+            is_common: 0,
             popularity: 460,
         },
         {
@@ -368,7 +368,7 @@ module.exports = {
             token: 'd7gm26so3u1eiowc5xnj',
             name: 'Bass flute',
             category: 'Wind',
-            is_common: 1,
+            is_common: 0,
             popularity: 200,
         },
         {
@@ -550,7 +550,7 @@ module.exports = {
             token: 's6wbu9mb83z6oxxzgmny',
             name: 'Bongo drum',
             category: 'Percussion',
-            is_common: 1,
+            is_common: 0,
             popularity: 450,
         },
         {
@@ -620,7 +620,7 @@ module.exports = {
             token: 'ohnzn8qswkqixi4uznx0',
             name: 'Castanets',
             category: 'Percussion',
-            is_common: 1,
+            is_common: 0,
             popularity: 300,
         },
         {
@@ -704,7 +704,7 @@ module.exports = {
             token: 'ihnj8ozkl9ex44rqn17d',
             name: 'Chimes',
             category: 'Percussion',
-            is_common: 1,
+            is_common: 0,
             popularity: 350,
         },
         {
@@ -774,7 +774,7 @@ module.exports = {
             token: 'w2c89fv80hmk7o9r4ruq',
             name: 'Clapped hands',
             category: 'Percussion',
-            is_common: 1,
+            is_common: 0,
             popularity: 500,
         },
         {
@@ -830,7 +830,7 @@ module.exports = {
             token: 'lbczgxuclv9wa32hs53o',
             name: 'Conga',
             category: 'Percussion',
-            is_common: 1,
+            is_common: 0,
             popularity: 450,
         },
         {
@@ -886,7 +886,7 @@ module.exports = {
             token: '4ewx6qoh81dtseyu2hrg',
             name: 'Contrabassoon',
             category: 'Wind',
-            is_common: 1,
+            is_common: 0,
             popularity: 200,
         },
         {
@@ -1089,7 +1089,7 @@ module.exports = {
             token: 'eoleqfy7l8r7kjqwrgyp',
             name: 'Djembe',
             category: 'Percussion',
-            is_common: 1,
+            is_common: 0,
             popularity: 400,
         },
         {
@@ -1285,7 +1285,7 @@ module.exports = {
             token: '9n7oor44390fu3h9vofw',
             name: 'Euphonium',
             category: 'Brass',
-            is_common: 1,
+            is_common: 0,
             popularity: 350,
         },
         {
@@ -1299,7 +1299,7 @@ module.exports = {
             token: '6mpz258zgi1y6yulk4vj',
             name: 'Fiddle',
             category: 'String',
-            is_common: 1,
+            is_common: 0,
             popularity: 450,
         },
         {
@@ -1873,7 +1873,7 @@ module.exports = {
             token: '9e76m6fic84j47mmc8ow',
             name: 'Kettle drum',
             category: 'Percussion',
-            is_common: 1,
+            is_common: 0,
             popularity: 400,
         },
         {
@@ -2097,7 +2097,7 @@ module.exports = {
             token: '1vgyx6sdjtz8jc8lohgn',
             name: 'Lute',
             category: 'String',
-            is_common: 1,
+            is_common: 0,
             popularity: 280,
         },
         {
@@ -2167,7 +2167,7 @@ module.exports = {
             token: '7wfirqzuhi4qupoy9tcw',
             name: 'Maraca',
             category: 'Percussion',
-            is_common: 1,
+            is_common: 0,
             popularity: 400,
         },
         {
@@ -2482,7 +2482,7 @@ module.exports = {
             token: 'm90rcoz3jtpgj129eslh',
             name: 'Organ pipe',
             category: 'Wind',
-            is_common: 1,
+            is_common: 0,
             popularity: 200,
         },
         {
@@ -2566,7 +2566,7 @@ module.exports = {
             token: 'wakpzb6pjh2zhezy69qp',
             name: 'Pipe organ',
             category: 'Wind',
-            is_common: 1,
+            is_common: 0,
             popularity: 520,
         },
         {
@@ -2664,7 +2664,7 @@ module.exports = {
             token: 'qtskso652bzhnbxl1qhx',
             name: 'Rattle',
             category: 'Percussion',
-            is_common: 1,
+            is_common: 0,
             popularity: 250,
         },
         {
@@ -2986,21 +2986,21 @@ module.exports = {
             token: 'ojb9o67bfwl0dnv8u57r',
             name: 'Sitar',
             category: 'String',
-            is_common: 1,
+            is_common: 0,
             popularity: 400,
         },
         {
             token: 'xc8zvzuew6hvwp5f3cm5',
             name: 'Sleigh Bells',
             category: 'Percussion',
-            is_common: 1,
+            is_common: 0,
             popularity: 250,
         },
         {
             token: 'kkdgxv9vzw61fzh9kzvi',
             name: 'Slide guitar',
             category: 'String',
-            is_common: 1,
+            is_common: 0,
             popularity: 300,
         },
         {
@@ -3042,7 +3042,7 @@ module.exports = {
             token: '6cbhm4v9wbvqdogyr9s1',
             name: 'Soprano clarinet',
             category: 'Wind',
-            is_common: 1,
+            is_common: 0,
             popularity: 350,
         },
         {
@@ -3056,7 +3056,7 @@ module.exports = {
             token: 'o1e3sih1wt5n2nvbuhez',
             name: 'Soprano saxophone',
             category: 'Wind',
-            is_common: 1,
+            is_common: 0,
             popularity: 400,
         },
         {
@@ -3077,7 +3077,7 @@ module.exports = {
             token: 'v4jsrf7tby07iglwksx1',
             name: 'Sousaphone',
             category: 'Brass',
-            is_common: 1,
+            is_common: 0,
             popularity: 250,
         },
         {
@@ -3098,14 +3098,14 @@ module.exports = {
             token: 'h6rx3p5r6wy854hm8jpj',
             name: 'Steel drum',
             category: 'Percussion',
-            is_common: 1,
+            is_common: 0,
             popularity: 300,
         },
         {
             token: '240dc3ov6dfjueekucpy',
             name: 'Steel guitar',
             category: 'String',
-            is_common: 1,
+            is_common: 0,
             popularity: 250,
         },
         {
@@ -3154,7 +3154,7 @@ module.exports = {
             token: '2xvx1hubteit9w77umih',
             name: 'Tabla',
             category: 'Percussion',
-            is_common: 1,
+            is_common: 0,
             popularity: 400,
         },
         {
@@ -3238,7 +3238,7 @@ module.exports = {
             token: 'j53fa8mr7qbevbj8aqmo',
             name: 'Tenor horn',
             category: 'Brass',
-            is_common: 1,
+            is_common: 0,
             popularity: 200,
         },
         {
@@ -3259,7 +3259,7 @@ module.exports = {
             token: 'b3r1wp4jf2on8i8hfccf',
             name: 'Tenor saxophone',
             category: 'Wind',
-            is_common: 1,
+            is_common: 0,
             popularity: 500,
         },
         {
@@ -3329,7 +3329,7 @@ module.exports = {
             token: 'rswrmn6s1tmkzrbf2fu0',
             name: 'Tom-tom',
             category: 'Percussion',
-            is_common: 1,
+            is_common: 0,
             popularity: 400,
         },
         {
@@ -3350,7 +3350,7 @@ module.exports = {
             token: 'vsfri6i1338vj68o6bov',
             name: 'Transverse Flute',
             category: 'Wind',
-            is_common: 1,
+            is_common: 0,
             popularity: 200,
         },
         {
@@ -3441,7 +3441,7 @@ module.exports = {
             token: 'spl7wm81zswgyjmj19dk',
             name: 'Tubular Bells',
             category: 'Percussion',
-            is_common: 1,
+            is_common: 0,
             popularity: 300,
         },
         {
@@ -3525,7 +3525,7 @@ module.exports = {
             token: '967jukgwqrczxldwc9kx',
             name: 'Vibraphone',
             category: 'Percussion',
-            is_common: 1,
+            is_common: 0,
             popularity: 350,
         },
         {
@@ -3658,7 +3658,7 @@ module.exports = {
             token: 'a8glaxcyx4am7s7w8sda',
             name: 'Whistle',
             category: 'Wind',
-            is_common: 1,
+            is_common: 0,
             popularity: 350,
         },
         {
@@ -3672,7 +3672,7 @@ module.exports = {
             token: 'pzk4b5ml6qjx8kdojuyu',
             name: 'Wind Chimes',
             category: 'Percussion',
-            is_common: 1,
+            is_common: 0,
             popularity: 300,
         },
         {
@@ -3805,7 +3805,7 @@ module.exports = {
             token: 'ylkiao2qt0mvwv0txnnm',
             name: 'Zither',
             category: 'String',
-            is_common: 1,
+            is_common: 0,
             popularity: 250,
         },
         {
