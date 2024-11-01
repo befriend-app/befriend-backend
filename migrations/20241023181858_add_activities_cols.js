@@ -6,6 +6,8 @@
 let table_name = 'activities';
 
 exports.up = async function(knex) {
+
+
     let has_persons_qty_col = await knex.schema.hasColumn(table_name, 'persons_qty');
 
     if(!has_persons_qty_col) {
