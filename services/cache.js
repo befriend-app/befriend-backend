@@ -74,6 +74,9 @@ module.exports = {
         places_category_city: function (category_id, city_id) {
             return `places:category:${category_id}:city:${city_id}`;
         },
+        person_sections: function (person_token) {
+            return `persons:sections:${person_token}`;
+        }
     },
     init: function () {
         return new Promise(async (resolve, reject) => {

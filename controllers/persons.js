@@ -4,6 +4,8 @@ const dbService = require('../services/db');
 const { timeNow, generateToken } = require('../services/shared');
 
 const { getPerson } = require('../services/persons');
+const { getMeSections } = require('../services/sections');
+
 
 const { findMatches, notifyMatches, prepareActivity } = require('../services/activities');
 
@@ -14,6 +16,7 @@ module.exports = {
 
             try {
                  let person = await getPerson(person_token);
+                 person.sections = await getMeSections(person_token);
 
                  res.json({
                      me: person
@@ -282,5 +285,5 @@ module.exports = {
                 res.json("Error adding device", 400);
             }
         });
-    }
+    },
 };
