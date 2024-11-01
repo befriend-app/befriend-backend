@@ -31,12 +31,9 @@ loadScriptEnv();
             connection: connection,
         });
 
-        let tables = [
-            'persons_sections',
-            'me_sections'
-        ];
+        let tables = ['persons_instruments', 'instruments', 'persons_sections', 'me_sections'];
 
-        for(let table of tables) {
+        for (let table of tables) {
             await knex(table).delete();
         }
 
@@ -44,9 +41,15 @@ loadScriptEnv();
 
         keys.push(cacheService.keys.me_sections);
 
+        //instruments
+        keys.push(cacheService.keys.instruments);
+        keys.push(cacheService.keys.instruments_common);
+        keys.concat(cacheService.keys.instrument('') + '*');
+
         await cacheService.deleteKeys(keys);
 
         await require('../../data/me_sections/add_sections').main();
+        await require('../../data/me_sections/add_instruments').main();
     }
 
     process.exit();

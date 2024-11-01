@@ -4,15 +4,27 @@
  */
 
 let bools = [
-    'meet', 'eat', 'drink', 'walk', 'exercise', 'watch', 'fun', 'dance', 'attend',
-    'relax', 'discover', 'travel', 'shop', 'kids'
+    'meet',
+    'eat',
+    'drink',
+    'walk',
+    'exercise',
+    'watch',
+    'fun',
+    'dance',
+    'attend',
+    'relax',
+    'discover',
+    'travel',
+    'shop',
+    'kids',
 ];
 
-exports.up = function(knex) {
-    return knex.schema.alterTable('activity_types', table => {
+exports.up = function (knex) {
+    return knex.schema.alterTable('activity_types', (table) => {
         let prev = 'is_visible';
 
-        for(let col of bools) {
+        for (let col of bools) {
             table.boolean(`is_${col}`).defaultTo(0).after(prev);
             prev = `is_${col}`;
         }
@@ -23,9 +35,9 @@ exports.up = function(knex) {
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
-exports.down = function(knex) {
-    return knex.schema.alterTable('activity_types', table => {
-        for(let col of bools) {
+exports.down = function (knex) {
+    return knex.schema.alterTable('activity_types', (table) => {
+        for (let col of bools) {
             table.dropColumn(`is_${col}`);
         }
     });

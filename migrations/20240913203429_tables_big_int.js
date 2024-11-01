@@ -2,7 +2,7 @@
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
-exports.up = async function(knex) {
+exports.up = async function (knex) {
     let tables = [
         'persons_reviews',
         'persons_companies',
@@ -28,11 +28,11 @@ exports.up = async function(knex) {
         'schools',
         'genders',
         'networks_secret_keys',
-        'networks'
+        'networks',
     ];
 
-    for(let table_name of tables) {
-        await knex.schema.alterTable(table_name, table => {
+    for (let table_name of tables) {
+        await knex.schema.alterTable(table_name, (table) => {
             table.bigint('created').notNullable().alter();
             table.bigint('updated').notNullable().alter();
         });
@@ -43,6 +43,4 @@ exports.up = async function(knex) {
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
-exports.down = function(knex) {
-  
-};
+exports.down = function (knex) {};

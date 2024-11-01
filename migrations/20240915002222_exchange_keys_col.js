@@ -2,10 +2,9 @@
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
-exports.up = function(knex) {
-    return knex.schema.alterTable('networks', table => {
-        table.boolean('keys_exchanged').notNullable().defaultTo(false)
-            .after('priority');
+exports.up = function (knex) {
+    return knex.schema.alterTable('networks', (table) => {
+        table.boolean('keys_exchanged').notNullable().defaultTo(false).after('priority');
     });
 };
 
@@ -13,6 +12,4 @@ exports.up = function(knex) {
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
-exports.down = function(knex) {
-  
-};
+exports.down = function (knex) {};

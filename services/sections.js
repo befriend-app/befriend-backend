@@ -6,13 +6,13 @@ const { setCache } = require('./cache');
 module.exports = {
     addMeSection: function (person, section_key) {
         return new Promise(async (resolve, reject) => {
-            if(!person || !person.person_token || !section_key) {
-                return reject("Person and section key required");
+            if (!person || !person.person_token || !section_key) {
+                return reject('Person and section key required');
             }
 
             let sections_dict = {
                 byId: {},
-                byKey: {}
+                byKey: {},
             };
 
             try {
@@ -21,21 +21,21 @@ module.exports = {
 
                 let all_sections = await module.exports.getAllMeSections();
 
-                for(let section of all_sections) {
+                for (let section of all_sections) {
                     sections_dict.byId[section.id] = section;
                     sections_dict.byKey[section.section_key] = section;
                 }
 
                 let person_sections = await cacheService.getObj(cache_key);
 
-                if(!person_sections) {
+                if (!person_sections) {
                     person_sections = {};
 
                     let sections_qry = await conn('persons_sections')
                         .where('person_id', person.id)
                         .orderBy('position', 'asc');
 
-                    for(let section of sections_qry) {
+                    for (let section of sections_qry) {
                         let section_data = sections_dict.byId[section.section_id];
 
                         person_sections[section_data.section_key] = section;
@@ -43,25 +43,24 @@ module.exports = {
                 }
 
                 //check if valid
-                if(!(section_key in sections_dict.byKey)) {
-                    return reject("Invalid section key");
+                if (!(section_key in sections_dict.byKey)) {
+                    return reject('Invalid section key');
                 }
 
                 let section_data = sections_dict.byKey[section_key];
 
                 //check if exists
-                if(!(section_key in person_sections)) {
+                if (!(section_key in person_sections)) {
                     //add to db
                     let data = {
                         person_id: person.id,
                         section_id: section_data.id,
                         position: Object.keys(person_sections).length,
                         created: timeNow(),
-                        updated: timeNow()
+                        updated: timeNow(),
                     };
 
-                    let [id] = await conn('persons_sections')
-                        .insert(data);
+                    let [id] = await conn('persons_sections').insert(data);
 
                     data.id = id;
 
@@ -72,9 +71,9 @@ module.exports = {
 
                     resolve();
                 } else {
-                    return reject("Section added previously");
+                    return reject('Section added previously');
                 }
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
             }
         });
@@ -116,7 +115,7 @@ module.exports = {
             //lookup dict
             let me_dict = {
                 byId: {},
-                byKey: {}
+                byKey: {},
             };
 
             //return object
@@ -153,7 +152,7 @@ module.exports = {
                         .where('person_id', person.id)
                         .orderBy('position', 'asc');
 
-                    for(let section of sections_qry) {
+                    for (let section of sections_qry) {
                         let section_data = me_dict.byId[section.section_id];
 
                         person_sections[section_data.section_key] = section;

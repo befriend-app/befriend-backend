@@ -2,8 +2,8 @@
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
-exports.up = function(knex) {
-    return knex.schema.alterTable('networks_secret_keys', table => {
+exports.up = function (knex) {
+    return knex.schema.alterTable('networks_secret_keys', (table) => {
         table.dropColumn('secret_key');
 
         table.string('secret_key_from', 255).notNullable();
@@ -18,6 +18,4 @@ exports.up = function(knex) {
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
-exports.down = function(knex) {
-  
-};
+exports.down = function (knex) {};

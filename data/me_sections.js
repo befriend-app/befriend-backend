@@ -4,6 +4,7 @@ function main() {
             console.log('Loading me data');
 
             await require('./me_sections/add_sections').main();
+            await require('./me_sections/add_instruments').main();
         } catch (e) {
             console.error(e);
         }
