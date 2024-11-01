@@ -29,6 +29,7 @@ exports.up = function(knex) {
         table.foreign('section_id').references('id').inTable('me_sections');
     }).createTable("movies", (table) => {
         table.increments('id').primary();
+        table.string('movie_token', 255).notNullable();
 
         table.string('name').notNullable();
         table.date('release_date').notNullable();
