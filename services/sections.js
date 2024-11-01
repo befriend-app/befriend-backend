@@ -7,7 +7,7 @@ module.exports = {
     sections: {
         instruments: {
             categories: ['String', 'Wind', 'Brass', 'Percussion', 'Keyboard', 'Electronic'],
-            secondary: ['Beginner', 'Intermediate', 'Advanced', 'Professional'],
+            secondary: ['Beginner', 'Intermediate', 'Advanced', 'Expert', 'Virtuoso'],
         },
     },
     addMeSection: function (person, section_key) {
@@ -193,18 +193,25 @@ module.exports = {
             }
         });
     },
-    sectionData: function (table_name, cache_key, filter) {
+    sectionData: function (table_name, cache_key, filter, sort_by, sort_direction) {
         return new Promise(async (resolve, reject) => {
             try {
                 let cached_obj = await cacheService.getObj(cache_key);
 
+                //todo remove
                 if (cached_obj && false) {
                     return resolve(cached_obj);
                 }
 
                 let conn = await dbService.conn();
 
-                let data = await conn(table_name);
+                let qry = conn(table_name);
+
+                if(sort_by) {
+                    qry = qry.orderBy(sort_by, sort_direction ? sort_direction : 'asc');
+                }
+
+                let data = await qry;
 
                 if (filter) {
                     data = data.filter((item) => item[filter]);
@@ -226,6 +233,8 @@ module.exports = {
                     'instruments',
                     cacheService.keys.instruments_common,
                     'is_common',
+                    'popularity',
+                    'desc'
                 );
 
                 let data = {

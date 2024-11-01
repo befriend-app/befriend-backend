@@ -3599,6 +3599,13 @@ module.exports = {
             popularity: 50,
         },
         {
+            token: 'sd948da84kjf9029d82a',
+            name: 'Voice',
+            category: 'Natural',
+            is_common: 1,
+            popularity: 1000,
+        },
+        {
             token: 'ykas7q5u67oehpwlygu9',
             name: 'Volinka',
             category: 'Wind',
