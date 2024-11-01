@@ -2,6 +2,7 @@ const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 const { timeNow } = require('./shared');
 const { setCache } = require('./cache');
+const { getPerson } = require('./persons');
 
 module.exports = {
     sections: {
@@ -10,9 +11,15 @@ module.exports = {
             secondary: ['Beginner', 'Intermediate', 'Advanced', 'Expert', 'Virtuoso'],
         },
     },
-    addMeSection: function (person, section_key) {
+    dataIdMap: {
+        instruments: 'instrument_id',
+    },
+    secondaryMap: {
+        instruments: 'skill_level',
+    },
+    addMeSection: function (person_token, section_key) {
         return new Promise(async (resolve, reject) => {
-            if (!person || !person.person_token || !section_key) {
+            if (!person_token || !section_key) {
                 return reject('Person and section key required');
             }
 
@@ -22,6 +29,12 @@ module.exports = {
             };
 
             try {
+                let person = await getPerson(person_token);
+
+                if (!person) {
+                    return reject('No person found');
+                }
+
                 let conn = await dbService.conn();
                 let cache_key = cacheService.keys.person_sections(person.person_token);
 
@@ -85,6 +98,123 @@ module.exports = {
                 }
             } catch (e) {
                 console.error(e);
+            }
+        });
+    },
+    addMeSectionItem: function (person_token, section_key, item_token) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                if (!section_key || !item_token) {
+                    return reject('Section key and item token required');
+                }
+
+                let options = null;
+
+                let conn = await dbService.conn();
+
+                let person = await getPerson(person_token);
+
+                if (!person) {
+                    return reject('No person found');
+                }
+
+                let me_sections = await module.exports.getAllMeSections();
+
+                let this_section = me_sections.find(
+                    (section) => section.section_key === section_key,
+                );
+
+                if (!this_section) {
+                    return reject('Section not found');
+                }
+
+                if (this_section.data_table === 'instruments') {
+                    options = await module.exports.allInstruments();
+                }
+
+                let section_data = await module.exports.getPersonSectionData(
+                    person,
+                    this_section,
+                    options,
+                );
+
+                if (!(item_token in section_data)) {
+                    let insert_data = {
+                        person_id: person.id,
+                        created: timeNow(),
+                        updated: timeNow(),
+                    };
+
+                    let this_option = options.find((opt) => opt.token === item_token);
+
+                    if (!this_option) {
+                        return reject('Item not found');
+                    }
+
+                    insert_data[module.exports.dataIdMap[section_key]] = this_option.id;
+
+                    let [id] = await conn(`persons_${this_section.data_table}`).insert(insert_data);
+
+                    insert_data.id = id;
+
+                    section_data[item_token] = {
+                        ...insert_data,
+                    };
+
+                    let cache_key = cacheService.keys.person_sections_data(
+                        person.person_token,
+                        this_section.data_table,
+                    );
+
+                    await cacheService.setCache(cache_key, section_data);
+
+                    return resolve(insert_data);
+                }
+            } catch (e) {
+                console.error(e);
+                return reject();
+            }
+
+            resolve();
+        });
+    },
+    getPersonSectionData: function (person, section, options) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let cache_key = cacheService.keys.person_sections_data(
+                    person.person_token,
+                    section.data_table,
+                );
+
+                let cached_data = await cacheService.getObj(cache_key);
+
+                if (false) {
+                    return resolve(cached_data);
+                }
+
+                let conn = await dbService.conn();
+
+                let qry = await conn(`persons_${section.data_table}`).where('person_id', person.id);
+
+                let organized = {};
+
+                let col_name = module.exports.dataIdMap[section.data_table];
+
+                for (let item of qry) {
+                    let section_option = options.find((_item) => _item.id === item[col_name]);
+
+                    organized[section_option.token] = {
+                        ...section_option,
+                        ...item,
+                    };
+                }
+
+                await setCache(cache_key, organized);
+
+                resolve(organized);
+            } catch (e) {
+                console.error(e);
+                return reject(e);
             }
         });
     },
@@ -184,6 +314,14 @@ module.exports = {
                 //add data options to active
                 if ('instruments' in organized.active) {
                     organized.active.instruments.data = await module.exports.instruments();
+
+                    let options = await module.exports.allInstruments();
+
+                    organized.active.instruments.items = await module.exports.getPersonSectionData(
+                        person,
+                        organized.all.instruments,
+                        options,
+                    );
                 }
 
                 return resolve(organized);
@@ -207,7 +345,7 @@ module.exports = {
 
                 let qry = conn(table_name);
 
-                if(sort_by) {
+                if (sort_by) {
                     qry = qry.orderBy(sort_by, sort_direction ? sort_direction : 'asc');
                 }
 
@@ -234,7 +372,7 @@ module.exports = {
                     cacheService.keys.instruments_common,
                     'is_common',
                     'popularity',
-                    'desc'
+                    'desc',
                 );
 
                 let data = {
@@ -251,6 +389,29 @@ module.exports = {
             } catch (e) {
                 console.error(e);
                 return reject();
+            }
+        });
+    },
+    allInstruments: function () {
+        return new Promise(async (resolve, reject) => {
+            let cache_key = cacheService.keys.instruments;
+
+            try {
+                let data = await cacheService.getObj(cache_key);
+
+                if (data) {
+                    return resolve(data);
+                }
+
+                let conn = await dbService.conn();
+
+                data = await conn('instruments').orderBy('popularity', 'desc');
+
+                await cacheService.setCache(cache_key, data);
+
+                resolve(data);
+            } catch (e) {
+                console.error(e);
             }
         });
     },

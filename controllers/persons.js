@@ -4,7 +4,12 @@ const dbService = require('../services/db');
 const { timeNow, generateToken } = require('../services/shared');
 
 const { getPerson } = require('../services/persons');
-const { getMeSections, addMeSection, getAllMeSections } = require('../services/sections');
+const {
+    getMeSections,
+    addMeSection,
+    getAllMeSections,
+    addMeSectionItem,
+} = require('../services/sections');
 const { findMatches, notifyMatches, prepareActivity } = require('../services/activities');
 
 module.exports = {
@@ -32,9 +37,7 @@ module.exports = {
     addMeSection: function (req, res) {
         return new Promise(async (resolve, reject) => {
             try {
-                let me = await getPerson(req.body.person_token);
-
-                let data = await addMeSection(me, req.body.key);
+                let data = await addMeSection(req.body.person_token, req.body.key);
 
                 res.json(data, 201);
 
@@ -42,6 +45,24 @@ module.exports = {
             } catch (e) {
                 console.error(e);
                 res.json('Error adding section', 400);
+            }
+        });
+    },
+    addMeSectionItem: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let data = await addMeSectionItem(
+                    req.body.person_token,
+                    req.body.section_key,
+                    req.body.item_token,
+                );
+
+                res.json(data, 201);
+
+                resolve();
+            } catch (e) {
+                console.error(e);
+                res.json('Error adding section item', 400);
             }
         });
     },
