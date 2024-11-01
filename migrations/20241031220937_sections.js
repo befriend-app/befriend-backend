@@ -61,5 +61,5 @@ exports.up = function(knex) {
  * @returns { Promise<void> }
  */
 exports.down = async function(knex) {
-    return knex.schema.dropTableIfExists("person_movies").dropTableIfExists("movies").dropTableIfExists("persons_sections").dropTableIfExists("me_sections")
+    return knex.schema.dropTableIfExists("persons_movies").dropTableIfExists("movies").dropTableIfExists("persons_sections").dropTableIfExists("me_sections")
 };
