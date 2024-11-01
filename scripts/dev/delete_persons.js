@@ -4,8 +4,8 @@ const { loadScriptEnv, isProdApp } = require('../../services/shared');
 loadScriptEnv();
 
 (async function () {
-    if(isProdApp()) {
-        console.error("App env: [prod]", 'exiting');
+    if (isProdApp()) {
+        console.error('App env: [prod]', 'exiting');
         process.exit();
     }
 
@@ -31,9 +31,17 @@ loadScriptEnv();
         let bulk_delete_count = 50000;
 
         //delete activities
-        let activity_tables = ['activities_persons', 'activities_filters', 'activities', 'persons_login_tokens', 'persons_devices', 'persons_networks', 'persons'];
+        let activity_tables = [
+            'activities_persons',
+            'activities_filters',
+            'activities',
+            'persons_login_tokens',
+            'persons_devices',
+            'persons_networks',
+            'persons',
+        ];
 
-        for(let activity_table of activity_tables) {
+        for (let activity_table of activity_tables) {
             while (true) {
                 let pn_qry = await knex(activity_table).select('id').limit(bulk_delete_count);
 
@@ -49,7 +57,7 @@ loadScriptEnv();
 
         try {
             await knex('sync').where('sync_process', 'persons').delete();
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
     }

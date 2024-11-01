@@ -36,7 +36,6 @@ const createAPNSConnection = async (baseURL) => {
             client.on('goaway', async () => {
                 client = await reconnect();
             });
-
         } catch (error) {
             console.error('Reconnection failed:', error);
             // Exponential backoff could be implemented here
@@ -55,43 +54,46 @@ const createAPNSConnection = async (baseURL) => {
     });
 
     // Check connection health periodically
-    setInterval(async () => {
-        if (!client?.socket?.connecting) {
-            try {
-                client = await reconnect();
-            } catch (error) {
-                console.error('Health check reconnection failed:', error);
+    setInterval(
+        async () => {
+            if (!client?.socket?.connecting) {
+                try {
+                    client = await reconnect();
+                } catch (error) {
+                    console.error('Health check reconnection failed:', error);
+                }
             }
-        }
-    }, 30 * 60 * 1000);
+        },
+        30 * 60 * 1000,
+    );
 
     return {
         getClient: () => client,
         close: () => client && client.close(),
-        reconnect
+        reconnect,
     };
 };
 
-function createTokenManager (keyId, teamId, privateKey) {
+function createTokenManager(keyId, teamId, privateKey) {
     const state = {
         currentToken: null,
-        tokenExpiry: null
+        tokenExpiry: null,
     };
 
     function generateNewToken() {
         const header = {
             alg: 'ES256',
-            kid: keyId
+            kid: keyId,
         };
 
         const claims = {
-            iss: teamId
+            iss: teamId,
         };
 
         state.currentToken = jwt.sign(claims, privateKey, {
             algorithm: 'ES256',
             header: header,
-            expiresIn: '1h'
+            expiresIn: '1h',
         });
 
         state.tokenExpiry = Date.now() + 55 * 60 * 1000;
@@ -114,8 +116,8 @@ function createTokenManager (keyId, teamId, privateKey) {
     }
 
     return {
-        getToken
-    }
+        getToken,
+    };
 }
 
 function createAPNSProvider(options) {
@@ -127,7 +129,11 @@ function createAPNSProvider(options) {
                 : 'https://api.development.push.apple.com';
 
             const connection = await createAPNSConnection(baseURL);
-            const tokenManager = createTokenManager(options.token.keyId, options.token.teamId, privateKey);
+            const tokenManager = createTokenManager(
+                options.token.keyId,
+                options.token.teamId,
+                privateKey,
+            );
 
             const getErrorReason = (status) => {
                 const errorReasons = {
@@ -138,7 +144,7 @@ function createAPNSProvider(options) {
                     413: 'Notification payload too large',
                     429: 'Too many requests',
                     500: 'Internal server error',
-                    503: 'Service unavailable'
+                    503: 'Service unavailable',
                 };
                 return errorReasons[status] || 'Unknown error';
             };
@@ -150,11 +156,11 @@ function createAPNSProvider(options) {
                         ':method': 'POST',
                         ':scheme': 'https',
                         ':path': `/3/device/${deviceToken}`,
-                        'authorization': `bearer ${token}`,
+                        authorization: `bearer ${token}`,
                         'apns-topic': notification.topic,
                         'apns-expiration': notification.expiry.toString(),
                         'apns-priority': '10',
-                        'apns-push-type': 'alert'
+                        'apns-push-type': 'alert',
                     };
 
                     const payload = {
@@ -162,9 +168,9 @@ function createAPNSProvider(options) {
                             alert: notification.alert,
                             badge: notification.badge,
                             sound: notification.sound,
-                            'interruption-level': notification['interruption-level']
+                            'interruption-level': notification['interruption-level'],
                         },
-                        ...notification.payload
+                        ...notification.payload,
                     };
 
                     return new Promise((resolve, reject) => {
@@ -182,24 +188,28 @@ function createAPNSProvider(options) {
                             const status = headers[':status'];
                             if (status === 200) {
                                 resolve({
-                                    sent: [{
-                                        device: deviceToken,
-                                        status: 'success'
-                                    }],
-                                    failed: []
+                                    sent: [
+                                        {
+                                            device: deviceToken,
+                                            status: 'success',
+                                        },
+                                    ],
+                                    failed: [],
                                 });
                             } else {
                                 reject({
                                     sent: [],
-                                    failed: [{
-                                        device: deviceToken,
-                                        status: 'error',
-                                        response: {
-                                            reason: getErrorReason(status),
-                                            statusCode: status,
-                                            error: responseData
-                                        }
-                                    }]
+                                    failed: [
+                                        {
+                                            device: deviceToken,
+                                            status: 'error',
+                                            response: {
+                                                reason: getErrorReason(status),
+                                                statusCode: status,
+                                                error: responseData,
+                                            },
+                                        },
+                                    ],
                                 });
                             }
                         });
@@ -211,14 +221,16 @@ function createAPNSProvider(options) {
                         req.on('error', (err) => {
                             reject({
                                 sent: [],
-                                failed: [{
-                                    device: deviceToken,
-                                    status: 'error',
-                                    response: {
-                                        reason: 'Request failed',
-                                        error: err.message
-                                    }
-                                }]
+                                failed: [
+                                    {
+                                        device: deviceToken,
+                                        status: 'error',
+                                        response: {
+                                            reason: 'Request failed',
+                                            error: err.message,
+                                        },
+                                    },
+                                ],
                             });
                         });
 
@@ -228,14 +240,16 @@ function createAPNSProvider(options) {
                 } catch (error) {
                     throw {
                         sent: [],
-                        failed: [{
-                            device: deviceToken,
-                            status: 'error',
-                            response: {
-                                reason: 'Internal error',
-                                error: error.message
-                            }
-                        }]
+                        failed: [
+                            {
+                                device: deviceToken,
+                                status: 'error',
+                                response: {
+                                    reason: 'Internal error',
+                                    error: error.message,
+                                },
+                            },
+                        ],
                     };
                 }
             };
@@ -243,7 +257,7 @@ function createAPNSProvider(options) {
             resolve({
                 send,
                 close: connection.close,
-                reconnect: connection.reconnect
+                reconnect: connection.reconnect,
             });
         } catch (error) {
             console.error(error);
@@ -257,7 +271,7 @@ function getAPNSProvider(options) {
         if (!provider) {
             try {
                 provider = await createAPNSProvider(options);
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
                 return reject();
             }
@@ -267,7 +281,7 @@ function getAPNSProvider(options) {
     });
 }
 
-function sendIOSBatch (deviceTokens, payload, time_sensitive)  {
+function sendIOSBatch(deviceTokens, payload, time_sensitive) {
     return new Promise(async (resolve, reject) => {
         const options = {
             token: {
@@ -275,7 +289,7 @@ function sendIOSBatch (deviceTokens, payload, time_sensitive)  {
                 keyId: process.env.PUSH_IOS_KEY_ID,
                 teamId: process.env.PUSH_IOS_TEAM_ID,
             },
-            production: false
+            production: false,
         };
 
         try {
@@ -283,26 +297,26 @@ function sendIOSBatch (deviceTokens, payload, time_sensitive)  {
             const apnProvider = await getAPNSProvider(options);
 
             console.log({
-                apnProvider: timeNow() - t
+                apnProvider: timeNow() - t,
             });
 
             let notifyData = {
                 topic: process.env.PUSH_IOS_APP_ID,
                 expiry: Math.floor(Date.now() / 1000) + 3600,
-                sound: "ping.aiff",
+                sound: 'ping.aiff',
                 alert: {
                     title: payload.title,
-                    body: payload.body
+                    body: payload.body,
                 },
                 payload: payload.data || {},
             };
 
-            if(time_sensitive) {
+            if (time_sensitive) {
                 notifyData['interruption-level'] = 'time-sensitive';
             }
 
             let results = await Promise.allSettled(
-                deviceTokens.map(token => apnProvider.send(notifyData, token))
+                deviceTokens.map((token) => apnProvider.send(notifyData, token)),
             );
 
             // Process results to handle both fulfilled and rejected promises
@@ -312,14 +326,16 @@ function sendIOSBatch (deviceTokens, payload, time_sensitive)  {
                 }
                 return {
                     sent: [],
-                    failed: [{
-                        device: deviceTokens[index],
-                        status: 'error',
-                        response: {
-                            reason: 'Send failed',
-                            error: result.reason.message || 'Unknown error'
-                        }
-                    }]
+                    failed: [
+                        {
+                            device: deviceTokens[index],
+                            status: 'error',
+                            response: {
+                                reason: 'Send failed',
+                                error: result.reason.message || 'Unknown error',
+                            },
+                        },
+                    ],
                 };
             });
 
@@ -333,6 +349,6 @@ function sendIOSBatch (deviceTokens, payload, time_sensitive)  {
 
 module.exports = {
     ios: {
-        sendBatch: sendIOSBatch
+        sendBatch: sendIOSBatch,
     },
 };

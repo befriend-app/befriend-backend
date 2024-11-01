@@ -31,19 +31,22 @@ loadScriptEnv();
             connection: connection,
         });
 
-        await knex('categories_geo_places').delete();
+        let tables = [
+            'persons_sections',
+            'me_sections'
+        ];
 
-        await knex('categories_geo').delete();
+        for(let table of tables) {
+            await knex(table).delete();
+        }
 
-        await knex('places').delete();
+        let keys = await cacheService.getKeys(`${cacheService.keys.person_sections('')}*`);
 
-        let keys = await cacheService.getKeys(`${cacheService.keys.place_fsq('')}*`);
+        keys.push(cacheService.keys.me_sections);
 
         await cacheService.deleteKeys(keys);
 
-        let keys_cats = await cacheService.getKeys(`places:category:*`);
-
-        await cacheService.deleteKeys(keys_cats);
+        await require('../../data/me_sections/add_sections').main();
     }
 
     process.exit();

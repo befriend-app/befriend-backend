@@ -4,9 +4,7 @@ const dbService = require('../services/db');
 const { timeNow, generateToken } = require('../services/shared');
 
 const { getPerson } = require('../services/persons');
-const { getMeSections } = require('../services/sections');
-
-
+const { getMeSections, addMeSection, getAllMeSections } = require('../services/sections');
 const { findMatches, notifyMatches, prepareActivity } = require('../services/activities');
 
 module.exports = {
@@ -15,19 +13,35 @@ module.exports = {
             let person_token = req.query.person_token;
 
             try {
-                 let me = await getPerson(person_token);
+                let me = await getPerson(person_token);
 
-                 let sections = await getMeSections(me);
+                let sections = await getMeSections(me);
 
-                 res.json({
-                     me,
-                     sections
-                 });
+                res.json({
+                    me,
+                    sections,
+                });
 
-                 resolve();
-            } catch(e) {
+                resolve();
+            } catch (e) {
                 console.error(e);
-                res.json("Error getting person", 400);
+                res.json('Error getting person', 400);
+            }
+        });
+    },
+    addMeSection: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let me = await getPerson(req.body.person_token);
+
+                await addMeSection(me, req.body.key);
+
+                res.json('Section added successfully', 201);
+
+                resolve();
+            } catch (e) {
+                console.error(e);
+                res.json('Error adding section', 400);
             }
         });
     },
@@ -179,7 +193,7 @@ module.exports = {
 
                 // Validate required fields
                 if (!device_token || !platform) {
-                    res.status(400).json({ message: "Device token and platform required" });
+                    res.status(400).json({ message: 'Device token and platform required' });
                     return resolve();
                 }
 
@@ -203,8 +217,7 @@ module.exports = {
                 const timestamp = timeNow();
 
                 // Get existing devices
-                const personDevices = await conn('persons_devices')
-                    .where('person_id', person.id);
+                const personDevices = await conn('persons_devices').where('person_id', person.id);
 
                 // Handle new device registration
                 if (!personDevices.length) {
@@ -215,76 +228,74 @@ module.exports = {
                         is_current: true,
                         last_updated: timestamp,
                         created: timestamp,
-                        updated: timestamp
+                        updated: timestamp,
                     };
 
                     const [id] = await conn('persons_devices').insert(newDevice);
                     newDevice.id = id;
 
-                    await cacheService.setCache(
-                        cacheService.keys.person_devices(person_token),
-                        [newDevice]
-                    );
+                    await cacheService.setCache(cacheService.keys.person_devices(person_token), [
+                        newDevice,
+                    ]);
 
-                    res.status(201).json({ message: "Added successfully" });
+                    res.status(201).json({ message: 'Added successfully' });
                     return resolve();
                 }
 
                 // Handle existing devices
-                const existingDevice = personDevices.find(d => d.platform === normalizedPlatform);
+                const existingDevice = personDevices.find((d) => d.platform === normalizedPlatform);
 
                 if (!existingDevice) {
-                    res.status(400).json({ message: "Unexpected state: Platform device not found" });
+                    res.status(400).json({
+                        message: 'Unexpected state: Platform device not found',
+                    });
                     return resolve();
                 }
 
-                const needsUpdate = existingDevice.token !== device_token || !existingDevice.is_current;
+                const needsUpdate =
+                    existingDevice.token !== device_token || !existingDevice.is_current;
 
                 if (!needsUpdate) {
-                    res.status(200).json({ message: "No update needed" });
+                    res.status(200).json({ message: 'No update needed' });
                     return resolve();
                 }
 
                 // Update devices
                 if (personDevices.length > 1) {
                     // Set all devices to not current
-                    await conn('persons_devices')
-                        .where('person_id', person.id)
-                        .update({
-                            is_current: false,
-                            updated: timestamp
-                        });
+                    await conn('persons_devices').where('person_id', person.id).update({
+                        is_current: false,
+                        updated: timestamp,
+                    });
                 }
 
                 // Update the target device
-                await conn('persons_devices')
-                    .where('id', existingDevice.id)
-                    .update({
-                        token: device_token,
-                        is_current: true,
-                        last_updated: timestamp,
-                        updated: timestamp
-                    });
+                await conn('persons_devices').where('id', existingDevice.id).update({
+                    token: device_token,
+                    is_current: true,
+                    last_updated: timestamp,
+                    updated: timestamp,
+                });
 
                 // Update cache
-                const updatedDevices = personDevices.map(device => ({
+                const updatedDevices = personDevices.map((device) => ({
                     ...device,
                     is_current: device.id === existingDevice.id,
                     token: device.id === existingDevice.id ? device_token : device.token,
                     last_updated: device.id === existingDevice.id ? timestamp : device.last_updated,
-                    updated: timestamp
+                    updated: timestamp,
                 }));
 
                 await cacheService.setCache(
                     cacheService.keys.person_devices(person_token),
-                    updatedDevices
+                    updatedDevices,
                 );
 
-                res.status(200).json({ message: "Devices updated" });
+                res.status(200).json({ message: 'Devices updated' });
                 return resolve();
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
-                res.json("Error adding device", 400);
+                res.json('Error adding device', 400);
             }
         });
     },

@@ -169,7 +169,7 @@ function initWS() {
 
             let params = parseUrlParams(req.url);
 
-            if(!params.person_token || !params.login_token) {
+            if (!params.person_token || !params.login_token) {
                 return terminate(ws, true);
             }
 
@@ -177,9 +177,12 @@ function initWS() {
             let login_token = params.login_token;
 
             try {
-                let is_authenticated = await personsService.isAuthenticated(person_token, login_token);
+                let is_authenticated = await personsService.isAuthenticated(
+                    person_token,
+                    login_token,
+                );
 
-                if(!is_authenticated) {
+                if (!is_authenticated) {
                     return terminate(ws, true);
                 }
             } catch (e) {
@@ -191,7 +194,7 @@ function initWS() {
             });
 
             ws.isAlive = true;
-            ws.person_token =person_token;
+            ws.person_token = person_token;
 
             if (!(person_token in persons_connections)) {
                 persons_connections[person_token] = [];
@@ -272,20 +275,20 @@ function initSubscribe() {
                 //     return;
                 // }
 
-                console.log("processing ws message", getDateTimeStr());
+                console.log('processing ws message', getDateTimeStr());
 
-                if(data.matches && data.matches.length) {
-                    for(let match of data.matches) {
+                if (data.matches && data.matches.length) {
+                    for (let match of data.matches) {
                         let message_sent = false;
 
                         let person_token = match.person_token;
 
-                        if(person_token in persons_connections) {
-                            for(let k in persons_connections[person_token]) {
+                        if (person_token in persons_connections) {
+                            for (let k in persons_connections[person_token]) {
                                 let client = persons_connections[person_token][k];
 
-                                if(client.readyState === WebSocket.OPEN) {
-                                    console.log("Message sent");
+                                if (client.readyState === WebSocket.OPEN) {
+                                    console.log('Message sent');
 
                                     client.send(JSON.stringify(data));
                                     message_sent = true;
@@ -293,7 +296,7 @@ function initSubscribe() {
                             }
                         }
 
-                        if(!message_sent) {
+                        if (!message_sent) {
                             addPersonMessage(data);
                         }
                     }

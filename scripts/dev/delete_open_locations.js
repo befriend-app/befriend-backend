@@ -5,8 +5,8 @@ const { loadScriptEnv, isProdApp } = require('../../services/shared');
 loadScriptEnv();
 
 (async function () {
-    if(isProdApp()) {
-        console.error("App env: [prod]", 'exiting');
+    if (isProdApp()) {
+        console.error('App env: [prod]', 'exiting');
         process.exit();
     }
 

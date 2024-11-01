@@ -6,8 +6,8 @@ const cacheService = require('../../services/cache');
 loadScriptEnv();
 
 (async function () {
-    if(isProdApp()) {
-        console.error("App env: [prod]", 'exiting');
+    if (isProdApp()) {
+        console.error('App env: [prod]', 'exiting');
         process.exit();
     }
 

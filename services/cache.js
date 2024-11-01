@@ -77,7 +77,7 @@ module.exports = {
         },
         person_sections: function (person_token) {
             return `persons:sections:${person_token}`;
-        }
+        },
     },
     init: function () {
         return new Promise(async (resolve, reject) => {
@@ -101,7 +101,7 @@ module.exports = {
 
             try {
                 await module.exports.publisher.connect();
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
             }
 

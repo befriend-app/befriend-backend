@@ -14,7 +14,7 @@ function fetchMoviesForDateRange(startDate, endDate) {
             headers: {
                 accept: 'application/json',
                 Authorization: `Bearer ${process.env.TMDB_API_KEY}`,
-            }
+            },
         };
 
         let conn = await dbService.conn();
@@ -33,7 +33,7 @@ function fetchMoviesForDateRange(startDate, endDate) {
                 let batch_insert = [];
 
                 for (const movie of results) {
-                    if(!movie.release_date) {
+                    if (!movie.release_date) {
                         continue;
                     }
 
@@ -47,20 +47,25 @@ function fetchMoviesForDateRange(startDate, endDate) {
                         popularity: movie.popularity,
                         type: 'movie',
                         created: timeNow(),
-                        updated: timeNow()
+                        updated: timeNow(),
                     });
                 }
 
                 await dbService.batchUpdate(conn, 'movies', batch_insert);
 
-                console.log(`Processed page ${current_page}/${total_pages} for date range ${startDate} to ${endDate}`);
+                console.log(
+                    `Processed page ${current_page}/${total_pages} for date range ${startDate} to ${endDate}`,
+                );
 
                 current_page++;
                 hasMorePages = current_page <= Math.min(total_pages, MAX_PAGES);
-            } catch(e) {
-                console.error(`Error fetching page ${current_page} for dates ${startDate}-${endDate}:`, e.message);
+            } catch (e) {
+                console.error(
+                    `Error fetching page ${current_page} for dates ${startDate}-${endDate}:`,
+                    e.message,
+                );
                 // Add delay before retry
-                await new Promise(resolve => setTimeout(resolve, 5000));
+                await new Promise((resolve) => setTimeout(resolve, 5000));
             }
         }
 
@@ -81,17 +86,17 @@ function getMonthRanges(year) {
         { month: 9, days: 30 },
         { month: 10, days: 31 },
         { month: 11, days: 30 },
-        { month: 12, days: 31 }
+        { month: 12, days: 31 },
     ];
 
     return months.map(({ month, days }) => ({
         start: `${year}-${String(month).padStart(2, '0')}-01`,
-        end: `${year}-${String(month).padStart(2, '0')}-${days}`
+        end: `${year}-${String(month).padStart(2, '0')}-${days}`,
     }));
 }
 
 function isLeapYear(year) {
-    return (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+    return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
 }
 
 function main() {
@@ -114,14 +119,14 @@ function main() {
                     for (const month of months) {
                         await fetchMoviesForDateRange(month.start, month.end);
                         // Add delay between months to avoid rate limiting
-                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        await new Promise((resolve) => setTimeout(resolve, 1000));
                     }
                 } else {
                     await fetchMoviesForDateRange(`${year}-01-01`, `${year}-12-31`);
                 }
 
                 // Add delay between years to avoid rate limiting
-                await new Promise(resolve => setTimeout(resolve, 2000));
+                await new Promise((resolve) => setTimeout(resolve, 2000));
             }
 
             resolve();

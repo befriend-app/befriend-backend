@@ -26,7 +26,7 @@ module.exports = {
     },
     when: {
         options: {
-            now: { id: 'now', name: 'Now', value: "Now", is_now: true, in_mins: 5 },
+            now: { id: 'now', name: 'Now', value: 'Now', is_now: true, in_mins: 5 },
             schedule: { id: 'schedule', name: 'Schedule', is_schedule: true },
             15: { id: 15, value: '15', unit: 'mins', in_mins: 15 },
             30: { id: 30, value: '30', unit: 'mins', in_mins: 30 },
@@ -200,7 +200,7 @@ module.exports = {
                 !(activity.when.id in module.exports.when.options)
             ) {
                 errors.push('Invalid activity start time');
-            } else if(!duration_valid) {
+            } else if (!duration_valid) {
                 //do nothing
             } else {
                 let date;
@@ -267,31 +267,40 @@ module.exports = {
                 const overlapping = await conn('activities')
                     .where('person_id', person.id)
                     .where('is_cancelled', false)
-                    .where(function() {
-                        this.where(function() {
+                    .where(function () {
+                        this.where(function () {
                             // New activity starts during an existing activity
-                            this.where('activity_start', '<=', time.start)
-                                .where('activity_end', '>', time.start)
+                            this.where('activity_start', '<=', time.start).where(
+                                'activity_end',
+                                '>',
+                                time.start,
+                            );
                         })
-                        .orWhere(function() {
-                            // New activity ends during an existing activity
-                            this.where('activity_start', '<', time.end)
-                                .where('activity_end', '>=', time.end)
-                        })
-                        .orWhere(function() {
-                            // New activity completely contains an existing activity
-                            this.where('activity_start', '>=', time.start)
-                                .where('activity_end', '<=', time.end)
-                        });
+                            .orWhere(function () {
+                                // New activity ends during an existing activity
+                                this.where('activity_start', '<', time.end).where(
+                                    'activity_end',
+                                    '>=',
+                                    time.end,
+                                );
+                            })
+                            .orWhere(function () {
+                                // New activity completely contains an existing activity
+                                this.where('activity_start', '>=', time.start).where(
+                                    'activity_end',
+                                    '<=',
+                                    time.end,
+                                );
+                            });
                     });
 
-                if(overlapping.length) {
+                if (overlapping.length) {
                     //todo
                     // return reject(['New activity would overlap with existing activity'])
                 }
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
-                return reject(['Error validating activity times'])
+                return reject(['Error validating activity times']);
             }
 
             return resolve(true);
@@ -330,12 +339,10 @@ module.exports = {
             try {
                 let conn = await dbService.conn();
 
-                 let matches = await conn('persons')
-                     .where('id', '<>', person.id)
-                     .limit(2);
+                let matches = await conn('persons').where('id', '<>', person.id).limit(2);
 
-                 resolve(matches);
-            } catch(e) {
+                resolve(matches);
+            } catch (e) {
                 console.error(e);
                 return reject(e);
             }
@@ -350,63 +357,63 @@ module.exports = {
             let time_str = activity.when.time.formatted;
             let place_str = '';
 
-            if(activity.friends.qty > 1) {
+            if (activity.friends.qty > 1) {
                 plus_str = ` (+${activity.friends.qty - 1})`;
             }
 
-            if(activity.place.data.name) {
+            if (activity.place.data.name) {
                 place_str = `at ${activity.place.data.name}`;
             }
 
-            if(activity.place.is_address) {
-
+            if (activity.place.is_address) {
             } else {
-                if(activity.activity.data.activity_emoji) {
+                if (activity.activity.data.activity_emoji) {
                     emoji_str = activity.activity.data.activity_emoji + ' ';
                 }
 
-                if(activity.activity.name) {
+                if (activity.activity.name) {
                     title_arr.push(activity.activity.name);
                 }
 
                 title_arr.push(`at ${time_str}`);
-
             }
 
             let payload = {
                 title: `${emoji_str}Invite: ${title_arr.join(' ')}`,
                 body: `Join ${person.first_name}${plus_str} ${place_str}`,
                 data: {
-                    activity_token: activity.activity_token
-                }
+                    activity_token: activity.activity_token,
+                },
             };
 
             let tokens = {
-                ios: []
+                ios: [],
             };
 
-            for(let match of matches) {
+            for (let match of matches) {
                 try {
-                    let personDevices = await cacheService.getObj(cacheService.keys.person_devices(match.person_token));
+                    let personDevices = await cacheService.getObj(
+                        cacheService.keys.person_devices(match.person_token),
+                    );
 
-                    if(!personDevices || !personDevices.length) {
+                    if (!personDevices || !personDevices.length) {
                         continue;
                     }
 
-                    let currentDevice = personDevices.find(device => device.is_current);
+                    let currentDevice = personDevices.find((device) => device.is_current);
 
-                    if(currentDevice && currentDevice.platform === 'ios') {
+                    if (currentDevice && currentDevice.platform === 'ios') {
                         tokens.ios.push(currentDevice.token);
                     }
-                } catch(e) {
+                } catch (e) {
                     console.error(e);
                 }
             }
 
-            if(tokens.ios.length) {
+            if (tokens.ios.length) {
                 try {
                     await notificationService.ios.sendBatch(tokens.ios, payload, true);
-                } catch(e) {
+                } catch (e) {
                     console.error(e);
                 }
             }

@@ -4,11 +4,22 @@ let personsController = require('../controllers/persons');
 
 router.use(require('../middleware/auth'));
 
-
 router.get('/me', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await personsController.getMe(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
+router.post('/me/sections', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await personsController.addMeSection(req, res);
         } catch (err) {
             console.log(err);
         }
