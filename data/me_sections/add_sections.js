@@ -91,16 +91,22 @@ function main() {
 
                 let data = me_sections[key];
 
-                await conn('me_sections')
-                    .insert({
-                        section_key: key,
-                        section_name: data.name,
-                        data_table: data.data_table,
-                        icon: data.icon,
-                        position: i,
-                        created: timeNow(),
-                        updated: timeNow()
-                    })
+                let check = await conn('me_sections')
+                    .where('section_key', key)
+                    .first();
+
+                if(!check) {
+                    await conn('me_sections')
+                        .insert({
+                            section_key: key,
+                            section_name: data.name,
+                            data_table: data.data_table,
+                            icon: data.icon,
+                            position: i,
+                            created: timeNow(),
+                            updated: timeNow()
+                        })
+                }
             }
 
             resolve();
