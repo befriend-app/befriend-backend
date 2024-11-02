@@ -131,6 +131,9 @@ module.exports = {
                     return reject('Section not found');
                 }
 
+                let table_name = `persons_${this_section.data_table}`;
+                let data_id_col = module.exports.dataIdMap[section_key];
+
                 if (this_section.data_table === 'instruments') {
                     options = await module.exports.allInstruments();
                 }
@@ -141,27 +144,53 @@ module.exports = {
                     options,
                 );
 
+                let this_option = options.find((opt) => opt.token === item_token);
+
+                if (!this_option) {
+                    return reject('Item not found');
+                }
+
                 if (!(item_token in section_data)) {
-                    let insert_data = {
-                        person_id: person.id,
-                        created: timeNow(),
-                        updated: timeNow(),
-                    };
+                    let item_data;
 
-                    let this_option = options.find((opt) => opt.token === item_token);
+                    //prevent duplicate item after deletion
+                    let exists_qry = await conn(table_name)
+                        .where('person_id', person.id)
+                        .where(data_id_col, this_option.id)
+                        .first();
 
-                    if (!this_option) {
-                        return reject('Item not found');
+                    if(exists_qry) {
+                        if(!exists_qry.deleted) {
+                            return reject("No change");
+                        }
+
+                        await conn(table_name)
+                            .where('id', exists_qry.id)
+                            .update({
+                                deleted: null
+                            });
+
+                        item_data = exists_qry;
+
+                        delete item_data.deleted;
+                    } else {
+                        let insert_data = {
+                            person_id: person.id,
+                            created: timeNow(),
+                            updated: timeNow(),
+                        };
+
+                        insert_data[data_id_col] = this_option.id;
+
+                        let [id] = await conn(table_name).insert(insert_data);
+
+                        insert_data.id = id;
+
+                        item_data = insert_data;
                     }
 
-                    insert_data[module.exports.dataIdMap[section_key]] = this_option.id;
-
-                    let [id] = await conn(`persons_${this_section.data_table}`).insert(insert_data);
-
-                    insert_data.id = id;
-
                     section_data[item_token] = {
-                        ...insert_data,
+                        ...item_data,
                     };
 
                     let cache_key = cacheService.keys.person_sections_data(
@@ -171,7 +200,7 @@ module.exports = {
 
                     await cacheService.setCache(cache_key, section_data);
 
-                    return resolve(insert_data);
+                    return resolve(item_data);
                 }
             } catch (e) {
                 console.error(e);
