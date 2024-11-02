@@ -164,9 +164,12 @@ module.exports = {
                             return reject("No change");
                         }
 
+                        exists_qry.updated = timeNow();
+
                         await conn(table_name)
                             .where('id', exists_qry.id)
                             .update({
+                                updated: exists_qry.updated,
                                 deleted: null
                             });
 
