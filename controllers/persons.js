@@ -78,7 +78,10 @@ module.exports = {
                 resolve();
             } catch (e) {
                 console.error(e);
-                res.json('Error adding section item', 400);
+
+                let msg = e && e.message ? e.message : 'Error adding section item';
+
+                res.json(msg, 400);
             }
         });
     },

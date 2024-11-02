@@ -56,6 +56,7 @@ exports.up = function (knex) {
 
                 table.bigInteger('created').notNullable();
                 table.bigInteger('updated').notNullable();
+                table.bigInteger('deleted').nullable();
 
                 table.foreign('person_id').references('id').inTable('persons');
                 table.foreign('movie_id').references('id').inTable('movies');

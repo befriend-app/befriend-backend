@@ -202,14 +202,18 @@ module.exports = {
 
                 let conn = await dbService.conn();
 
-                if(secondary) {
-                    let col = module.exports.secondaryMap[section_name];
+                if(secondary || is_delete) {
+                    let secondary_col = module.exports.secondaryMap[section_name];
 
                     let data = {
                         updated: timeNow()
                     };
 
-                    data[col] = secondary;
+                    if(is_delete) {
+                        data.deleted = timeNow();
+                    } else {
+                        data[secondary_col] = secondary;
+                    }
 
                     let update = await conn(`persons_${section_name}`)
                         .where('id', section_item_id)
@@ -228,7 +232,12 @@ module.exports = {
 
                                 if(item.id === section_item_id) {
                                     item.updated = data.updated;
-                                    item.secondary = secondary;
+
+                                    if(is_delete) {
+                                        item.deleted = data.deleted;
+                                    } else {
+                                        item.secondary = secondary;
+                                    }
                                     break;
                                 }
                             }
@@ -253,34 +262,42 @@ module.exports = {
                     section.data_table,
                 );
 
-                let cached_data = await cacheService.getObj(cache_key);
+                let organized = await cacheService.getObj(cache_key);
 
-                if (false) {
-                    return resolve(cached_data);
+                if (!organized || true) {
+                    organized = {};
+
+                    let conn = await dbService.conn();
+
+                    let qry = await conn(`persons_${section.data_table}`).where('person_id', person.id)
+                        .whereNull('deleted');
+
+                    let col_name = module.exports.dataIdMap[section.data_table];
+
+                    let secondary_col_name = module.exports.secondaryMap[section.data_table];
+
+                    for (let item of qry) {
+                        let section_option = options.find((_item) => _item.id === item[col_name]);
+
+                        item.secondary = item[secondary_col_name];
+
+                        organized[section_option.token] = {
+                            ...section_option,
+                            ...item,
+                        };
+                    }
+
+                    await setCache(cache_key, organized);
                 }
 
-                let conn = await dbService.conn();
+                //remove deleted items
+                for(let token in organized) {
+                    let item = organized[token];
 
-                let qry = await conn(`persons_${section.data_table}`).where('person_id', person.id);
-
-                let organized = {};
-
-                let col_name = module.exports.dataIdMap[section.data_table];
-
-                let secondary_col_name = module.exports.secondaryMap[section.data_table];
-
-                for (let item of qry) {
-                    let section_option = options.find((_item) => _item.id === item[col_name]);
-
-                    item.secondary = item[secondary_col_name];
-
-                    organized[section_option.token] = {
-                        ...section_option,
-                        ...item,
-                    };
+                    if(item.deleted) {
+                        delete organized[token];
+                    }
                 }
-
-                await setCache(cache_key, organized);
 
                 resolve(organized);
             } catch (e) {
