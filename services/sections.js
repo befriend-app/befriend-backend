@@ -9,6 +9,7 @@ module.exports = {
         instruments: {
             categories: ['String', 'Wind', 'Brass', 'Percussion', 'Keyboard', 'Electronic'],
             secondary: ['Beginner', 'Intermediate', 'Advanced', 'Expert', 'Virtuoso'],
+            unselectedStr: 'Skill Level'
         },
     },
     dataIdMap: {
@@ -91,6 +92,8 @@ module.exports = {
                     if (section_key === 'instruments') {
                         data.data = await module.exports.instruments();
                     }
+
+                    data.items = {};
 
                     resolve(data);
                 } else {
@@ -178,6 +181,70 @@ module.exports = {
             resolve();
         });
     },
+    updateMeSectionItem: function (body) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let {person_token, section_name, section_item_id, secondary, is_delete } = body;
+
+                if(!person_token || !section_name || !section_item_id) {
+                    return reject('Person, name, and section item id required');
+                }
+
+                if(!secondary && typeof is_delete === 'undefined') {
+                    return reject('Invalid request');
+                }
+
+                let person = await getPerson(person_token);
+
+                if(!person) {
+                    return reject("Person not found")
+                }
+
+                let conn = await dbService.conn();
+
+                if(secondary) {
+                    let col = module.exports.secondaryMap[section_name];
+
+                    let data = {
+                        updated: timeNow()
+                    };
+
+                    data[col] = secondary;
+
+                    let update = await conn(`persons_${section_name}`)
+                        .where('id', section_item_id)
+                        .where('person_id', person.id)
+                        .update(data);
+
+                    if(update === 1) {
+                        //update cache
+                        let cache_key = cacheService.keys.person_sections_data(person.person_token, section_name);
+
+                        let cache_data = await cacheService.getObj(cache_key);
+
+                        if(cache_data) {
+                            for(let token in cache_data) {
+                                let item = cache_data[token];
+
+                                if(item.id === section_item_id) {
+                                    item.updated = data.updated;
+                                    item.secondary = secondary;
+                                    break;
+                                }
+                            }
+
+                            await cacheService.setCache(cache_key, cache_data);
+                        }
+                    }
+                }
+
+                resolve();
+            } catch(e) {
+                console.error(e);
+                return reject(e);
+            }
+        });
+    },
     getPersonSectionData: function (person, section, options) {
         return new Promise(async (resolve, reject) => {
             try {
@@ -200,8 +267,12 @@ module.exports = {
 
                 let col_name = module.exports.dataIdMap[section.data_table];
 
+                let secondary_col_name = module.exports.secondaryMap[section.data_table];
+
                 for (let item of qry) {
                     let section_option = options.find((_item) => _item.id === item[col_name]);
+
+                    item.secondary = item[secondary_col_name];
 
                     organized[section_option.token] = {
                         ...section_option,
@@ -383,6 +454,7 @@ module.exports = {
                     options: options,
                     categories: module.exports.sections.instruments.categories,
                     secondary: module.exports.sections.instruments.secondary,
+                    unselectedStr: module.exports.sections.instruments.unselectedStr
                 };
 
                 resolve(data);

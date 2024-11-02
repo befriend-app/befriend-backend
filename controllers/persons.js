@@ -8,7 +8,7 @@ const {
     getMeSections,
     addMeSection,
     getAllMeSections,
-    addMeSectionItem,
+    addMeSectionItem, updateMeSectionItem,
 } = require('../services/sections');
 const { findMatches, notifyMatches, prepareActivity } = require('../services/activities');
 
@@ -55,6 +55,22 @@ module.exports = {
                     req.body.person_token,
                     req.body.section_key,
                     req.body.item_token,
+                );
+
+                res.json(data, 201);
+
+                resolve();
+            } catch (e) {
+                console.error(e);
+                res.json('Error adding section item', 400);
+            }
+        });
+    },
+    updateMeSectionItem: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let data = await updateMeSectionItem(
+                    req.body
                 );
 
                 res.json(data, 201);

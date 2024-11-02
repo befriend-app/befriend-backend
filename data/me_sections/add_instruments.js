@@ -88,7 +88,7 @@ module.exports = {
             token: '35ssy15j4be1ckbvhvqp',
             name: 'Acoustic guitar',
             category: 'String',
-            is_common: 1,
+            is_common: 0,
             popularity: 770,
         },
         {
@@ -375,7 +375,7 @@ module.exports = {
             token: '7pvir6be45dzy0ltorgb',
             name: 'Bass guitar',
             category: 'String',
-            is_common: 1,
+            is_common: 0,
             popularity: 830,
         },
         {
@@ -795,7 +795,7 @@ module.exports = {
             token: 'ctvdbtdpdf8rqgurykrj',
             name: 'Classical guitar',
             category: 'String',
-            is_common: 1,
+            is_common: 0,
             popularity: 750,
         },
         {
@@ -907,7 +907,7 @@ module.exports = {
             token: '65sevrvsu9e9g6c3xsho',
             name: 'Cowbell',
             category: 'Percussion',
-            is_common: 1,
+            is_common: 0,
             popularity: 300,
         },
         {
@@ -1243,7 +1243,7 @@ module.exports = {
             token: 'yiip37gqvwtklk7xnrjn',
             name: 'Electric guitar',
             category: 'String',
-            is_common: 1,
+            is_common: 0,
             popularity: 880,
         },
         {
