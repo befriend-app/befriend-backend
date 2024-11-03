@@ -4,7 +4,6 @@ const { timeNow } = require('./shared');
 const { setCache } = require('./cache');
 const { getPerson } = require('./persons');
 
-
 let sectionsData = {
     instruments: {
         colId: 'instrument_id',
@@ -19,8 +18,8 @@ let sectionsData = {
         cache_key: cacheService.keys.instruments_common,
         functions: {
             data: 'getInstruments',
-            all: 'allInstruments'
-        }
+            all: 'allInstruments',
+        },
     },
 };
 
@@ -95,10 +94,10 @@ function addMeSection(person_token, section_key) {
 
                 await setCache(cache_key, person_sections);
 
-                if(section_key in sectionsData) {
+                if (section_key in sectionsData) {
                     let fnData = sectionsData[section_key].functions.data;
 
-                    if(fnData) {
+                    if (fnData) {
                         data.data = await module.exports[fnData]();
                     }
                 }
@@ -110,7 +109,7 @@ function addMeSection(person_token, section_key) {
                 let section = person_sections[section_key];
 
                 //remove deleted
-                if(section && !section.deleted) {
+                if (section && !section.deleted) {
                     return reject('Section added previously');
                 }
 
@@ -118,20 +117,18 @@ function addMeSection(person_token, section_key) {
                 section.updated = timeNow();
                 section.deleted = null;
 
-                await conn('persons_sections')
-                    .where('id', section.id)
-                    .update({
-                        updated: section.updated,
-                        deleted: null
-                    })
+                await conn('persons_sections').where('id', section.id).update({
+                    updated: section.updated,
+                    deleted: null,
+                });
 
                 //cache
                 await cacheService.setCache(cache_key, person_sections);
 
-                if(section_key in sectionsData) {
+                if (section_key in sectionsData) {
                     let fnData = sectionsData[section_key].functions.data;
 
-                    if(fnData) {
+                    if (fnData) {
                         section.data = await module.exports[fnData]();
                     }
                 }
@@ -176,7 +173,7 @@ function deleteMeSection(person_token, section_key) {
 
             let ts = timeNow();
 
-            if(person_sections && (section_key in person_sections)) {
+            if (person_sections && section_key in person_sections) {
                 //update db
                 let section = person_sections[section_key];
 
@@ -189,9 +186,9 @@ function deleteMeSection(person_token, section_key) {
                         .where('person_id', person.id)
                         .update({
                             updated: section.updated,
-                            deleted: section.deleted
-                        })
-                } catch(e) {
+                            deleted: section.deleted,
+                        });
+                } catch (e) {
                     console.error(e);
                 }
 
@@ -200,7 +197,7 @@ function deleteMeSection(person_token, section_key) {
 
                 return resolve();
             } else {
-                return reject("Expected section key for person sections");
+                return reject('Expected section key for person sections');
             }
         } catch (e) {
             console.error(e);
@@ -229,9 +226,7 @@ function addMeSectionItem(person_token, section_key, item_token) {
 
             let me_sections = await getAllMeSections();
 
-            let this_section = me_sections.find(
-                (section) => section.section_key === section_key,
-            );
+            let this_section = me_sections.find((section) => section.section_key === section_key);
 
             if (!this_section) {
                 return reject('Section not found');
@@ -242,10 +237,7 @@ function addMeSectionItem(person_token, section_key, item_token) {
 
             options = await module.exports[fnAll]();
 
-            let section_data = await getPersonSectionItems(
-                person,
-                section_key
-            );
+            let section_data = await getPersonSectionItems(person, section_key);
 
             let section_option = options.find((opt) => opt.token === item_token);
 
@@ -262,25 +254,25 @@ function addMeSectionItem(person_token, section_key, item_token) {
                     .where(data_id_col, section_option.id)
                     .first();
 
-                if(exists_qry) {
+                if (exists_qry) {
                     let secondary_col = sectionsData[section_key].secondaryCol;
 
-                    if(!exists_qry.deleted) {
-                        return reject("No change");
+                    if (!exists_qry.deleted) {
+                        return reject('No change');
                     }
 
                     exists_qry.updated = timeNow();
 
-                    await conn(table_name)
-                        .where('id', exists_qry.id)
-                        .update({
-                            updated: exists_qry.updated,
-                            deleted: null
-                        });
+                    await conn(table_name).where('id', exists_qry.id).update({
+                        updated: exists_qry.updated,
+                        deleted: null,
+                    });
 
                     item_data = exists_qry;
 
-                    item_data.secondary = item_data[secondary_col] ? item_data[secondary_col] : null;
+                    item_data.secondary = item_data[secondary_col]
+                        ? item_data[secondary_col]
+                        : null;
 
                     delete item_data.deleted;
                 } else {
@@ -325,32 +317,32 @@ function addMeSectionItem(person_token, section_key, item_token) {
 function updateMeSectionItem(body) {
     return new Promise(async (resolve, reject) => {
         try {
-            let {person_token, section_key, section_item_id, secondary, is_delete } = body;
+            let { person_token, section_key, section_item_id, secondary, is_delete } = body;
 
-            if(!person_token || !section_key || !section_item_id) {
+            if (!person_token || !section_key || !section_item_id) {
                 return reject('Person, name, and section item id required');
             }
 
-            if(!secondary && typeof is_delete === 'undefined') {
+            if (!secondary && typeof is_delete === 'undefined') {
                 return reject('Invalid request');
             }
 
             let person = await getPerson(person_token);
 
-            if(!person) {
-                return reject("Person not found")
+            if (!person) {
+                return reject('Person not found');
             }
 
             let conn = await dbService.conn();
 
-            if(secondary || is_delete) {
+            if (secondary || is_delete) {
                 let secondary_col = sectionsData[section_key].secondaryCol;
 
                 let data = {
-                    updated: timeNow()
+                    updated: timeNow(),
                 };
 
-                if(is_delete) {
+                if (is_delete) {
                     data.deleted = timeNow();
                 } else {
                     data[secondary_col] = secondary;
@@ -361,20 +353,23 @@ function updateMeSectionItem(body) {
                     .where('person_id', person.id)
                     .update(data);
 
-                if(update === 1) {
+                if (update === 1) {
                     //update cache
-                    let cache_key = cacheService.keys.person_sections_data(person.person_token, section_key);
+                    let cache_key = cacheService.keys.person_sections_data(
+                        person.person_token,
+                        section_key,
+                    );
 
                     let cache_data = await cacheService.getObj(cache_key);
 
-                    if(cache_data) {
-                        for(let token in cache_data) {
+                    if (cache_data) {
+                        for (let token in cache_data) {
                             let item = cache_data[token];
 
-                            if(item.id === section_item_id) {
+                            if (item.id === section_item_id) {
                                 item.updated = data.updated;
 
-                                if(is_delete) {
+                                if (is_delete) {
                                     item.deleted = data.deleted;
                                 } else {
                                     item.secondary = secondary;
@@ -389,7 +384,7 @@ function updateMeSectionItem(body) {
             }
 
             resolve();
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return reject(e);
         }
@@ -415,7 +410,8 @@ function getPersonSectionItems(person, section_key) {
 
                 let conn = await dbService.conn();
 
-                let qry = await conn(`persons_${section_key}`).where('person_id', person.id)
+                let qry = await conn(`persons_${section_key}`)
+                    .where('person_id', person.id)
                     .whereNull('deleted');
 
                 let col_name = sectionsData[section_key].colId;
@@ -437,10 +433,10 @@ function getPersonSectionItems(person, section_key) {
             }
 
             //remove deleted items
-            for(let token in organized) {
+            for (let token in organized) {
                 let item = organized[token];
 
-                if(item.deleted) {
+                if (item.deleted) {
                     delete organized[token];
                 }
             }
@@ -504,9 +500,7 @@ function getMeSections(person) {
         try {
             let conn = await dbService.conn();
 
-            let person_sections_cache_key = cacheService.keys.person_sections(
-                person.person_token,
-            );
+            let person_sections_cache_key = cacheService.keys.person_sections(person.person_token);
 
             //all me sections
             let all_me_sections = await getAllMeSections();
@@ -539,7 +533,7 @@ function getMeSections(person) {
             for (let section_key in person_sections) {
                 let section = person_sections[section_key];
 
-                if(!section.deleted) {
+                if (!section.deleted) {
                     organized.active[section_key] = person_sections[section_key];
                 }
             }
@@ -566,7 +560,7 @@ function getActiveData(person, sections) {
     return new Promise(async (resolve, reject) => {
         let section_keys = Object.keys(sections);
 
-        if(!section_keys || !section_keys.length) {
+        if (!section_keys || !section_keys.length) {
             return resolve({});
         }
 
@@ -579,55 +573,60 @@ function getActiveData(person, sections) {
 
         try {
             //options, person items
-            for(let key of section_keys) {
-                if(!(key in sectionsData)) {
+            for (let key of section_keys) {
+                if (!(key in sectionsData)) {
                     continue;
                 }
 
                 let cache_key_options = sectionsData[key].cache_key;
-                let cache_key_items = cacheService.keys.person_sections_data(person.person_token, key);
+                let cache_key_items = cacheService.keys.person_sections_data(
+                    person.person_token,
+                    key,
+                );
                 multi.get(cache_key_options);
                 multi.get(cache_key_items);
             }
 
             let results = await cacheService.execMulti(multi);
 
-            for(let i = 0; i < results.length; i++) {
+            for (let i = 0; i < results.length; i++) {
                 let result = results[i];
 
-                if(result) {
+                if (result) {
                     try {
                         results[i] = JSON.parse(result);
-                    } catch(e) {
-
-                    }
+                    } catch (e) {}
                 }
             }
 
             //set to section/missing
-            for(let i = 0; i < section_keys.length; i++) {
+            for (let i = 0; i < section_keys.length; i++) {
                 let section_key = section_keys[i];
                 let section_config = sectionsData[section_key];
 
                 let options = results[i * 2];
                 let items = results[i * 2 + 1];
 
-                if(options && items) {
+                if (options && items) {
                     sections[section_key].data = {
                         options: options,
-                        autoComplete: section_config.autoComplete ? section_config.autoComplete : null,
+                        autoComplete: section_config.autoComplete
+                            ? section_config.autoComplete
+                            : null,
                         categories: section_config.categories ? section_config.categories : null,
                         secondary: section_config.secondary ? section_config.secondary : null,
-                        unselectedStr: section_config.unselectedStr ? section_config.unselectedStr : null,
+                        unselectedStr: section_config.unselectedStr
+                            ? section_config.unselectedStr
+                            : null,
                     };
 
                     sections[section_key].items = items;
-                } else if(section_key in sectionsData) {
+                } else if (section_key in sectionsData) {
                     missing_keys[section_key] = 1;
                 }
             }
 
-            for(let key in missing_keys) {
+            for (let key in missing_keys) {
                 let fnData = sectionsData[key].functions.data;
                 let data = await module.exports[fnData]();
                 let items = await getPersonSectionItems(person, key);
@@ -635,22 +634,22 @@ function getActiveData(person, sections) {
                 sections[key].data = data;
                 sections[key].items = items;
             }
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
 
         // remove created/updated
         // delete deleted
-        for(let key in sections) {
+        for (let key in sections) {
             let section = sections[key];
 
-            for(let token in section.items) {
+            for (let token in section.items) {
                 let item = section.items[token];
 
                 delete item.created;
                 delete item.updated;
 
-                if(item.deleted) {
+                if (item.deleted) {
                     delete section.items[token];
                 }
             }
@@ -710,7 +709,7 @@ function getInstruments() {
                 autoComplete: sectionsData.instruments.autoComplete,
                 categories: sectionsData.instruments.categories,
                 secondary: sectionsData.instruments.secondary,
-                unselectedStr: sectionsData.instruments.unselectedStr
+                unselectedStr: sectionsData.instruments.unselectedStr,
             };
 
             resolve(data);

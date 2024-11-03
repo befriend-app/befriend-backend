@@ -1,5 +1,6 @@
 let express = require('express');
 let router = express.Router();
+let apiController = require('../controllers/api');
 let personsController = require('../controllers/persons');
 
 router.use(require('../middleware/auth'));
@@ -80,6 +81,18 @@ router.post('/devices', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await personsController.addDevice(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
+router.get('/autocomplete/instruments', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await apiController.autoCompleteInstruments(req, res);
         } catch (err) {
             console.log(err);
         }

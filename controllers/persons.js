@@ -8,7 +8,8 @@ const {
     getMeSections,
     addMeSection,
     deleteMeSection,
-    addMeSectionItem, updateMeSectionItem,
+    addMeSectionItem,
+    updateMeSectionItem,
 } = require('../services/sections');
 const { findMatches, notifyMatches, prepareActivity } = require('../services/activities');
 
@@ -83,9 +84,7 @@ module.exports = {
     updateMeSectionItem: function (req, res) {
         return new Promise(async (resolve, reject) => {
             try {
-                let data = await updateMeSectionItem(
-                    req.body
-                );
+                let data = await updateMeSectionItem(req.body);
 
                 res.json(data, 201);
 

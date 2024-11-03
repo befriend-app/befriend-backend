@@ -17,6 +17,7 @@ const {
     generateToken,
     joinPaths,
     confirmDecryptedRegistrationNetworkToken,
+    normalizeSearch,
 } = require('../services/shared');
 
 const { getNetwork, getNetworkSelf } = require('../services/network');
@@ -1586,6 +1587,48 @@ module.exports = {
             } catch (e) {
                 console.error(e);
                 res.json('Error getting travel times', 400);
+            }
+        });
+    },
+    autoCompleteInstruments: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            let search = req.query.search;
+
+            if (!search) {
+                res.json('Invalid search', 400);
+                return resolve();
+            }
+
+            search = normalizeSearch(search);
+
+            let prefix_key = cacheService.keys.instruments_prefix(search);
+
+            try {
+                let unique = {};
+
+                let tokens = await cacheService.getSortedSetByScore(prefix_key);
+
+                for(let token of tokens) {
+                    unique[token] = true;
+                }
+
+                let pipeline = await cacheService.conn.multi();
+
+                for(let token in unique) {
+                    pipeline.hGetAll(cacheService.keys.instrument(token));
+                }
+
+                let items = await cacheService.execMulti(pipeline);
+
+                res.json({
+                    items: items
+                }, 200);
+
+                resolve();
+            } catch (e) {
+                console.error(e);
+                res.json('Autocomplete error', 400);
+                return resolve();
             }
         });
     },

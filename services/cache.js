@@ -439,23 +439,34 @@ module.exports = {
                 return reject('No key');
             }
 
-            let results;
-
-            let options = {
-                REV: !lowest_to_highest,
-            };
-
-            if (limit) {
-                options.LIMIT = {
-                    offset: 0,
-                    count: limit,
-                };
-            }
-
             try {
-                results = await module.exports.conn.zRangeByScore(key, '-inf', '+inf', options);
+                const multi = module.exports.conn.multi();
 
-                return resolve(results);
+                if (limit) {
+                    multi.addCommand([
+                        'ZRANGE',
+                        key,
+                        lowest_to_highest ? '-inf' : '+inf',
+                        lowest_to_highest ? '+inf' : '-inf',
+                        'BYSCORE',
+                        !lowest_to_highest ? 'REV' : '',
+                        'LIMIT',
+                        '0',
+                        limit.toString()
+                    ]);
+                } else {
+                    multi.addCommand([
+                        'ZRANGE',
+                        key,
+                        lowest_to_highest ? '-inf' : '+inf',
+                        lowest_to_highest ? '+inf' : '-inf',
+                        'BYSCORE',
+                        !lowest_to_highest ? 'REV' : '']);
+                }
+
+                const results = await multi.exec();
+
+                return resolve(results[0]);
             } catch (e) {
                 console.error(e);
                 return reject();
