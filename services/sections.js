@@ -291,6 +291,8 @@ function addMeSectionItem(person_token, section_key, item_token) {
                     item_data = insert_data;
                 }
 
+                delete section_option.id;
+
                 section_data[item_token] = {
                     ...section_option,
                     ...item_data,
@@ -303,7 +305,10 @@ function addMeSectionItem(person_token, section_key, item_token) {
 
                 await cacheService.setCache(cache_key, section_data);
 
-                return resolve(item_data);
+                return resolve({
+                    ...section_option,
+                    ...item_data
+                });
             }
         } catch (e) {
             console.error(e);
