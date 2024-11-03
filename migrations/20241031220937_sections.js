@@ -12,7 +12,6 @@ exports.up = function (knex) {
                 table.text('icon').nullable();
                 table.integer('position').notNullable().defaultTo(0);
                 table.boolean('active').notNullable().defaultTo(true);
-                table.string('data_table').nullable();
                 table.bigInteger('created').notNullable();
                 table.bigInteger('updated').notNullable();
             })

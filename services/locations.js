@@ -105,7 +105,7 @@ function addLocationData(results, dataType) {
                 }
             }
 
-            let data = await cacheService.execRedisMulti(pipeline);
+            let data = await cacheService.execMulti(pipeline);
 
             for (let i = 0; i < data.length; i++) {
                 let item = data[i];
@@ -159,7 +159,7 @@ function fetchCityDetails(cityIds) {
                 pipeline.hGetAll(cacheService.keys.city(id));
             }
 
-            let cities = await cacheService.execRedisMulti(pipeline);
+            let cities = await cacheService.execMulti(pipeline);
             resolve(cities);
         } catch (e) {
             console.error('Error fetching city details:', e);

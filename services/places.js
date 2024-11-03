@@ -670,7 +670,7 @@ module.exports = {
 
             //try cache first
             try {
-                let cache_data = await cacheService.execRedisMulti(multi);
+                let cache_data = await cacheService.execMulti(multi);
 
                 for (let i = 0; i < cache_data.length; i++) {
                     let data = cache_data[i];
@@ -929,7 +929,7 @@ module.exports = {
                             multi.set(cache_key, JSON.stringify(item));
                         }
 
-                        await cacheService.execRedisMulti(multi);
+                        await cacheService.execMulti(multi);
                     }
                 } catch (e) {
                     console.error(e);

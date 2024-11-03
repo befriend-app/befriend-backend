@@ -28,6 +28,18 @@ router.post('/me/sections', function (req, res, next) {
     });
 });
 
+router.delete('/me/sections/:section_key', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await personsController.deleteMeSection(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
 router.post('/me/sections/item', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {

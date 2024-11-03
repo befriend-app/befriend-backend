@@ -245,7 +245,7 @@ module.exports = {
             }
         });
     },
-    execRedisMulti: function (multi) {
+    execMulti: function (multi) {
         return new Promise(async (resolve, reject) => {
             try {
                 let data = await multi.exec();

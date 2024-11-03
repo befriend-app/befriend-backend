@@ -7,7 +7,7 @@ const { getPerson } = require('../services/persons');
 const {
     getMeSections,
     addMeSection,
-    getAllMeSections,
+    deleteMeSection,
     addMeSectionItem, updateMeSectionItem,
 } = require('../services/sections');
 const { findMatches, notifyMatches, prepareActivity } = require('../services/activities');
@@ -45,6 +45,20 @@ module.exports = {
             } catch (e) {
                 console.error(e);
                 res.json('Error adding section', 400);
+            }
+        });
+    },
+    deleteMeSection: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let data = await deleteMeSection(req.body.person_token, req.params.section_key);
+
+                res.json(data, 200);
+
+                resolve();
+            } catch (e) {
+                console.error(e);
+                res.json('Error deleting section', 400);
             }
         });
     },
