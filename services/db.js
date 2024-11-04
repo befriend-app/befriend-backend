@@ -1,3 +1,4 @@
+const dbService = require('./db');
 module.exports = {
     max_placeholders: 65536,
     keys: {},
@@ -33,12 +34,14 @@ module.exports = {
             return resolve(knex);
         });
     },
-    batchInsert: function (to_conn, table_name, insert_rows, add_id_prop) {
+    batchInsert: function (table_name, insert_rows, add_id_prop) {
         return new Promise(async (resolve, reject) => {
             let output = [];
 
             try {
-                let cols = await to_conn(table_name).columnInfo();
+                let conn = await module.exports.conn();
+
+                let cols = await conn(table_name).columnInfo();
 
                 let chunk_items_count =
                     Number.parseInt(module.exports.max_placeholders / Object.keys(cols).length) - 1;
@@ -46,7 +49,7 @@ module.exports = {
                 let chunks = require('lodash').chunk(insert_rows, chunk_items_count);
 
                 for (let chunk of chunks) {
-                    let id = await to_conn.batchInsert(table_name, chunk);
+                    let id = await conn.batchInsert(table_name, chunk);
 
                     output.push([id[0], id[0] + chunk.length - 1]);
 
@@ -64,7 +67,7 @@ module.exports = {
             return resolve(output);
         });
     },
-    batchUpdate: function (to_conn, table_name, update_rows, id_column = 'id') {
+    batchUpdate: function (table_name, update_rows, id_column = 'id') {
         return new Promise(async (resolve, reject) => {
             let output;
 
@@ -73,7 +76,9 @@ module.exports = {
             }
 
             try {
-                const cols = await to_conn(table_name).columnInfo();
+                let conn = await module.exports.conn();
+
+                const cols = await conn(table_name).columnInfo();
 
                 const chunk_items_count =
                     Number.parseInt(module.exports.max_placeholders / Object.keys(cols).length) - 1;
@@ -107,7 +112,7 @@ module.exports = {
                     ];
 
                     // Execute the query
-                    output = await to_conn.raw(updateSQL, insertBindings);
+                    output = await conn.raw(updateSQL, insertBindings);
                 }
 
                 resolve();

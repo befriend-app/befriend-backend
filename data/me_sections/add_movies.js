@@ -51,7 +51,7 @@ function fetchMoviesForDateRange(startDate, endDate) {
                     });
                 }
 
-                await dbService.batchUpdate(conn, 'movies', batch_insert);
+                await dbService.batchUpdate('movies', batch_insert);
 
                 console.log(
                     `Processed page ${current_page}/${total_pages} for date range ${startDate} to ${endDate}`,

@@ -95,7 +95,7 @@ let max_request_count = 1000;
                 batch_insert.push(person_insert);
             }
 
-            let ids_output = await batchInsert(conn, 'persons', batch_insert);
+            let ids_output = await batchInsert( 'persons', batch_insert);
 
             for (let ids of ids_output) {
                 for (let person_id = ids[0]; person_id < ids[1]; person_id++) {
@@ -109,7 +109,7 @@ let max_request_count = 1000;
             }
 
             try {
-                await batchInsert(conn, 'persons_networks', person_network_insert);
+                await batchInsert('persons_networks', person_network_insert);
             } catch (e) {
                 console.error(e);
             }

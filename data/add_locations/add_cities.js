@@ -317,13 +317,13 @@ function main() {
                         batch_insert.push(insert_data);
 
                         if (batch_insert.length > 5000) {
-                            await dbService.batchInsert(conn, 'open_cities', batch_insert);
+                            await dbService.batchInsert('open_cities', batch_insert);
                             batch_insert = [];
                         }
                     }
 
                     if (batch_insert.length) {
-                        await dbService.batchInsert(conn, 'open_cities', batch_insert);
+                        await dbService.batchInsert('open_cities', batch_insert);
                     }
                 }
             }

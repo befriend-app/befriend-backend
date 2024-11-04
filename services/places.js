@@ -151,7 +151,7 @@ module.exports = {
                     }
 
                     try {
-                        await batchInsert(conn, 'categories_geo_places', batch_geo_place_insert);
+                        await batchInsert('categories_geo_places', batch_geo_place_insert);
                     } catch (e) {
                         console.error(e);
                     }
@@ -891,7 +891,7 @@ module.exports = {
                 //db
                 if (batch_insert.length) {
                     try {
-                        await batchInsert(conn, 'places', batch_insert, true);
+                        await batchInsert('places', batch_insert, true);
                     } catch (e) {
                         console.error(e);
                     }
@@ -899,7 +899,7 @@ module.exports = {
 
                 if (batch_update.length) {
                     try {
-                        await batchUpdate(conn, 'places', batch_update);
+                        await batchUpdate('places', batch_update);
                     } catch (e) {
                         console.error(e);
                     }
