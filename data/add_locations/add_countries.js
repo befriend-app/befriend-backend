@@ -1,6 +1,7 @@
 const axios = require('axios');
-const { loadScriptEnv } = require('../../services/shared');
+const { loadScriptEnv, timeNow } = require('../../services/shared');
 const dbService = require('../../services/db');
+const { wikiCountries } = require('./wiki-countries')
 
 loadScriptEnv();
 
@@ -22,13 +23,30 @@ function main() {
                     .where('country_name', country.name)
                     .first();
 
+                let wiki_code = (country.name in wikiCountries) ? wikiCountries[country.name] : null;
+
+                if(!wiki_code) {
+                    console.log("Missing: " + country.name);
+                }
+
                 if (!check) {
                     await conn('open_countries').insert({
                         country_name: country.name,
                         country_code: country.key,
                         lat: country.latitude,
                         lon: country.longitude,
+                        wiki_code: wiki_code,
+                        created: timeNow(),
+                        updated: timeNow()
                     });
+                } else {
+                    await conn('open_countries')
+                        .where('id', check.id)
+                        .update({
+                            wiki_code: wiki_code,
+                            created: timeNow(),
+                            updated: timeNow()
+                        });
                 }
             }
 
