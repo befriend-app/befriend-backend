@@ -254,8 +254,9 @@ function cityAutoComplete(search, userLat, userLon, maxDistance) {
             }
 
             let locationCountry;
+
             try {
-                locationCountry = latLonLookup(userLat, userLon);
+                locationCountry = await latLonLookup(userLat, userLon);
             } catch (e) {
                 console.error('Error looking up location:', e);
             }

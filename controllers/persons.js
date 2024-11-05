@@ -23,7 +23,7 @@ module.exports = {
 
                 let sections = await getMeSections(me);
 
-                let location = latLonLookup(req.query.location?.lat, req.query.location?.lon);
+                let location = await latLonLookup(req.query.location?.lat, req.query.location?.lon);
 
                 res.json({
                     me,
