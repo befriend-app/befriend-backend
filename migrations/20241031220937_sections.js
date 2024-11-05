@@ -33,7 +33,7 @@ exports.up = function (knex) {
                 table.increments('id').primary();
                 table.integer('tmdb_id').nullable().unique();
                 table.string('tmdb_poster_path').nullable();
-                table.string('movie_token', 255).notNullable();
+                table.string('token', 255).notNullable();
                 table.string('name').notNullable();
                 table.string('original_language').nullable();
                 table.date('release_date').notNullable();

@@ -23,16 +23,21 @@ function main() {
                     .where('country_name', country.name)
                     .first();
 
-                let wiki_code = (country.name in wikiCountries) ? wikiCountries[country.name] : null;
+                let wiki_code = null;
+                let emoji = null;
 
-                if(!wiki_code) {
-                    console.log("Missing: " + country.name);
+                let wikiCountry = wikiCountries[country.name];
+
+                if(wikiCountry) {
+                    wiki_code = wikiCountry.code;
+                    emoji = wikiCountry.emoji;
                 }
 
                 if (!check) {
                     await conn('open_countries').insert({
                         country_name: country.name,
                         country_code: country.key,
+                        emoji: emoji,
                         lat: country.latitude,
                         lon: country.longitude,
                         wiki_code: wiki_code,
@@ -43,6 +48,7 @@ function main() {
                     await conn('open_countries')
                         .where('id', check.id)
                         .update({
+                            emoji: emoji,
                             wiki_code: wiki_code,
                             created: timeNow(),
                             updated: timeNow()

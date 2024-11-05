@@ -25,6 +25,7 @@ exports.up = async function(knex) {
 
         table.float('lat', 14, 10).nullable().after('country_id');
         table.float('lon', 14, 10).nullable().after('lat');
+
         table.bigInteger('deleted').nullable();
 
         table.foreign('country_id').references('id').inTable('open_countries');

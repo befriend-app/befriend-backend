@@ -40,7 +40,7 @@ function fetchMoviesForDateRange(startDate, endDate) {
                     batch_insert.push({
                         tmdb_id: movie.id,
                         tmdb_poster_path: movie.poster_path,
-                        movie_token: generateToken(20),
+                        token: generateToken(10),
                         name: movie.title,
                         original_language: movie.original_language,
                         release_date: movie.release_date,

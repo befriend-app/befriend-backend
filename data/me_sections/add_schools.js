@@ -43,58 +43,58 @@ const WIKIDATA_API = 'https://query.wikidata.org/sparql';
 let countries_dict = {};
 
 const usStates = {
-    "Illinois": "Q1204",
-
-    // "Alabama": "Q173",
-    // "Alaska": "Q797",
-    // "Arizona": "Q816",
-    // "Arkansas": "Q1612",
-    // "California": "Q99",
-    // "Colorado": "Q1261",
-    // "Connecticut": "Q779",
-    // "Delaware": "Q1393",
-    // "Florida": "Q812",
-    // "Georgia": "Q1428",
-    // "Hawaii": "Q782",
-    // "Idaho": "Q1221",
     // "Illinois": "Q1204",
-    // "Indiana": "Q1415",
-    // "Iowa": "Q1546",
-    // "Kansas": "Q1558",
-    // "Kentucky": "Q1603",
-    // "Louisiana": "Q1588",
-    // "Maine": "Q724",
-    // "Maryland": "Q1391",
-    // "Massachusetts": "Q771",
-    // "Michigan": "Q1166",
-    // "Minnesota": "Q1527",
-    // "Mississippi": "Q1494",
-    // "Missouri": "Q1581",
-    // "Montana": "Q1212",
-    // "Nebraska": "Q1553",
-    // "Nevada": "Q1227",
-    // "New Hampshire": "Q759",
-    // "New Jersey": "Q1408",
-    // "New Mexico": "Q1522",
-    // "New York": "Q1384",
-    // "North Carolina": "Q1454",
-    // "North Dakota": "Q1207",
-    // "Ohio": "Q1397",
-    // "Oklahoma": "Q1649",
-    // "Oregon": "Q824",
-    // "Pennsylvania": "Q1400",
-    // "Rhode Island": "Q1387",
-    // "South Carolina": "Q1456",
-    // "South Dakota": "Q1211",
-    // "Tennessee": "Q1509",
-    // "Texas": "Q1439",
-    // "Utah": "Q829",
-    // "Vermont": "Q16551",
-    // "Virginia": "Q1370",
-    // "Washington": "Q1223",
-    // "West Virginia": "Q1371",
-    // "Wisconsin": "Q1537",
-    // "Wyoming": "Q1214"
+
+    "Alabama": "Q173",
+    "Alaska": "Q797",
+    "Arizona": "Q816",
+    "Arkansas": "Q1612",
+    "California": "Q99",
+    "Colorado": "Q1261",
+    "Connecticut": "Q779",
+    "Delaware": "Q1393",
+    "Florida": "Q812",
+    "Georgia": "Q1428",
+    "Hawaii": "Q782",
+    "Idaho": "Q1221",
+    "Illinois": "Q1204",
+    "Indiana": "Q1415",
+    "Iowa": "Q1546",
+    "Kansas": "Q1558",
+    "Kentucky": "Q1603",
+    "Louisiana": "Q1588",
+    "Maine": "Q724",
+    "Maryland": "Q1391",
+    "Massachusetts": "Q771",
+    "Michigan": "Q1166",
+    "Minnesota": "Q1527",
+    "Mississippi": "Q1494",
+    "Missouri": "Q1581",
+    "Montana": "Q1212",
+    "Nebraska": "Q1553",
+    "Nevada": "Q1227",
+    "New Hampshire": "Q759",
+    "New Jersey": "Q1408",
+    "New Mexico": "Q1522",
+    "New York": "Q1384",
+    "North Carolina": "Q1454",
+    "North Dakota": "Q1207",
+    "Ohio": "Q1397",
+    "Oklahoma": "Q1649",
+    "Oregon": "Q824",
+    "Pennsylvania": "Q1400",
+    "Rhode Island": "Q1387",
+    "South Carolina": "Q1456",
+    "South Dakota": "Q1211",
+    "Tennessee": "Q1509",
+    "Texas": "Q1439",
+    "Utah": "Q829",
+    "Vermont": "Q16551",
+    "Virginia": "Q1370",
+    "Washington": "Q1223",
+    "West Virginia": "Q1371",
+    "Wisconsin": "Q1537",
+    "Wyoming": "Q1214"
 };
 
 async function fetchUSOsm() {
@@ -239,6 +239,11 @@ async function fetchUSWiki() {
 
             let results = parseWikidataResponse(response.data);
 
+            console.log({
+                wiki_count: results.length,
+                state: state
+            });
+
             allResults = allResults.concat(results);
         } catch (error) {
             console.error('Error fetching from Wikidata:', error.message);
@@ -273,10 +278,15 @@ async function fetchFromWikidata(countryName, offset = 0, accumulated = []) {
                     wdt:P17 wd:${countryId} .
             
             VALUES ?type { 
-                wd:Q3914 wd:Q2385804 wd:Q23002054 
-                wd:Q9842 wd:Q149566 
-                wd:Q9826 wd:Q159334 
-                wd:Q3918 wd:Q189004 wd:Q1244277 wd:Q15936437
+                # wd:Q3914 wd:Q2385804 wd:Q23002054 
+                # wd:Q9842 wd:Q149566 
+                # wd:Q9826 wd:Q159334 
+                # wd:Q3918 wd:Q189004 wd:Q1244277 wd:Q15936437
+                
+                wd:Q2385804    # Educational institution (most general)
+                wd:Q3914       # University
+                wd:Q9842       # Secondary school
+                wd:Q159334     # School
             }
             
             SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
@@ -584,15 +594,8 @@ function processCountry(country) {
             console.error(e);
             return reject();
         }
-        let test = ['Urbana', 'Fairview South', 'Niles West', 'Jane Stenson'];
 
         for(let school of schools.all) {
-            for(let t of test) {
-                if(school.name?.toLowerCase().includes(t.toLowerCase())) {
-                    console.log(school);
-                }
-            }
-
             if(exclude_school_types.includes(school.type)) {
                 continue;
             }
@@ -729,19 +732,21 @@ function processSchools() {
         try {
             let conn = await dbService.conn();
 
-            //redo indonesia, india, italy
-            let ids = [4119, 4123, 4128];
-            ids = [4250];
+            // redo
+            //indonesia, india
+            let ids = [4370];
 
             countries = await conn('open_countries');
 
-            if(ids.length) {
+            if(typeof ids !== 'undefined' && ids.length) {
                 await conn('schools')
                     .whereIn('country_id', ids)
                     .delete();
 
                 countries = await conn('open_countries')
                     .whereIn('id', ids);
+            } else {
+                countries = await conn('open_countries')
             }
 
             for(let c of countries) {
@@ -754,7 +759,8 @@ function processSchools() {
         try {
             for(let country of countries) {
                 console.log({
-                    country
+                    id: country.id,
+                    name: country.country_name,
                 });
 
                 try {

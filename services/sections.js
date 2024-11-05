@@ -12,8 +12,10 @@ let sectionsData = {
         secondary: ['Beginner', 'Intermediate', 'Advanced', 'Expert', 'Virtuoso'],
         unselectedStr: 'Skill Level',
         autoComplete: {
-            string: 'Search instruments',
             endpoint: '/autocomplete/instruments',
+            placeholders: {
+                main: 'Search instruments'
+            },
         },
         cacheKeys: {
             display: cacheService.keys.instruments_common
@@ -26,15 +28,19 @@ let sectionsData = {
     schools: {
         colId: 'school_id',
         autoComplete: {
-            string: 'Search schools',
             endpoint: '/autocomplete/schools',
-            list: []
+            placeholders: {
+                main: 'Search schools',
+                list: 'Search countries'
+            },
+            filterList: [],
+            filterNoResults: 'No countries found',
         },
         cacheKeys: {
             byToken: cacheService.keys.school
         },
         functions: {
-            list: 'getSchools'
+            filterList: 'getSchools'
         },
     }
 };
@@ -44,14 +50,14 @@ function addMeSection(person_token, section_key) {
         return new Promise(async (resolve, reject) => {
             if (section_key in sectionsData) {
                 let fnData = sectionsData[section_key].functions.data;
-                let fnList = sectionsData[section_key].functions.list;
+                let fnFilterList = sectionsData[section_key].functions.filterList;
 
                 if (fnData) {
                     section.data = await module.exports[fnData]();
                 }
 
-                if(fnList) {
-                    section.data = await module.exports[fnList]();
+                if(fnFilterList) {
+                    section.data = await module.exports[fnFilterList]();
                 }
             }
 
@@ -669,7 +675,7 @@ function getActiveData(person, sections) {
 
                 const sectionConfig = sectionsData[section_key];
                 let options = null;
-                let list = null;
+                let filterList = null;
                 let items = null;
 
                 // If display key
@@ -677,18 +683,17 @@ function getActiveData(person, sections) {
                     options = results[resultIndex++];
                 }
 
-                if (sectionConfig.functions?.list) {
-                    list = await module.exports[sectionConfig.functions.list]();
+                if (sectionConfig.functions?.filterList) {
+                    filterList = await module.exports[sectionConfig.functions.filterList]();
                 }
 
                 items = results[resultIndex++];
 
-                if (options || list) {
+                if (options || filterList) {
                     sections[section_key].data = {
                         options: options,
                         autoComplete: {
-                            ...sectionConfig.autoComplete,
-                            list: list || sectionConfig.autoComplete?.list || []
+                            ...sectionConfig.autoComplete
                         },
                         categories: sectionConfig.categories || null,
                         secondary: sectionConfig.secondary || null,
@@ -827,7 +832,11 @@ function getSchools() {
         try {
             let countries = await getCountries();
 
-            data.autoComplete.list = countries || [];
+            countries.map((country) => {
+                country.name = country.country_name
+            });
+
+            data.autoComplete.filterList = countries || [];
         } catch(e) {
             console.error(e);
         }
