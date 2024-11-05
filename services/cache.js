@@ -13,19 +13,19 @@ module.exports = {
         instruments: `instruments`,
         instruments_common: `instruments:common`,
         activity: function (activity_token) {
-            return `activity:${activity_token}`;
+            return `activities:${activity_token}`;
         },
         activity_type: function (token) {
-            return `activity_type:${token}`;
+            return `activity_types:${token}`;
         },
         activity_type_venue_categories: function (token) {
-            return `activity_type:venue_categories:${token}`;
+            return `activity_types:venue_categories:${token}`;
         },
         place_fsq: function (fsq_id) {
-            return `place:fsq:${fsq_id}`;
+            return `places:fsq:${fsq_id}`;
         },
         city: function (id) {
-            return `city:${id}`;
+            return `cities:${id}`;
         },
         cities_country: function (code) {
             return `cities:country:${code}`;
@@ -34,10 +34,10 @@ module.exports = {
             return `cities:prefix:${prefix}`;
         },
         state: function (id) {
-            return `state:${id}`;
+            return `states:${id}`;
         },
         country: function (id) {
-            return `country:${id}`;
+            return `countries:${id}`;
         },
         session: function (session) {
             return `session:api:${session}`;
@@ -85,13 +85,13 @@ module.exports = {
             return `persons:sections:${data_name}:${person_token}`;
         },
         instrument: function (token) {
-            return `instrument:${token}`;
+            return `instruments:${token}`;
         },
         instruments_prefix: function (prefix) {
             return `instruments:prefix:${prefix}`;
         },
         school: function (school_id_or_token) {
-            return `school:${school_id_or_token}`;
+            return `schools:${school_id_or_token}`;
         },
         schools_country_prefix: function (code, prefix) {
             return `schools:country:${code}:${prefix}`;

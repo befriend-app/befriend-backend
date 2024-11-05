@@ -9,6 +9,12 @@ const batchSize = 5000;
 
 let countries_dict = {};
 
+function safeValue(val) {
+    if (val === null || val === undefined) return '';
+    if (typeof val === 'boolean') return val ? '1' : '0';
+    return val.toString();
+}
+
 function indexSchools() {
     return new Promise(async (resolve, reject) => {
         try {
@@ -21,7 +27,7 @@ function indexSchools() {
             for (let int = 0; int < schools.length; int++) {
                 if (int % 1000 === 0) {
                     console.log({
-                        loop: int,
+                        process: `${int} / ${schools.length}`
                     });
                 }
 
@@ -29,7 +35,7 @@ function indexSchools() {
 
                 const school_key = cacheService.keys.school(school.token);
 
-                pipeline.hSet(school_key, {
+                pipeline.set(school_key, JSON.stringify({
                     id: school.id,
                     token: school.token,
                     name: school.name,
@@ -41,10 +47,11 @@ function indexSchools() {
                     is_grade_school: school.is_grade_school,
                     is_high_school: school.is_high_school,
                     is_college: school.is_college,
-                });
+                }));
 
                 //lookup token by id
-                pipeline.set(school.id, school.token);
+                let id_key = cacheService.keys.school(school.id);
+                pipeline.set(id_key, school.token);
 
                 //add to country set
                 let country_code = countries_dict[school.country_id].country_code;
@@ -81,7 +88,6 @@ function indexSchools() {
                 const nameSplit = nameLower.split(' ');
 
                 for (let word of nameSplit) {
-
                     for (let i = 1; i <= word.length; i++) {
                         const prefix = word.slice(0, i);
 
@@ -105,88 +111,6 @@ function indexSchools() {
         } catch (e) {
             console.error(e);
             return reject();
-        }
-
-        resolve();
-    });
-}
-
-function deDuplicate() {
-    return new Promise(async (resolve, reject) => {
-        try {
-            let conn = await dbService.conn();
-
-            let schools = await conn('schools').whereNull('deleted');
-
-            let dict = {};
-
-            let all_countries_dict = {};
-
-            for(let s of schools) {
-                if(!(s.name in all_countries_dict)) {
-                    all_countries_dict[s.name] = {
-                        name: s.name,
-                        count: 0
-                    };
-                }
-
-                all_countries_dict[s.name].count += 1;
-
-                if(!(s.country_id in dict)) {
-                    dict[s.country_id] = {};
-                }
-
-                if(!(s.name in dict[s.country_id])) {
-                    dict[s.country_id][s.name] = [];
-                }
-
-                dict[s.country_id][s.name].push(s);
-            }
-
-            // let duplicate_names = [];
-            //
-            // for(let k in dict) {
-            //     let country_names = dict[k];
-            //
-            //     for(let name in country_names) {
-            //         let nameList = country_names[name];
-            //
-            //         if(nameList.length > 1) {
-            //             duplicate_names.push({
-            //                 country_id: k,
-            //                 name: name,
-            //                 count: nameList.length,
-            //                 list: nameList
-            //             });
-            //         }
-            //     }
-            // }
-            //
-            // duplicate_names.sort((a, b) => {
-            //     return b.count - a.count;
-            // });
-
-            let all_duplicates = [];
-
-            for(let name in all_countries_dict) {
-                if(all_countries_dict[name].count > 1) {
-                    all_duplicates.push(all_countries_dict[name]);
-                }
-            }
-
-            all_duplicates.sort((a, b) => {
-                return b.count - a.count;
-            });
-
-            while (all_duplicates.length) {
-                let items = all_duplicates.splice(0, 100);
-
-                items = items.map(item => item.name);
-            }
-
-            console.log();
-        } catch(e) {
-            console.error(e);
         }
 
         resolve();
@@ -220,7 +144,6 @@ function main() {
 
             await getCountries();
 
-            await deDuplicate();
             await indexSchools();
         } catch (e) {
             console.error(e);

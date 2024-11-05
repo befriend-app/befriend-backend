@@ -1,7 +1,7 @@
 const axios = require('axios');
 const dbService = require('../../services/db');
 const { generateToken, timeNow, loadScriptEnv } = require('../../services/shared');
-const os = require('node:os');
+const excludedNames = require('./excluded_school_names');
 
 loadScriptEnv();
 
@@ -554,6 +554,10 @@ function isValidSchoolName(name) {
 
     // Check if name is too short or just "Unknown"
     if (!name || name.length < 2 || name === 'Unknown') {
+        return false;
+    }
+
+    if(name.toLowerCase() in excludedNames) {
         return false;
     }
 
