@@ -4,47 +4,68 @@ const { loadScriptEnv, isProdApp } = require('../../services/shared');
 
 loadScriptEnv();
 
-(async function () {
-    if (isProdApp()) {
-        console.error('App env: [prod]', 'exiting');
-        process.exit();
-    }
-
-    await cacheService.init();
-
-    let dbs = [process.env.DB_NAME];
-
-    for (let db of dbs) {
-        let connection = {
-            host: process.env.DB_HOST,
-            user: process.env.DB_USER,
-            password: process.env.DB_PASSWORD,
-            database: db,
-        };
-
-        if (process.env.DB_PORT) {
-            connection.port = parseInt(process.env.DB_PORT);
+function main(is_me) {
+    return new Promise(async (resolve, reject) => {
+        if (isProdApp()) {
+            console.error('App env: [prod]', 'exiting');
+            return resolve();
         }
 
-        let knex = require('knex')({
-            client: process.env.DB_CLIENT,
-            connection: connection,
-        });
+        await cacheService.init();
 
-        await knex('categories_geo_places').delete();
+        let dbs = [process.env.DB_NAME];
 
-        await knex('categories_geo').delete();
+        for (let db of dbs) {
+            let connection = {
+                host: process.env.DB_HOST,
+                user: process.env.DB_USER,
+                password: process.env.DB_PASSWORD,
+                database: db,
+            };
 
-        await knex('places').delete();
+            if (process.env.DB_PORT) {
+                connection.port = parseInt(process.env.DB_PORT);
+            }
 
-        let keys = await cacheService.getKeys(`${cacheService.keys.place_fsq('')}*`);
+            let knex = require('knex')({
+                client: process.env.DB_CLIENT,
+                connection: connection,
+            });
 
-        await cacheService.deleteKeys(keys);
+            await knex('categories_geo_places').delete();
 
-        let keys_cats = await cacheService.getKeys(`places:category:*`);
+            await knex('categories_geo').delete();
 
-        await cacheService.deleteKeys(keys_cats);
-    }
+            await knex('places').delete();
 
-    process.exit();
-})();
+            let keys = await cacheService.getKeys(`${cacheService.keys.place_fsq('')}*`);
+
+            await cacheService.deleteKeys(keys);
+
+            let keys_cats = await cacheService.getKeys(`places:category:*`);
+
+            await cacheService.deleteKeys(keys_cats);
+        }
+
+        if(is_me) {
+            process.exit();
+        }
+
+       resolve();
+    });
+}
+
+module.exports = {
+    main: main,
+};
+
+if (require.main === module) {
+    (async function () {
+        try {
+            await main(true);
+            process.exit();
+        } catch (e) {
+            console.error(e);
+        }
+    })();
+}

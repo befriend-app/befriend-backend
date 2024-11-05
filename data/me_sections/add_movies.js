@@ -105,7 +105,7 @@ function main() {
             console.log('Add movies');
 
             // Start from 1900 to current year
-            let startYear = 2019;
+            let startYear = 1900;
             const currentYear = new Date().getFullYear();
 
             for (let year = startYear; year <= currentYear; year++) {

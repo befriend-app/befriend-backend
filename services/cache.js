@@ -90,6 +90,12 @@ module.exports = {
         instruments_prefix: function (prefix) {
             return `instruments:prefix:${prefix}`;
         },
+        movie: function (token) {
+            return `movies:${token}`;
+        },
+        movies_prefix: function (prefix) {
+            return `movies:prefix:${prefix}`;
+        },
         school: function (school_id_or_token) {
             return `schools:${school_id_or_token}`;
         },

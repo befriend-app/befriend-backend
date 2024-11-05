@@ -32,21 +32,23 @@ function main(is_me) {
                 connection: connection,
             });
 
-            let tables = ['persons_sections', 'me_sections'];
+            let tables = ['persons_schools', 'schools'];
 
             for (let table of tables) {
                 await knex(table).delete();
             }
 
-            let keys = await cacheService.getKeys(`${cacheService.keys.person_sections('')}*`);
+            let keys = await cacheService.getKeys(`${cacheService.keys.school('')}*`);
 
-            keys.push(cacheService.keys.me_sections);
+            let keys_2 = await cacheService.getKeys(`schools:country:*`);
+
+            keys = keys.concat(keys_2);
 
             await cacheService.deleteKeys(keys);
         }
 
         if(is_me) {
-            await require('../../data/me_sections/add_sections').main();
+            await require('../../data/me_sections/add_schools').main();
 
             process.exit();
         }
