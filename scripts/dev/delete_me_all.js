@@ -7,28 +7,22 @@ function main(is_me) {
     return new Promise(async (resolve, reject) => {
         if (isProdApp()) {
             console.error('App env: [prod]', 'exiting');
+            return resolve();
+        }
+
+        await cacheService.init();
+
+        let scripts = ['delete_schools', 'delete_movies', 'delete_instruments', 'delete_me'];
+
+        for(let s of scripts) {
+            await require(`./${s}`).main();
+        }
+
+        if(is_me) {
             process.exit();
         }
 
-        console.log("Delete: all");
-
-        let scripts = [
-            'delete_me_all',
-            'delete_activity_venues',
-            'delete_persons',
-            'delete_open_locations',
-            'delete_places',
-        ];
-
-        for(let script of scripts) {
-            console.log(`Deleting: ${script}`);
-
-            let fn = `./${script}`;
-
-            await require(fn).main();
-        }
-
-        process.exit();
+        resolve();
     });
 }
 

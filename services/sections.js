@@ -820,7 +820,7 @@ function allInstruments() {
 function getSchools() {
     return new Promise(async (resolve, reject) => {
         let data = {
-            autoComplete: sectionsData.instruments.autoComplete,
+            autoComplete: sectionsData.schools.autoComplete,
         };
 
         //list of countries for autocomplete
