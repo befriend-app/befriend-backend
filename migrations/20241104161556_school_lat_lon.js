@@ -5,9 +5,20 @@
 exports.up = async function(knex) {
     let has_country_col = await knex.schema.hasColumn('schools', 'country');
 
+    let has_school_token_col = await knex.schema.hasColumn('schools', 'school_token');
+    let has_school_name_col = await knex.schema.hasColumn('schools', 'school_name');
+
     return knex.schema.alterTable('schools', (table) => {
         if(has_country_col) {
             table.dropColumn('country');
+        }
+
+        if(has_school_token_col) {
+            table.renameColumn('school_token', 'token');
+        }
+
+        if(has_school_name_col) {
+            table.renameColumn('school_name', 'name');
         }
 
         table.integer('country_id').unsigned().notNullable().after('state');
