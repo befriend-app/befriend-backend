@@ -9,6 +9,11 @@ exports.up = async function (knex) {
     return knex.schema.alterTable(tn, (table) => {
         table.string('emoji').nullable().after('country_code');
 
+        table.float('min_lat', 10, 4);
+        table.float('max_lat', 10, 4);
+        table.float('min_lon', 10, 4);
+        table.float('max_lon', 10, 4);
+
         table.string('wiki_code').nullable();
 
         table.bigInteger('created').nullable();

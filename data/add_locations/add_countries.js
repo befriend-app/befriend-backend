@@ -27,10 +27,20 @@ function main() {
                 let emoji = null;
 
                 let wikiCountry = wikiCountries[country.name];
+                let minLat = null;
+                let maxLat = null;
+                let minLon = null;
+                let maxLon = null;
 
                 if (wikiCountry) {
                     wiki_code = wikiCountry.code;
                     emoji = wikiCountry.emoji;
+                    minLat = wikiCountry.minLat;
+                    maxLat = wikiCountry.maxLat;
+                    minLon = wikiCountry.minLon;
+                    maxLon = wikiCountry.maxLon;
+                } else {
+                    console.log('No country', country.name);
                 }
 
                 if (!check) {
@@ -40,6 +50,10 @@ function main() {
                         emoji: emoji,
                         lat: country.latitude,
                         lon: country.longitude,
+                        min_lat: minLat,
+                        max_lat: maxLat,
+                        min_lon: minLon,
+                        max_lon: maxLon,
                         wiki_code: wiki_code,
                         created: timeNow(),
                         updated: timeNow(),
@@ -48,7 +62,10 @@ function main() {
                     await conn('open_countries').where('id', check.id).update({
                         emoji: emoji,
                         wiki_code: wiki_code,
-                        created: timeNow(),
+                        min_lat: minLat,
+                        max_lat: maxLat,
+                        min_lon: minLon,
+                        max_lon: maxLon,
                         updated: timeNow(),
                     });
                 }

@@ -1,7 +1,7 @@
 const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 
-const { timeNow, generateToken } = require('../services/shared');
+const { timeNow, generateToken, latLonLookup } = require('../services/shared');
 
 const { getPerson } = require('../services/persons');
 const {
@@ -21,11 +21,14 @@ module.exports = {
             try {
                 let me = await getPerson(person_token);
 
-                let sections = await getMeSections(me, req.query.location);
+                let sections = await getMeSections(me);
+
+                let location = latLonLookup(req.query.location?.lat, req.query.location?.lon);
 
                 res.json({
                     me,
                     sections,
+                    location,
                 });
 
                 resolve();

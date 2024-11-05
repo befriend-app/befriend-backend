@@ -31,7 +31,7 @@ let sectionsData = {
             endpoint: '/autocomplete/schools',
             placeholders: {
                 main: 'Search schools',
-                list: 'Search countries',
+                list: 'Country',
             },
             filterList: [],
             filterNoResults: 'No countries found',

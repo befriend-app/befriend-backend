@@ -5,7 +5,6 @@ const fs = require('fs');
 const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
-const geoplaces = require('geojson-places');
 const tldts = require('tldts');
 const process = require('process');
 const { decrypt } = require('./encryption');
@@ -27,6 +26,93 @@ Object.defineProperty(String.prototype, 'capitalize', {
     },
     enumerable: false,
 });
+
+let geoLookup = {
+    gridSize: 10,
+    grid: null,
+    countries: null,
+    buildIndex: function() {
+        this.grid = new Map();
+
+        for (let country of geoLookup.countries) {
+            // Calculate grid cells that this bounding box intersects
+            const minGridX = Math.floor(country.min_lon / this.gridSize);
+            const maxGridX = Math.ceil(country.max_lon / this.gridSize);
+            const minGridY = Math.floor(country.min_lat / this.gridSize);
+            const maxGridY = Math.ceil(country.max_lat / this.gridSize);
+
+            // Add box to all intersecting grid cells
+            for (let x = minGridX; x <= maxGridX; x++) {
+                for (let y = minGridY; y <= maxGridY; y++) {
+                    const cellKey = `${x},${y}`;
+                    if (!this.grid.has(cellKey)) {
+                        this.grid.set(cellKey, []);
+                    }
+
+                    this.grid.get(cellKey).push(country);
+                }
+            }
+        }
+    }
+};
+
+function _normalizeLongitude(lon) {
+    lon = lon % 360;
+
+    if (lon > 180) {
+        lon -= 360;
+    }
+
+    return lon;
+}
+
+function latLonLookup(lat, lon) {
+    return new Promise(async (resolve, reject) => {
+        if (!lat || !lon) {
+            return resolve(null);
+        }
+
+        if (!isNumeric(lat) || !isNumeric(lon)) {
+            return resolve(null);
+        }
+
+        //initialize geo lookup
+        if(!geoLookup.countries) {
+            try {
+                geoLookup.countries = await getCountries();
+            } catch(e) {
+                console.error(e);
+            }
+        }
+
+        if(!geoLookup.grid) {
+            geoLookup.buildIndex();
+        }
+
+        lat = parseFloat(lat);
+        lon = parseFloat(lon);
+
+        lon = _normalizeLongitude(lon);
+
+        // Find grid cell
+        const gridX = Math.floor(lon / geoLookup.gridSize);
+        const gridY = Math.floor(lat / geoLookup.gridSize);
+        const cellKey = `${gridX},${gridY}`;
+
+        // Check candidate boxes in this grid cell
+        if (geoLookup.grid.has(cellKey)) {
+            for (const box of geoLookup.grid.get(cellKey)) {
+                if (lat >= box.min_lat && lat <= box.max_lat &&
+                    lon >= box.min_lon && lon <= box.max_lon) {
+
+                    return resolve(box);
+                }
+            }
+        }
+
+        return resolve(null);
+    });
+}
 
 function birthDatePure(birth_date) {
     if (!birth_date) {
@@ -815,14 +901,6 @@ function joinPaths() {
     }
 
     return url;
-}
-
-function latLonLookup(lat, lon) {
-    if (!lat || !lon) {
-        return null;
-    }
-
-    return geoplaces.lookUp(lat, lon);
 }
 
 function loadScriptEnv() {
