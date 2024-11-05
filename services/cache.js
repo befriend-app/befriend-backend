@@ -101,7 +101,7 @@ module.exports = {
         },
         schools_country_prefix: function (code, prefix) {
             return `schools:country:${code}:${prefix}`;
-        }
+        },
     },
     init: function () {
         return new Promise(async (resolve, reject) => {
@@ -465,7 +465,7 @@ module.exports = {
                         !lowest_to_highest ? 'REV' : '',
                         'LIMIT',
                         '0',
-                        limit.toString()
+                        limit.toString(),
                     ]);
                 } else {
                     multi.addCommand([
@@ -474,7 +474,8 @@ module.exports = {
                         lowest_to_highest ? '-inf' : '+inf',
                         lowest_to_highest ? '+inf' : '-inf',
                         'BYSCORE',
-                        !lowest_to_highest ? 'REV' : '']);
+                        !lowest_to_highest ? 'REV' : '',
+                    ]);
                 }
 
                 const results = await multi.exec();

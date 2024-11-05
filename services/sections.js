@@ -14,11 +14,11 @@ let sectionsData = {
         autoComplete: {
             endpoint: '/autocomplete/instruments',
             placeholders: {
-                main: 'Search instruments'
+                main: 'Search instruments',
             },
         },
         cacheKeys: {
-            display: cacheService.keys.instruments_common
+            display: cacheService.keys.instruments_common,
         },
         functions: {
             data: 'getInstruments',
@@ -31,18 +31,18 @@ let sectionsData = {
             endpoint: '/autocomplete/schools',
             placeholders: {
                 main: 'Search schools',
-                list: 'Search countries'
+                list: 'Search countries',
             },
             filterList: [],
             filterNoResults: 'No countries found',
         },
         cacheKeys: {
-            byToken: cacheService.keys.school
+            byToken: cacheService.keys.school,
         },
         functions: {
-            filterList: 'getSchools'
+            filterList: 'getSchools',
         },
-    }
+    },
 };
 
 function addMeSection(person_token, section_key) {
@@ -56,7 +56,7 @@ function addMeSection(person_token, section_key) {
                     section.data = await module.exports[fnData]();
                 }
 
-                if(fnFilterList) {
+                if (fnFilterList) {
                     section.data = await module.exports[fnFilterList]();
                 }
             }
@@ -271,10 +271,10 @@ function addMeSectionItem(person_token, section_key, item_token) {
             let data_id_col = sectionData.colId;
             let section_option;
 
-            if(fnAll) {
+            if (fnAll) {
                 options = await module.exports[fnAll]();
                 section_option = options.find((opt) => opt.token === item_token);
-            } else if(sectionData.cacheKeys.byToken) {
+            } else if (sectionData.cacheKeys.byToken) {
                 let cache_key = sectionData.cacheKeys.byToken(item_token);
                 section_option = await getObj(cache_key);
             }
@@ -347,7 +347,7 @@ function addMeSectionItem(person_token, section_key, item_token) {
 
                 return resolve({
                     ...section_option,
-                    ...item_data
+                    ...item_data,
                 });
             }
         } catch (e) {
@@ -454,7 +454,7 @@ function getPersonSectionItems(person, section_key) {
 
                 let options;
 
-                if(fnAll) {
+                if (fnAll) {
                     options = await module.exports[fnAll]();
                 }
 
@@ -473,9 +473,9 @@ function getPersonSectionItems(person, section_key) {
                 for (let item of qry) {
                     let section_option;
 
-                    if(options) {
+                    if (options) {
                         section_option = options.find((_item) => _item.id === item[col_name]);
-                    } else if(sectionData.cacheKeys.byToken) {
+                    } else if (sectionData.cacheKeys.byToken) {
                         let cache_key_for_token = sectionData.cacheKeys.byToken(item[col_name]);
 
                         let token = await getObj(cache_key_for_token);
@@ -648,14 +648,14 @@ function getActiveData(person, sections) {
                 // Always get person-specific items
                 const cache_key_items = cacheService.keys.person_sections_data(
                     person.person_token,
-                    key
+                    key,
                 );
                 multi.get(cache_key_items);
             }
 
             let results = await cacheService.execMulti(multi);
 
-            results = results.map(result => {
+            results = results.map((result) => {
                 if (result) {
                     try {
                         return JSON.parse(result);
@@ -693,7 +693,7 @@ function getActiveData(person, sections) {
                     sections[section_key].data = {
                         options: options,
                         autoComplete: {
-                            ...sectionConfig.autoComplete
+                            ...sectionConfig.autoComplete,
                         },
                         categories: sectionConfig.categories || null,
                         secondary: sectionConfig.secondary || null,
@@ -833,11 +833,11 @@ function getSchools() {
             let countries = await getCountries();
 
             countries.map((country) => {
-                country.name = country.country_name
+                country.name = country.country_name;
             });
 
             data.autoComplete.filterList = countries || [];
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
 

@@ -95,7 +95,7 @@ let max_request_count = 1000;
                 batch_insert.push(person_insert);
             }
 
-            let ids_output = await batchInsert( 'persons', batch_insert);
+            let ids_output = await batchInsert('persons', batch_insert);
 
             for (let ids of ids_output) {
                 for (let person_id = ids[0]; person_id < ids[1]; person_id++) {

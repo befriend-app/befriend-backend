@@ -14,11 +14,11 @@ function main(is_me) {
 
         let scripts = ['delete_schools', 'delete_movies', 'delete_instruments', 'delete_me'];
 
-        for(let s of scripts) {
+        for (let s of scripts) {
             await require(`./${s}`).main();
         }
 
-        if(is_me) {
+        if (is_me) {
             process.exit();
         }
 

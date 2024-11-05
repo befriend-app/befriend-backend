@@ -45,7 +45,7 @@ function main(is_me) {
             await cacheService.deleteKeys(keys);
         }
 
-        if(is_me) {
+        if (is_me) {
             await require('../../data/me_sections/add_sections').main();
 
             process.exit();

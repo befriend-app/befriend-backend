@@ -79,7 +79,7 @@ function main(is_me) {
 
         await cache.deleteKeys(keys);
 
-        if(is_me) {
+        if (is_me) {
             try {
                 await require('../../data/add_activity_types_venues').main();
             } catch (e) {

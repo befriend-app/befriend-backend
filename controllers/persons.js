@@ -38,7 +38,11 @@ module.exports = {
     addMeSection: function (req, res) {
         return new Promise(async (resolve, reject) => {
             try {
-                let data = await addMeSection(req.body.person_token, req.body.key, req.body.location);
+                let data = await addMeSection(
+                    req.body.person_token,
+                    req.body.key,
+                    req.body.location,
+                );
 
                 res.json(data, 201);
 

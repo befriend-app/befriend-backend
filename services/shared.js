@@ -412,23 +412,22 @@ function getCoordsFromPointDistance(lat, lon, distance_miles_or_km, direction) {
 function getCountries() {
     return new Promise(async (resolve, reject) => {
         try {
-             let cache_key = cacheService.keys.countries;
+            let cache_key = cacheService.keys.countries;
 
-             let data = await cacheService.getObj(cache_key);
+            let data = await cacheService.getObj(cache_key);
 
-             if(data) {
-                 return resolve(data);
-             }
+            if (data) {
+                return resolve(data);
+            }
 
-             let conn = await dbService.conn();
+            let conn = await dbService.conn();
 
-             data = await conn('open_countries')
-                 .orderBy('country_name', 'asc');
+            data = await conn('open_countries').orderBy('country_name', 'asc');
 
-             await cacheService.setCache(cache_key, data);
+            await cacheService.setCache(cache_key, data);
 
-             resolve(data);
-        } catch(e) {
+            resolve(data);
+        } catch (e) {
             console.error(e);
         }
     });

@@ -27,7 +27,7 @@ function indexSchools() {
             for (let int = 0; int < schools.length; int++) {
                 if (int % 1000 === 0) {
                     console.log({
-                        process: `${int} / ${schools.length}`
+                        process: `${int} / ${schools.length}`,
                     });
                 }
 
@@ -35,19 +35,22 @@ function indexSchools() {
 
                 const school_key = cacheService.keys.school(school.token);
 
-                pipeline.set(school_key, JSON.stringify({
-                    id: school.id,
-                    token: school.token,
-                    name: school.name,
-                    city: school.city,
-                    state: school.state,
-                    country_id: school.country_id,
-                    lat: school.lat,
-                    lon: school.lon,
-                    is_grade_school: school.is_grade_school,
-                    is_high_school: school.is_high_school,
-                    is_college: school.is_college,
-                }));
+                pipeline.set(
+                    school_key,
+                    JSON.stringify({
+                        id: school.id,
+                        token: school.token,
+                        name: school.name,
+                        city: school.city,
+                        state: school.state,
+                        country_id: school.country_id,
+                        lat: school.lat,
+                        lon: school.lon,
+                        is_grade_school: school.is_grade_school,
+                        is_high_school: school.is_high_school,
+                        is_college: school.is_college,
+                    }),
+                );
 
                 //lookup token by id
                 let id_key = cacheService.keys.school(school.id);
@@ -61,15 +64,15 @@ function indexSchools() {
 
                 let priority = 0;
 
-                if(school.is_college) {
+                if (school.is_college) {
                     priority = 3;
-                } else if(school.is_high_school) {
+                } else if (school.is_high_school) {
                     priority = 2;
-                } else if(school.is_grade_school) {
+                } else if (school.is_grade_school) {
                     priority = 1;
                 }
 
-                if(school.city) {
+                if (school.city) {
                     priority += 1;
                 }
 
@@ -91,12 +94,15 @@ function indexSchools() {
                     for (let i = 1; i <= word.length; i++) {
                         const prefix = word.slice(0, i);
 
-                        pipeline.zAdd(cacheService.keys.schools_country_prefix(country_code, prefix), [
-                            {
-                                value: school.id.toString(),
-                                score: priority,
-                            },
-                        ]);
+                        pipeline.zAdd(
+                            cacheService.keys.schools_country_prefix(country_code, prefix),
+                            [
+                                {
+                                    value: school.id.toString(),
+                                    score: priority,
+                                },
+                            ],
+                        );
                     }
                 }
 
@@ -127,7 +133,7 @@ function getCountries() {
             countries.map((country) => {
                 countries_dict[country.id] = country;
             });
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
 

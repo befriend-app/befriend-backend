@@ -1,7 +1,7 @@
 const axios = require('axios');
 const { loadScriptEnv, timeNow } = require('../../services/shared');
 const dbService = require('../../services/db');
-const { wikiCountries } = require('./wiki-countries')
+const { wikiCountries } = require('./wiki-countries');
 
 loadScriptEnv();
 
@@ -28,7 +28,7 @@ function main() {
 
                 let wikiCountry = wikiCountries[country.name];
 
-                if(wikiCountry) {
+                if (wikiCountry) {
                     wiki_code = wikiCountry.code;
                     emoji = wikiCountry.emoji;
                 }
@@ -42,17 +42,15 @@ function main() {
                         lon: country.longitude,
                         wiki_code: wiki_code,
                         created: timeNow(),
-                        updated: timeNow()
+                        updated: timeNow(),
                     });
                 } else {
-                    await conn('open_countries')
-                        .where('id', check.id)
-                        .update({
-                            emoji: emoji,
-                            wiki_code: wiki_code,
-                            created: timeNow(),
-                            updated: timeNow()
-                        });
+                    await conn('open_countries').where('id', check.id).update({
+                        emoji: emoji,
+                        wiki_code: wiki_code,
+                        created: timeNow(),
+                        updated: timeNow(),
+                    });
                 }
             }
 

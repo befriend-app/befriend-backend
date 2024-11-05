@@ -45,11 +45,12 @@ function main(is_me) {
             for (let activity_table of activity_tables) {
                 while (true) {
                     try {
-                        var pn_qry = await knex(activity_table).select('id').limit(bulk_delete_count);
-                    } catch(e) {
+                        var pn_qry = await knex(activity_table)
+                            .select('id')
+                            .limit(bulk_delete_count);
+                    } catch (e) {
                         break;
                     }
-
 
                     if (!pn_qry.length) {
                         break;
@@ -68,7 +69,7 @@ function main(is_me) {
             }
         }
 
-        if(is_me) {
+        if (is_me) {
             process.exit();
         }
 

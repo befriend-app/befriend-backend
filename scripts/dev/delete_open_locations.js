@@ -47,7 +47,8 @@ function main(is_me) {
                 cache.keys.cities_prefix(''),
                 cache.keys.state(''),
                 cache.keys.country(''),
-                cache.keys.cities_country(''),,
+                cache.keys.cities_country(''),
+                ,
             ];
 
             for (let key of param_keys) {
@@ -65,7 +66,7 @@ function main(is_me) {
             await cache.deleteKeys([cache.keys.countries, cache.keys.cities_population]);
         }
 
-        if(is_me) {
+        if (is_me) {
             process.exit();
         }
 

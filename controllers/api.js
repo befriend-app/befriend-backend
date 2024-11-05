@@ -1608,21 +1608,24 @@ module.exports = {
 
                 let tokens = await cacheService.getSortedSetByScore(prefix_key);
 
-                for(let token of tokens) {
+                for (let token of tokens) {
                     unique[token] = true;
                 }
 
                 let pipeline = await cacheService.conn.multi();
 
-                for(let token in unique) {
+                for (let token in unique) {
                     pipeline.hGetAll(cacheService.keys.instrument(token));
                 }
 
                 let items = await cacheService.execMulti(pipeline);
 
-                res.json({
-                    items: items
-                }, 200);
+                res.json(
+                    {
+                        items: items,
+                    },
+                    200,
+                );
 
                 resolve();
             } catch (e) {

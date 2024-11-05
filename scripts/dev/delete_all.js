@@ -10,7 +10,7 @@ function main(is_me) {
             process.exit();
         }
 
-        console.log("Delete: all");
+        console.log('Delete: all');
 
         let scripts = [
             'delete_me_all',
@@ -20,7 +20,7 @@ function main(is_me) {
             'delete_places',
         ];
 
-        for(let script of scripts) {
+        for (let script of scripts) {
             console.log(`Deleting: ${script}`);
 
             let fn = `./${script}`;

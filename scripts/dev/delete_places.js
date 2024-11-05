@@ -47,11 +47,11 @@ function main(is_me) {
             await cacheService.deleteKeys(keys_cats);
         }
 
-        if(is_me) {
+        if (is_me) {
             process.exit();
         }
 
-       resolve();
+        resolve();
     });
 }
 

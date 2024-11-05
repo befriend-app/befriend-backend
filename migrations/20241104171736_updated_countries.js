@@ -5,7 +5,7 @@
 
 let tn = 'open_countries';
 
-exports.up = async function(knex) {
+exports.up = async function (knex) {
     return knex.schema.alterTable(tn, (table) => {
         table.string('emoji').nullable().after('country_code');
 

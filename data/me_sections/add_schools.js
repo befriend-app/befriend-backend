@@ -15,26 +15,26 @@ const EDUCATION_LEVELS = {
     osm: {
         'primary school': 'middle_school',
         'middle school': 'middle_school',
-        'middle_school': 'middle_school',
-        'secondary': 'high_school',
-        'high_school': 'high_school',
-        'secondary_school': 'high_school',
-        'college': 'college',
-        'university': 'college'
+        middle_school: 'middle_school',
+        secondary: 'high_school',
+        high_school: 'high_school',
+        secondary_school: 'high_school',
+        college: 'college',
+        university: 'college',
     },
     wikidata: {
-        'Q3914': 'school',
-        'Q2385804': 'school',
-        'Q23002054': 'school',
-        'Q9842': 'middle_school',
-        'Q149566': 'middle_school',
-        'Q159334': 'high_school',
-        'Q9826': 'high_school',
-        'Q3918': 'college',
-        'Q189004': 'college',
-        'Q1244277': 'college',
-        'Q15936437': 'college'
-    }
+        Q3914: 'school',
+        Q2385804: 'school',
+        Q23002054: 'school',
+        Q9842: 'middle_school',
+        Q149566: 'middle_school',
+        Q159334: 'high_school',
+        Q9826: 'high_school',
+        Q3918: 'college',
+        Q189004: 'college',
+        Q1244277: 'college',
+        Q15936437: 'college',
+    },
 };
 
 const OVERPASS_API = 'https://overpass-api.de/api/interpreter';
@@ -45,56 +45,56 @@ let countries_dict = {};
 const usStates = {
     // "Illinois": "Q1204",
 
-    "Alabama": "Q173",
-    "Alaska": "Q797",
-    "Arizona": "Q816",
-    "Arkansas": "Q1612",
-    "California": "Q99",
-    "Colorado": "Q1261",
-    "Connecticut": "Q779",
-    "Delaware": "Q1393",
-    "Florida": "Q812",
-    "Georgia": "Q1428",
-    "Hawaii": "Q782",
-    "Idaho": "Q1221",
-    "Illinois": "Q1204",
-    "Indiana": "Q1415",
-    "Iowa": "Q1546",
-    "Kansas": "Q1558",
-    "Kentucky": "Q1603",
-    "Louisiana": "Q1588",
-    "Maine": "Q724",
-    "Maryland": "Q1391",
-    "Massachusetts": "Q771",
-    "Michigan": "Q1166",
-    "Minnesota": "Q1527",
-    "Mississippi": "Q1494",
-    "Missouri": "Q1581",
-    "Montana": "Q1212",
-    "Nebraska": "Q1553",
-    "Nevada": "Q1227",
-    "New Hampshire": "Q759",
-    "New Jersey": "Q1408",
-    "New Mexico": "Q1522",
-    "New York": "Q1384",
-    "North Carolina": "Q1454",
-    "North Dakota": "Q1207",
-    "Ohio": "Q1397",
-    "Oklahoma": "Q1649",
-    "Oregon": "Q824",
-    "Pennsylvania": "Q1400",
-    "Rhode Island": "Q1387",
-    "South Carolina": "Q1456",
-    "South Dakota": "Q1211",
-    "Tennessee": "Q1509",
-    "Texas": "Q1439",
-    "Utah": "Q829",
-    "Vermont": "Q16551",
-    "Virginia": "Q1370",
-    "Washington": "Q1223",
-    "West Virginia": "Q1371",
-    "Wisconsin": "Q1537",
-    "Wyoming": "Q1214"
+    Alabama: 'Q173',
+    Alaska: 'Q797',
+    Arizona: 'Q816',
+    Arkansas: 'Q1612',
+    California: 'Q99',
+    Colorado: 'Q1261',
+    Connecticut: 'Q779',
+    Delaware: 'Q1393',
+    Florida: 'Q812',
+    Georgia: 'Q1428',
+    Hawaii: 'Q782',
+    Idaho: 'Q1221',
+    Illinois: 'Q1204',
+    Indiana: 'Q1415',
+    Iowa: 'Q1546',
+    Kansas: 'Q1558',
+    Kentucky: 'Q1603',
+    Louisiana: 'Q1588',
+    Maine: 'Q724',
+    Maryland: 'Q1391',
+    Massachusetts: 'Q771',
+    Michigan: 'Q1166',
+    Minnesota: 'Q1527',
+    Mississippi: 'Q1494',
+    Missouri: 'Q1581',
+    Montana: 'Q1212',
+    Nebraska: 'Q1553',
+    Nevada: 'Q1227',
+    'New Hampshire': 'Q759',
+    'New Jersey': 'Q1408',
+    'New Mexico': 'Q1522',
+    'New York': 'Q1384',
+    'North Carolina': 'Q1454',
+    'North Dakota': 'Q1207',
+    Ohio: 'Q1397',
+    Oklahoma: 'Q1649',
+    Oregon: 'Q824',
+    Pennsylvania: 'Q1400',
+    'Rhode Island': 'Q1387',
+    'South Carolina': 'Q1456',
+    'South Dakota': 'Q1211',
+    Tennessee: 'Q1509',
+    Texas: 'Q1439',
+    Utah: 'Q829',
+    Vermont: 'Q16551',
+    Virginia: 'Q1370',
+    Washington: 'Q1223',
+    'West Virginia': 'Q1371',
+    Wisconsin: 'Q1537',
+    Wyoming: 'Q1214',
 };
 
 async function fetchUSOsm() {
@@ -136,9 +136,9 @@ async function fetchUSOsm() {
         try {
             const response = await axios.post(OVERPASS_API, query, {
                 headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded'
+                    'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                timeout: 120000
+                timeout: 120000,
             });
 
             if (response.data && response.data.elements) {
@@ -147,7 +147,7 @@ async function fetchUSOsm() {
                 console.log(`Found ${elements.length} elements in ${state}`);
 
                 // Add a delay between requests
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                await new Promise((resolve) => setTimeout(resolve, 1000));
             }
         } catch (error) {
             console.error(`Error fetching data for ${state}:`, error.message);
@@ -160,7 +160,7 @@ async function fetchUSOsm() {
 async function fetchFromOverpass(countryName) {
     console.log(`${countryName}: OSM`);
 
-    if (countryName === "United States") {
+    if (countryName === 'United States') {
         return await fetchUSOsm();
     }
 
@@ -180,8 +180,8 @@ async function fetchFromOverpass(countryName) {
     try {
         const response = await axios.post(OVERPASS_API, query, {
             headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            }
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
         });
 
         return parseOverpassData(response.data);
@@ -195,7 +195,7 @@ async function fetchUSWiki() {
     // Expanded query to ensure we get educational institutions and their parts
     let allResults = [];
 
-    for(let state in usStates) {
+    for (let state in usStates) {
         let code = usStates[state];
 
         const query = `
@@ -229,19 +229,19 @@ async function fetchUSWiki() {
             const response = await axios.get(WIKIDATA_API, {
                 params: {
                     query,
-                    format: 'json'
+                    format: 'json',
                 },
                 headers: {
-                    'Accept': 'application/json',
-                    'User-Agent': 'SchoolDataFetcher/1.0 (educational research)'
-                }
+                    Accept: 'application/json',
+                    'User-Agent': 'SchoolDataFetcher/1.0 (educational research)',
+                },
             });
 
             let results = parseWikidataResponse(response.data);
 
             console.log({
                 wiki_count: results.length,
-                state: state
+                state: state,
             });
 
             allResults = allResults.concat(results);
@@ -254,9 +254,8 @@ async function fetchUSWiki() {
     return allResults;
 }
 
-
 async function fetchFromWikidata(countryName, offset = 0, accumulated = []) {
-    if (countryName === "United States") {
+    if (countryName === 'United States') {
         return await fetchUSWiki();
     }
 
@@ -301,9 +300,7 @@ async function fetchFromWikidata(countryName, offset = 0, accumulated = []) {
 
         for (let i = 0; i < schoolIds.length; i += DETAILS_BATCH_SIZE) {
             const batch = schoolIds.slice(i, i + DETAILS_BATCH_SIZE);
-            const valuesClause = batch
-                .map(url => `wd:${url.split('/').pop()}`)
-                .join(' ');
+            const valuesClause = batch.map((url) => `wd:${url.split('/').pop()}`).join(' ');
 
             const detailQuery = `
                 SELECT ?school ?coordinates ?city ?cityLabel ?state ?stateLabel WHERE {
@@ -322,28 +319,34 @@ async function fetchFromWikidata(countryName, offset = 0, accumulated = []) {
             `;
 
             try {
-                const response = await axios.post(WIKIDATA_API,
+                const response = await axios.post(
+                    WIKIDATA_API,
                     new URLSearchParams({
                         query: detailQuery,
-                        format: 'json'
+                        format: 'json',
                     }).toString(),
                     {
                         headers: {
-                            'Accept': 'application/json',
+                            Accept: 'application/json',
                             'Content-Type': 'application/x-www-form-urlencoded',
-                            'User-Agent': 'SchoolDataFetcher/1.0 (educational research)'
+                            'User-Agent': 'SchoolDataFetcher/1.0 (educational research)',
                         },
-                        timeout: 120000
-                    }
+                        timeout: 120000,
+                    },
                 );
 
                 batches.push(response.data?.results?.bindings || []);
-                console.log(`Processed batch ${i/DETAILS_BATCH_SIZE + 1}/${Math.ceil(schoolIds.length/DETAILS_BATCH_SIZE)}`);
+                console.log(
+                    `Processed batch ${i / DETAILS_BATCH_SIZE + 1}/${Math.ceil(schoolIds.length / DETAILS_BATCH_SIZE)}`,
+                );
 
                 // Add small delay between batch requests
-                await new Promise(resolve => setTimeout(resolve, 500));
+                await new Promise((resolve) => setTimeout(resolve, 500));
             } catch (error) {
-                console.error(`Error fetching details batch ${i/DETAILS_BATCH_SIZE + 1}:`, error.message);
+                console.error(
+                    `Error fetching details batch ${i / DETAILS_BATCH_SIZE + 1}:`,
+                    error.message,
+                );
                 if (error.response?.data) {
                     console.error('Error details:', error.response.data);
                 }
@@ -355,19 +358,20 @@ async function fetchFromWikidata(countryName, offset = 0, accumulated = []) {
     }
 
     try {
-        const baseResponse = await axios.post(WIKIDATA_API,
+        const baseResponse = await axios.post(
+            WIKIDATA_API,
             new URLSearchParams({
                 query: baseQuery,
-                format: 'json'
+                format: 'json',
             }).toString(),
             {
                 headers: {
-                    'Accept': 'application/json',
+                    Accept: 'application/json',
                     'Content-Type': 'application/x-www-form-urlencoded',
-                    'User-Agent': 'SchoolDataFetcher/1.0 (educational research)'
+                    'User-Agent': 'SchoolDataFetcher/1.0 (educational research)',
                 },
-                timeout: 120000
-            }
+                timeout: 120000,
+            },
         );
 
         if (!baseResponse.data?.results?.bindings) {
@@ -376,18 +380,18 @@ async function fetchFromWikidata(countryName, offset = 0, accumulated = []) {
 
         const baseResults = baseResponse.data.results.bindings;
 
-        const schoolIds = baseResults.map(result => result.school.value);
+        const schoolIds = baseResults.map((result) => result.school.value);
 
         const detailResults = await fetchSchoolDetails(schoolIds);
         console.log(`Fetched details`);
 
-        const mergedResults = baseResults.map(baseResult => {
+        const mergedResults = baseResults.map((baseResult) => {
             const schoolId = baseResult.school.value;
-            const details = detailResults.find(detail => detail.school?.value === schoolId) || {};
+            const details = detailResults.find((detail) => detail.school?.value === schoolId) || {};
 
             return {
                 ...baseResult,
-                ...details
+                ...details,
             };
         });
 
@@ -395,14 +399,17 @@ async function fetchFromWikidata(countryName, offset = 0, accumulated = []) {
         const allResults = accumulated.concat(results);
 
         if (baseResults.length === BATCH_SIZE) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await new Promise((resolve) => setTimeout(resolve, 1000));
             return fetchFromWikidata(countryName, offset + BATCH_SIZE, allResults);
         }
 
         console.log(`${countryName}: Total schools found: ${allResults.length}`);
         return allResults;
     } catch (error) {
-        console.error(`Error fetching from Wikidata for ${countryName} (offset: ${offset}):`, error.message);
+        console.error(
+            `Error fetching from Wikidata for ${countryName} (offset: ${offset}):`,
+            error.message,
+        );
         if (error.response?.data) {
             console.error('Error details:', error.response.data);
         }
@@ -413,7 +420,8 @@ async function fetchFromWikidata(countryName, offset = 0, accumulated = []) {
 // Parsing functions remain the same
 function determineEducationLevel(data, source) {
     if (source === 'OpenStreetMap') {
-        const schoolType = data.tags['school:type'] ||
+        const schoolType =
+            data.tags['school:type'] ||
             data.tags.amenity ||
             data.tags.education ||
             data.tags['education:level'] ||
@@ -428,14 +436,16 @@ function determineEducationLevel(data, source) {
 
 function parseOverpassData(data) {
     return data.elements
-        .filter(element => element.tags)
-        .map(element => {
-            const city = element.tags['addr:city'] ||
+        .filter((element) => element.tags)
+        .map((element) => {
+            const city =
+                element.tags['addr:city'] ||
                 element.tags.city ||
                 element.tags['is_in:city'] ||
                 null;
 
-            const state = element.tags['addr:state'] ||
+            const state =
+                element.tags['addr:state'] ||
                 element.tags.state ||
                 element.tags['is_in:state'] ||
                 element.tags['is_in:province'] ||
@@ -449,36 +459,40 @@ function parseOverpassData(data) {
                 // For nodes, use direct lat/lon
                 coordinates = {
                     lat: element.lat,
-                    lon: element.lon
+                    lon: element.lon,
                 };
             } else if (element.type === 'way') {
                 // For ways, use center coordinates
                 if (element.center) {
                     coordinates = {
                         lat: element.center.lat,
-                        lon: element.center.lon
+                        lon: element.center.lon,
                     };
                 }
             }
 
             return {
                 name: element.tags.name || element.tags['name:en'] || 'Unknown',
-                type: element.tags.amenity || element.tags.education || element.tags.building || 'Unknown',
+                type:
+                    element.tags.amenity ||
+                    element.tags.education ||
+                    element.tags.building ||
+                    'Unknown',
                 educationLevel: determineEducationLevel(element, 'OpenStreetMap'),
                 source: 'OpenStreetMap',
                 id: element.id,
                 coordinates: coordinates,
                 location: {
                     city: city,
-                    state: state
+                    state: state,
                 },
-                tags: element.tags
+                tags: element.tags,
             };
         });
 }
 
 function parseWikidataResponse(data) {
-    return data.results.bindings.map(result => ({
+    return data.results.bindings.map((result) => ({
         name: result.schoolLabel?.value || 'Unknown',
         type: result.typeLabel?.value || 'Unknown',
         educationLevel: determineEducationLevel(result, 'Wikidata'),
@@ -487,8 +501,8 @@ function parseWikidataResponse(data) {
         coordinates: parseWikidataCoordinates(result.coordinates?.value),
         location: {
             city: result.cityLabel?.value || null,
-            state: result.stateLabel?.value || null
-        }
+            state: result.stateLabel?.value || null,
+        },
     }));
 }
 
@@ -498,7 +512,7 @@ function parseWikidataCoordinates(coordinatesString) {
     if (match) {
         return {
             lon: parseFloat(match[1]),
-            lat: parseFloat(match[2])
+            lat: parseFloat(match[2]),
         };
     }
     return undefined;
@@ -508,12 +522,12 @@ async function fetchSchoolsByCountry(countryName) {
     try {
         const [osmSchools, wikidataSchools] = await Promise.all([
             fetchFromOverpass(countryName),
-            fetchFromWikidata(countryName)
+            fetchFromWikidata(countryName),
         ]);
 
         console.log({
             wikiSchools: wikidataSchools.length,
-            osmSchools: osmSchools.length
+            osmSchools: osmSchools.length,
         });
 
         const allSchools = [...osmSchools, ...wikidataSchools];
@@ -531,8 +545,10 @@ async function fetchSchoolsByCountry(countryName) {
 
 function isSameLocation(school1, school2) {
     // If both schools have no location and no coordinates, consider them the same
-    const hasNoLocation1 = !school1.coordinates && (!school1.location?.city && !school1.location?.state);
-    const hasNoLocation2 = !school2.coordinates && (!school2.location?.city && !school2.location?.state);
+    const hasNoLocation1 =
+        !school1.coordinates && !school1.location?.city && !school1.location?.state;
+    const hasNoLocation2 =
+        !school2.coordinates && !school2.location?.city && !school2.location?.state;
 
     if (hasNoLocation1 && hasNoLocation2) {
         return true;
@@ -567,7 +583,7 @@ function isValidSchoolName(name) {
         return false;
     }
 
-    if(name.toLowerCase() in excludedNames) {
+    if (name.toLowerCase() in excludedNames) {
         return false;
     }
 
@@ -590,35 +606,35 @@ function processCountry(country) {
 
         try {
             schools = await fetchSchoolsByCountry(country.country_name);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return reject();
         }
 
-        for(let school of schools.all) {
-            if(exclude_school_types.includes(school.type)) {
+        for (let school of schools.all) {
+            if (exclude_school_types.includes(school.type)) {
                 continue;
             }
 
-            if(!isValidSchoolName(school.name)) {
+            if (!isValidSchoolName(school.name)) {
                 continue;
             }
 
-            if(!(school.type in unique.types)) {
+            if (!(school.type in unique.types)) {
                 unique.types[school.type] = {
                     osm: 0,
-                    wiki: 0
-                }
+                    wiki: 0,
+                };
             }
 
-            if(!(school.educationLevel in unique.el)) {
+            if (!(school.educationLevel in unique.el)) {
                 unique.el[school.educationLevel] = {
                     osm: 0,
-                    wiki: 0
-                }
+                    wiki: 0,
+                };
             }
 
-            if(school.source === 'Wikidata') {
+            if (school.source === 'Wikidata') {
                 unique.types[school.type].wiki += 1;
                 unique.el[school.educationLevel].wiki += 1;
             } else {
@@ -626,17 +642,17 @@ function processCountry(country) {
                 unique.el[school.educationLevel].osm += 1;
             }
 
-            if(!(school.name in unique.schools)) {
+            if (!(school.name in unique.schools)) {
                 unique.schools[school.name] = [];
             }
 
             unique.schools[school.name].push(school);
         }
 
-        for(let school_name in unique.schools) {
+        for (let school_name in unique.schools) {
             let schoolList = unique.schools[school_name];
 
-            if(schoolList.length === 1) {
+            if (schoolList.length === 1) {
                 schools_distinct.push(schoolList[0]);
                 continue;
             }
@@ -645,8 +661,8 @@ function processCountry(country) {
 
             for (const school of schoolList) {
                 // Check if we already have a school at this location
-                const existingLocation = distinctLocations.find(existing =>
-                    isSameLocation(existing, school)
+                const existingLocation = distinctLocations.find((existing) =>
+                    isSameLocation(existing, school),
                 );
 
                 if (!existingLocation) {
@@ -665,7 +681,9 @@ function processCountry(country) {
                         existingLocation.location = school.location;
                     }
                     // Mark as merged entry
-                    existingLocation.sources = existingLocation.sources || [existingLocation.source];
+                    existingLocation.sources = existingLocation.sources || [
+                        existingLocation.source,
+                    ];
                     if (!existingLocation.sources.includes(school.source)) {
                         existingLocation.sources.push(school.source);
                     }
@@ -682,20 +700,20 @@ function processCountry(country) {
 
         console.log({
             all: schools.all.length,
-            distinct: schools_distinct.length
+            distinct: schools_distinct.length,
         });
 
-        for(let school of schools_distinct) {
+        for (let school of schools_distinct) {
             //college
-            if(school.type === 'university' || school.educationLevel === 'college') {
+            if (school.type === 'university' || school.educationLevel === 'college') {
                 school.is_college = true;
             }
             //hs
-            else if(school.educationLevel === 'high_school') {
+            else if (school.educationLevel === 'high_school') {
                 school.is_high_school = true;
             }
             //middle
-            else if(school.educationLevel === 'middle_school') {
+            else if (school.educationLevel === 'middle_school') {
                 school.is_grade_school = true;
             }
 
@@ -712,12 +730,12 @@ function processCountry(country) {
                 is_college: school.is_college,
                 created: timeNow(),
                 updated: timeNow(),
-            })
+            });
         }
 
         try {
-             await dbService.batchInsert('schools', batch_insert);
-        } catch(e) {
+            await dbService.batchInsert('schools', batch_insert);
+        } catch (e) {
             console.error(e);
         }
 
@@ -738,26 +756,23 @@ function processSchools() {
 
             countries = await conn('open_countries');
 
-            if(typeof ids !== 'undefined' && ids.length) {
-                await conn('schools')
-                    .whereIn('country_id', ids)
-                    .delete();
+            if (typeof ids !== 'undefined' && ids.length) {
+                await conn('schools').whereIn('country_id', ids).delete();
 
-                countries = await conn('open_countries')
-                    .whereIn('id', ids);
+                countries = await conn('open_countries').whereIn('id', ids);
             } else {
-                countries = await conn('open_countries')
+                countries = await conn('open_countries');
             }
 
-            for(let c of countries) {
+            for (let c of countries) {
                 countries_dict[c.country_name] = c;
             }
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
 
         try {
-            for(let country of countries) {
+            for (let country of countries) {
                 console.log({
                     id: country.id,
                     name: country.country_name,
@@ -765,11 +780,11 @@ function processSchools() {
 
                 try {
                     await processCountry(country);
-                } catch(e) {
+                } catch (e) {
                     console.error(e);
                 }
             }
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
 
@@ -781,7 +796,7 @@ function main() {
     return new Promise(async (resolve, reject) => {
         try {
             await processSchools();
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
 
@@ -790,7 +805,7 @@ function main() {
 }
 
 module.exports = {
-    main
+    main,
 };
 
 if (require.main === module) {

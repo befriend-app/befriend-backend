@@ -5,7 +5,7 @@
 
 let tn = 'persons_schools';
 
-exports.up = async function(knex) {
+exports.up = async function (knex) {
     return knex.schema.alterTable(tn, (table) => {
         table.integer('year_from').nullable().alter();
         table.string('year_to').nullable().alter();
