@@ -21,7 +21,7 @@ module.exports = {
             try {
                 let me = await getPerson(person_token);
 
-                let sections = await getMeSections(me);
+                let sections = await getMeSections(me, req.query.location);
 
                 res.json({
                     me,
@@ -38,7 +38,7 @@ module.exports = {
     addMeSection: function (req, res) {
         return new Promise(async (resolve, reject) => {
             try {
-                let data = await addMeSection(req.body.person_token, req.body.key);
+                let data = await addMeSection(req.body.person_token, req.body.key, req.body.location);
 
                 res.json(data, 201);
 

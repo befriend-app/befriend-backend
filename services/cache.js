@@ -7,6 +7,7 @@ module.exports = {
         ws: 'ws:messages',
         activity_types: `activity_types`,
         activity_type_default: `activity_type:default`,
+        countries: `countries`,
         cities_population: `cities:by_population`,
         me_sections: `sections:me`,
         instruments: `instruments`,
@@ -89,6 +90,12 @@ module.exports = {
         instruments_prefix: function (prefix) {
             return `instruments:prefix:${prefix}`;
         },
+        school: function (school_id_or_token) {
+            return `school:${school_id_or_token}`;
+        },
+        schools_country_prefix: function (code, prefix) {
+            return `schools:country:${code}:${prefix}`;
+        }
     },
     init: function () {
         return new Promise(async (resolve, reject) => {

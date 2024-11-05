@@ -1,4 +1,5 @@
 const axios = require('axios');
+const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 const fs = require('fs');
 const dayjs = require('dayjs');
@@ -406,6 +407,31 @@ function getCoordsFromPointDistance(lat, lon, distance_miles_or_km, direction) {
         lat: newLat,
         lon: newLon,
     };
+}
+
+function getCountries() {
+    return new Promise(async (resolve, reject) => {
+        try {
+             let cache_key = cacheService.keys.countries;
+
+             let data = await cacheService.getObj(cache_key);
+
+             if(data) {
+                 return resolve(data);
+             }
+
+             let conn = await dbService.conn();
+
+             data = await conn('open_countries')
+                 .orderBy('country_name', 'asc');
+
+             await cacheService.setCache(cache_key, data);
+
+             resolve(data);
+        } catch(e) {
+            console.error(e);
+        }
+    });
 }
 
 function getDateDiff(date_1, date_2, unit) {
@@ -1081,6 +1107,7 @@ module.exports = {
     getCleanDomain: getCleanDomain,
     getCoordsBoundBox: getCoordsBoundBox,
     getCoordsFromPointDistance: getCoordsFromPointDistance,
+    getCountries: getCountries,
     getDateDiff: getDateDiff,
     getDateStr: getDateStr,
     getDateTimeStr: getDateTimeStr,

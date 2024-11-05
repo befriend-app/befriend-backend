@@ -1,4 +1,3 @@
-const dbService = require('./db');
 module.exports = {
     max_placeholders: 65536,
     keys: {},
