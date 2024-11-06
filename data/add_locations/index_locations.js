@@ -179,9 +179,15 @@ function indexCountries() {
                     id: country.id,
                     name: country.country_name,
                     code: country.country_code,
+                    emoji: country.emoji,
                     population: country.population ? country.population : '',
                     lat: country.lat,
                     lon: country.lon,
+                    min_lat: country.min_lat,
+                    max_lat: country.max_lat,
+                    min_lon: country.min_lon,
+                    max_lon: country.max_lon,
+                    wiki_code: country.wiki_code,
                 });
             }
 

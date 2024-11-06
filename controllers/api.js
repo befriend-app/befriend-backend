@@ -25,6 +25,7 @@ const { encrypt } = require('../services/encryption');
 const { getPerson } = require('../services/persons');
 const { getCategoriesPlaces, placesAutoComplete, travelTimes } = require('../services/places');
 const { cityAutoComplete } = require('../services/locations');
+const { hGetAll } = require('../services/cache');
 
 module.exports = {
     getNetworks: function (req, res) {
@@ -1619,6 +1620,76 @@ module.exports = {
                 }
 
                 let items = await cacheService.execMulti(pipeline);
+
+                res.json(
+                    {
+                        items: items,
+                    },
+                    200,
+                );
+
+                resolve();
+            } catch (e) {
+                console.error(e);
+                res.json('Autocomplete error', 400);
+                return resolve();
+            }
+        });
+    },
+    autoCompleteSchools: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            let country;
+
+            let search = req.query.search;
+            let filterId = req.query.filterId;
+
+            if (!search || !filterId) {
+                res.json('Invalid search', 400);
+                return resolve();
+            }
+
+            search = normalizeSearch(search);
+
+            //get country obj by id
+            try {
+                 country = await hGetAll(cacheService.keys.country(filterId));
+
+                 if(!country) {
+                     res.json('Country not found', 400);
+                     return resolve();
+                 }
+            } catch(e) {
+                console.error(e);
+                res.json('Country not found', 400);
+                return resolve();
+            }
+
+            let prefix_key = cacheService.keys.schools_country_prefix(country.code, search);
+
+            try {
+                let unique = {};
+
+                let tokens = await cacheService.getSortedSetByScore(prefix_key);
+
+                for (let token of tokens) {
+                    unique[token] = true;
+                }
+
+                let pipeline = await cacheService.conn.multi();
+
+                for (let token in unique) {
+                    pipeline.get(cacheService.keys.school(token));
+                }
+
+                let items = await cacheService.execMulti(pipeline);
+
+                for(let i = 0; i < items.length; i++) {
+                    try {
+                         items[i] = JSON.parse(items[i]);
+                    } catch(e) {
+                        console.error(e);
+                    }
+                }
 
                 res.json(
                     {

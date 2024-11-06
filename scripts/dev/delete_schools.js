@@ -6,6 +6,8 @@ loadScriptEnv();
 
 function main(is_me) {
     return new Promise(async (resolve, reject) => {
+        console.log("Delete: schools");
+
         if (isProdApp()) {
             console.error('App env: [prod]', 'exiting');
             return resolve();
@@ -35,20 +37,20 @@ function main(is_me) {
             let tables = ['persons_schools', 'schools'];
 
             for (let table of tables) {
-                await knex(table).delete();
+                // await knex(table).delete();
             }
 
             let keys = await cacheService.getKeys(`${cacheService.keys.school('')}*`);
 
-            let keys_2 = await cacheService.getKeys(`schools:country:*`);
-
-            keys = keys.concat(keys_2);
+            console.log({
+                delete: keys.length
+            });
 
             await cacheService.deleteKeys(keys);
         }
 
         if (is_me) {
-            await require('../../data/me_sections/add_schools').main();
+            // await require('../../data/me_sections/add_schools').main();
 
             process.exit();
         }

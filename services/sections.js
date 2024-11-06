@@ -833,7 +833,9 @@ function getSchools() {
             let countries = await getCountries();
 
             countries.map((country) => {
-                country.name = country.country_name;
+                if(country.country_name && !country.name) {
+                    country.name = country.country_name;
+                }
             });
 
             data.autoComplete.filterList = countries || [];

@@ -53,7 +53,7 @@ module.exports = {
         },
         person: function (person_token_or_email) {
             if (!person_token_or_email) {
-                throw new Error('No person_token or email provided');
+                person_token_or_email = '';
             }
 
             person_token_or_email = person_token_or_email.toLowerCase();
@@ -62,7 +62,7 @@ module.exports = {
         },
         person_login_tokens: function (person_token) {
             if (!person_token) {
-                throw new Error('No person_token provided');
+                person_token = '';
             }
 
             person_token = person_token.toLowerCase();
@@ -82,7 +82,7 @@ module.exports = {
             return `persons:sections:${person_token}`;
         },
         person_sections_data: function (person_token, data_name) {
-            return `persons:sections:${data_name}:${person_token}`;
+            return `persons:sections:data:${data_name}:${person_token}`;
         },
         instrument: function (token) {
             return `instruments:${token}`;
@@ -199,6 +199,30 @@ module.exports = {
             }
         });
     },
+    hGetAll: function(key) {
+        return new Promise(async (resolve, reject) => {
+            //init conn in case first time
+            if (!module.exports.conn) {
+                try {
+                    await module.exports.init();
+                } catch (e) {
+                    return reject(e);
+                }
+            }
+
+            try {
+                let data = await module.exports.conn.hGetAll(key);
+
+                try {
+                    return resolve(data);
+                } catch (e) {
+                    return resolve(null);
+                }
+            } catch (e) {
+                return reject(e);
+            }
+        });
+    },
     setCache: function (key, data, cache_lifetime = null) {
         return new Promise(async (resolve, reject) => {
             //in case conn not initiated
@@ -243,14 +267,17 @@ module.exports = {
 
         return new_key.replace(/ /g, '-');
     },
-    deleteKeys: function (keys) {
+    deleteKeys: function (keys, batchSize = 1000000) {
         return new Promise(async (resolve, reject) => {
             if (!keys || !keys.length) {
                 return resolve();
             }
 
             try {
-                await module.exports.conn.del(keys);
+                for (let i = 0; i < keys.length; i += batchSize) {
+                    const batch = keys.slice(i, i + batchSize);
+                    await module.exports.conn.del(batch);
+                }
                 return resolve();
             } catch (e) {
                 console.error(e);

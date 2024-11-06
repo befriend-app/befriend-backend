@@ -101,4 +101,16 @@ router.get('/autocomplete/instruments', function (req, res, next) {
     });
 });
 
+router.get('/autocomplete/schools', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await apiController.autoCompleteSchools(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
 module.exports = router;

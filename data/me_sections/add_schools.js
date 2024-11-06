@@ -43,8 +43,6 @@ const WIKIDATA_API = 'https://query.wikidata.org/sparql';
 let countries_dict = {};
 
 const usStates = {
-    // "Illinois": "Q1204",
-
     Alabama: 'Q173',
     Alaska: 'Q797',
     Arizona: 'Q816',
@@ -752,7 +750,7 @@ function processSchools() {
 
             // redo
             //indonesia, india
-            let ids = [4370];
+            // let ids = [4370];
 
             countries = await conn('open_countries');
 

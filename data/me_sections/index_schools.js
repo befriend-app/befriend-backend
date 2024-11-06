@@ -81,7 +81,7 @@ function indexSchools() {
 
                     pipeline.zAdd(cacheService.keys.schools_country_prefix(country_code, prefix), [
                         {
-                            value: school.id.toString(),
+                            value: school.token,
                             score: priority,
                         },
                     ]);
@@ -98,7 +98,7 @@ function indexSchools() {
                             cacheService.keys.schools_country_prefix(country_code, prefix),
                             [
                                 {
-                                    value: school.id.toString(),
+                                    value: school.token,
                                     score: priority,
                                 },
                             ],

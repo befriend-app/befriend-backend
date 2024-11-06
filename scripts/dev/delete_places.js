@@ -6,6 +6,8 @@ loadScriptEnv();
 
 function main(is_me) {
     return new Promise(async (resolve, reject) => {
+        console.log('Delete: places');
+
         if (isProdApp()) {
             console.error('App env: [prod]', 'exiting');
             return resolve();

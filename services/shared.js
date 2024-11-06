@@ -160,7 +160,12 @@ function latLonLookup(lat, lon) {
                         );
 
                         if (isInside) {
-                            return resolve(country);
+                            return resolve({
+                                id: country.id,
+                                emoji: country.emoji,
+                                name: country.country_name,
+                                code: country.country_code,
+                            });
                         }
                     }
                 }
