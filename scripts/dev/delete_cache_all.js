@@ -25,6 +25,10 @@ function main(is_me) {
                     cache_key = cache_key.split('::')[0] + ':';
                 }
 
+                console.log({
+                    deleting_key: cache_key
+                });
+
                 const key_keys = await getKeys(cache_key + '*');
 
                 await cacheService.deleteKeys(key_keys);

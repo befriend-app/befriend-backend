@@ -1,4 +1,3 @@
-const cacheService = require('../../services/cache');
 const { loadScriptEnv, isProdApp } = require('../../services/shared');
 
 loadScriptEnv();
