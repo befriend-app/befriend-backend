@@ -5,12 +5,12 @@ loadScriptEnv();
 
 function main(is_me) {
     return new Promise(async (resolve, reject) => {
+        console.log('Delete: all');
+
         if (isProdApp()) {
             console.error('App env: [prod]', 'exiting');
             process.exit();
         }
-
-        console.log('Delete: all');
 
         let scripts = [
             'delete_me_all',
