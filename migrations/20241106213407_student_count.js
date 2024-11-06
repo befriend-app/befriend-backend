@@ -6,6 +6,8 @@ exports.up = async function (knex) {
 
     return knex.schema.alterTable('schools', (table) => {
         table.integer('student_count').nullable().after('country_id');
+        table.string('source').notNullable().after('name');
+
     });
 };
 
@@ -15,6 +17,7 @@ exports.up = async function (knex) {
  */
 exports.down = function (knex) {
     return knex.schema.alterTable('schools', (table) => {
-        table.dropForeign('student_count');
+        table.dropColumn('student_count');
+        table.dropColumn('source');
     });
 };
