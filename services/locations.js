@@ -2,7 +2,7 @@ const cacheService = require('../services/cache');
 const dbService = require('./db');
 const { getDistanceMeters, normalizeSearch, latLonLookup } = require('./shared');
 
-const LIMIT = 10;
+const LIMIT = 20;
 const MIN_COUNTRY_CHARS = 1;
 
 const countries = {
@@ -200,8 +200,8 @@ function calculateCityScore(city, userLat, userLon, maxDistance, locationCountry
     // Is user location country
     if (city.country && locationCountry) {
         if (
-            locationCountry.country_a2.startsWith(city.country.code) ||
-            locationCountry.country_a3.startsWith(city.country.code)
+            locationCountry.code.startsWith(city.country.code) ||
+            locationCountry.code.startsWith(city.country.code)
         ) {
             city.is_user_country = true;
         }

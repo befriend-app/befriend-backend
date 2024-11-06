@@ -35,6 +35,10 @@ function main(is_me) {
             }
         }
 
+        let remaining_keys = await getKeys('*');
+
+        await cacheService.deleteKeys(remaining_keys);
+
         process.exit();
     });
 }
