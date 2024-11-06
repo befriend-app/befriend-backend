@@ -31,7 +31,7 @@ let geoLookup = {
     gridSize: 10,
     grid: null,
     countries: null,
-    buildIndex: function() {
+    buildIndex: function () {
         this.grid = new Map();
 
         for (let country of geoLookup.countries) {
@@ -53,7 +53,7 @@ let geoLookup = {
                 }
             }
         }
-    }
+    },
 };
 
 function checkSinglePolygon(lat, lon, polygonCoords) {
@@ -71,8 +71,10 @@ function checkSinglePolygon(lat, lon, polygonCoords) {
         const lat2 = ring[j][1];
 
         // Check if point crosses the ray
-        if (((lat1 > lat) !== (lat2 > lat)) &&
-            (lon < (lon2 - lon1) * (lat - lat1) / (lat2 - lat1) + lon1)) {
+        if (
+            lat1 > lat !== lat2 > lat &&
+            lon < ((lon2 - lon1) * (lat - lat1)) / (lat2 - lat1) + lon1
+        ) {
             inside = !inside;
         }
     }
@@ -85,7 +87,7 @@ function pointInPolygon(lat, lon, coordinates) {
 
     if (Array.isArray(coordinates[0][0][0])) {
         // Check each polygon in the MultiPolygon
-        return coordinates.some(polygon => checkSinglePolygon(lat, lon, polygon));
+        return coordinates.some((polygon) => checkSinglePolygon(lat, lon, polygon));
     }
 
     return checkSinglePolygon(lat, lon, coordinates);
@@ -112,18 +114,22 @@ function latLonLookup(lat, lon) {
         }
 
         //initialize geo lookup
-        if(!geoLookup.countries) {
+        if (!geoLookup.countries) {
             try {
                 geoLookup.countries = await getCountries();
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
             }
 
             //add polygon data for each country
-            for(let c of geoLookup.countries) {
-                let data_path = joinPaths(getRepoRoot(), 'node_modules/geojson-places/data/countries', `${c.country_code}.json`);
+            for (let c of geoLookup.countries) {
+                let data_path = joinPaths(
+                    getRepoRoot(),
+                    'node_modules/geojson-places/data/countries',
+                    `${c.country_code}.json`,
+                );
 
-                if(await pathExists(data_path)) {
+                if (await pathExists(data_path)) {
                     let country_feature = require(data_path);
 
                     c.coordinates = country_feature.geometry.coordinates;
@@ -131,7 +137,7 @@ function latLonLookup(lat, lon) {
             }
         }
 
-        if(!geoLookup.grid) {
+        if (!geoLookup.grid) {
             geoLookup.buildIndex();
         }
 
@@ -149,15 +155,14 @@ function latLonLookup(lat, lon) {
         if (geoLookup.grid.has(cellKey)) {
             for (const country of geoLookup.grid.get(cellKey)) {
                 // quick bounding box check
-                if (lat >= country.min_lat && lat <= country.max_lat &&
-                    lon >= country.min_lon && lon <= country.max_lon) {
-
+                if (
+                    lat >= country.min_lat &&
+                    lat <= country.max_lat &&
+                    lon >= country.min_lon &&
+                    lon <= country.max_lon
+                ) {
                     if (country.coordinates) {
-                        const isInside = pointInPolygon(
-                            lat,
-                            lon,
-                            country.coordinates
-                        );
+                        const isInside = pointInPolygon(lat, lon, country.coordinates);
 
                         if (isInside) {
                             return resolve({
@@ -1029,13 +1034,13 @@ function numberWithCommas(x, to_integer) {
 
 function pathExists(p) {
     return new Promise(async (resolve, reject) => {
-         fs.access(p, fs.constants.F_OK, function(err) {
-            if(err) {
+        fs.access(p, fs.constants.F_OK, function (err) {
+            if (err) {
                 return resolve(false);
             }
 
             return resolve(true);
-         });
+        });
     });
 }
 

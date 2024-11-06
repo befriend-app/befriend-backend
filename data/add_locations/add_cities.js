@@ -200,7 +200,7 @@ function main() {
 
                         try {
                             city = JSON.parse(line);
-                        } catch(e) {
+                        } catch (e) {
                             console.error(e);
                             continue;
                         }

@@ -3,11 +3,9 @@
  * @returns { Promise<void> }
  */
 exports.up = async function (knex) {
-
     return knex.schema.alterTable('schools', (table) => {
         table.integer('student_count').nullable().after('country_id');
         table.string('source').notNullable().after('name');
-
     });
 };
 

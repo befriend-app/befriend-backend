@@ -37,7 +37,7 @@ const countries = {
         minLat: -14.38,
         maxLat: -14.13,
         minLon: -170.85,
-        maxLon: -169.42
+        maxLon: -169.42,
     },
     Andorra: {
         code: 'Q228',
@@ -177,13 +177,13 @@ const countries = {
         maxLon: -87.78,
     },
     Benin: { code: 'Q962', emoji: '🇧🇯', minLat: 6.23, maxLat: 12.42, minLon: 0.77, maxLon: 3.85 },
-    'Bermuda': {
+    Bermuda: {
         code: 'Q23635',
         emoji: '🇧🇲',
         minLat: 32.25,
         maxLat: 32.39,
-        minLon: -64.90,
-        maxLon: -64.65
+        minLon: -64.9,
+        maxLon: -64.65,
     },
     Bhutan: {
         code: 'Q917',
@@ -1381,7 +1381,7 @@ const countries = {
         minLat: 17.878611,
         maxLat: 17.928888,
         minLon: -62.876945,
-        maxLon: -62.792500,
+        maxLon: -62.7925,
     },
     'Saint Helena': {
         code: 'Q34497',

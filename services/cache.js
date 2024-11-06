@@ -199,7 +199,7 @@ module.exports = {
             }
         });
     },
-    hGetAll: function(key) {
+    hGetAll: function (key) {
         return new Promise(async (resolve, reject) => {
             //init conn in case first time
             if (!module.exports.conn) {

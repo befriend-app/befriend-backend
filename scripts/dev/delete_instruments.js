@@ -6,7 +6,7 @@ loadScriptEnv();
 
 function main(is_me) {
     return new Promise(async (resolve, reject) => {
-        console.log("Delete: instruments");
+        console.log('Delete: instruments');
 
         if (isProdApp()) {
             console.error('App env: [prod]', 'exiting');

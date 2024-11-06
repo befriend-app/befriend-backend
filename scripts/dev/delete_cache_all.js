@@ -17,16 +17,16 @@ function main(is_me) {
 
         let keys = cacheService.keys;
 
-        for(let key in keys) {
-            if(typeof keys[key] === 'function') {
+        for (let key in keys) {
+            if (typeof keys[key] === 'function') {
                 let cache_key = keys[key]('', '');
 
-                if(cache_key.includes('::')) {
+                if (cache_key.includes('::')) {
                     cache_key = cache_key.split('::')[0] + ':';
                 }
 
                 console.log({
-                    deleting_key: cache_key
+                    deleting_key: cache_key,
                 });
 
                 const key_keys = await getKeys(cache_key + '*');

@@ -833,7 +833,7 @@ function getSchools() {
             let countries = await getCountries();
 
             countries.map((country) => {
-                if(country.country_name && !country.name) {
+                if (country.country_name && !country.name) {
                     country.name = country.country_name;
                 }
             });

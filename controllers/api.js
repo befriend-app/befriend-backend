@@ -1652,13 +1652,13 @@ module.exports = {
 
             //get country obj by id
             try {
-                 country = await hGetAll(cacheService.keys.country(filterId));
+                country = await hGetAll(cacheService.keys.country(filterId));
 
-                 if(!country) {
-                     res.json('Country not found', 400);
-                     return resolve();
-                 }
-            } catch(e) {
+                if (!country) {
+                    res.json('Country not found', 400);
+                    return resolve();
+                }
+            } catch (e) {
                 console.error(e);
                 res.json('Country not found', 400);
                 return resolve();
@@ -1683,10 +1683,10 @@ module.exports = {
 
                 let items = await cacheService.execMulti(pipeline);
 
-                for(let i = 0; i < items.length; i++) {
+                for (let i = 0; i < items.length; i++) {
                     try {
-                         items[i] = JSON.parse(items[i]);
-                    } catch(e) {
+                        items[i] = JSON.parse(items[i]);
+                    } catch (e) {
                         console.error(e);
                     }
                 }

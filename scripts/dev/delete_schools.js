@@ -6,7 +6,7 @@ loadScriptEnv();
 
 function main(is_me) {
     return new Promise(async (resolve, reject) => {
-        console.log("Delete: schools");
+        console.log('Delete: schools');
 
         if (isProdApp()) {
             console.error('App env: [prod]', 'exiting');
@@ -43,7 +43,7 @@ function main(is_me) {
             let keys = await cacheService.getKeys(`${cacheService.keys.school('')}*`);
 
             console.log({
-                delete: keys.length
+                delete: keys.length,
             });
 
             await cacheService.deleteKeys(keys);
