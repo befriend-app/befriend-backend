@@ -45,17 +45,6 @@ function indexCities() {
                     lon: city.lon,
                 });
 
-                try {
-                    pipeline.zAdd(cacheService.keys.cities_population, [
-                        {
-                            value: city.id.toString(),
-                            score: city.population,
-                        },
-                    ]);
-                } catch (e) {
-                    console.error(e);
-                }
-
                 //add to country set
                 let country_code = countries_dict[city.country_id].country_code;
 

@@ -196,7 +196,14 @@ function main() {
                     let batch_insert = [];
 
                     for (let line of lines) {
-                        let city = JSON.parse(line);
+                        let city;
+
+                        try {
+                            city = JSON.parse(line);
+                        } catch(e) {
+                            console.error(e);
+                            continue;
+                        }
 
                         if (!city.name) {
                             continue;

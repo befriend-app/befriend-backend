@@ -70,8 +70,6 @@ function main() {
                     });
                 }
             }
-
-            resolve();
         } catch (e) {
             console.error(e);
         }
