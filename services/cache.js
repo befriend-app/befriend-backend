@@ -8,7 +8,6 @@ module.exports = {
         activity_types: `activity_types`,
         activity_type_default: `activity_type:default`,
         countries: `countries`,
-        cities_population: `cities:by_population`,
         me_sections: `sections:me`,
         instruments: `instruments`,
         instruments_common: `instruments:common`,

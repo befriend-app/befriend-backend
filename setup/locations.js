@@ -1,7 +1,7 @@
 const axios = require('axios');
-const { loadScriptEnv, timeNow, dataEndpoint } = require('../../services/shared');
-const dbService = require('../../services/db');
-const cacheService = require('../../services/cache');
+const { loadScriptEnv, timeNow, dataEndpoint } = require('../services/shared');
+const dbService = require('../services/db');
+const cacheService = require('../services/cache');
 
 loadScriptEnv();
 
@@ -115,8 +115,6 @@ async function syncStates() {
 
             let r = await axios.get(endpoint);
 
-            let update_cache = false;
-
             for(let item of r.data.items) {
                 if(!(item.country_code in db_dict_states)) {
                     db_dict_states[item.country_code] = {};
@@ -125,7 +123,6 @@ async function syncStates() {
                 let db_item = db_dict_states[item.country_code][item.state_name];
 
                 if(!db_item) {
-                    update_cache = true;
                     let new_item = structuredClone(item);
 
                     delete new_item.country_code;
@@ -146,8 +143,6 @@ async function syncStates() {
                     if(item.updated > db_item.updated) {
                         delete item.country_code;
 
-                        update_cache = true;
-
                         let update_obj = {};
 
                         for(let k in item) {
@@ -167,10 +162,6 @@ async function syncStates() {
                         }
                     }
                 }
-            }
-
-            if(update_cache) {
-                await cacheService.deleteKeys(cacheService.keys.states);
             }
 
             console.log({
@@ -195,14 +186,14 @@ async function syncCities() {
         let batch_insert = [];
         let batch_update = [];
         const BATCH_SIZE = 10000;
+        const sync_name = 'sync_open_locations';
 
         try {
             let conn = await dbService.conn();
 
             // Last sync time
             let last_sync = await conn('sync')
-                .where('sync_process', 'sync_open_locations')
-                .select('last_updated')
+                .where('sync_process', sync_name)
                 .first();
 
             // Countries lookup
@@ -239,6 +230,7 @@ async function syncCities() {
 
             let offset = 0;
             let hasMore = true;
+            let saveTimestamp = null;
 
             while(hasMore) {
                 let endpoint = dataEndpoint(`/cities?offset=${offset}`);
@@ -250,13 +242,16 @@ async function syncCities() {
                 console.log(`Fetching cities with offset ${offset}`);
 
                 let r = await axios.get(endpoint);
-                let {items, next_offset, has_more} = r.data;
+
+                let {items, next_offset, has_more, timestamp} = r.data;
+
+                if(!has_more) {
+                    saveTimestamp = timestamp;
+                }
 
                 if(!items.length) {
                     break;
                 }
-
-                let update_cache = false;
 
                 for(let item of items) {
                     // Get country and state IDs from lookup dictionaries
@@ -278,7 +273,6 @@ async function syncCities() {
                         db_dict_cities[country.id]?.['null']?.[lookup_key];
 
                     if(!db_item) {
-                        update_cache = true;
                         let new_item = {
                             country_id: country.id,
                             state_id: state?.id || null,
@@ -312,8 +306,6 @@ async function syncCities() {
                             batch_insert = [];
                         }
                     } else if(item.updated > db_item.updated) {
-                        update_cache = true;
-
                         let update_obj = {
                             id: db_item.id,
                             country_id: country.id,
@@ -349,10 +341,6 @@ async function syncCities() {
                     }
                 }
 
-                if(update_cache) {
-                    await cacheService.deleteKeys(cacheService.keys.cities);
-                }
-
                 // Process any remaining batch items
                 if(batch_insert.length) {
                     await dbService.batchInsert('open_cities', batch_insert);
@@ -385,11 +373,22 @@ async function syncCities() {
             }
 
             // Update sync table with last sync time
-            await conn('sync')
-                .where('sync_process', 'sync_open_locations')
-                .update({
-                    last_updated: timeNow()
-                });
+            if(last_sync) {
+                await conn('sync')
+                    .where('id', last_sync.id)
+                    .update({
+                        last_updated: timeNow(),
+                        updated: timeNow()
+                    });
+            } else {
+                await conn('sync')
+                    .insert({
+                        sync_process: sync_name,
+                        last_updated: timeNow(),
+                        created: timeNow(),
+                        updated: timeNow()
+                    });
+            }
 
             console.log({
                 added, updated

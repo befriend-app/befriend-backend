@@ -1,7 +1,6 @@
 const axios = require('axios');
 
 const dbService = require('../services/db');
-const genderService = require('../services/genders');
 
 const {
     loadScriptEnv,
