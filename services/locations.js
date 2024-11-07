@@ -1,9 +1,11 @@
 const cacheService = require('../services/cache');
 const dbService = require('./db');
-const { getDistanceMeters, normalizeSearch, latLonLookup } = require('./shared');
+const { getDistanceMeters, normalizeSearch, latLonLookup, timeNow } = require('./shared');
 
 const LIMIT = 20;
 const MIN_COUNTRY_CHARS = 1;
+const MAX_PREFIX_LIMIT = 4;
+const MAX_COUNTRY_PREFIX_LIMIT = 3;
 
 const countries = {
     codes: [],
@@ -124,25 +126,32 @@ function addLocationData(results, dataType) {
     });
 }
 
-function getCityIds(parsed, locationCountry) {
+function getCityCountryIds(parsed, locationCountry) {
     return new Promise(async (resolve, reject) => {
         try {
-            let cityIds = new Set();
+            let citiesCountry = new Set();
 
             if (locationCountry && parsed.city) {
                 let countryPrefixKey = cacheService.keys.city_country_prefix(
-                    locationCountry.country_a2,
-                    parsed.city,
+                    locationCountry.code,
+                    parsed.city.substring(0, MAX_COUNTRY_PREFIX_LIMIT),
                 );
+
                 let countryCityIds = await cacheService.getSortedSet(countryPrefixKey);
-                countryCityIds.forEach((id) => cityIds.add(id));
+
+                for(let id of countryCityIds) {
+                    citiesCountry.add(`${id}:${locationCountry.code}`);
+                }
             }
 
-            let cityKey = cacheService.keys.cities_prefix(parsed.city);
-            let globalCityIds = await cacheService.getSortedSetByScore(cityKey, 1000);
-            globalCityIds.forEach((id) => cityIds.add(id));
+            let cityKey = cacheService.keys.cities_prefix(parsed.city.substring(0, MAX_PREFIX_LIMIT));
+            let globalCities = await cacheService.getSortedSetByScore(cityKey, 1000);
 
-            resolve(Array.from(cityIds));
+            for(let city of globalCities) {
+                citiesCountry.add(city);
+            }
+
+            resolve(Array.from(citiesCountry));
         } catch (e) {
             console.error('Error getting city IDs:', e);
             reject(e);
@@ -150,16 +159,20 @@ function getCityIds(parsed, locationCountry) {
     });
 }
 
-function fetchCityDetails(cityIds) {
+function fetchCityDetails(cityCountryIds) {
     return new Promise(async (resolve, reject) => {
         try {
             let pipeline = cacheService.conn.multi();
 
-            for (let id of cityIds) {
-                pipeline.hGetAll(cacheService.keys.city(id));
+            for (let item of cityCountryIds) {
+                const [cityId, countryCode] = item.split(':');
+                pipeline.hGet(cacheService.keys.cities_country(countryCode), cityId);
             }
 
             let cities = await cacheService.execMulti(pipeline);
+
+            cities = cities.map(c => JSON.parse(c));
+
             resolve(cities);
         } catch (e) {
             console.error('Error fetching city details:', e);
@@ -170,6 +183,11 @@ function fetchCityDetails(cityIds) {
 
 function filterCitiesByParsedCriteria(cities, parsed) {
     return cities.filter(function (result) {
+        //handles limited prefix
+        if(!result.name.toLowerCase().includes(parsed.city)) {
+            return false;
+        }
+
         if (parsed.state && parsed.country) {
             let stateMatches = stateMatch(result.state, parsed.state);
             let countryMatches = countryMatch(result.country, parsed.country);
@@ -187,13 +205,15 @@ function filterCitiesByParsedCriteria(cities, parsed) {
             return true;
         }
     });
+
+    return filtered;
 }
 
 function calculateCityScore(city, userLat, userLon, maxDistance, locationCountry) {
     // Convert types
     city.population = parseInt(city.population);
-    city.lat = parseFloat(city.lat);
-    city.lon = parseFloat(city.lon);
+    city.lat = parseFloat(city.ll[0]);
+    city.lon = parseFloat(city.ll[1]);
 
     city.is_user_country = false;
 
@@ -270,14 +290,14 @@ function cityAutoComplete(search, userLat, userLon, maxDistance) {
             let results_arr = [];
 
             for (let parsed of parsedSearches) {
-                let cityIds = await getCityIds(parsed, locationCountry);
+                let cityCountryIds = await getCityCountryIds(parsed, locationCountry);
 
-                if (!cityIds.length) {
+                if (!cityCountryIds.length) {
                     results_arr.push([]);
                     continue;
                 }
 
-                let cities = await fetchCityDetails(cityIds);
+                let cities = await fetchCityDetails(cityCountryIds);
 
                 await addLocationData(cities, 'state');
                 await addLocationData(cities, 'country');
@@ -319,6 +339,8 @@ function cityAutoComplete(search, userLat, userLon, maxDistance) {
 }
 
 module.exports = {
+    prefixLimit: MAX_PREFIX_LIMIT,
+    countryPrefixLimit: MAX_COUNTRY_PREFIX_LIMIT,
     countries,
     cityAutoComplete,
 };

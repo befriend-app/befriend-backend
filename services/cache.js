@@ -27,7 +27,7 @@ module.exports = {
             return `cities:${id}`;
         },
         cities_country: function (code) {
-            return `cities:country:${code}`;
+            return `cities:countries:${code}`;
         },
         cities_prefix: function (prefix) {
             return `cities:prefix:${prefix}`;

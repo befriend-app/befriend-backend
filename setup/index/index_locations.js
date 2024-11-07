@@ -1,18 +1,18 @@
 const cacheService = require('../../services/cache');
-const dbService = require('../../services/db');
 const { loadScriptEnv } = require('../../services/shared');
+const dbService = require('../../services/db');
 
 loadScriptEnv();
+
+let {prefixLimit, countryPrefixLimit} = require('../../services/locations');
 
 function indexCities() {
     return new Promise(async (resolve, reject) => {
         try {
             let conn = await dbService.conn();
-
-            console.log('Cities');
+            console.log('Index Cities');
 
             let countries = await conn('open_countries');
-
             let countries_dict = {};
 
             countries.map((country) => {
@@ -20,70 +20,59 @@ function indexCities() {
             });
 
             let cities = await conn('open_cities').whereNotNull('population');
-
             let pipeline = cacheService.conn.multi();
 
-            for (let int = 0; int < cities.length; int++) {
-                if (int % 1000 === 0) {
-                    console.log({
-                        loop: int,
-                    });
-                }
+            // Cities by country
+            const citiesByCountry = {};
 
-                let city = cities[int];
-
-                const city_key = cacheService.keys.city(city.id);
-
-                pipeline.hSet(city_key, {
-                    id: city.id,
-                    name: city.city_name,
-                    country_id: city.country_id,
-                    state_id: city.state_id ? city.state_id : '',
-                    population: city.population,
-                    lat: city.lat,
-                    lon: city.lon,
-                });
-
-                //add to country set
+            for (let city of cities) {
                 let country_code = countries_dict[city.country_id].country_code;
 
-                pipeline.zAdd(cacheService.keys.cities_country(country_code), [
-                    {
-                        value: city.id.toString(),
-                        score: city.population,
-                    },
-                ]);
-
-                //from beginning of name to end
-                const nameLower = city.city_name.toLowerCase();
-
-                for (let i = 1; i <= nameLower.length; i++) {
-                    const prefix = nameLower.slice(0, i);
-
-                    pipeline.zAdd(cacheService.keys.cities_prefix(prefix), [
-                        {
-                            value: city.id.toString(),
-                            score: city.population,
-                        },
-                    ]);
+                if (!citiesByCountry[country_code]) {
+                    citiesByCountry[country_code] = {};
                 }
 
-                //split name into words
-                const nameSplit = nameLower.split(' ');
+                citiesByCountry[country_code][city.id] = JSON.stringify({
+                    id: city.id,
+                    name: city.city_name,
+                    state_id: city.state_id || '',
+                    country_id: city.country_id || '',
+                    population: Math.floor(city.population),
+                    ll: [Number(city.lat.toFixed(4)), Number(city.lon.toFixed(4))]
+                });
+            }
 
-                for (let word of nameSplit) {
-                    for (let i = 1; i <= word.length; i++) {
+            for (const [countryCode, cities] of Object.entries(citiesByCountry)) {
+                pipeline.hSet(cacheService.keys.cities_country(countryCode), cities);
+            }
+
+            // Create word prefix groups
+            const prefixGroups = {};
+
+            for (let city of cities) {
+                const words = city.city_name.toLowerCase().split(/\s+/);
+
+                // Index each word
+                for (let word of words) {
+                    // Skip very short words
+                    if (word.length < 2) continue;
+
+                    for (let i = 1; i <= Math.min(word.length, prefixLimit); i++) {
                         const prefix = word.slice(0, i);
+                        
+                        if (!prefixGroups[prefix]) {
+                            prefixGroups[prefix] = [];
+                        }
 
-                        pipeline.zAdd(cacheService.keys.cities_prefix(prefix), [
-                            {
-                                value: city.id.toString(),
-                                score: city.population,
-                            },
-                        ]);
+                        let country_code = countries_dict[city.country_id].country_code;
+
+                        prefixGroups[prefix].push({
+                            score: Math.floor(city.population),
+                            value: `${city.id}:${country_code}`
+                        });
 
                         //add to country prefix for small number of characters
-                        if (i < 4) {
+                        if (prefix.length <= countryPrefixLimit) {
                             pipeline.zAdd(
                                 cacheService.keys.city_country_prefix(country_code, prefix),
                                 [
@@ -97,19 +86,40 @@ function indexCities() {
                     }
                 }
 
-                if (int % 5000 === 0) {
-                    await pipeline.execAsPipeline();
+                // Also index start of full name for direct matches
+                const nameLower = city.city_name.toLowerCase();
+                
+                for (let i = 1; i <= Math.min(nameLower.length, prefixLimit); i++) {
+                    const prefix = nameLower.slice(0, i);
+                    
+                    if (!prefixGroups[prefix]) {
+                        prefixGroups[prefix] = [];
+                    }
 
-                    pipeline = cacheService.conn.multi();
+                    let country_code = countries_dict[city.country_id].country_code;
+
+                    prefixGroups[prefix].push({
+                        score: Math.floor(city.population),
+                        value: `${city.id}:${country_code}`
+                    });
                 }
             }
 
+            console.log("Add prefix groups");
+            
+            for (const [prefix, cities] of Object.entries(prefixGroups)) {
+                if (cities.length > 0) {
+                    pipeline.zAdd(cacheService.keys.cities_prefix(prefix), cities);
+                }
+            }
+
+            console.log("Exec pipeline");
             await pipeline.execAsPipeline();
+
         } catch (e) {
             console.error(e);
             return reject();
         }
-
         resolve();
     });
 }
@@ -117,7 +127,7 @@ function indexCities() {
 function indexStates() {
     return new Promise(async (resolve, reject) => {
         try {
-            console.log('States');
+            console.log('Index States');
 
             let conn = await dbService.conn();
 
@@ -152,7 +162,7 @@ function indexStates() {
 function indexCountries() {
     return new Promise(async (resolve, reject) => {
         try {
-            console.log('Countries');
+            console.log('Index Countries');
 
             let conn = await dbService.conn();
 
@@ -189,35 +199,56 @@ function indexCountries() {
     });
 }
 
-function main() {
-    return new Promise(async (resolve, reject) => {
+async function searchCities(query, limit = 10) {
+    const searchTerm = query.toLowerCase();
+    const results = new Set();
+
+    try {
+        let query_prefix = searchTerm.substring(0, prefixLimit);
+        
+        const matches = await cacheService.getSortedSetByScore(cacheService.keys.cities_prefix(query_prefix));
+
+        for (const match of matches) {
+            const [cityId, countryCode] = match.split(':');
+
+            // Get city data
+            const cityData = await cacheService.conn.hGet(`cities:countries:${countryCode}`, cityId);
+
+            if (cityData) {
+                results.add(cityData);
+            }
+
+            if (results.size >= limit) break;
+        }
+
+        return Array.from(results).map(r => JSON.parse(r));
+    } catch (e) {
+        console.error('Search error:', e);
+        return [];
+    }
+}
+
+module.exports = {
+    main: async function(is_me) {
         try {
             console.log('Indexing Locations');
 
             await cacheService.init();
-
-            await indexCities();
-            await indexStates();
             await indexCountries();
+            await indexStates();
+            await indexCities();
+
+            if(is_me) {
+                process.exit();
+            }
         } catch (e) {
             console.error(e);
         }
-
-        resolve();
-    });
-}
-
-module.exports = {
-    main: main,
+    },
 };
 
 if (require.main === module) {
-    (async function () {
-        try {
-            await main();
-            process.exit();
-        } catch (e) {
-            console.error(e);
-        }
+    (async function() {
+        await module.exports.main(true);
     })();
 }
