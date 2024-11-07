@@ -8,7 +8,7 @@ loadScriptEnv();
 let db_dict_activities = {};
 let db_dict_venues = {};
 
-function activityTypes() {
+function syncActivityTypes() {
     return new Promise(async (resolve, reject) => {
         console.log("Add activity types");
 
@@ -107,7 +107,7 @@ function activityTypes() {
     });
 }
 
-function venueCategories() {
+function syncVenueCategories() {
     return new Promise(async (resolve, reject) => {
         console.log('Add venue categories');
 
@@ -194,7 +194,7 @@ function venueCategories() {
     });
 }
 
-function activitiesVenues() {
+function syncActivitiesVenues() {
     return new Promise(async (resolve, reject) => {
         console.log("Add activity-venue-categories");
 
@@ -299,9 +299,9 @@ function main() {
         try {
             await cacheService.init();
 
-            await activityTypes();
-            await venueCategories();
-            await activitiesVenues();
+            await syncActivityTypes();
+            await syncVenueCategories();
+            await syncActivitiesVenues();
         } catch (e) {
             console.error(e);
         }
