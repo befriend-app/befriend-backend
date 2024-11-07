@@ -73,18 +73,15 @@ function main(is_me) {
         }
 
         //delete cache
-        let keys = await cacheService.getKeys(`${cacheService.keys.activity_type('')}*`);
+        await cacheService.deleteKeys(cacheService.keys.activity_types);
 
-        keys.push(cacheService.keys.activity_types);
-
-        await cache.deleteKeys(keys);
 
         if (is_me) {
-            try {
-                await require('../../data/add_activity_types_venues').main();
-            } catch (e) {
-                console.error(e);
-            }
+            // try {
+            //     await require('../../data/add_activity_types_venues').main();
+            // } catch (e) {
+            //     console.error(e);
+            // }
 
             process.exit();
         }

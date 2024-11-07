@@ -1,7 +1,6 @@
-const axios = require('axios');
-const { loadScriptEnv } = require('../../services/shared');
 const cacheService = require('../../services/cache');
 const dbService = require('../../services/db');
+const { loadScriptEnv } = require('../../services/shared');
 
 loadScriptEnv();
 

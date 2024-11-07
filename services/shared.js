@@ -15,6 +15,8 @@ dayjs.extend(timezone);
 
 global.serverTimezoneString = process.env.TZ || 'America/Chicago';
 
+const data_api_url = 'https://data.befriend.app';
+
 const earth_radius_km = 6371;
 const earth_radius_miles = 3958.762079;
 const meters_to_miles = 0.000621371192;
@@ -274,6 +276,10 @@ function confirmDecryptedRegistrationNetworkToken(encrypted_message) {
             return reject('Error decrypting message');
         }
     });
+}
+
+function dataEndpoint(route) {
+    return joinPaths(process.env.DATA_API_DOMAIN || data_api_url, route);
 }
 
 function dateTimeNow(date) {
@@ -1253,6 +1259,7 @@ module.exports = {
     confirmDecryptedNetworkToken: confirmDecryptedNetworkToken,
     confirmDecryptedRegistrationNetworkToken: confirmDecryptedRegistrationNetworkToken,
     cloneObj: cloneObj,
+    dataEndpoint: dataEndpoint,
     dateTimeNow: dateTimeNow,
     downloadURL: downloadURL,
     encodePassword: encodePassword,

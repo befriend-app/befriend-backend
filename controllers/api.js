@@ -1227,22 +1227,6 @@ module.exports = {
                     }
                 }
 
-                //add venues to each category/subcategory
-
-                // let qry = await conn('activity_type_venues AS atv')
-                //     .join('activity_types AS at', 'at.id', '=', 'atv.activity_type_id')
-                //     .join('venues_categories AS vc', 'vc.id', '=', 'atv.venue_category_id')
-                //     .where('at.is_visible', true)
-                //     .orderBy('at.sort_position')
-                //     .orderBy('atv.sort_position')
-                //     .select('at.*', 'at.id AS at_id', 'vc.category_name', 'fsq_id', 'vc.category_token');
-                //
-                // for(let item of qry) {
-                //     let activity = getActivity(item);
-                //
-                //     activity.categories.push(item.fsq_id);
-                // }
-
                 await cacheService.setCache(cache_key, data_organized);
 
                 res.json(data_organized);
