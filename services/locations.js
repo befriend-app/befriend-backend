@@ -205,8 +205,6 @@ function filterCitiesByParsedCriteria(cities, parsed) {
             return true;
         }
     });
-
-    return filtered;
 }
 
 function calculateCityScore(city, userLat, userLon, maxDistance, locationCountry) {
