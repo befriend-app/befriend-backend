@@ -50,7 +50,7 @@ function main(is_me) {
         }
 
         if (is_me) {
-            await require('../../data/me_sections/add_instruments').main();
+            await require('../../setup/me/instruments').main();
 
             process.exit();
         }
