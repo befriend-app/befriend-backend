@@ -1,4 +1,4 @@
-const { loadScriptEnv, isProdApp } = require('../../services/shared');
+const { loadScriptEnv, isProdApp } = require('../services/shared');
 
 loadScriptEnv();
 

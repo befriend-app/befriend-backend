@@ -1,6 +1,6 @@
-const db = require('../../services/db');
-const cache = require('../../services/cache');
-const { loadScriptEnv, isProdApp } = require('../../services/shared');
+const db = require('../services/db');
+const cache = require('../services/cache');
+const { loadScriptEnv, isProdApp } = require('../services/shared');
 
 loadScriptEnv();
 
@@ -70,8 +70,6 @@ function main(is_me) {
             }
 
             await cache.deleteKeys([cache.keys.countries]);
-
-
         }
 
         if (is_me) {

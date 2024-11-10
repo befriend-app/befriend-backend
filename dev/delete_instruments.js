@@ -1,12 +1,12 @@
-const cacheService = require('../../services/cache');
-const db = require('../../services/db');
-const { loadScriptEnv, isProdApp } = require('../../services/shared');
+const cacheService = require('../services/cache');
+const db = require('../services/db');
+const { loadScriptEnv, isProdApp } = require('../services/shared');
 
 loadScriptEnv();
 
 function main(is_me) {
     return new Promise(async (resolve, reject) => {
-        console.log('Delete: movies');
+        console.log('Delete: instruments');
 
         if (isProdApp()) {
             console.error('App env: [prod]', 'exiting');
@@ -34,23 +34,23 @@ function main(is_me) {
                 connection: connection,
             });
 
-            let tables = ['persons_movies', 'movies'];
+            let tables = ['persons_instruments', 'instruments'];
 
             for (let table of tables) {
                 await knex(table).delete();
             }
 
-            let keys = await cacheService.getKeys(`${cacheService.keys.movie('')}*`);
+            let keys = await cacheService.getKeys(cacheService.keys.instrument('') + '*');
 
-            let keys_2 = await cacheService.getKeys(`${cacheService.keys.movies_prefix('')}*`);
-
-            keys = keys.concat(keys_2);
+            //instruments
+            keys.push(cacheService.keys.instruments);
+            keys.push(cacheService.keys.instruments_common);
 
             await cacheService.deleteKeys(keys);
         }
 
         if (is_me) {
-            await require('../../data/me_sections/add_movies').main();
+            await require('../setup/me/instruments').main();
 
             process.exit();
         }

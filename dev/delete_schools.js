@@ -1,6 +1,6 @@
-const cacheService = require('../../services/cache');
-const db = require('../../services/db');
-const { loadScriptEnv, isProdApp } = require('../../services/shared');
+const cacheService = require('../services/cache');
+const db = require('../services/db');
+const { loadScriptEnv, isProdApp } = require('../services/shared');
 
 loadScriptEnv();
 
@@ -34,13 +34,18 @@ function main(is_me) {
                 connection: connection,
             });
 
+            //delete sync
+            await knex('sync')
+                .where('sync_process', 'sync_schools')
+                .delete();
+
             let tables = ['persons_schools', 'schools'];
 
             for (let table of tables) {
                 // await knex(table).delete();
             }
 
-            let keys = await cacheService.getKeys(`${cacheService.keys.school('')}*`);
+            let keys = await cacheService.getKeys(`schools:*`);
 
             console.log({
                 delete: keys.length,
@@ -50,7 +55,7 @@ function main(is_me) {
         }
 
         if (is_me) {
-            // await require('../../data/me_sections/add_schools').main();
+            // await require('../data/me_sections/add_schools').main();
 
             process.exit();
         }

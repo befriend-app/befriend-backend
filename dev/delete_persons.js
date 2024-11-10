@@ -1,5 +1,5 @@
-const db = require('../../services/db');
-const { loadScriptEnv, isProdApp } = require('../../services/shared');
+const db = require('../services/db');
+const { loadScriptEnv, isProdApp } = require('../services/shared');
 
 loadScriptEnv();
 

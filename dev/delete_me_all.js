@@ -1,11 +1,11 @@
-const cacheService = require('../../services/cache');
-const { loadScriptEnv, isProdApp } = require('../../services/shared');
+const cacheService = require('../services/cache');
+const { loadScriptEnv, isProdApp } = require('../services/shared');
 
 loadScriptEnv();
 
 function main(is_me) {
     return new Promise(async (resolve, reject) => {
-        console.log('Delete: me-all');
+        console.log('Delete: all/me');
 
         if (isProdApp()) {
             console.error('App env: [prod]', 'exiting');
