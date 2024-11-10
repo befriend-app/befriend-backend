@@ -1662,7 +1662,7 @@ module.exports = {
                 let pipeline = await cacheService.conn.multi();
 
                 for (let token in unique) {
-                    pipeline.get(cacheService.keys.school(token));
+                    pipeline.get(cacheService.keys.schools_country(token));
                 }
 
                 let items = await cacheService.execMulti(pipeline);

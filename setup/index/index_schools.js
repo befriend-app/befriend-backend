@@ -1,158 +1,127 @@
-const axios = require('axios');
 const { loadScriptEnv } = require('../../services/shared');
 const cacheService = require('../../services/cache');
 const dbService = require('../../services/db');
+const schoolService = require('../../services/schools');
 
 loadScriptEnv();
 
-const batchSize = 5000;
-
-let countries_dict = {};
-
-function safeValue(val) {
-    if (val === null || val === undefined) return '';
-    if (typeof val === 'boolean') return val ? '1' : '0';
-    return val.toString();
-}
+const BATCH_SIZE = 5000;
 
 function indexSchools() {
     return new Promise(async (resolve, reject) => {
         try {
             let conn = await dbService.conn();
 
-            let schools = await conn('schools').whereNull('deleted');
-
-            let pipeline = cacheService.conn.multi();
-
-            for (let int = 0; int < schools.length; int++) {
-                if (int % 1000 === 0) {
-                    console.log({
-                        process: `${int} / ${schools.length}`,
-                    });
-                }
-
-                let school = schools[int];
-
-                const school_key = cacheService.keys.school(school.token);
-
-                pipeline.set(
-                    school_key,
-                    JSON.stringify({
-                        id: school.id,
-                        token: school.token,
-                        name: school.name,
-                        city: school.city,
-                        state: school.state,
-                        country_id: school.country_id,
-                        lat: school.lat,
-                        lon: school.lon,
-                        is_grade_school: school.is_grade_school,
-                        is_high_school: school.is_high_school,
-                        is_college: school.is_college,
-                    }),
-                );
-
-                //lookup token by id
-                let id_key = cacheService.keys.school(school.id);
-                pipeline.set(id_key, school.token);
-
-                //add to country set
-                let country_code = countries_dict[school.country_id].country_code;
-
-                //from beginning of name to end
-                const nameLower = school.name.toLowerCase();
-
-                let priority = 0;
-
-                if (school.is_college) {
-                    priority = 3;
-                } else if (school.is_high_school) {
-                    priority = 2;
-                } else if (school.is_grade_school) {
-                    priority = 1;
-                }
-
-                if (school.city) {
-                    priority += 1;
-                }
-
-                for (let i = 1; i <= nameLower.length; i++) {
-                    const prefix = nameLower.slice(0, i);
-
-                    pipeline.zAdd(cacheService.keys.schools_country_prefix(country_code, prefix), [
-                        {
-                            value: school.token,
-                            score: priority,
-                        },
-                    ]);
-                }
-
-                //split name into words
-                const nameSplit = nameLower.split(' ');
-
-                for (let word of nameSplit) {
-                    for (let i = 1; i <= word.length; i++) {
-                        const prefix = word.slice(0, i);
-
-                        pipeline.zAdd(
-                            cacheService.keys.schools_country_prefix(country_code, prefix),
-                            [
-                                {
-                                    value: school.token,
-                                    score: priority,
-                                },
-                            ],
-                        );
-                    }
-                }
-
-                if (int % batchSize === 0) {
-                    await pipeline.execAsPipeline();
-
-                    pipeline = cacheService.conn.multi();
-                }
-            }
-
-            await pipeline.execAsPipeline();
-        } catch (e) {
-            console.error(e);
-            return reject();
-        }
-
-        resolve();
-    });
-}
-
-function getCountries() {
-    return new Promise(async (resolve, reject) => {
-        try {
-            let conn = await dbService.conn();
-
+            // Get countries once
             let countries = await conn('open_countries');
+            let countries_dict = {};
 
             countries.map((country) => {
                 countries_dict[country.id] = country;
             });
+
+            let schools = await conn('schools').whereNotNull('name').whereNull('deleted');
+
+            // Group schools by country
+            const schoolsByCountry = {};
+            const prefixGroups = {};
+
+            for (let school of schools) {
+                const country_code = countries_dict[school.country_id].country_code;
+
+                if (!schoolsByCountry[country_code]) {
+                    schoolsByCountry[country_code] = {};
+                }
+
+                schoolsByCountry[country_code][school.token] = JSON.stringify({
+                    id: school.id,
+                    token: school.token,
+                    name: school.name,
+                    city_id: school.city_id || '',
+                    lat: school.lat || '',
+                    lon: school.lon || '',
+                    type: school.is_college ? schoolService.is_college :
+                        school.is_high_school ? schoolService.is_high_school :
+                            school.is_grade_school ? schoolService.is_grade_school : ''
+                });
+
+                // Index prefixes
+                const nameLower = school.name.toLowerCase();
+                const words = nameLower.split(/\s+/);
+
+                // Index start of full name
+                for (let i = 1; i <= Math.min(nameLower.length, schoolService.prefixLimit); i++) {
+                    const prefix = nameLower.slice(0, i);
+
+                    if (!prefixGroups[country_code]) {
+                        prefixGroups[country_code] = {};
+                    }
+
+                    if (!prefixGroups[country_code][prefix]) {
+                        prefixGroups[country_code][prefix] = [];
+                    }
+
+                    prefixGroups[country_code][prefix].push(school.token);
+                }
+
+                // Index word prefixes
+                for (let word of words) {
+                    if (word.length < 2) continue; // Skip very short words
+
+                    for (let i = 1; i <= Math.min(word.length, schoolService.prefixLimit); i++) {
+                        const prefix = word.slice(0, i);
+
+                        if (!prefixGroups[country_code]) {
+                            prefixGroups[country_code] = {};
+                        }
+
+                        if (!prefixGroups[country_code][prefix]) {
+                            prefixGroups[country_code][prefix] = [];
+                        }
+
+                        prefixGroups[country_code][prefix].push(school.token);
+                    }
+                }
+            }
+
+            // Add to Redis
+            let count = 0;
+            let pipeline = cacheService.conn.multi();
+
+            // Store schools, by country
+            for (const [countryCode, schools] of Object.entries(schoolsByCountry)) {
+                pipeline.hSet(cacheService.keys.schools_country(countryCode), schools);
+                count++;
+
+                if (count % BATCH_SIZE === 0) {
+                    await pipeline.execAsPipeline();
+                    pipeline = cacheService.conn.multi();
+                }
+            }
+
+            // Store prefixes, by country
+            for (const [countryCode, prefixes] of Object.entries(prefixGroups)) {
+                for (const [prefix, schools] of Object.entries(prefixes)) {
+                    pipeline.sAdd(
+                        cacheService.keys.schools_country_prefix(countryCode, prefix),
+                        schools
+                    );
+
+                    count++;
+
+                    if (count % BATCH_SIZE === 0) {
+                        await pipeline.execAsPipeline();
+                        pipeline = cacheService.conn.multi();
+                    }
+                }
+            }
+
+            if (count % BATCH_SIZE !== 0) {
+                await pipeline.execAsPipeline();
+            }
         } catch (e) {
             console.error(e);
-        }
-
-        resolve();
-    });
-}
-
-function main() {
-    return new Promise(async (resolve, reject) => {
-        try {
-            console.log('Indexing Schools');
-
-            await cacheService.init();
-
-            await getCountries();
-
-            await indexSchools();
-        } catch (e) {
-            console.error(e);
+            return reject(e);
         }
 
         resolve();
@@ -160,16 +129,24 @@ function main() {
 }
 
 module.exports = {
-    main: main,
+    main: async function(is_me) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                console.log('Index Schools');
+                await cacheService.init();
+                await indexSchools();
+                resolve();
+            } catch (e) {
+                console.error(e);
+                reject(e);
+            }
+        });
+    },
 };
 
 if (require.main === module) {
-    (async function () {
-        try {
-            await main();
-            process.exit();
-        } catch (e) {
-            console.error(e);
-        }
+    (async function() {
+        await module.exports.main(true);
+        process.exit();
     })();
 }
