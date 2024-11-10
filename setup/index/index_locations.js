@@ -231,7 +231,7 @@ async function searchCities(query, limit = 10) {
 module.exports = {
     main: async function(is_me) {
         try {
-            console.log('Indexing Locations');
+            console.log('Index Locations');
 
             await cacheService.init();
             await indexCountries();

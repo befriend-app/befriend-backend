@@ -6,9 +6,10 @@ const { batchInsert, batchUpdate } = require('../services/db');
 
 loadScriptEnv();
 
+const sync_name = 'sync_open_locations';
+
 let db_dict_countries = {};
 let db_dict_states = {};
-let db_dict_cities = {};
 
 async function syncCountries() {
     return new Promise(async (resolve, reject) => {
@@ -195,12 +196,15 @@ async function syncCities() {
     return new Promise(async (resolve, reject) => {
         console.log("Sync cities");
 
+        let main_table = 'open_cities';
+
+        let db_dict_cities = {};
+
         let added = 0;
         let updated = 0;
         let batch_insert = [];
         let batch_update = [];
         const BATCH_SIZE = 10000;
-        const sync_name = 'sync_open_locations';
 
         try {
             let conn = await dbService.conn();
@@ -227,17 +231,10 @@ async function syncCities() {
             }
 
             // Existing cities
-            let previous = await conn('open_cities');
+            let previous = await conn(main_table);
 
             for(let item of previous) {
-                if(!(item.country_id in db_dict_cities)) {
-                    db_dict_cities[item.country_id] = {};
-                }
-
-                if(!(item.state_id in db_dict_cities[item.country_id])) {
-                    db_dict_cities[item.country_id][item.state_id] = {};
-                }
-                db_dict_cities[item.country_id][item.state_id][item.city_name.toLowerCase()] = item;
+                db_dict_cities[item.token] = item;
             }
 
             let offset = 0;
@@ -268,26 +265,24 @@ async function syncCities() {
                 for(let item of items) {
                     // Get country and state IDs from lookup dictionaries
                     let country = countries_dict[item.country_code];
+
                     if (!country) {
                         console.warn(`Country not found: ${item.country_code}`);
                         continue;
                     }
 
-                    let state = item.state_name ? states_dict[country.id]?.[item.state_name] : null;
+                    let state = states_dict[item.state_token] || null;
 
-                    if (item.state_name && !state) {
-                        console.warn(`State not found: ${item.state_name} for country ${item.country_code}`);
+                    if (item.state_token && !state) {
+                        console.warn(`State not found: ${item.state_token} for country ${item.country_code}`);
                         continue;
                     }
 
-                    let lookup_key = item.city_name.toLowerCase();
-
-                    let db_item = state ?
-                        db_dict_cities[country.id]?.[state.id]?.[lookup_key] :
-                        db_dict_cities[country.id]?.['null']?.[lookup_key];
+                    let db_item = db_dict_cities[item.token];
 
                     if(!db_item) {
                         let new_item = {
+                            token: item.token,
                             country_id: country.id,
                             state_id: state?.id || null,
                             city_name: item.city_name,
@@ -316,40 +311,46 @@ async function syncCities() {
                         added++;
 
                         if(batch_insert.length >= BATCH_SIZE) {
-                            await dbService.batchInsert('open_cities', batch_insert);
+                            await dbService.batchInsert(main_table, batch_insert);
                             batch_insert = [];
                         }
                     } else if(item.updated > db_item.updated) {
-                        let update_obj = {
-                            id: db_item.id,
-                            country_id: country.id,
-                            state_id: state?.id || null,
-                            city_name: item.city_name,
-                            population: item.population,
-                            lat: item.lat,
-                            lon: item.lon,
-                            postcode: item.postcode,
-                            is_city: item.is_city,
-                            is_town: item.is_town,
-                            is_village: item.is_village,
-                            is_hamlet: item.is_hamlet,
-                            is_administrative: item.is_administrative,
-                            bbox_lat_min: item.bbox_lat_min,
-                            bbox_lat_max: item.bbox_lat_max,
-                            bbox_lon_min: item.bbox_lon_min,
-                            bbox_lon_max: item.bbox_lon_max,
-                            bbox_lat_min_1000: item.bbox_lat_min_1000,
-                            bbox_lat_max_1000: item.bbox_lat_max_1000,
-                            bbox_lon_min_1000: item.bbox_lon_min_1000,
-                            bbox_lon_max_1000: item.bbox_lon_max_1000,
-                            updated: timeNow()
-                        };
+                        let update_obj = structuredClone(db_item);
 
-                        batch_update.push(update_obj);
-                        updated++;
+                        let has_changes = false;
+
+                        //needs country_id, state_id
+                        let country_lookup = countries_dict[item.country_code];
+                        let state_lookup = states_dict[item.state_token];
+
+                        delete item.country_code;
+                        delete item.state_token;
+
+                        if(state_lookup && state_lookup.id !== db_item.state_id) {
+                            db_item.state_id = state_lookup.id;
+                            has_changes = true;
+                        }
+
+                        for(let k in item) {
+                            if(k === 'updated') {
+                                continue;
+                            }
+
+                            if(db_item[k] !== item[k]) {
+                                update_obj[k] = item[k];
+                                has_changes = true;
+                            }
+                        }
+
+                        if(has_changes) {
+                            update_obj.updated = timeNow();
+
+                            batch_update.push(update_obj);
+                            updated++;
+                        }
 
                         if(batch_update.length >= BATCH_SIZE) {
-                            await dbService.batchUpdate('open_cities', batch_update);
+                            await dbService.batchUpdate(main_table, batch_update);
                             batch_update = [];
                         }
                     }
@@ -357,12 +358,12 @@ async function syncCities() {
 
                 // Process any remaining batch items
                 if(batch_insert.length) {
-                    await dbService.batchInsert('open_cities', batch_insert);
+                    await dbService.batchInsert(main_table, batch_insert);
                     batch_insert = [];
                 }
 
                 if(batch_update.length) {
-                    await dbService.batchUpdate('open_cities', batch_update);
+                    await dbService.batchUpdate(main_table, batch_update);
                     batch_update = [];
                 }
 
@@ -423,10 +424,11 @@ async function main() {
 
             await syncCountries();
             await syncStates();
-            // await syncCities();
+            await syncCities();
 
             console.log('Locations sync completed');
 
+            await require('./index/index_locations').main();
         } catch(e) {
             console.error(e);
         }
