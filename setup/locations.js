@@ -2,6 +2,7 @@ const axios = require('axios');
 const { loadScriptEnv, timeNow, dataEndpoint } = require('../services/shared');
 const dbService = require('../services/db');
 const cacheService = require('../services/cache');
+const { batchInsert, batchUpdate } = require('../services/db');
 
 loadScriptEnv();
 
@@ -94,9 +95,6 @@ async function syncStates() {
     return new Promise(async (resolve, reject) => {
         console.log("Sync states");
 
-        let added = 0;
-        let updated = 0;
-
         try {
             let conn = await dbService.conn();
 
@@ -105,69 +103,85 @@ async function syncStates() {
                 .select('os.*', 'oc.country_code')
 
             for(let item of previous) {
-                if(!(item.country_code in db_dict_states)) {
-                    db_dict_states[item.country_code] = {};
-                }
-                db_dict_states[item.country_code][item.state_name] = item;
+                db_dict_states[item.token] = item;
             }
 
             let endpoint = dataEndpoint(`/states`);
 
             let r = await axios.get(endpoint);
 
-            for(let item of r.data.items) {
-                if(!(item.country_code in db_dict_states)) {
-                    db_dict_states[item.country_code] = {};
-                }
+            let batch_insert = [];
+            let batch_update = [];
 
-                let db_item = db_dict_states[item.country_code][item.state_name];
+            for(let item of r.data.items) {
+                let db_item = db_dict_states[item.token];
 
                 if(!db_item) {
                     let new_item = structuredClone(item);
 
                     delete new_item.country_code;
 
+                    db_dict_states[item.token] = new_item;
+
                     new_item.country_id = db_dict_countries[item.country_code].id;
                     new_item.created = timeNow();
                     new_item.updated = timeNow();
 
-                    let [id] = await conn('open_states')
-                        .insert(new_item);
-
-                    added++;
-
-                    new_item.id = id;
-
-                    db_dict_states[item.country_code][item.state_name] = new_item;
+                    batch_insert.push(new_item);
                 } else {
                     if(item.updated > db_item.updated) {
                         delete item.country_code;
+                        delete db_item.country_code;
 
-                        let update_obj = {};
+                        let update_obj = structuredClone(db_item);
+
+                        let has_changes = false;
 
                         for(let k in item) {
+                            if(k === 'updated') {
+                                continue;
+                            }
+
                             if(db_item[k] !== item[k]) {
                                 update_obj[k] = item[k];
+                                has_changes = true;
                             }
                         }
 
-                        if(Object.keys(update_obj).length) {
+                        if(has_changes) {
                             update_obj.updated = timeNow();
 
-                            await conn('open_states')
-                                .where('id', db_item.id)
-                                .update(update_obj);
-
-                            updated++;
+                            batch_update.push(update_obj);
                         }
                     }
                 }
             }
 
-            console.log({
-                added,
-                updated
-            });
+            //batch insert
+            if(batch_insert.length) {
+                try {
+                    await batchInsert('open_states', batch_insert, true)
+
+                    console.log({
+                        added: batch_insert.length,
+                    });
+                } catch(e) {
+                    console.error(e);
+                }
+            }
+
+            if(batch_update.length) {
+                try {
+                    await batchUpdate('open_states', batch_update)
+
+                    console.log({
+                        updated: batch_update.length
+                    });
+                } catch(e) {
+                    console.error(e);
+                }
+            }
+
         } catch(e) {
             console.error(e);
             return reject();
@@ -209,10 +223,7 @@ async function syncCities() {
             let states_dict = {};
 
             for(let state of states) {
-                if(!(state.country_id in states_dict)) {
-                    states_dict[state.country_id] = {};
-                }
-                states_dict[state.country_id][state.state_name] = state;
+                states_dict[state.token] = state;
             }
 
             // Existing cities
@@ -222,6 +233,7 @@ async function syncCities() {
                 if(!(item.country_id in db_dict_cities)) {
                     db_dict_cities[item.country_id] = {};
                 }
+
                 if(!(item.state_id in db_dict_cities[item.country_id])) {
                     db_dict_cities[item.country_id][item.state_id] = {};
                 }
@@ -262,12 +274,14 @@ async function syncCities() {
                     }
 
                     let state = item.state_name ? states_dict[country.id]?.[item.state_name] : null;
+
                     if (item.state_name && !state) {
                         console.warn(`State not found: ${item.state_name} for country ${item.country_code}`);
                         continue;
                     }
 
                     let lookup_key = item.city_name.toLowerCase();
+
                     let db_item = state ?
                         db_dict_cities[country.id]?.[state.id]?.[lookup_key] :
                         db_dict_cities[country.id]?.['null']?.[lookup_key];
@@ -409,7 +423,7 @@ async function main() {
 
             await syncCountries();
             await syncStates();
-            await syncCities();
+            // await syncCities();
 
             console.log('Locations sync completed');
 

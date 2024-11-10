@@ -41,6 +41,11 @@ function main(is_me) {
                 await knex(t).delete();
             }
 
+            //delete sync
+            await knex('sync')
+                .where('sync_process', 'sync_open_locations')
+                .delete();
+
             //delete cache
             let batchSize = 50000;
 
@@ -65,6 +70,8 @@ function main(is_me) {
             }
 
             await cache.deleteKeys([cache.keys.countries]);
+
+
         }
 
         if (is_me) {

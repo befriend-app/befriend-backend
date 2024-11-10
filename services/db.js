@@ -60,6 +60,7 @@ module.exports = {
                     }
                 }
             } catch (e) {
+                console.error(`Batch insert error`, e);
                 return reject(e);
             }
 
