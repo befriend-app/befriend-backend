@@ -95,11 +95,11 @@ module.exports = {
         movies_prefix: function (prefix) {
             return `movies:prefix:${prefix}`;
         },
-        school: function (school_id_or_token) {
-            return `schools:${school_id_or_token}`;
+        schools_country: function (code) {
+            return `schools:country:${code}`;
         },
         schools_country_prefix: function (code, prefix) {
-            return `schools:country:${code}:${prefix}`;
+            return `schools:prefix:${code}:${prefix}`;
         },
     },
     init: function () {

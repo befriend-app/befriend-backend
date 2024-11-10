@@ -2,7 +2,7 @@ const cacheService = require('../services/cache');
 const dbService = require('./db');
 const { getDistanceMeters, normalizeSearch, latLonLookup, timeNow } = require('./shared');
 
-const LIMIT = 20;
+const RESULTS_LIMIT = 20;
 const MIN_COUNTRY_CHARS = 1;
 const MAX_PREFIX_LIMIT = 4;
 const MAX_COUNTRY_PREFIX_LIMIT = 3;
@@ -326,7 +326,7 @@ function cityAutoComplete(search, userLat, userLon, maxDistance) {
                 )
                 .filter(Boolean)
                 .sort((a, b) => b.score - a.score)
-                .slice(0, LIMIT);
+                .slice(0, RESULTS_LIMIT);
 
             resolve(results);
         } catch (e) {

@@ -37,7 +37,7 @@ let sectionsData = {
             filterNoResults: 'No countries found',
         },
         cacheKeys: {
-            byToken: cacheService.keys.school,
+            byHashToken: cacheService.keys.schools_country,
         },
         functions: {
             filterList: 'getSchools',
