@@ -3,14 +3,15 @@ function main() {
         try {
             console.log('Loading me data');
 
-            await require('./me_sections/add_sections').main();
-            await require('./me_sections/add_instruments').main();
-            await require('./me_sections/add_movies').main();
-            await require('./me_sections/add_schools').main();
+            await require('./me/sections').main();
+            await require('./me/instruments').main();
 
-            await require('./me_sections/index_schools').main();
+            await require('./me/schools').main();
+
+            // await require('./me/movies').main();
         } catch (e) {
             console.error(e);
+            return reject();
         }
 
         resolve();
