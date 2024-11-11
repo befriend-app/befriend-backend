@@ -181,13 +181,33 @@ function fetchCityDetails(cityCountryIds) {
     });
 }
 
+function getCitiesByCountry(countryCode, cityIds) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            if(!countryCode || !cityIds.length) {
+                return reject("No country code/city ids provided")
+            }
+
+            let pipeline = cacheService.conn.multi();
+
+            for (let city_id of cityIds) {
+                pipeline.hGet(cacheService.keys.cities_country(countryCode), city_id);
+            }
+
+            let cities = await cacheService.execMulti(pipeline);
+
+            cities = cities.map(c => JSON.parse(c));
+
+            resolve(cities);
+        } catch (e) {
+            console.error('Error getting city details:', e);
+            reject(e);
+        }
+    });
+}
+
 function filterCitiesByParsedCriteria(cities, parsed) {
     return cities.filter(function (result) {
-        //handles limited prefix
-        if(!result.name.toLowerCase().includes(parsed.city)) {
-            return false;
-        }
-
         if (parsed.state && parsed.country) {
             let stateMatches = stateMatch(result.state, parsed.state);
             let countryMatches = countryMatch(result.country, parsed.country);
@@ -297,6 +317,10 @@ function cityAutoComplete(search, userLat, userLon, maxDistance) {
 
                 let cities = await fetchCityDetails(cityCountryIds);
 
+                cities = cities.filter(function (item) {
+                    return item.name.toLowerCase().includes(parsed.city);
+                });
+
                 await addLocationData(cities, 'state');
                 await addLocationData(cities, 'country');
 
@@ -341,4 +365,5 @@ module.exports = {
     countryPrefixLimit: MAX_COUNTRY_PREFIX_LIMIT,
     countries,
     cityAutoComplete,
+    getCitiesByCountry,
 };
