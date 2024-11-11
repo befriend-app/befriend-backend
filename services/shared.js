@@ -588,6 +588,7 @@ function getCountries() {
             resolve(data);
         } catch (e) {
             console.error(e);
+            reject(e);
         }
     });
 }
