@@ -35,6 +35,20 @@ let sectionsData = {
             },
             filterList: [],
             filterNoResults: 'No countries found',
+            groups: {
+                college: {
+                    name: 'Universities and Colleges'
+                },
+                hs: {
+                    name: 'High Schools'
+                },
+                grade: {
+                    name: 'Middle Schools'
+                },
+                other: {
+                    name: 'Other',
+                }
+            }
         },
         cacheKeys: {
             byHashToken: cacheService.keys.schools_country,

@@ -126,6 +126,25 @@ function addLocationData(results, dataType) {
     });
 }
 
+function getStates(stateIds) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let pipeline = cacheService.conn.multi();
+
+            for (let id of stateIds) {
+                pipeline.hGetAll(cacheService.keys.state(id));
+            }
+
+            let data = await cacheService.execMulti(pipeline);
+
+            resolve(data);
+        } catch (e) {
+            console.error(`Error getting states:`, e);
+            reject(e);
+        }
+    });
+}
+
 function getCityCountryIds(parsed, locationCountry) {
     return new Promise(async (resolve, reject) => {
         try {
@@ -366,4 +385,5 @@ module.exports = {
     countries,
     cityAutoComplete,
     getCitiesByCountry,
+    getStates,
 };
