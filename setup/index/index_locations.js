@@ -6,6 +6,8 @@ loadScriptEnv();
 
 let {prefixLimit, countryPrefixLimit} = require('../../services/locations');
 
+const BATCH_SIZE = 10000;
+
 function indexCities() {
     return new Promise(async (resolve, reject) => {
         try {
@@ -19,37 +21,57 @@ function indexCities() {
                 countries_dict[country.id] = country;
             });
 
-            let cities = await conn('open_cities').whereNotNull('population');
+            let schools = await conn('schools')
+                .whereNull('deleted');
+
+            let schools_cities = schools.reduce((acc, school) => {
+                acc[school.city_id] = 1;
+                return acc;
+            }, {});
+
+            let cities = await conn('open_cities');
+
             let pipeline = cacheService.conn.multi();
+            let commandCount = 0;
 
             // Cities by country
-            const citiesByCountry = {};
 
             for (let city of cities) {
                 let country_code = countries_dict[city.country_id].country_code;
 
-                if (!citiesByCountry[country_code]) {
-                    citiesByCountry[country_code] = {};
+                if(city.population || (city.id in schools_cities)) {
+                    pipeline.hSet(
+                        cacheService.keys.cities_country(country_code),
+                        city.id.toString(),
+                        JSON.stringify({
+                            id: city.id,
+                            name: city.city_name,
+                            state_id: city.state_id || '',
+                            country_id: city.country_id || '',
+                            population: Math.floor(city.population) || 0,
+                            ll: [Number(city.lat.toFixed(4)), Number(city.lon.toFixed(4))]
+                        })
+                    );
+
+                    commandCount++;
+
+                    if (commandCount >= BATCH_SIZE) {
+                        await pipeline.execAsPipeline();
+                        pipeline = cacheService.conn.multi();
+                        commandCount = 0;
+                    }
                 }
-
-                citiesByCountry[country_code][city.id] = JSON.stringify({
-                    id: city.id,
-                    name: city.city_name,
-                    state_id: city.state_id || '',
-                    country_id: city.country_id || '',
-                    population: Math.floor(city.population),
-                    ll: [Number(city.lat.toFixed(4)), Number(city.lon.toFixed(4))]
-                });
-            }
-
-            for (const [countryCode, cities] of Object.entries(citiesByCountry)) {
-                pipeline.hSet(cacheService.keys.cities_country(countryCode), cities);
             }
 
             // Create word prefix groups
             const prefixGroups = {};
 
             for (let city of cities) {
+                //skip cities without a known population
+                if(!city.population) {
+                    continue;
+                }
+
                 const words = city.city_name.toLowerCase().split(/\s+/);
 
                 // Index each word
@@ -197,35 +219,6 @@ function indexCountries() {
             return reject();
         }
     });
-}
-
-async function searchCities(query, limit = 10) {
-    const searchTerm = query.toLowerCase();
-    const results = new Set();
-
-    try {
-        let query_prefix = searchTerm.substring(0, prefixLimit);
-        
-        const matches = await cacheService.getSortedSetByScore(cacheService.keys.cities_prefix(query_prefix));
-
-        for (const match of matches) {
-            const [cityId, countryCode] = match.split(':');
-
-            // Get city data
-            const cityData = await cacheService.conn.hGet(`cities:countries:${countryCode}`, cityId);
-
-            if (cityData) {
-                results.add(cityData);
-            }
-
-            if (results.size >= limit) break;
-        }
-
-        return Array.from(results).map(r => JSON.parse(r));
-    } catch (e) {
-        console.error('Search error:', e);
-        return [];
-    }
 }
 
 module.exports = {
