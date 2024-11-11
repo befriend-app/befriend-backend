@@ -40,9 +40,10 @@ function indexSchools() {
                     city_id: school.city_id || '',
                     lat: school.lat || '',
                     lon: school.lon || '',
-                    type: school.is_college ? schoolService.is_college :
-                        school.is_high_school ? schoolService.is_high_school :
-                            school.is_grade_school ? schoolService.is_grade_school : ''
+                    sc: school.student_count,
+                    type: school.is_college ? schoolService.typeNames.is_college :
+                        school.is_high_school ? schoolService.typeNames.is_high_school :
+                            school.is_grade_school ? schoolService.typeNames.is_grade_school : ''
                 });
 
                 // Index prefixes
@@ -135,6 +136,8 @@ module.exports = {
                 console.log('Index Schools');
                 await cacheService.init();
                 await indexSchools();
+
+                console.log("Index completed");
                 resolve();
             } catch (e) {
                 console.error(e);
