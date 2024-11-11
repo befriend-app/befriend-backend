@@ -20,11 +20,12 @@ function indexSchools() {
                 countries_dict[country.id] = country;
             });
 
-            let schools = await conn('schools').whereNotNull('name').whereNull('deleted');
+            let schools = await conn('schools').whereNotNull('name');
 
             // Group schools by country
             const schoolsByCountry = {};
             const prefixGroups = {};
+            const deletePrefixGroups = {};
 
             for (let school of schools) {
                 const country_code = countries_dict[school.country_id].country_code;
@@ -43,12 +44,14 @@ function indexSchools() {
                     sc: school.student_count,
                     type: school.is_college ? schoolService.typeNames.is_college :
                         school.is_high_school ? schoolService.typeNames.is_high_school :
-                            school.is_grade_school ? schoolService.typeNames.is_grade_school : ''
+                            school.is_grade_school ? schoolService.typeNames.is_grade_school : '',
+                    d: school.deleted ? 1 : ''
                 });
 
                 // Index prefixes
                 const nameLower = school.name.toLowerCase();
                 const words = nameLower.split(/\s+/);
+                let delete_multi = cacheService.conn.multi();
 
                 // Index start of full name
                 for (let i = 1; i <= Math.min(nameLower.length, schoolService.prefixLimit); i++) {
@@ -58,11 +61,23 @@ function indexSchools() {
                         prefixGroups[country_code] = {};
                     }
 
+                    if (!deletePrefixGroups[country_code]) {
+                        deletePrefixGroups[country_code] = {};
+                    }
+
                     if (!prefixGroups[country_code][prefix]) {
                         prefixGroups[country_code][prefix] = [];
                     }
 
-                    prefixGroups[country_code][prefix].push(school.token);
+                    if(school.deleted) {
+                        if (!deletePrefixGroups[country_code][prefix]) {
+                            deletePrefixGroups[country_code][prefix] = [];
+                        }
+
+                        deletePrefixGroups[country_code][prefix].push(school.token);
+                    } else {
+                        prefixGroups[country_code][prefix].push(school.token);
+                    }
                 }
 
                 // Index word prefixes
@@ -76,11 +91,23 @@ function indexSchools() {
                             prefixGroups[country_code] = {};
                         }
 
+                        if (!deletePrefixGroups[country_code]) {
+                            deletePrefixGroups[country_code] = {};
+                        }
+
                         if (!prefixGroups[country_code][prefix]) {
                             prefixGroups[country_code][prefix] = [];
                         }
 
-                        prefixGroups[country_code][prefix].push(school.token);
+                        if(school.deleted) {
+                            if (!deletePrefixGroups[country_code][prefix]) {
+                                deletePrefixGroups[country_code][prefix] = [];
+                            }
+
+                            deletePrefixGroups[country_code][prefix].push(school.token);
+                        } else {
+                            prefixGroups[country_code][prefix].push(school.token);
+                        }
                     }
                 }
             }
@@ -104,6 +131,23 @@ function indexSchools() {
             for (const [countryCode, prefixes] of Object.entries(prefixGroups)) {
                 for (const [prefix, schools] of Object.entries(prefixes)) {
                     pipeline.sAdd(
+                        cacheService.keys.schools_country_prefix(countryCode, prefix),
+                        schools
+                    );
+
+                    count++;
+
+                    if (count % BATCH_SIZE === 0) {
+                        await pipeline.execAsPipeline();
+                        pipeline = cacheService.conn.multi();
+                    }
+                }
+            }
+
+            // Delete deleted schools from prefix set
+            for (const [countryCode, prefixes] of Object.entries(deletePrefixGroups)) {
+                for (const [prefix, schools] of Object.entries(prefixes)) {
+                    pipeline.sRem(
                         cacheService.keys.schools_country_prefix(countryCode, prefix),
                         schools
                     );
