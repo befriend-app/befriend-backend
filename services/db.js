@@ -80,12 +80,12 @@ module.exports = {
 
                 const cols = await conn(table_name).columnInfo();
 
-                const chunk_items_count =
-                    Number.parseInt(module.exports.max_placeholders / Object.keys(cols).length) - 1;
+                // Get column names from the first row that exist in the table
+                let columnNames = Object.keys(update_rows[0]).filter(col => cols[col]);
+                const updateColumns = columnNames.filter(name => name !== id_column);
 
+                const chunk_items_count = Number.parseInt(module.exports.max_placeholders / columnNames.length) - 1;
                 const chunks = require('lodash').chunk(update_rows, chunk_items_count);
-
-                let columnNames = Object.keys(chunks[0][0]);
 
                 for (let chunk of chunks) {
                     if (!chunk.length) {
@@ -93,22 +93,23 @@ module.exports = {
                     }
 
                     const updateSQL = `
-                          INSERT INTO ?? (${columnNames.map(() => '??').join(', ')})
-                          VALUES ${chunk.map(() => `(${columnNames.map(() => '?').join(', ')})`).join(', ')}
-                          ON DUPLICATE KEY UPDATE ${columnNames
-                              .filter((name) => name !== id_column)
-                              .map((name) => `?? = VALUES(??)`)
-                              .join(', ')}
-                        `;
+                        UPDATE ??
+                        SET ${updateColumns.map(name => `?? = CASE ?? ${chunk.map(() => 'WHEN ? THEN ?').join(' ')} END`).join(', ')}
+                        WHERE ?? IN (${chunk.map(() => '?').join(',')})
+                    `;
 
                     // Prepare the bindings
                     const insertBindings = [
                         table_name,
-                        ...columnNames,
-                        ...chunk.flatMap((row) => columnNames.map((name) => row[name])),
-                        ...columnNames
-                            .filter((name) => name !== id_column)
-                            .flatMap((name) => [name, name]),
+                        // For each update column, add the column name and CASE/WHEN/THEN values
+                        ...updateColumns.flatMap(colName => [
+                            colName,
+                            id_column,
+                            ...chunk.flatMap(row => [row[id_column], row[colName]])
+                        ]),
+                        // WHERE IN clause
+                        id_column,
+                        ...chunk.map(row => row[id_column])
                     ];
 
                     // Execute the query
@@ -121,5 +122,5 @@ module.exports = {
                 return reject();
             }
         });
-    },
+    }
 };
