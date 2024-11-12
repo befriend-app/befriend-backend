@@ -287,6 +287,14 @@ module.exports = {
     },
     deleteKeys: function (keys, batchSize = 1000000) {
         return new Promise(async (resolve, reject) => {
+            if (!module.exports.conn) {
+                try {
+                    await module.exports.init();
+                } catch (e) {
+                    return reject(e);
+                }
+            }
+
             if(typeof keys === 'string') {
                 keys = [keys];
             }

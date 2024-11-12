@@ -67,6 +67,8 @@ function main() {
                 }
             }
 
+            await cacheService.deleteKeys(cacheService.keys.me_sections);
+
             console.log({
                 added,
                 updated
