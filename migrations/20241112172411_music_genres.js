@@ -12,9 +12,9 @@ exports.up = function (knex) {
 
             table.boolean('is_active').notNullable().defaultTo(true);
 
-            table.timestamp('created').notNullable();
-            table.timestamp('updated').notNullable();
-            table.timestamp('deleted').nullable();
+            table.bigInteger('created').notNullable();
+            table.bigInteger('updated').notNullable();
+            table.bigInteger('deleted').nullable();
 
             table.index('token');
             table.index('apple_id');
@@ -33,9 +33,9 @@ exports.up = function (knex) {
 
             table.integer('position').notNullable().defaultTo(0);
 
-            table.timestamp('created').notNullable();
-            table.timestamp('updated').notNullable();
-            table.timestamp('deleted').nullable();
+            table.bigInteger('created').notNullable();
+            table.bigInteger('updated').notNullable();
+            table.bigInteger('deleted').nullable();
 
             table.index('country_id');
             table.index('genre_id');
