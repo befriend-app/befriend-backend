@@ -286,8 +286,8 @@ function sendIOSBatch(deviceTokens, payload, time_sensitive) {
         const options = {
             token: {
                 key: joinPaths(getRepoRoot(), ios_private_key_name),
-                keyId: process.env.PUSH_IOS_KEY_ID,
-                teamId: process.env.PUSH_IOS_TEAM_ID,
+                keyId: process.env.APPLE_KEY_ID,
+                teamId: process.env.APPLE_TEAM_ID,
             },
             production: false,
         };
@@ -301,7 +301,7 @@ function sendIOSBatch(deviceTokens, payload, time_sensitive) {
             });
 
             let notifyData = {
-                topic: process.env.PUSH_IOS_APP_ID,
+                topic: process.env.APPLE_APP_ID,
                 expiry: Math.floor(Date.now() / 1000) + 3600,
                 sound: 'ping.aiff',
                 alert: {

@@ -27,9 +27,9 @@ https://drawsql.app/teams/befriend/diagrams/befriend-backend
     a. Save as `ios-push.p8` in project root
 2. Set environment variables
    
-    a. `PUSH_IOS_APP_ID`
+    a. `APPLE_APP_ID`
     
-    b. `PUSH_IOS_KEY_ID`
+    b. `APPLE_KEY_ID`
 
-    c. `PUSH_IOS_TEAM_ID`
+    c. `APPLE_TEAM_ID`
 
