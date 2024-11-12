@@ -36,6 +36,7 @@ function indexSchools() {
 
                 schoolsByCountry[country_code][school.token] = JSON.stringify({
                     id: school.id,
+                    code: country_code,
                     token: school.token,
                     name: school.name,
                     city_id: school.city_id || '',

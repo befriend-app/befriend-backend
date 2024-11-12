@@ -77,6 +77,7 @@ module.exports = {
                     req.body.person_token,
                     req.body.section_key,
                     req.body.item_token,
+                    req.body.hash_token
                 );
 
                 res.json(data, 201);

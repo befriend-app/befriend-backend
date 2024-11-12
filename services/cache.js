@@ -198,6 +198,25 @@ module.exports = {
             }
         });
     },
+    hGetItem: function (key, item_id) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let data = await module.exports.conn.hGet(key, item_id);
+
+                if(typeof data === 'string') {
+                    data = JSON.parse(data);
+                }
+
+                try {
+                    return resolve(data);
+                } catch (e) {
+                    return resolve(null);
+                }
+            } catch (e) {
+                return reject(e);
+            }
+        });
+    },
     hGetAll: function (key) {
         return new Promise(async (resolve, reject) => {
             //init conn in case first time
