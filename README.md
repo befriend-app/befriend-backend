@@ -24,12 +24,13 @@ https://drawsql.app/teams/befriend/diagrams/befriend-backend
 
 1. Download Private Key
    
-    a. Save as `ios-push.p8` in project root
 2. Set environment variables
-   
-    a. `APPLE_APP_ID`
-    
-    b. `APPLE_KEY_ID`
 
-    c. `APPLE_TEAM_ID`
+`APPLE_APP_ID=`
+
+`APPLE_KEY_ID=`
+
+`APPLE_TEAM_ID=`
+
+`APPLE_PRIVATE_KEY=""`
 

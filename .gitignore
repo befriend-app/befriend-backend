@@ -5,5 +5,3 @@ node_modules
 .DS_Store
 package-lock.json
 tmp
-
-ios-push.p8

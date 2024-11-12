@@ -4,7 +4,6 @@ const jwt = require('jsonwebtoken');
 const { joinPaths, getRepoRoot, timeNow } = require('./shared');
 
 let provider = null;
-let ios_private_key_name = 'ios-push.p8';
 
 const createAPNSConnection = async (baseURL) => {
     const connect = () => {
@@ -285,7 +284,7 @@ function sendIOSBatch(deviceTokens, payload, time_sensitive) {
     return new Promise(async (resolve, reject) => {
         const options = {
             token: {
-                key: joinPaths(getRepoRoot(), ios_private_key_name),
+                key: process.env.APPLE_PRIVATE_KEY,
                 keyId: process.env.APPLE_KEY_ID,
                 teamId: process.env.APPLE_TEAM_ID,
             },
