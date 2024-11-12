@@ -11,6 +11,7 @@ module.exports = {
         me_sections: `sections:me`,
         instruments: `instruments`,
         instruments_common: `instruments:common`,
+        music_genres: `music:genres`,
         activity: function (activity_token) {
             return `activities:${activity_token}`;
         },
@@ -94,6 +95,12 @@ module.exports = {
         },
         movies_prefix: function (prefix) {
             return `movies:prefix:${prefix}`;
+        },
+        music_country_genres: function (country_code) {
+            return `music:genres:${country_code}`;
+        },
+        music_genres_prefix: function (prefix) {
+            return `music:genres:prefix:${prefix}`;
         },
         schools_country: function (code) {
             return `schools:country:${code}`;
