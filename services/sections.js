@@ -26,6 +26,9 @@ let sectionsData = {
             data: 'getInstruments',
             all: 'allInstruments',
         },
+        styles: {
+            rowCols: 'cols-2'
+        }
     },
     schools: {
         cols: {
@@ -65,6 +68,9 @@ let sectionsData = {
         functions: {
             filterList: 'getSchools',
         },
+        styles: {
+            rowCols: 'cols-1'
+        }
     },
 };
 
@@ -731,6 +737,7 @@ function getActiveData(person, sections) {
                         categories: sectionConfig.categories || null,
                         secondary: sectionConfig.secondary || null,
                         unselectedStr: sectionConfig.unselectedStr || null,
+                        styles: sectionConfig.styles || null,
                     };
 
                     sections[section_key].items = items || {};
