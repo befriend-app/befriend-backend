@@ -101,7 +101,7 @@ function indexInstruments() {
 
             let instruments = await conn('instruments')
                 .orderBy('is_common', 'desc')
-                .orderBy('name', 'asc');
+                .orderBy('popularity', 'desc');
 
             let instruments_common = instruments.filter((item) => item.is_common);
 
