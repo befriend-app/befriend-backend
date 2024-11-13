@@ -10,7 +10,7 @@ let sectionsData = {
             id: 'instrument_id',
             secondary: 'skill_level'
         },
-        categories: ['String', 'Wind', 'Brass', 'Percussion', 'Keyboard', 'Electronic'],
+        categories: ['String', 'Wind', 'Brass', 'Percussion', 'Keyboard', 'Electronic', 'Voice'],
         secondary: ['Beginner', 'Intermediate', 'Advanced', 'Expert', 'Virtuoso'],
         unselectedStr: 'Skill Level',
         autoComplete: {

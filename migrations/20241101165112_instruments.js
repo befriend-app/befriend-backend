@@ -21,7 +21,7 @@ exports.up = function (knex) {
                         'Percussion',
                         'Keyboard',
                         'Electronic',
-                        'Natural',
+                        'Voice'
                     ])
                     .notNullable();
 
