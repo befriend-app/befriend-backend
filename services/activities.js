@@ -34,6 +34,7 @@ module.exports = {
             60: { id: 60, value: '1', unit: 'hr', in_mins: 60 },
             90: { id: 90, value: '1.5', unit: 'hrs', in_mins: 90 },
             120: { id: 120, value: '2', unit: 'hrs', in_mins: 120 },
+            150: { id: 150, value: '2.5', unit: 'hrs', in_mins: 150 },
             180: { id: 180, value: '3', unit: 'hrs', in_mins: 180 },
             240: { id: 240, value: '4', unit: 'hrs', in_mins: 240 },
         },
