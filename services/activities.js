@@ -36,7 +36,16 @@ module.exports = {
             120: { id: 120, value: '2', unit: 'hrs', in_mins: 120 },
             150: { id: 150, value: '2.5', unit: 'hrs', in_mins: 150 },
             180: { id: 180, value: '3', unit: 'hrs', in_mins: 180 },
+            210: { id: 210, value: '3.5', unit: 'hrs', in_mins: 210 },
             240: { id: 240, value: '4', unit: 'hrs', in_mins: 240 },
+            270: { id: 270, value: '4.5', unit: 'hrs', in_mins: 270 },
+            300: { id: 300, value: '5', unit: 'hrs', in_mins: 300 },
+            330: { id: 330, value: '5.5', unit: 'hrs', in_mins: 330 },
+            360: { id: 360, value: '6', unit: 'hrs', in_mins: 360 },
+            390: { id: 390, value: '6.5', unit: 'hrs', in_mins: 390 },
+            420: { id: 420, value: '7', unit: 'hrs', in_mins: 420 },
+            450: { id: 450, value: '7.5', unit: 'hrs', in_mins: 450 },
+            480: { id: 480, value: '8', unit: 'hrs', in_mins: 480 }
         },
     },
     getActivityType: function (activity_type_token) {
