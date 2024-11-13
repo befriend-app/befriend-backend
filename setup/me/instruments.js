@@ -2,6 +2,7 @@ const axios = require('axios');
 const { loadScriptEnv, timeNow, generateToken, dataEndpoint } = require('../../services/shared');
 const dbService = require('../../services/db');
 const cacheService = require('../../services/cache');
+const { getKeys, deleteKeys } = require('../../services/cache');
 
 loadScriptEnv();
 
@@ -92,6 +93,10 @@ function indexInstruments() {
         console.log("Index instruments");
 
         try {
+            //delete previous
+            let prev_keys = await getKeys(cacheService.keys.instrument('') + '*');
+            await deleteKeys(prev_keys);
+
             let conn = await dbService.conn();
 
             let instruments = await conn('instruments')
