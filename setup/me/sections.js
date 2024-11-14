@@ -22,7 +22,7 @@ function main() {
                 db_dict[item[token_key]] = item;
             }
 
-            let endpoint = dataEndpoint(`/sections`);
+            let endpoint = dataEndpoint(`/me/sections`);
 
             let r = await axios.get(endpoint);
 
