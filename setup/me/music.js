@@ -81,6 +81,7 @@ function syncGenres() {
                         name: genre.name,
                         parent_id: null, // Will update after all genres are inserted
                         is_active: genre.is_active,
+                        is_featured: genre.is_featured,
                         created: timeNow(),
                         updated: timeNow()
                     };
@@ -94,6 +95,7 @@ function syncGenres() {
                         id: existing.id,
                         name: genre.name,
                         is_active: genre.is_active,
+                        is_featured: genre.is_featured,
                         updated: timeNow(),
                         deleted: genre.deleted ? timeNow() : null
                     };
