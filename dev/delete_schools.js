@@ -1,6 +1,6 @@
 const cacheService = require('../services/cache');
-const db = require('../services/db');
 const { loadScriptEnv, isProdApp } = require('../services/shared');
+const { keys: systemKeys } = require('../services/system');
 
 loadScriptEnv();
 
@@ -36,7 +36,7 @@ function main(is_me) {
 
             //delete sync
             await knex('sync')
-                .where('sync_process', 'sync_schools')
+                .where('sync_process', systemKeys.sync.data.schools)
                 .delete();
 
             let tables = ['persons_schools', 'schools'];

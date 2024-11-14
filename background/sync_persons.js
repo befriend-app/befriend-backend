@@ -14,8 +14,9 @@ const { getNetworkSelf } = require('../services/network');
 const { setCache } = require('../services/cache');
 const { encrypt } = require('../services/encryption');
 const { getGender, getGenderByToken } = require('../services/genders');
+const { keys: systemKeys } = require('../services/system');
 
-const sync_name = `persons`;
+const sync_name = systemKeys.sync.network.persons;
 
 const runInterval = 60 * 30 * 1000; //every 30 minutes
 

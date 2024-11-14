@@ -1129,34 +1129,6 @@ function sendEmail(subject, html, email, from, cc, attachment_alt) {
     });
 }
 
-function setSystemProcessRan(system_key) {
-    return new Promise(async (resolve, reject) => {
-        try {
-            let conn = await dbService.conn();
-
-            let qry = await conn('system').where('system_key', system_key).first();
-
-            if (qry) {
-                await conn('system').where('id', qry.id).update({
-                    updated: timeNow(),
-                });
-            } else {
-                await conn('system').insert({
-                    system_key: system_key,
-                    system_value: 1,
-                    created: timeNow(),
-                    updated: timeNow(),
-                });
-            }
-
-            resolve();
-        } catch (e) {
-            console.error(e);
-            return reject(e);
-        }
-    });
-}
-
 function shuffleFunc(array) {
     let currentIndex = array.length,
         temporaryValue,
@@ -1181,37 +1153,6 @@ function slugName(name) {
     return require('slugify')(name, {
         lower: true,
         strict: true,
-    });
-}
-
-function systemProcessRan(system_key) {
-    return new Promise(async (resolve, reject) => {
-        try {
-            let conn = await dbService.conn();
-
-            let qry = await conn('system').where('system_key', system_key).first();
-
-            if (!qry || !qry.system_value) {
-                return resolve(false);
-            }
-
-            let value = qry.system_value.toLowerCase();
-
-            if (value === 'true') {
-                return resolve(true);
-            }
-
-            if (isNumeric(value)) {
-                if (parseInt(value)) {
-                    return resolve(true);
-                }
-            }
-
-            return resolve(false);
-        } catch (e) {
-            console.error(e);
-            return reject(e);
-        }
     });
 }
 
@@ -1310,10 +1251,8 @@ module.exports = {
     range: range,
     readFile: readFile,
     sendEmail: sendEmail,
-    setSystemProcessRan: setSystemProcessRan,
     shuffleFunc: shuffleFunc,
     slugName: slugName,
-    systemProcessRan: systemProcessRan,
     timeNow: timeNow,
     timeoutAwait: timeoutAwait,
     useKM: useKM,

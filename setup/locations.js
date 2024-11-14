@@ -3,10 +3,11 @@ const { loadScriptEnv, timeNow, dataEndpoint } = require('../services/shared');
 const dbService = require('../services/db');
 const cacheService = require('../services/cache');
 const { batchInsert, batchUpdate } = require('../services/db');
+const { keys: systemKeys } = require('../services/system');
 
 loadScriptEnv();
 
-const sync_name = 'sync_open_locations';
+const sync_name = systemKeys.sync.data.locations;
 
 let db_dict_countries = {};
 let db_dict_states = {};

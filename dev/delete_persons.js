@@ -1,5 +1,5 @@
-const db = require('../services/db');
 const { loadScriptEnv, isProdApp } = require('../services/shared');
+const { keys: systemKeys } = require('../services/system');
 
 loadScriptEnv();
 
@@ -65,7 +65,7 @@ function main(is_me) {
             }
 
             try {
-                await knex('sync').where('sync_process', 'persons').delete();
+                await knex('sync').where('sync_process', systemKeys.sync.network.persons).delete();
             } catch (e) {
                 console.error(e);
             }

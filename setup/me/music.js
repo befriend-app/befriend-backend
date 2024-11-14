@@ -5,8 +5,6 @@ const cacheService = require('../../services/cache');
 
 loadScriptEnv();
 
-const sync_name = 'sync_music_artists';
-
 function syncGenres() {
     return new Promise(async (resolve, reject) => {
         console.log("Sync genres");

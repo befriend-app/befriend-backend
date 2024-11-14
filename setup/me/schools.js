@@ -2,10 +2,11 @@ const axios = require('axios');
 const { loadScriptEnv, timeNow, dataEndpoint } = require('../../services/shared');
 const dbService = require('../../services/db');
 const cacheService = require('../../services/cache');
+const { keys: systemKeys } = require('../../services/system');
 
 loadScriptEnv();
 
-const sync_name = 'sync_schools';
+const sync_name = systemKeys.sync.data.schools;
 
 function syncSchools() {
     return new Promise(async (resolve, reject) => {
