@@ -1,22 +1,23 @@
 const cacheService = require('../services/cache');
 const dbService = require('../services/db');
-const { timeNow, getCountries, isNumeric } = require('./shared');
+const { timeNow, getCountries } = require('./shared');
 const { setCache, getObj } = require('./cache');
 const { getPerson } = require('./persons');
-const { prefixLimit } = require('./music');
 
 let sectionsData = {
     instruments: {
+        myStr: 'My Instruments',
         cols: {
             id: 'instrument_id',
             secondary: 'skill_level'
         },
-        categories: ['String', 'Wind', 'Brass', 'Percussion', 'Keyboard', 'Electronic', 'Voice'],
+        categories: {
+            options: ['String', 'Wind', 'Brass', 'Percussion', 'Keyboard', 'Electronic', 'Voice'],
+        },
         secondary: {
             options: ['Beginner', 'Intermediate', 'Advanced', 'Expert', 'Virtuoso'],
             unselectedStr: 'Skill Level',
         },
-        myStr: 'My Instruments',
         autoComplete: {
             minChars: 1,
             endpoint: '/autocomplete/instruments',
@@ -36,12 +37,15 @@ let sectionsData = {
         }
     },
     music: {
+        myStr: 'My Music',
         cols: {
             id: 'instrument_id',
-            secondary: 'skill_level'
         },
-        categories: null,
-        myStr: 'My Instruments',
+        categories: {
+            options: null,
+            fn: `getMusicGenres`,
+            hasKey: true, //key of country code
+        },
         autoComplete: {
             minChars: 1,
             endpoint: '/autocomplete/instruments',
@@ -50,7 +54,7 @@ let sectionsData = {
             },
         },
         cacheKeys: {
-            display: cacheService.keys.instruments_common,
+            // display: cacheService.keys.instruments_common,
         },
         functions: {
             data: '',
@@ -334,7 +338,7 @@ function addMeSectionItem(person_token, section_key, item_token, hash_token) {
 
             if (fnAll) {
                 options = await module.exports[fnAll]();
-                section_option = options.find((opt) => opt.token === item_token);
+                section_option = options.byToken[item_token];
             } else if (sectionData.cacheKeys.byHashToken) {
                 let cache_key = sectionData.cacheKeys.byHashToken(hash_token);
                 section_option = await cacheService.hGetItem(cache_key, item_token);
@@ -548,7 +552,7 @@ function getPersonSectionItems(person, section_key) {
                     let section_option;
 
                     if (options) {
-                        section_option = options.find((_item) => _item.id === item[col_name]);
+                        section_option = options.byId[item[col_name]];
                     } else if (sectionData.cacheKeys.byHashToken) {
                         let cache_key = sectionData.cacheKeys.byHashToken(item[hash_token_col]);
 
@@ -760,13 +764,15 @@ function getActiveData(person, sections) {
                 items = results[resultIndex++];
 
                 if (options || filterList) {
+                    let categories = sectionConfig.categories?.options;
+
                     sections[section_key].data = {
                         myStr: sectionConfig.myStr || null,
                         options: options,
                         autoComplete: {
                             ...sectionConfig.autoComplete,
                         },
-                        categories: sectionConfig.categories || null,
+                        categories: categories || null,
                         secondary: sectionConfig.secondary || null,
                         styles: sectionConfig.styles || null,
                     };
@@ -875,13 +881,19 @@ function allInstruments() {
         try {
             let data = await cacheService.getObj(cache_key);
 
-            if (data) {
+            if (false && data) {
                 return resolve(data);
             }
 
             let conn = await dbService.conn();
 
             data = await conn('instruments').orderBy('popularity', 'desc');
+
+            data = data.reduce((acc, item) => {
+                acc.byId[item.id] = item;
+                acc.byToken[item.token] = item;
+                return acc;
+            }, {byId: {}, byToken: {}});
 
             await cacheService.setCache(cache_key, data);
 
