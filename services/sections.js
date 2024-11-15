@@ -3,6 +3,7 @@ const dbService = require('../services/db');
 const { timeNow, getCountries, isNumeric } = require('./shared');
 const { setCache, getObj } = require('./cache');
 const { getPerson } = require('./persons');
+const { prefixLimit } = require('./music');
 
 let sectionsData = {
     instruments: {
@@ -14,6 +15,7 @@ let sectionsData = {
         secondary: ['Beginner', 'Intermediate', 'Advanced', 'Expert', 'Virtuoso'],
         unselectedStr: 'Skill Level',
         autoComplete: {
+            minChars: 1,
             endpoint: '/autocomplete/instruments',
             placeholders: {
                 main: 'Search instruments',
@@ -37,6 +39,7 @@ let sectionsData = {
             hashToken: 'hash_token'
         },
         autoComplete: {
+            minChars: 2,
             endpoint: '/autocomplete/schools',
             placeholders: {
                 main: 'Search schools',

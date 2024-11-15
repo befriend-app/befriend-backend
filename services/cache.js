@@ -76,9 +76,6 @@ module.exports = {
         city_country_prefix: function (country_code, prefix) {
             return `cities:country:${country_code}:${prefix}`;
         },
-        places_category_city: function (category_id, city_id) {
-            return `places:category:${category_id}:city:${city_id}`;
-        },
         person_sections: function (person_token) {
             return `persons:sections:${person_token}`;
         },
@@ -561,7 +558,7 @@ module.exports = {
             }
         });
     },
-    prefixIndexer: function (items, score_key, keyGenerators) {
+    prefixIndexer: function (items, score_key, keyGenerators, minPrefixLength = 2) {
         const { mainKey, prefixKey } = keyGenerators;
 
         let batchSize = 5000;

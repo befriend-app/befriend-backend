@@ -111,7 +111,7 @@ function indexInstruments() {
             await cacheService.prefixIndexer(instruments, 'popularity', {
                 mainKey: cacheService.keys.instrument,
                 prefixKey: cacheService.keys.instruments_prefix,
-            });
+            }, 1);
         } catch (e) {
             console.error(e);
         }

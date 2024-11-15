@@ -7,7 +7,6 @@ loadScriptEnv();
 
 const BATCH_SIZE = 5000;
 
-
 function indexGenres() {
     return new Promise(async (resolve, reject) => {
         try {
