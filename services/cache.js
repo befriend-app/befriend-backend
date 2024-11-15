@@ -94,8 +94,8 @@ module.exports = {
         movies_prefix: function (prefix) {
             return `movies:prefix:${prefix}`;
         },
-        music_country_genres: function (country_code) {
-            return `music:genres:${country_code}`;
+        music_genres_country: function (country_code) {
+            return `music:genres:country:${country_code}`;
         },
         music_genres_prefix: function (prefix) {
             return `music:genres:prefix:${prefix}`;
@@ -255,6 +255,40 @@ module.exports = {
             }
         });
     },
+    hGetAllObj: function (key) {
+        return new Promise(async (resolve, reject) => {
+            //init conn in case first time
+            if (!module.exports.conn) {
+                try {
+                    await module.exports.init();
+                } catch (e) {
+                    return reject(e);
+                }
+            }
+
+            try {
+                let data = await module.exports.conn.hGetAll(key);
+
+                try {
+                    if(typeof data === 'object') {
+                        for(let k in data) {
+                            let v = data[k];
+
+                            if(typeof v === 'string') {
+                                data[k] = JSON.parse(v);
+                            }
+                        }
+                    }
+
+                    return resolve(data);
+                } catch (e) {
+                    return resolve(null);
+                }
+            } catch (e) {
+                return reject(e);
+            }
+        });
+    },
     setCache: function (key, data, cache_lifetime = null) {
         return new Promise(async (resolve, reject) => {
             //in case conn not initiated
@@ -336,6 +370,18 @@ module.exports = {
 
                 return resolve(data);
             } catch (e) {
+                return reject(e);
+            }
+        });
+    },
+    execPipeline: function (pipeline) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                 let data = await pipeline.execAsPipeline();
+
+                 resolve(data);
+            } catch(e) {
+                console.error(e);
                 return reject(e);
             }
         });

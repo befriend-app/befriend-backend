@@ -1,7 +1,7 @@
 const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 const { timeNow, getCountries } = require('./shared');
-const { setCache, getObj } = require('./cache');
+const { setCache, getObj, execMulti, execPipeline, hGetAll, hGetAllObj } = require('./cache');
 const { getPerson } = require('./persons');
 let sectionsData = require('./sections_data');
 
@@ -546,7 +546,7 @@ function getAllMeSections() {
     });
 }
 
-function getMeSections(person) {
+function getMeSections(person, country) {
     return new Promise(async (resolve, reject) => {
         if (!person || !person.person_token) {
             return resolve('person required');
@@ -616,7 +616,7 @@ function getMeSections(person) {
             }
 
             //add data options to active
-            organized.active = await getActiveData(person, organized.active);
+            organized.active = await getActiveData(person, organized.active, country);
 
             return resolve(organized);
         } catch (e) {
@@ -626,7 +626,7 @@ function getMeSections(person) {
     });
 }
 
-function getActiveData(person, sections) {
+function getActiveData(person, sections, country) {
     return new Promise(async (resolve, reject) => {
         let section_keys = Object.keys(sections);
 
@@ -638,7 +638,7 @@ function getActiveData(person, sections) {
         let multi = cacheService.conn.multi();
 
         try {
-            // Batch cache
+            // Get data from cache in batch
             for (let key of section_keys) {
                 if (!(key in sectionsData)) {
                     continue;
@@ -646,66 +646,72 @@ function getActiveData(person, sections) {
 
                 const section = sectionsData[key];
 
-                // If display key
-                if (section.categories?.cacheKeys?.items) {
-                    multi.get(section.categories.cacheKeys.items);
+                if (section.categories?.cacheKeys) {
+                    // Items
+                    if (section.categories.cacheKeys.items?.key) {
+                        multi.get(section.categories.cacheKeys.items.key);
+                    }
                 }
 
                 // Always get person-specific items
                 const cache_key_items = cacheService.keys.person_sections_data(
                     person.person_token,
-                    key,
+                    key
                 );
+
                 multi.get(cache_key_items);
             }
 
-            let results = await cacheService.execMulti(multi);
-
-            results = results.map((result) => {
-                if (result) {
-                    try {
-                        return JSON.parse(result);
-                    } catch (e) {
-                        return result;
-                    }
-                }
-                return null;
-            });
+            let results = await execPipeline(multi);
 
             let resultIndex = 0;
 
+            // Process results
             for (let section_key of section_keys) {
                 if (!(section_key in sectionsData)) {
                     continue;
                 }
 
                 const section = sectionsData[section_key];
-                let options = null;
+                let categoryOptions = null;
+                let categoryItems = null;
                 let filterList = null;
                 let items = null;
 
-                // If display key
-                if (section.categories?.cacheKeys?.items) {
-                    options = results[resultIndex++];
+                // Get category items
+                if (section.categories?.cacheKeys) {
+                    if (section.categories.cacheKeys.items?.key) {
+                        categoryItems = results[resultIndex++];
+                        try {
+                            categoryItems = JSON.parse(categoryItems);
+                        } catch (e) {}
+                    }
                 }
 
+                // Get category options
+                if(section.categories.fn) {
+                    categoryOptions = await module.exports[section.categories.fn](country);
+                }
+
+                // Get filter list
                 if (section.functions?.filterList) {
                     filterList = await module.exports[section.functions.filterList]();
                 }
 
+                // Get person items
                 items = results[resultIndex++];
+                try {
+                    items = JSON.parse(items);
+                } catch (e) {}
 
-                if (options || filterList) {
-                    let categories = section.categories?.options;
-
+                // Build section data
+                if (categoryOptions || categoryItems || filterList) {
                     sections[section_key].data = {
                         myStr: section.myStr || null,
                         tables: Object.keys(section.tables),
-                        options: options,
-                        autoComplete: {
-                            ...section.autoComplete,
-                        },
-                        categories: categories || null,
+                        options: categoryItems,
+                        autoComplete: section.autoComplete,
+                        categories: section.categories?.options || categoryOptions || null,
                         secondary: section.secondary || null,
                         styles: section.styles || null,
                     };
@@ -716,38 +722,33 @@ function getActiveData(person, sections) {
                 }
             }
 
-            // Fetch missing data
+            // Handle missing data
             for (let key in missing_keys) {
-                let fnData = sectionsData[key].functions.data;
-
-                if(fnData) {
-                    let data = await module.exports[fnData]();
+                if (sectionsData[key].functions?.data) {
+                    let data = await module.exports[sectionsData[key].functions.data]();
                     let items = await getPersonSectionItems(person, key);
 
                     sections[key].data = data;
                     sections[key].items = items;
-                } else {
-                    sections[key].data = {};
-                    sections[key].items = {};
                 }
             }
 
             // Clean up items
             for (let key in sections) {
                 let section = sections[key];
-
-                for (let token in section.items) {
-                    let item = section.items[token];
-                    delete item.created;
-                    delete item.updated;
-
-                    if (item.deleted) {
-                        delete section.items[token];
+                if (section.items) {
+                    for (let token in section.items) {
+                        let item = section.items[token];
+                        delete item.created;
+                        delete item.updated;
+                        if (item.deleted) {
+                            delete section.items[token];
+                        }
                     }
                 }
             }
         } catch (e) {
-            console.error('Error in getSectionData:', e);
+            console.error('Error in getActiveData:', e);
         }
 
         resolve(sections);
@@ -914,6 +915,47 @@ function getSchools() {
     });
 }
 
+function getCategoriesMusic(country) {
+    return new Promise(async (resolve, reject) => {
+        let section = sectionsData.music;
+
+        let code = country?.code || section.categories.defaultCountry;
+
+        try {
+             let allGenres = await hGetAllObj(cacheService.keys.music_genres);
+             let countryGenres = await hGetAllObj(cacheService.keys.music_genres_country(code));
+
+             let categoryGenres = [];
+
+             for(let k in countryGenres) {
+                 if(allGenres[k].is_active) {
+                     categoryGenres.push({
+                         name: allGenres[k].name,
+                         position: countryGenres[k].position,
+                         token: k,
+                     });
+                 }
+             }
+
+             categoryGenres.sort((a, b) => {
+                 return a.position - b.position;
+             });
+
+             let categories = [
+                 {
+                     name: 'Genres'
+                 },
+                 ...categoryGenres
+             ];
+
+             resolve(categories);
+        } catch(e) {
+            console.error(e);
+            return reject(e);
+        }
+    });
+}
+
 module.exports = {
     sections: sectionsData,
     addMeSection,
@@ -929,4 +971,5 @@ module.exports = {
     allInstruments,
     getMusic,
     getSchools,
+    getCategoriesMusic
 };

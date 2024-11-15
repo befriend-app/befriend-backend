@@ -18,9 +18,33 @@ module.exports = {
             }
         },
         categories: {
-            options: ['String', 'Wind', 'Brass', 'Percussion', 'Keyboard', 'Electronic', 'Voice'],
+            options: [
+                {
+                    name: 'String'
+                },
+                {
+                    name: 'Wind'
+                },
+                {
+                    name: 'Brass'
+                },
+                {
+                    name: 'Percussion'
+                },
+                {
+                    name: 'Keyboard'
+                },
+                {
+                    name: 'Electronic'
+                },
+                {
+                    name: 'Voice'
+                }
+            ],
             cacheKeys: {
-                items: cacheService.keys.instruments_common
+                items: {
+                    key: cacheService.keys.instruments_common
+                },
             }
         },
         secondary: {
@@ -73,18 +97,15 @@ module.exports = {
         },
         categories: {
             options: null,
-            fn: `getMusicGenres`,
-            hasKey: true, //key of country code
+            fn: 'getCategoriesMusic',
+            defaultCountry: 'US'
         },
         autoComplete: {
-            minChars: 1,
+            minChars: 2,
             endpoint: '/autocomplete/music',
             placeholders: {
                 main: 'Search music',
             },
-        },
-        cacheKeys: {
-            // display: cacheService.keys.instruments_common,
         },
         functions: {
             data: 'getMusic',

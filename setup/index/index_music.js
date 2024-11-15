@@ -119,7 +119,7 @@ function indexGenres() {
 
             // 2. Store country-specific genres
             for (const [countryCode, countryGenres] of Object.entries(genresByCountry)) {
-                pipeline.hSet(cacheService.keys.music_country_genres(countryCode), countryGenres);
+                pipeline.hSet(cacheService.keys.music_genres_country(countryCode), countryGenres);
             }
 
             // 3. Store prefix indexes

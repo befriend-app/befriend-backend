@@ -21,9 +21,9 @@ module.exports = {
             try {
                 let me = await getPerson(person_token);
 
-                let sections = await getMeSections(me);
-
                 let country = await latLonLookup(req.query.location?.lat, req.query.location?.lon);
+
+                let sections = await getMeSections(me, country);
 
                 res.json({
                     me,
