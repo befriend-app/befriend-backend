@@ -7,9 +7,19 @@ const { getPerson } = require('./persons');
 let sectionsData = {
     instruments: {
         myStr: 'My Instruments',
-        cols: {
-            id: 'instrument_id',
-            secondary: 'skill_level'
+        tables: {
+            instruments: {
+                data: {
+                    name: 'instruments'
+                },
+                user: {
+                    name: 'persons_instruments',
+                    cols: {
+                        id: 'instrument_id',
+                        secondary: 'skill_level'
+                    },
+                },
+            }
         },
         categories: {
             options: ['String', 'Wind', 'Brass', 'Percussion', 'Keyboard', 'Electronic', 'Voice'],
@@ -65,10 +75,20 @@ let sectionsData = {
         }
     },
     schools: {
-        cols: {
-            id: 'school_id',
-            token: 'school_token',
-            hashToken: 'hash_token'
+        tables: {
+            schools: {
+                data: {
+                    name: 'schools'
+                },
+                user: {
+                    name: 'persons_schools',
+                    cols: {
+                        id: 'school_id',
+                        token: 'school_token',
+                        hashToken: 'hash_token'
+                    },
+                },
+            }
         },
         autoComplete: {
             minChars: 2,
@@ -303,14 +323,32 @@ function deleteMeSection(person_token, section_key) {
     });
 }
 
-function addMeSectionItem(person_token, section_key, item_token, hash_token) {
+function addMeSectionItem(person_token, section_key, table_key, item_token, hash_token) {
     return new Promise(async (resolve, reject) => {
         try {
-            if (!section_key || !item_token) {
-                return reject('Section key and item token required');
+            if (!section_key) {
+                return reject('Section key required');
+            }
+
+            if(!table_key) {
+                return reject('Table key required');
+            }
+
+            if(!item_token) {
+                return reject('Item token required');
             }
 
             let sectionData = sectionsData[section_key];
+
+            if(!sectionData) {
+                return reject('Invalid section key');
+            }
+
+            let userTableData = sectionData.tables[table_key]?.user;
+
+            if(!userTableData) {
+                return reject('Invalid table key');
+            }
 
             let fnAll = sectionData.functions.all;
 
@@ -332,8 +370,6 @@ function addMeSectionItem(person_token, section_key, item_token, hash_token) {
                 return reject('Section not found');
             }
 
-            let table_name = `persons_${section_key}`;
-            let data_id_col = sectionData.cols.id;
             let section_option;
 
             if (fnAll) {
@@ -354,9 +390,9 @@ function addMeSectionItem(person_token, section_key, item_token, hash_token) {
                 let item_data;
 
                 //prevent duplicate item after deletion
-                let exists_qry = await conn(table_name)
+                let exists_qry = await conn(userTableData.name)
                     .where('person_id', person.id)
-                    .where(data_id_col, section_option.id)
+                    .where(userTableData.cols.id, section_option.id)
                     .first();
 
                 if (exists_qry) {
@@ -364,19 +400,17 @@ function addMeSectionItem(person_token, section_key, item_token, hash_token) {
                         return reject('No change');
                     }
 
-                    let secondary_col = sectionData.cols.secondary;
-
                     exists_qry.updated = timeNow();
 
-                    await conn(table_name).where('id', exists_qry.id).update({
+                    await conn(userTableData.name).where('id', exists_qry.id).update({
                         updated: exists_qry.updated,
                         deleted: null,
                     });
 
                     item_data = exists_qry;
 
-                    item_data.secondary = item_data[secondary_col]
-                        ? item_data[secondary_col]
+                    item_data.secondary = item_data[userTableData.cols.secondary]
+                        ? item_data[userTableData.cols.secondary]
                         : null;
 
                     delete item_data.deleted;
@@ -387,17 +421,17 @@ function addMeSectionItem(person_token, section_key, item_token, hash_token) {
                         updated: timeNow(),
                     };
 
-                    if(sectionData.cols.token) {
-                        insert_data[sectionData.cols.token] = section_option.token;
+                    if(userTableData.cols.token) {
+                        insert_data[userTableData.cols.token] = section_option.token;
                     }
 
-                    if(sectionData.cols.hashToken) {
-                        insert_data[sectionData.cols.hashToken] = section_option[sectionData.autoComplete.filter.hashKey];
+                    if(userTableData.cols.hashToken) {
+                        insert_data[userTableData.cols.hashToken] = section_option[sectionData.autoComplete.filter.hashKey];
                     }
 
-                    insert_data[data_id_col] = section_option.id;
+                    insert_data[userTableData.cols.id] = section_option.id;
 
-                    let [id] = await conn(table_name).insert(insert_data);
+                    let [id] = await conn(userTableData.name).insert(insert_data);
 
                     insert_data.id = id;
 
@@ -435,14 +469,30 @@ function addMeSectionItem(person_token, section_key, item_token, hash_token) {
 function updateMeSectionItem(body) {
     return new Promise(async (resolve, reject) => {
         try {
-            let { person_token, section_key, section_item_id, secondary, is_delete } = body;
+            let { person_token, section_key, table_key, section_item_id, secondary, is_delete } = body;
+
+            if (!secondary && typeof is_delete === 'undefined') {
+                return reject('Invalid request');
+            }
 
             if (!person_token || !section_key || !section_item_id) {
                 return reject('Person, name, and section item id required');
             }
 
-            if (!secondary && typeof is_delete === 'undefined') {
-                return reject('Invalid request');
+            if(!table_key) {
+                return reject('Table key required');
+            }
+
+            let sectionData = sectionsData[section_key];
+
+            if(!sectionData) {
+                return reject('Section not found');
+            }
+
+            let userTableData = sectionData.tables?.[table_key]?.user;
+
+            if(!userTableData) {
+                return reject('Invalid table key');
             }
 
             let person = await getPerson(person_token);
@@ -454,7 +504,7 @@ function updateMeSectionItem(body) {
             let conn = await dbService.conn();
 
             if (secondary || is_delete) {
-                let secondary_col = sectionsData[section_key].cols.secondary;
+                let secondary_col = userTableData.cols.secondary;
 
                 let data = {
                     updated: timeNow(),
@@ -466,7 +516,7 @@ function updateMeSectionItem(body) {
                     data[secondary_col] = secondary;
                 }
 
-                let update = await conn(`persons_${section_key}`)
+                let update = await conn(userTableData.name)
                     .where('id', section_item_id)
                     .where('person_id', person.id)
                     .update(data);
@@ -539,32 +589,38 @@ function getPersonSectionItems(person, section_key) {
 
                 let conn = await dbService.conn();
 
-                let qry = await conn(`persons_${section_key}`)
-                    .where('person_id', person.id)
-                    .whereNull('deleted');
+                for(let table_key in sectionData.tables) {
+                    let userTableData = sectionData.tables[table_key]?.user;
 
-                let col_name = sectionData.cols.id;
-                let secondary_col_name = sectionData.cols.secondary;
-                let token_col = sectionData.cols.token;
-                let hash_token_col = sectionData.cols.hashToken;
+                    let qry = await conn(userTableData.name)
+                        .where('person_id', person.id)
+                        .whereNull('deleted');
 
-                for (let item of qry) {
-                    let section_option;
+                    let col_name = userTableData.cols.id;
+                    let secondary_col_name = userTableData.cols.secondary;
+                    let token_col = userTableData.cols.token;
+                    let hash_token_col = userTableData.cols.hashToken;
 
-                    if (options) {
-                        section_option = options.byId[item[col_name]];
-                    } else if (sectionData.cacheKeys.byHashToken) {
-                        let cache_key = sectionData.cacheKeys.byHashToken(item[hash_token_col]);
+                    for (let item of qry) {
+                        item.table_key = table_key;
 
-                        section_option = await cacheService.hGetItem(cache_key, item[token_col]);
+                        let section_option;
+
+                        if (options) {
+                            section_option = options.byId[item[col_name]];
+                        } else if (sectionData.cacheKeys.byHashToken) {
+                            let cache_key = sectionData.cacheKeys.byHashToken(item[hash_token_col]);
+
+                            section_option = await cacheService.hGetItem(cache_key, item[token_col]);
+                        }
+
+                        item.secondary = item[secondary_col_name];
+
+                        organized[section_option.token] = {
+                            ...section_option,
+                            ...item,
+                        };
                     }
-
-                    item.secondary = item[secondary_col_name];
-
-                    organized[section_option.token] = {
-                        ...section_option,
-                        ...item,
-                    };
                 }
 
                 await setCache(cache_key, organized);
@@ -768,6 +824,7 @@ function getActiveData(person, sections) {
 
                     sections[section_key].data = {
                         myStr: sectionConfig.myStr || null,
+                        tables: Object.keys(sectionConfig.tables),
                         options: options,
                         autoComplete: {
                             ...sectionConfig.autoComplete,
@@ -796,6 +853,7 @@ function getActiveData(person, sections) {
             // Clean up items
             for (let key in sections) {
                 let section = sections[key];
+
                 for (let token in section.items) {
                     let item = section.items[token];
                     delete item.created;
@@ -859,11 +917,16 @@ function getInstruments() {
                 'desc',
             );
 
+            let section = sectionsData.instruments;
+
             let data = {
-                options: options,
-                autoComplete: sectionsData.instruments.autoComplete,
-                categories: sectionsData.instruments.categories,
-                secondary: sectionsData.instruments.secondary,
+                options,
+                myStr: section.myStr,
+                autoComplete: section.autoComplete,
+                categories: section.categories.options,
+                secondary: section.secondary,
+                styles: section.styles,
+                tables: Object.keys(section.tables),
             };
 
             resolve(data);
@@ -906,12 +969,17 @@ function allInstruments() {
 
 function getSchools() {
     return new Promise(async (resolve, reject) => {
-        let data = {
-            autoComplete: sectionsData.schools.autoComplete,
-        };
-
         //list of countries for autocomplete
         try {
+            let section = sectionsData.schools;
+
+            let data = {
+                autoComplete: section.autoComplete,
+                myStr: section.myStr,
+                styles: section.styles,
+                tables: Object.keys(section.tables),
+            };
+
             let countries = await getCountries();
 
             countries.map((country) => {
@@ -921,11 +989,11 @@ function getSchools() {
             });
 
             data.autoComplete.filter.list = countries || [];
+            resolve(data);
         } catch (e) {
             console.error(e);
+            return reject();
         }
-
-        resolve(data);
     });
 }
 

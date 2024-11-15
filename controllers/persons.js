@@ -76,6 +76,7 @@ module.exports = {
                 let data = await addMeSectionItem(
                     req.body.person_token,
                     req.body.section_key,
+                    req.body.table_key,
                     req.body.item_token,
                     req.body.hash_token
                 );
