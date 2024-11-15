@@ -3,133 +3,9 @@ const dbService = require('../services/db');
 const { timeNow, getCountries } = require('./shared');
 const { setCache, getObj } = require('./cache');
 const { getPerson } = require('./persons');
+let sectionsData = require('./sections_data');
 
-let sectionsData = {
-    instruments: {
-        myStr: 'My Instruments',
-        tables: {
-            instruments: {
-                data: {
-                    name: 'instruments'
-                },
-                user: {
-                    name: 'persons_instruments',
-                    cols: {
-                        id: 'instrument_id',
-                        secondary: 'skill_level'
-                    },
-                },
-            }
-        },
-        categories: {
-            options: ['String', 'Wind', 'Brass', 'Percussion', 'Keyboard', 'Electronic', 'Voice'],
-        },
-        secondary: {
-            options: ['Beginner', 'Intermediate', 'Advanced', 'Expert', 'Virtuoso'],
-            unselectedStr: 'Skill Level',
-        },
-        autoComplete: {
-            minChars: 1,
-            endpoint: '/autocomplete/instruments',
-            placeholders: {
-                main: 'Search instruments',
-            },
-        },
-        cacheKeys: {
-            display: cacheService.keys.instruments_common,
-        },
-        functions: {
-            data: 'getInstruments',
-            all: 'allInstruments',
-        },
-        styles: {
-            rowCols: 'cols-2'
-        }
-    },
-    music: {
-        myStr: 'My Music',
-        cols: {
-            id: 'instrument_id',
-        },
-        categories: {
-            options: null,
-            fn: `getMusicGenres`,
-            hasKey: true, //key of country code
-        },
-        autoComplete: {
-            minChars: 1,
-            endpoint: '/autocomplete/instruments',
-            placeholders: {
-                main: 'Search instruments',
-            },
-        },
-        cacheKeys: {
-            // display: cacheService.keys.instruments_common,
-        },
-        functions: {
-            data: '',
-            all: '',
-        },
-        styles: {
-            rowCols: 'cols-2'
-        }
-    },
-    schools: {
-        tables: {
-            schools: {
-                data: {
-                    name: 'schools'
-                },
-                user: {
-                    name: 'persons_schools',
-                    cols: {
-                        id: 'school_id',
-                        token: 'school_token',
-                        hashToken: 'hash_token'
-                    },
-                },
-            }
-        },
-        autoComplete: {
-            minChars: 2,
-            endpoint: '/autocomplete/schools',
-            placeholders: {
-                main: 'Search schools',
-                list: 'Country',
-            },
-            filter: {
-                hashKey: 'code',
-                list: [],
-                noResults: 'No countries found'
-            },
-            groups: {
-                college: {
-                    name: 'Universities and Colleges'
-                },
-                hs: {
-                    name: 'High Schools'
-                },
-                grade: {
-                    name: 'Middle Schools'
-                },
-                other: {
-                    name: 'Other',
-                }
-            }
-        },
-        cacheKeys: {
-            byHashToken: cacheService.keys.schools_country,
-        },
-        functions: {
-            filterList: 'getSchools',
-        },
-        styles: {
-            rowCols: 'cols-1'
-        }
-    },
-};
-
-function addMeSection(person_token, section_key) {
+function addMeSection(person_token, section_key, location) {
     function addDataToSection(section) {
         return new Promise(async (resolve, reject) => {
             if (section_key in sectionsData) {
@@ -768,11 +644,11 @@ function getActiveData(person, sections) {
                     continue;
                 }
 
-                const sectionConfig = sectionsData[key];
+                const section = sectionsData[key];
 
                 // If display key
-                if (sectionConfig.cacheKeys?.display) {
-                    multi.get(sectionConfig.cacheKeys.display);
+                if (section.categories?.cacheKeys?.items) {
+                    multi.get(section.categories.cacheKeys.items);
                 }
 
                 // Always get person-specific items
@@ -803,35 +679,35 @@ function getActiveData(person, sections) {
                     continue;
                 }
 
-                const sectionConfig = sectionsData[section_key];
+                const section = sectionsData[section_key];
                 let options = null;
                 let filterList = null;
                 let items = null;
 
                 // If display key
-                if (sectionConfig.cacheKeys?.display) {
+                if (section.categories?.cacheKeys?.items) {
                     options = results[resultIndex++];
                 }
 
-                if (sectionConfig.functions?.filterList) {
-                    filterList = await module.exports[sectionConfig.functions.filterList]();
+                if (section.functions?.filterList) {
+                    filterList = await module.exports[section.functions.filterList]();
                 }
 
                 items = results[resultIndex++];
 
                 if (options || filterList) {
-                    let categories = sectionConfig.categories?.options;
+                    let categories = section.categories?.options;
 
                     sections[section_key].data = {
-                        myStr: sectionConfig.myStr || null,
-                        tables: Object.keys(sectionConfig.tables),
+                        myStr: section.myStr || null,
+                        tables: Object.keys(section.tables),
                         options: options,
                         autoComplete: {
-                            ...sectionConfig.autoComplete,
+                            ...section.autoComplete,
                         },
                         categories: categories || null,
-                        secondary: sectionConfig.secondary || null,
-                        styles: sectionConfig.styles || null,
+                        secondary: section.secondary || null,
+                        styles: section.styles || null,
                     };
 
                     sections[section_key].items = items || {};
@@ -843,11 +719,17 @@ function getActiveData(person, sections) {
             // Fetch missing data
             for (let key in missing_keys) {
                 let fnData = sectionsData[key].functions.data;
-                let data = await module.exports[fnData]();
-                let items = await getPersonSectionItems(person, key);
 
-                sections[key].data = data;
-                sections[key].items = items;
+                if(fnData) {
+                    let data = await module.exports[fnData]();
+                    let items = await getPersonSectionItems(person, key);
+
+                    sections[key].data = data;
+                    sections[key].items = items;
+                } else {
+                    sections[key].data = {};
+                    sections[key].items = {};
+                }
             }
 
             // Clean up items
@@ -967,6 +849,41 @@ function allInstruments() {
     });
 }
 
+function getMusic(country_code) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let section = sectionsData.music;
+
+            //categories
+
+
+            let options = await dataForSchema(
+                'instruments',
+                cacheService.keys.instruments_common,
+                'is_common',
+                'popularity',
+                'desc',
+            );
+
+            let data = {
+                options,
+                myStr: section.myStr,
+                autoComplete: section.autoComplete,
+                categories: section.categories.options,
+                secondary: section.secondary,
+                styles: section.styles,
+                tables: Object.keys(section.tables),
+            };
+
+            resolve(data);
+        } catch (e) {
+            console.error(e);
+            return reject();
+        }
+    });
+}
+
+
 function getSchools() {
     return new Promise(async (resolve, reject) => {
         //list of countries for autocomplete
@@ -999,16 +916,17 @@ function getSchools() {
 
 module.exports = {
     sections: sectionsData,
-    addMeSection: addMeSection,
-    deleteMeSection: deleteMeSection,
-    addMeSectionItem: addMeSectionItem,
-    updateMeSectionItem: updateMeSectionItem,
-    getPersonSectionItems: getPersonSectionItems,
-    getAllMeSections: getAllMeSections,
-    getMeSections: getMeSections,
-    getActiveData: getActiveData,
-    dataForSchema: dataForSchema,
-    getInstruments: getInstruments,
-    allInstruments: allInstruments,
-    getSchools: getSchools,
+    addMeSection,
+    deleteMeSection,
+    addMeSectionItem,
+    updateMeSectionItem,
+    getPersonSectionItems,
+    getAllMeSections,
+    getMeSections,
+    getActiveData,
+    dataForSchema,
+    getInstruments,
+    allInstruments,
+    getMusic,
+    getSchools,
 };
