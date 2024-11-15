@@ -12,8 +12,11 @@ let sectionsData = {
             secondary: 'skill_level'
         },
         categories: ['String', 'Wind', 'Brass', 'Percussion', 'Keyboard', 'Electronic', 'Voice'],
-        secondary: ['Beginner', 'Intermediate', 'Advanced', 'Expert', 'Virtuoso'],
-        unselectedStr: 'Skill Level',
+        secondary: {
+            options: ['Beginner', 'Intermediate', 'Advanced', 'Expert', 'Virtuoso'],
+            unselectedStr: 'Skill Level',
+        },
+        myStr: 'My Instruments',
         autoComplete: {
             minChars: 1,
             endpoint: '/autocomplete/instruments',
@@ -27,6 +30,31 @@ let sectionsData = {
         functions: {
             data: 'getInstruments',
             all: 'allInstruments',
+        },
+        styles: {
+            rowCols: 'cols-2'
+        }
+    },
+    music: {
+        cols: {
+            id: 'instrument_id',
+            secondary: 'skill_level'
+        },
+        categories: null,
+        myStr: 'My Instruments',
+        autoComplete: {
+            minChars: 1,
+            endpoint: '/autocomplete/instruments',
+            placeholders: {
+                main: 'Search instruments',
+            },
+        },
+        cacheKeys: {
+            display: cacheService.keys.instruments_common,
+        },
+        functions: {
+            data: '',
+            all: '',
         },
         styles: {
             rowCols: 'cols-2'
@@ -733,13 +761,13 @@ function getActiveData(person, sections) {
 
                 if (options || filterList) {
                     sections[section_key].data = {
+                        myStr: sectionConfig.myStr || null,
                         options: options,
                         autoComplete: {
                             ...sectionConfig.autoComplete,
                         },
                         categories: sectionConfig.categories || null,
                         secondary: sectionConfig.secondary || null,
-                        unselectedStr: sectionConfig.unselectedStr || null,
                         styles: sectionConfig.styles || null,
                     };
 
@@ -830,7 +858,6 @@ function getInstruments() {
                 autoComplete: sectionsData.instruments.autoComplete,
                 categories: sectionsData.instruments.categories,
                 secondary: sectionsData.instruments.secondary,
-                unselectedStr: sectionsData.instruments.unselectedStr,
             };
 
             resolve(data);
