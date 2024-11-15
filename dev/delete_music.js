@@ -5,6 +5,67 @@ const { getKeys } = require('../services/cache');
 
 loadScriptEnv();
 
+async function deleteDb() {
+    let dbs = [process.env.DB_NAME];
+
+    for (let db of dbs) {
+        let connection = {
+            host: process.env.DB_HOST,
+            user: process.env.DB_USER,
+            password: process.env.DB_PASSWORD,
+            database: db,
+        };
+
+        if (process.env.DB_PORT) {
+            connection.port = parseInt(process.env.DB_PORT);
+        }
+
+        let knex = require('knex')({
+            client: process.env.DB_CLIENT,
+            connection: connection,
+        });
+
+        //delete sync
+        let db_sync_keys = [systemKeys.sync.data.music.artists];
+
+        for(let key of db_sync_keys) {
+            try {
+                await knex('sync')
+                    .where('sync_process', key)
+                    .delete();
+            } catch(e) {
+                console.error(e);
+            }
+        }
+
+        let tables = [
+            'music_artists_genres', 'music_artists',
+            'music_genres_countries', 'music_genres'];
+
+        for (let table of tables) {
+            try {
+                await knex.raw('SET FOREIGN_KEY_CHECKS = 0');
+                await knex(table).delete();
+            } finally {
+                await knex.raw('SET FOREIGN_KEY_CHECKS = 1');
+            }
+        }
+    }
+}
+
+async function deleteRedis() {
+    await cacheService.init();
+
+    let keys = await getKeys('music:*');
+
+    console.log({
+        keys: keys.length
+    });
+
+    await cacheService.deleteKeys(keys);
+
+}
+
 function main(is_me) {
     return new Promise(async (resolve, reject) => {
         console.log('Delete: music');
@@ -14,57 +75,8 @@ function main(is_me) {
             return resolve();
         }
 
-        await cacheService.init();
-
-        let dbs = [process.env.DB_NAME];
-
-        for (let db of dbs) {
-            let connection = {
-                host: process.env.DB_HOST,
-                user: process.env.DB_USER,
-                password: process.env.DB_PASSWORD,
-                database: db,
-            };
-
-            if (process.env.DB_PORT) {
-                connection.port = parseInt(process.env.DB_PORT);
-            }
-
-            let knex = require('knex')({
-                client: process.env.DB_CLIENT,
-                connection: connection,
-            });
-
-            //delete sync
-            let db_sync_keys = [systemKeys.sync.data.music.artists];
-
-            for(let key of db_sync_keys) {
-                try {
-                     await knex('sync')
-                         .where('sync_process', key)
-                         .delete();
-                } catch(e) {
-                    console.error(e);
-                }
-            }
-
-            let tables = [
-                'music_artists_genres', 'music_artists',
-                'music_genres_countries', 'music_genres'];
-
-            for (let table of tables) {
-                try {
-                    await knex.raw('SET FOREIGN_KEY_CHECKS = 0');
-                    await knex(table).delete();
-                } finally {
-                    await knex.raw('SET FOREIGN_KEY_CHECKS = 1');
-                }
-            }
-
-            let keys = await getKeys('music:genres:*');
-
-            await cacheService.deleteKeys(keys);
-        }
+        // await deleteDb();
+        await deleteRedis();
 
         if (is_me) {
             process.exit();

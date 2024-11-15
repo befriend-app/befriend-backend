@@ -592,7 +592,7 @@ async function main() {
 
             console.log('Genres sync completed');
 
-            // await require('../index/index_music').main();
+            await require('../index/index_music').main();
         } catch(e) {
             console.error(e);
             return reject(e);

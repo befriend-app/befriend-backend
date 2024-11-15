@@ -12,6 +12,7 @@ module.exports = {
         instruments: `instruments`,
         instruments_common: `instruments:common`,
         music_genres: `music:genres`,
+        music_artists: `music:artists`,
         activity: function (activity_token) {
             return `activities:${activity_token}`;
         },
@@ -101,6 +102,15 @@ module.exports = {
         },
         music_genres_prefix: function (prefix) {
             return `music:genres:prefix:${prefix}`;
+        },
+        music_artists_prefix: function (prefix) {
+            return `music:artists:prefix:${prefix}`;
+        },
+        music_genre_artists: function(genre_token) {
+            return `music:genres:artists:${genre_token}`;
+        },
+        music_genre_top_artists: function(genre_token) {
+            return `music:genres:top:artists:${genre_token}`;
         },
         schools_country: function (code) {
             return `schools:country:${code}`;
