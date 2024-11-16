@@ -23,6 +23,12 @@ module.exports = {
                     name: 'String'
                 },
                 {
+                    name: 'Keyboard'
+                },
+                {
+                    name: 'Voice'
+                },
+                {
                     name: 'Wind'
                 },
                 {
@@ -31,15 +37,10 @@ module.exports = {
                 {
                     name: 'Percussion'
                 },
-                {
-                    name: 'Keyboard'
-                },
+
                 {
                     name: 'Electronic'
                 },
-                {
-                    name: 'Voice'
-                }
             ],
             cacheKeys: {
                 items: {
@@ -96,6 +97,7 @@ module.exports = {
             },
         },
         categories: {
+            endpoint: `/music/top/artists/genre`,
             options: null,
             fn: 'getCategoriesMusic',
             defaultCountry: 'US'

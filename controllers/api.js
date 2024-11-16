@@ -27,6 +27,7 @@ const { getCategoriesPlaces, placesAutoComplete, travelTimes } = require('../ser
 const { cityAutoComplete } = require('../services/locations');
 const { schoolAutoComplete } = require('../services/schools');
 const { hGetAll } = require('../services/cache');
+const { getTopArtistsForGenre } = require('../services/music');
 
 module.exports = {
     getNetworks: function (req, res) {
@@ -1642,6 +1643,29 @@ module.exports = {
                 console.error(e);
 
                 res.json('Autocomplete error', 400);
+                return resolve();
+            }
+        });
+    },
+    getMusicTopArtistsForGenre: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            let genre_token = req.query.category_token;
+
+            if (!genre_token) {
+                res.json('Genre token required', 400);
+                return resolve();
+            }
+
+            try {
+                let items = await getTopArtistsForGenre(genre_token)
+
+                res.json({
+                    items: items
+                });
+            } catch(e) {
+                console.error(e);
+
+                res.json('Error getting artists', 400);
                 return resolve();
             }
         });

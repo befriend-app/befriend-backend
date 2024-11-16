@@ -371,7 +371,7 @@ function indexArtistsGenres() {
                 let artist = artists_dict[ag.artist_id];
                 let genre = genres_dict[ag.genre_id];
 
-                if(ag.deleted) {
+                if(artist.deleted || ag.deleted) {
                    //do nothing
                 } else {
                     if(!(genre.token in genreArtists)) {
@@ -399,23 +399,35 @@ function indexArtistsGenres() {
             // Add to Redis
             for (const genreToken of Object.keys(genreArtists)) {
                 // 1. Store complete artist data for this genre
+                const stringifiedArtists = {};
+                for (const [key, value] of Object.entries(genreArtists[genreToken])) {
+                    stringifiedArtists[key] = JSON.stringify(value);
+                }
+
                 pipeline.hSet(
                     cacheService.keys.music_genre_artists(genreToken),
-                    genreArtists[genreToken]
+                    stringifiedArtists
                 );
 
                 // 2. Store top artists for this genre
                 const topArtists = genreTopArtists[genreToken];
 
                 if (topArtists.length) {
-                    pipeline.set(cacheService.keys.music_genre_top_artists(topArtists));
+                    let key = cacheService.keys.music_genre_top_artists(genreToken);
 
-                    pipeline.zAdd(
-                        cacheService.keys.music_genre_top_artists(genreToken),
-                        topArtists
+                    pipeline.set(
+                        key,
+                        JSON.stringify(topArtists)
                     );
+
+                    // pipeline.zAdd(
+                    //     cacheService.keys.music_genre_top_artists(genreToken),
+                    //     topArtists
+                    // );
                 }
             }
+
+            await pipeline.execAsPipeline();
         } catch(e) {
             console.error(e);
         }

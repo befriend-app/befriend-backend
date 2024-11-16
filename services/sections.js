@@ -689,8 +689,13 @@ function getActiveData(person, sections, country) {
                 }
 
                 // Get category options
-                if(section.categories.fn) {
-                    categoryOptions = await module.exports[section.categories.fn](country);
+                if(section?.categories?.fn) {
+                    if(section_key === 'music') {
+                        let sectionCategories = categoryOptions = await module.exports[section.categories.fn](country);
+
+                        categoryOptions = sectionCategories.options;
+                        categoryItems = sectionCategories.items;
+                    }
                 }
 
                 // Get filter list
@@ -711,7 +716,10 @@ function getActiveData(person, sections, country) {
                         tables: Object.keys(section.tables),
                         options: categoryItems,
                         autoComplete: section.autoComplete,
-                        categories: section.categories?.options || categoryOptions || null,
+                        categories: {
+                            endpoint: section.categories?.endpoint || null,
+                            options: section.categories?.options || categoryOptions || null
+                        },
                         secondary: section.secondary || null,
                         styles: section.styles || null,
                     };
@@ -806,7 +814,9 @@ function getInstruments() {
                 options,
                 myStr: section.myStr,
                 autoComplete: section.autoComplete,
-                categories: section.categories.options,
+                categories: {
+                    options: section.categories.options
+                },
                 secondary: section.secondary,
                 styles: section.styles,
                 tables: Object.keys(section.tables),
@@ -856,8 +866,6 @@ function getMusic(country_code) {
             let section = sectionsData.music;
 
             //categories
-
-
             let options = await dataForSchema(
                 'instruments',
                 cacheService.keys.instruments_common,
@@ -870,7 +878,10 @@ function getMusic(country_code) {
                 options,
                 myStr: section.myStr,
                 autoComplete: section.autoComplete,
-                categories: section.categories.options,
+                categories: {
+                    endpoint: section.categories.endpoint,
+                    options: section.categories.options
+                },
                 secondary: section.secondary,
                 styles: section.styles,
                 tables: Object.keys(section.tables),
@@ -921,6 +932,8 @@ function getCategoriesMusic(country) {
 
         let code = country?.code || section.categories.defaultCountry;
 
+        // code = 'CA';
+
         try {
              let allGenres = await hGetAllObj(cacheService.keys.music_genres);
              let countryGenres = await hGetAllObj(cacheService.keys.music_genres_country(code));
@@ -930,6 +943,7 @@ function getCategoriesMusic(country) {
              for(let k in countryGenres) {
                  if(allGenres[k].is_active) {
                      categoryGenres.push({
+                         heading: 'Artists',
                          name: allGenres[k].name,
                          position: countryGenres[k].position,
                          token: k,
@@ -948,7 +962,29 @@ function getCategoriesMusic(country) {
                  ...categoryGenres
              ];
 
-             resolve(categories);
+             let genres = [
+                 ...categoryGenres
+             ];
+
+             for(let k in allGenres) {
+                 let genre = allGenres[k];
+
+                 if(genre.is_featured) {
+                     genres.push({
+                         name: genre.name,
+                         token: genre.token,
+                     });
+                 }
+             }
+
+             genres.map(item => {
+                item.category = 'genres';
+             });
+
+             resolve({
+                 options: categories,
+                 items: genres
+             });
         } catch(e) {
             console.error(e);
             return reject(e);
