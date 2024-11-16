@@ -1,8 +1,12 @@
 let cacheService = require('./cache');
 let dbService = require('./db');
 const { getObj } = require('./cache');
+const { normalizeSearch, timeNow } = require('./shared');
+const { getCitiesByCountry, getStates } = require('./locations');
+const sectionsData = require('./sections_data');
 
 const MAX_PREFIX_LIMIT = 3;
+const RESULTS_LIMIT = 50;
 const TOP_GENRE_ARTISTS_COUNT = 100;
 
 function getTopArtistsForGenre(genre_token) {
@@ -36,9 +40,78 @@ function getTopArtistsForGenre(genre_token) {
     });
 }
 
+function musicAutoComplete(search_term, category, user_location) {
+    return new Promise(async (resolve, reject) => {
+        let minLength = sectionsData.music.autoComplete.minChars;
+        let maxLength = MAX_PREFIX_LIMIT;
+
+        search_term = normalizeSearch(search_term);
+
+        if (search_term.length < minLength) {
+            return resolve([]);
+        }
+
+        let prefix = search_term.substring(0, maxLength);
+        let artistResults = [];
+        let genreArtists = [];
+        let remainingArtists = [];
+
+        try {
+            // Always get prefix-matching artists first
+            const prefix_key = cacheService.keys.music_artists_prefix(prefix);
+            const artist_tokens = await cacheService.getSetMembers(prefix_key);
+
+            if (artist_tokens?.length) {
+                let pipeline = cacheService.conn.multi();
+
+                for (let token of artist_tokens) {
+                    pipeline.hGet(cacheService.keys.music_artists, token);
+                }
+
+                let artists = await cacheService.execMulti(pipeline);
+
+                for (let artist of artists) {
+                    if (artist) {
+                        try {
+                            artist = JSON.parse(artist);
+                            artistResults.push(artist);
+                        } catch (e) {
+                            console.error('Error parsing artist data:', e);
+                        }
+                    }
+                }
+
+                artistResults.sort((a, b) => b.score - a.score);
+            }
+
+            // For genre categories, prepend genre-specific artists
+            if(category.token) {
+                for(let artist of artistResults) {
+                    if(artist.genres && category.token in artist.genres) {
+                        genreArtists.push(artist);
+                    } else {
+                        remainingArtists.push(artist);
+                    }
+                }
+
+                //combine with artists
+                artistResults = genreArtists.concat(remainingArtists);
+            }
+
+            // Limit final results
+            artistResults = artistResults.slice(0, RESULTS_LIMIT);
+
+            resolve(artistResults);
+        } catch(e) {
+            console.error(e);
+            return reject(e);
+        }
+    });
+}
+
 module.exports = {
     prefixLimit: MAX_PREFIX_LIMIT,
     topGenreArtistsCount: TOP_GENRE_ARTISTS_COUNT,
-    getTopArtistsForGenre
-
+    getTopArtistsForGenre,
+    musicAutoComplete,
 };

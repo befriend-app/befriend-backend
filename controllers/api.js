@@ -27,7 +27,7 @@ const { getCategoriesPlaces, placesAutoComplete, travelTimes } = require('../ser
 const { cityAutoComplete } = require('../services/locations');
 const { schoolAutoComplete } = require('../services/schools');
 const { hGetAll } = require('../services/cache');
-const { getTopArtistsForGenre } = require('../services/music');
+const { getTopArtistsForGenre, musicAutoComplete } = require('../services/music');
 
 module.exports = {
     getNetworks: function (req, res) {
@@ -1617,6 +1617,31 @@ module.exports = {
                 resolve();
             } catch (e) {
                 console.error(e);
+                res.json('Autocomplete error', 400);
+                return resolve();
+            }
+        });
+    },
+    autoCompleteMusic: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            let search = req.query.search;
+            let category = req.query.category;
+            let location = req.query.location;
+
+            if (!search) {
+                res.json('Invalid search', 400);
+                return resolve();
+            }
+
+            try {
+                let items = await musicAutoComplete(search, category, location);
+
+                res.json({
+                    items: items
+                })
+            } catch(e) {
+                console.error(e);
+
                 res.json('Autocomplete error', 400);
                 return resolve();
             }

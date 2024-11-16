@@ -190,13 +190,14 @@ function indexArtists() {
                 let genre = genres_dict[ag.genre_id];
 
                 if(!(artist.id in acc)) {
-                    acc[artist.id] = [];
+                    acc[artist.id] = {};
                 }
 
-                acc[artist.id].push({
+                acc[artist.id][genre.token] = {
                     id: genre.id,
+                    token: genre.token,
                     name: genre.name,
-                });
+                }
 
                 return acc;
             }, {});
