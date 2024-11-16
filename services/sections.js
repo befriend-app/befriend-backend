@@ -841,7 +841,14 @@ function getInstruments() {
                 },
                 secondary: section.secondary,
                 styles: section.styles,
-                tables: Object.keys(section.tables),
+                tables: Object.keys(section.tables).reduce((acc, key) => {
+                    acc.push({
+                            name: key,
+                            isFavorable: !!section.tables[key].isFavorable
+                        });
+
+                    return acc;
+                }, []),
             };
 
             resolve(data);
@@ -892,7 +899,6 @@ function getMusic(country) {
 
             let data = {
                 myStr: section.myStr,
-                tables: Object.keys(section.tables),
                 tabs: section.tabs,
                 options: categoryData.items,
                 autoComplete: section.autoComplete,
@@ -901,6 +907,14 @@ function getMusic(country) {
                     options: categoryData.options,
                 },
                 styles: section.styles,
+                tables: Object.keys(section.tables).reduce((acc, key) => {
+                    acc.push({
+                        name: key,
+                        isFavorable: section.tables[key].isFavorable
+                    });
+
+                    return acc;
+                }, []),
             };
 
             resolve(data);
@@ -920,9 +934,16 @@ function getSchools() {
 
             let data = {
                 myStr: section.myStr,
-                tables: Object.keys(section.tables),
                 autoComplete: section.autoComplete,
                 styles: section.styles,
+                tables: Object.keys(section.tables).reduce((acc, key) => {
+                    acc.push({
+                        name: key,
+                        isFavorable: section.tables[key].isFavorable
+                    });
+
+                    return acc;
+                }, []),
             };
 
             let countries = await getCountries();
