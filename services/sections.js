@@ -325,6 +325,8 @@ function addMeSectionItem(person_token, section_key, table_key, item_token, hash
                     item_data = insert_data;
                 }
 
+                item_data.table_key = table_key;
+
                 delete section_option.id;
 
                 section_items[item_token] = {
@@ -343,6 +345,8 @@ function addMeSectionItem(person_token, section_key, table_key, item_token, hash
                     ...section_option,
                     ...item_data,
                 });
+            } else {
+                return reject("Item already exists in section");
             }
         } catch (e) {
             console.error(e);
