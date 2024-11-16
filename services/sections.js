@@ -734,7 +734,6 @@ function getActiveData(person, sections, country) {
                 if (categoryOptions || categoryItems || filterList) {
                     sections[section_key].data = {
                         myStr: section.myStr || null,
-                        tables: Object.keys(section.tables),
                         tabs: section.tabs || null,
                         options: categoryItems,
                         autoComplete: section.autoComplete,
@@ -744,6 +743,14 @@ function getActiveData(person, sections, country) {
                         },
                         secondary: section.secondary || null,
                         styles: section.styles || null,
+                        tables: Object.keys(section.tables).reduce((acc, key) => {
+                            acc.push({
+                                name: key,
+                                isFavorable: !!section.tables[key].isFavorable
+                            });
+
+                            return acc;
+                        }, []),
                     };
 
                     sections[section_key].items = items || {};
