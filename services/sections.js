@@ -1,6 +1,6 @@
 const cacheService = require('../services/cache');
 const dbService = require('../services/db');
-const { timeNow, getCountries } = require('./shared');
+const { timeNow, getCountries, latLonLookup } = require('./shared');
 const { setCache, getObj, execMulti, execPipeline, hGetAll, hGetAllObj } = require('./cache');
 const { getPerson } = require('./persons');
 let sectionsData = require('./sections_data');
@@ -12,12 +12,18 @@ function addMeSection(person_token, section_key, location) {
                 let fnData = sectionsData[section_key].functions.data;
                 let fnFilterList = sectionsData[section_key].functions.filterList;
 
-                if (fnData) {
-                    section.data = await module.exports[fnData]();
-                }
+                try {
+                    let country = await latLonLookup(location?.lat, location?.lon);
 
-                if (fnFilterList) {
-                    section.data = await module.exports[fnFilterList]();
+                    if (fnData) {
+                        section.data = await module.exports[fnData](country);
+                    }
+
+                    if (fnFilterList) {
+                        section.data = await module.exports[fnFilterList]();
+                    }
+                } catch(e) {
+                    console.error(e);
                 }
             }
 
@@ -860,31 +866,24 @@ function allInstruments() {
     });
 }
 
-function getMusic(country_code) {
+function getMusic(country) {
     return new Promise(async (resolve, reject) => {
         try {
             let section = sectionsData.music;
 
             //categories
-            let options = await dataForSchema(
-                'instruments',
-                cacheService.keys.instruments_common,
-                'is_common',
-                'popularity',
-                'desc',
-            );
+            let categoryData = await getCategoriesMusic(country);
 
             let data = {
-                options,
                 myStr: section.myStr,
+                tables: Object.keys(section.tables),
+                options: categoryData.items,
                 autoComplete: section.autoComplete,
                 categories: {
                     endpoint: section.categories.endpoint,
-                    options: section.categories.options
+                    options: categoryData.options,
                 },
-                secondary: section.secondary,
                 styles: section.styles,
-                tables: Object.keys(section.tables),
             };
 
             resolve(data);
@@ -903,10 +902,10 @@ function getSchools() {
             let section = sectionsData.schools;
 
             let data = {
-                autoComplete: section.autoComplete,
                 myStr: section.myStr,
-                styles: section.styles,
                 tables: Object.keys(section.tables),
+                autoComplete: section.autoComplete,
+                styles: section.styles,
             };
 
             let countries = await getCountries();
