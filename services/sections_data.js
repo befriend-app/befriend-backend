@@ -69,7 +69,16 @@ module.exports = {
     },
     music: {
         myStr: 'My Music',
-        hasTabs: true,
+        tabs: [
+            {
+                name: 'Artists',
+                key: 'artists'
+            },
+            {
+                name: 'Genres',
+                key: 'genres'
+            }
+        ],
         tables: {
             genres: {
                 isFavorable: true,

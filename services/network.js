@@ -299,7 +299,7 @@ module.exports = {
             let home_domains = await module.exports.homeDomains();
 
             for (let domain of home_domains) {
-                let keys_exchange_token_self = generateToken(30);
+                let keys_exchange_token_self = generateToken(40);
 
                 module.exports.keys.oneTime[keys_exchange_token_self] = null;
 

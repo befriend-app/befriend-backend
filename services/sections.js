@@ -735,6 +735,7 @@ function getActiveData(person, sections, country) {
                     sections[section_key].data = {
                         myStr: section.myStr || null,
                         tables: Object.keys(section.tables),
+                        tabs: section.tabs || null,
                         options: categoryItems,
                         autoComplete: section.autoComplete,
                         categories: {
@@ -892,6 +893,7 @@ function getMusic(country) {
             let data = {
                 myStr: section.myStr,
                 tables: Object.keys(section.tables),
+                tabs: section.tabs,
                 options: categoryData.items,
                 autoComplete: section.autoComplete,
                 categories: {

@@ -239,7 +239,7 @@ module.exports = {
                 await conn('networks').insert(network_data);
 
                 //continue key exchange process
-                let secret_key_me = generateToken(60);
+                let secret_key_me = generateToken(40);
 
                 let exchange_key_url = getURL(data.api_domain, 'keys/home/from');
 
@@ -393,7 +393,7 @@ module.exports = {
                 //save befriend secret key, set self secret key
                 networkService.keys.oneTime[keys_exchange_token.befriend] = secret_key_befriend;
 
-                let secret_key_new_network = generateToken(60);
+                let secret_key_new_network = generateToken(40);
 
                 networkService.keys.oneTime[keys_exchange_token.new_network] =
                     secret_key_new_network;
@@ -876,7 +876,7 @@ module.exports = {
                 }
 
                 //generate my secret_key for from_network
-                let secret_key_self = generateToken(60);
+                let secret_key_self = generateToken(40);
 
                 let r = await axios.post(getURL(from_network.api_domain, `/keys/exchange/save`), {
                     exchange_token: exchange_token,
@@ -1028,7 +1028,7 @@ module.exports = {
             try {
                 let conn = await dbService.conn();
 
-                let secret_key_to = generateToken(60);
+                let secret_key_to = generateToken(40);
 
                 await conn('networks_secret_keys').insert({
                     network_id: to_network.id,

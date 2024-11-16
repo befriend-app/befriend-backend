@@ -28,7 +28,7 @@ async function handleSession(req, res, next) {
     return new Promise(async (resolve, reject) => {
         function createSession() {
             return new Promise(async (resolve, reject) => {
-                let session_str = generateToken(20);
+                let session_str = generateToken();
 
                 //check for existence in rare  cases
                 try {

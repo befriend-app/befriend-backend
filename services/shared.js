@@ -343,7 +343,7 @@ function formatNumberLength(num, length) {
 
 function generateToken(length) {
     if (!length) {
-        length = 32;
+        length = 20;
     }
 
     //edit the token allowed characters
