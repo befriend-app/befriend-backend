@@ -79,7 +79,8 @@ module.exports = {
                 user: {
                     name: 'persons_music_genres',
                     cols: {
-                        id: 'genre_id'
+                        id: 'genre_id',
+                        token: 'genre_token',
                     },
                 },
             },
@@ -92,6 +93,7 @@ module.exports = {
                     name: 'persons_music_artists',
                     cols: {
                         id: 'artist_id',
+                        token: 'artist_token',
                     },
                 },
             },
@@ -107,6 +109,14 @@ module.exports = {
             endpoint: '/autocomplete/music',
             placeholders: {
                 main: 'Search music',
+            },
+        },
+        cacheKeys: {
+            genres: {
+                byHash: cacheService.keys.music_genres,
+            },
+            artists: {
+                byHash: cacheService.keys.music_artists,
             },
         },
         functions: {
@@ -127,7 +137,7 @@ module.exports = {
                     cols: {
                         id: 'school_id',
                         token: 'school_token',
-                        hashToken: 'hash_token'
+                        hashKey: 'hash_token'
                     },
                 },
             }
@@ -160,7 +170,9 @@ module.exports = {
             }
         },
         cacheKeys: {
-            byHashToken: cacheService.keys.schools_country,
+            schools: {
+                byHashKey: cacheService.keys.schools_country,
+            },
         },
         functions: {
             filterList: 'getSchools',

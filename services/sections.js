@@ -205,7 +205,7 @@ function deleteMeSection(person_token, section_key) {
     });
 }
 
-function addMeSectionItem(person_token, section_key, table_key, item_token, hash_token) {
+function addMeSectionItem(person_token, section_key, table_key, item_token, hash_key) {
     return new Promise(async (resolve, reject) => {
         try {
             if (!section_key) {
@@ -254,11 +254,16 @@ function addMeSectionItem(person_token, section_key, table_key, item_token, hash
 
             let section_option;
 
+            let cacheObj = sectionData.cacheKeys?.[table_key];
+
             if (fnAll) {
                 options = await module.exports[fnAll]();
                 section_option = options.byToken[item_token];
-            } else if (sectionData.cacheKeys.byHashToken) {
-                let cache_key = sectionData.cacheKeys.byHashToken(hash_token);
+            } else if (cacheObj?.byHash) {
+                let cache_key = cacheObj.byHash;
+                section_option = await cacheService.hGetItem(cache_key, item_token);
+            } else if (cacheObj?.byHashKey) {
+                let cache_key = cacheObj.byHashKey(hash_key);
                 section_option = await cacheService.hGetItem(cache_key, item_token);
             }
 
@@ -307,8 +312,8 @@ function addMeSectionItem(person_token, section_key, table_key, item_token, hash
                         insert_data[userTableData.cols.token] = section_option.token;
                     }
 
-                    if(userTableData.cols.hashToken) {
-                        insert_data[userTableData.cols.hashToken] = section_option[sectionData.autoComplete.filter.hashKey];
+                    if(userTableData.cols.hashKey) {
+                        insert_data[userTableData.cols.hashKey] = section_option[sectionData.autoComplete.filter.hashKey];
                     }
 
                     insert_data[userTableData.cols.id] = section_option.id;
@@ -481,17 +486,23 @@ function getPersonSectionItems(person, section_key) {
                     let col_name = userTableData.cols.id;
                     let secondary_col_name = userTableData.cols.secondary;
                     let token_col = userTableData.cols.token;
-                    let hash_token_col = userTableData.cols.hashToken;
+                    let hash_key_col = userTableData.cols.hashKey;
 
                     for (let item of qry) {
+                        let section_option;
+
                         item.table_key = table_key;
 
-                        let section_option;
+                        let cacheObj = sectionData.cacheKeys?.[table_key];
 
                         if (options) {
                             section_option = options.byId[item[col_name]];
-                        } else if (sectionData.cacheKeys.byHashToken) {
-                            let cache_key = sectionData.cacheKeys.byHashToken(item[hash_token_col]);
+                        } else if (cacheObj?.byHash) {
+                            let cache_key = cacheObj.byHash;
+
+                            section_option = await cacheService.hGetItem(cache_key, item[token_col]);
+                        } else if (cacheObj?.byHashKey) {
+                            let cache_key = cacheObj.byHashKey(item[hash_key_col]);
 
                             section_option = await cacheService.hGetItem(cache_key, item[token_col]);
                         }
@@ -942,6 +953,7 @@ function getCategoriesMusic(country) {
              for(let k in countryGenres) {
                  if(allGenres[k].is_active) {
                      categoryGenres.push({
+                         table_key: 'artists',
                          heading: 'Artists',
                          name: allGenres[k].name,
                          position: countryGenres[k].position,
@@ -956,7 +968,8 @@ function getCategoriesMusic(country) {
 
              let categories = [
                  {
-                     name: 'Genres'
+                     table_key: 'genres',
+                     name: 'Genres',
                  },
                  ...categoryGenres
              ];

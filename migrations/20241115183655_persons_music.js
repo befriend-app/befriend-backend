@@ -9,7 +9,7 @@ exports.up = function (knex) {
 
             table.bigInteger('person_id').unsigned().notNullable();
             table.integer('genre_id').unsigned().notNullable();
-            table.string('hash_token').nullable();
+            table.string('genre_token').nullable();
 
             table.boolean('is_favorite').defaultTo(0);
             table.integer('favorite_position').nullable();
@@ -27,7 +27,7 @@ exports.up = function (knex) {
 
             table.bigInteger('person_id').unsigned().notNullable();
             table.integer('artist_id').unsigned().notNullable();
-            table.string('hash_token').nullable();
+            table.string('artist_token').nullable();
 
             table.boolean('is_favorite').defaultTo(0);
             table.integer('favorite_position').nullable();
