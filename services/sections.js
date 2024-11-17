@@ -1,6 +1,6 @@
 const cacheService = require('../services/cache');
 const dbService = require('../services/db');
-const { timeNow, getCountries, latLonLookup } = require('./shared');
+const { timeNow, getCountries, latLonLookup, isNumeric } = require('./shared');
 const { setCache, getObj, execMulti, execPipeline, hGetAll, hGetAllObj } = require('./cache');
 const { getPerson } = require('./persons');
 let sectionsData = require('./sections_data');
@@ -352,93 +352,122 @@ function addMeSectionItem(person_token, section_key, table_key, item_token, hash
             console.error(e);
             return reject();
         }
-
-        resolve();
     });
 }
 
 function updateMeSectionItem(body) {
     return new Promise(async (resolve, reject) => {
         try {
-            let { person_token, section_key, table_key, section_item_id, secondary, is_delete } = body;
+            let { person_token, section_key, table_key, section_item_id, favorite, secondary, is_delete } = body;
 
-            if (!secondary && typeof is_delete === 'undefined') {
-                return reject('Invalid request');
+            // Check required base fields
+            if (!person_token || !section_key || !section_item_id || !table_key) {
+                return reject('Missing required fields');
             }
 
-            if (!person_token || !section_key || !section_item_id) {
-                return reject('Person, name, and section item id required');
+            // Validate at least one update field is provided
+            const updates = { favorite, secondary, is_delete };
+            const hasUpdates = Object.values(updates).some(val => val !== undefined);
+
+            if (!hasUpdates) {
+                return reject('No valid update fields provided');
             }
 
-            if(!table_key) {
-                return reject('Table key required');
+            if(typeof favorite !== 'undefined') {
+                if(typeof favorite !== 'object') {
+                    return reject('Error with favorite');
+                }
+
+                const valid = Object.keys(favorite).some(val => ['active', 'position'].includes(val));
+
+                if(!valid) {
+                    return reject('Invalid favorite fields');
+                }
             }
 
+            // Get section data and validate
             let sectionData = sectionsData[section_key];
-
-            if(!sectionData) {
+            if (!sectionData) {
                 return reject('Section not found');
             }
 
             let userTableData = sectionData.tables?.[table_key]?.user;
-
-            if(!userTableData) {
+            if (!userTableData) {
                 return reject('Invalid table key');
             }
 
+            // Get person
             let person = await getPerson(person_token);
-
             if (!person) {
                 return reject('Person not found');
             }
 
             let conn = await dbService.conn();
+            let data = {
+                updated: timeNow()
+            };
 
-            if (secondary || is_delete) {
-                let secondary_col = userTableData.cols.secondary;
-
-                let data = {
-                    updated: timeNow(),
-                };
-
-                if (is_delete) {
-                    data.deleted = timeNow();
-                } else {
-                    data[secondary_col] = secondary;
+            // Build update object based on provided fields
+            if (is_delete) {
+                data.deleted = timeNow();
+            } else {
+                if (secondary !== undefined) {
+                    data[userTableData.cols.secondary] = secondary;
                 }
+                if (favorite !== undefined) {
+                    if(typeof favorite.active !== 'undefined') {
+                        data.is_favorite = favorite.active;
+                    }
 
-                let update = await conn(userTableData.name)
-                    .where('id', section_item_id)
-                    .where('person_id', person.id)
-                    .update(data);
+                    if(typeof favorite.position !== 'undefined') {
+                        data.favorite_position = favorite.position;
+                    }
+                }
+            }
 
-                if (update === 1) {
-                    //update cache
-                    let cache_key = cacheService.keys.person_sections_data(
-                        person.person_token,
-                        section_key,
-                    );
+            // Update database
+            let update = await conn(userTableData.name)
+                .where('id', section_item_id)
+                .where('person_id', person.id)
+                .update(data);
 
-                    let cache_data = await cacheService.getObj(cache_key);
+            if (update === 1) {
+                // Update cache
+                let cache_key = cacheService.keys.person_sections_data(
+                    person.person_token,
+                    section_key,
+                );
 
-                    if (cache_data) {
-                        for (let token in cache_data) {
-                            let item = cache_data[token];
+                let cache_data = await cacheService.getObj(cache_key);
 
-                            if (item.id === section_item_id) {
-                                item.updated = data.updated;
+                if (cache_data) {
+                    for (let token in cache_data) {
+                        let item = cache_data[token];
 
-                                if (is_delete) {
-                                    item.deleted = data.deleted;
-                                } else {
+                        if (item.id === section_item_id) {
+                            item.updated = data.updated;
+
+                            if (is_delete) {
+                                item.deleted = data.deleted;
+                            } else {
+                                if (secondary !== undefined) {
                                     item.secondary = secondary;
                                 }
-                                break;
-                            }
-                        }
+                                if (favorite !== undefined) {
+                                    if(typeof favorite.active !== 'undefined') {
+                                        item.is_favorite = favorite.active;
+                                    }
 
-                        await cacheService.setCache(cache_key, cache_data);
+                                    if(typeof favorite.position !== 'undefined') {
+                                        item.favorite_position = favorite.position;
+                                    }
+                                }
+                            }
+                            break;
+                        }
                     }
+
+                    await cacheService.setCache(cache_key, cache_data);
                 }
             }
 
@@ -449,7 +478,6 @@ function updateMeSectionItem(body) {
         }
     });
 }
-
 function getPersonSectionItems(person, section_key) {
     return new Promise(async (resolve, reject) => {
         try {

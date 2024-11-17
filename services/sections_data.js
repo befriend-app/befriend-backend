@@ -132,7 +132,7 @@ module.exports = {
             data: 'getMusic',
         },
         styles: {
-            rowCols: 'cols-2'
+            rowCols: 'cols-1'
         }
     },
     schools: {
