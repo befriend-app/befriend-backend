@@ -31,7 +31,7 @@ function indexCities() {
 
             let cities = await conn('open_cities');
 
-            let pipeline = cacheService.conn.multi();
+            let pipeline = cacheService.startPipeline();
             let commandCount = 0;
 
             // Cities by country
@@ -57,7 +57,7 @@ function indexCities() {
 
                     if (commandCount >= BATCH_SIZE) {
                         await pipeline.execAsPipeline();
-                        pipeline = cacheService.conn.multi();
+                        pipeline = cacheService.startPipeline();
                         commandCount = 0;
                     }
                 }
@@ -155,7 +155,7 @@ function indexStates() {
 
             let states = await conn('open_states');
 
-            let pipeline = cacheService.conn.multi();
+            let pipeline = cacheService.startPipeline();
 
             for (let state of states) {
                 const state_key = cacheService.keys.state(state.id);
@@ -188,7 +188,7 @@ function indexCountries() {
 
             let conn = await dbService.conn();
 
-            let pipeline = cacheService.conn.multi();
+            let pipeline = cacheService.startPipeline();
 
             let countries = await conn('open_countries');
 

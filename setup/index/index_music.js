@@ -11,7 +11,7 @@ function indexGenres() {
     return new Promise(async (resolve, reject) => {
         try {
             let conn = await dbService.conn();
-            let pipeline = cacheService.conn.multi();
+            let pipeline = cacheService.startPipeline();
 
             // Get all required data in parallel
             const [countries, genres, countryGenres] = await Promise.all([
@@ -154,7 +154,7 @@ function indexArtists() {
     return new Promise(async (resolve, reject) => {
         try {
             let conn = await dbService.conn();
-            let pipeline = cacheService.conn.multi();
+            let pipeline = cacheService.startPipeline();
 
             // Get all artists
             const artists = await conn('music_artists')
@@ -347,7 +347,7 @@ function indexArtistsGenres() {
     return new Promise(async (resolve, reject) => {
         try {
             let conn = await dbService.conn();
-            let pipeline = cacheService.conn.multi();
+            let pipeline = cacheService.startPipeline();
 
             let genres = await conn('music_genres');
             let genres_dict = genres.reduce((acc, genre) => {

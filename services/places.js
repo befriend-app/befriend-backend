@@ -660,7 +660,7 @@ module.exports = {
 
             let cache_miss_ids = [];
 
-            let multi = cacheService.conn.multi();
+            let multi = cacheService.startPipeline();
 
             for (let fsq_id of fsq_ids) {
                 let cache_key = cacheService.keys.place_fsq(fsq_id);
@@ -921,7 +921,7 @@ module.exports = {
                 //cache
                 try {
                     if (batch_insert.length || batch_update.length) {
-                        let multi = cacheService.conn.multi();
+                        let multi = cacheService.startPipeline();
 
                         for (let item of batch_insert.concat(batch_update)) {
                             let cache_key = cacheService.keys.place_fsq(item.fsq_place_id);

@@ -141,7 +141,7 @@ function schoolAutoComplete(country_id, search_term, user_location) {
         try {
             let tokens = await cacheService.getSetMembers(prefix_key);
 
-            let pipeline = await cacheService.conn.multi();
+            let pipeline = await cacheService.startPipeline();
 
             for (let token of tokens) {
                 pipeline.hGet(cacheService.keys.schools_country(country.code), token);

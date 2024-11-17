@@ -1599,7 +1599,7 @@ module.exports = {
                     unique[token] = true;
                 }
 
-                let pipeline = await cacheService.conn.multi();
+                let pipeline = await cacheService.startPipeline();
 
                 for (let token in unique) {
                     pipeline.hGetAll(cacheService.keys.instrument(token));

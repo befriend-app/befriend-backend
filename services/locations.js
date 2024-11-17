@@ -97,7 +97,7 @@ function countryMatch(country, compare) {
 function addLocationData(results, dataType) {
     return new Promise(async (resolve, reject) => {
         try {
-            let pipeline = cacheService.conn.multi();
+            let pipeline = cacheService.startPipeline();
 
             for (let result of results) {
                 if (dataType === 'state') {
@@ -129,7 +129,7 @@ function addLocationData(results, dataType) {
 function getStates(stateIds) {
     return new Promise(async (resolve, reject) => {
         try {
-            let pipeline = cacheService.conn.multi();
+            let pipeline = cacheService.startPipeline();
 
             for (let id of stateIds) {
                 pipeline.hGetAll(cacheService.keys.state(id));
@@ -181,7 +181,7 @@ function getCityCountryIds(parsed, locationCountry) {
 function fetchCityDetails(cityCountryIds) {
     return new Promise(async (resolve, reject) => {
         try {
-            let pipeline = cacheService.conn.multi();
+            let pipeline = cacheService.startPipeline();
 
             for (let item of cityCountryIds) {
                 const [cityId, countryCode] = item.split(':');
@@ -207,7 +207,7 @@ function getCitiesByCountry(countryCode, cityIds) {
                 return reject("No country code/city ids provided")
             }
 
-            let pipeline = cacheService.conn.multi();
+            let pipeline = cacheService.startPipeline();
 
             for (let city_id of cityIds) {
                 pipeline.hGet(cacheService.keys.cities_country(countryCode), city_id);

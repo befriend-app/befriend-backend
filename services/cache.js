@@ -363,6 +363,9 @@ module.exports = {
             }
         });
     },
+    startPipeline: function () {
+        return module.exports.conn.multi();
+    },
     execMulti: function (multi) {
         return new Promise(async (resolve, reject) => {
             try {
@@ -570,7 +573,7 @@ module.exports = {
             }
 
             try {
-                const multi = module.exports.conn.multi();
+                const multi = module.exports.startPipeline();
 
                 if (limit) {
                     multi.addCommand([
@@ -609,7 +612,7 @@ module.exports = {
 
         let batchSize = 5000;
         let logFrequency = 1000;
-        let pipeline = module.exports.conn.multi();
+        let pipeline = module.exports.startPipeline();
 
         function getScore(item) {
             if (score_key.includes('is_')) {
@@ -670,7 +673,7 @@ module.exports = {
                     // Execute pipeline in batches
                     if ((i + 1) % batchSize === 0) {
                         await pipeline.execAsPipeline();
-                        pipeline = module.exports.conn.multi();
+                        pipeline = module.exports.startPipeline();
                     }
                 } catch (e) {
                     console.error(e);

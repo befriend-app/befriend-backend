@@ -4,6 +4,7 @@ const { timeNow, getCountries, latLonLookup, isNumeric } = require('./shared');
 const { setCache, getObj, execMulti, execPipeline, hGetAll, hGetAllObj } = require('./cache');
 const { getPerson } = require('./persons');
 let sectionsData = require('./sections_data');
+const { batchUpdate } = require('./db');
 
 function addMeSection(person_token, section_key, location) {
     function addDataToSection(section) {
@@ -357,127 +358,180 @@ function addMeSectionItem(person_token, section_key, table_key, item_token, hash
 
 function updateMeSectionItem(body) {
     return new Promise(async (resolve, reject) => {
-        try {
-            let { person_token, section_key, table_key, section_item_id, favorite, secondary, is_delete } = body;
-
-            // Check required base fields
+        const validateRequiredFields = () => {
+            const { person_token, section_key, table_key, section_item_id } = body;
             if (!person_token || !section_key || !section_item_id || !table_key) {
                 return reject('Missing required fields');
             }
+        };
 
-            // Validate at least one update field is provided
+        const validateUpdateFields = () => {
+            const { favorite, secondary, is_delete } = body;
             const updates = { favorite, secondary, is_delete };
-            const hasUpdates = Object.values(updates).some(val => val !== undefined);
-
-            if (!hasUpdates) {
+            if (!Object.values(updates).some(val => val !== undefined)) {
                 return reject('No valid update fields provided');
             }
+        };
 
-            if(typeof favorite !== 'undefined') {
-                if(typeof favorite !== 'object') {
-                    return reject('Error with favorite');
-                }
+        const validateFavoriteField = () => {
+            const { favorite } = body;
+            if (typeof favorite === 'undefined') return;
 
-                const valid = Object.keys(favorite).some(val => ['active', 'position'].includes(val));
-
-                if(!valid) {
-                    return reject('Invalid favorite fields');
-                }
+            if (typeof favorite !== 'object') {
+                return reject('Favorite must be an object');
             }
 
-            // Get section data and validate
-            let sectionData = sectionsData[section_key];
-            if (!sectionData) {
-                return reject('Section not found');
+            const validFields = ['active', 'position', 'reorder'];
+            const hasValidField = Object.keys(favorite).some(key => validFields.includes(key));
+
+            if (!hasValidField) {
+                return reject('Invalid favorite fields');
             }
+        };
 
-            let userTableData = sectionData.tables?.[table_key]?.user;
-            if (!userTableData) {
-                return reject('Invalid table key');
-            }
+        const getSection = () => {
+            const { section_key, table_key } = body;
+            const sectionData = sectionsData[section_key];
+            if (!sectionData) return reject('Section not found');
 
-            // Get person
-            let person = await getPerson(person_token);
-            if (!person) {
-                return reject('Person not found');
-            }
+            const userTableData = sectionData.tables?.[table_key]?.user;
+            if (!userTableData) return reject('Invalid table key');
 
-            let conn = await dbService.conn();
-            let data = {
-                updated: timeNow()
-            };
+            return { sectionData, userTableData };
+        };
 
-            // Build update object based on provided fields
-            if (is_delete) {
-                data.deleted = timeNow();
-            } else {
-                if (secondary !== undefined) {
-                    data[userTableData.cols.secondary] = secondary;
-                }
-                if (favorite !== undefined) {
-                    if(typeof favorite.active !== 'undefined') {
-                        data.is_favorite = favorite.active;
+        const handleReorderUpdate = (cache_data, userTableData) => {
+            return new Promise(async (resolve, reject) => {
+                try {
+                    const { section_item_id, favorite } = body;
+                    const batch_updates = [];
+                    const now = timeNow();
+
+                    // Handle main item favorite status if provided
+                    if (typeof favorite.active !== 'undefined') {
+                        const update = {
+                            id: section_item_id,
+                            is_favorite: favorite.active,
+                            favorite_position: isNumeric(favorite.position) ? favorite.position : null,
+                            updated: now
+                        };
+                        batch_updates.push(update);
+                        updateCacheItem(cache_data, section_item_id, update);
                     }
 
-                    if(typeof favorite.position !== 'undefined') {
-                        data.favorite_position = favorite.position;
+                    // Handle reorder updates
+                    for (const [token, reorder_item] of Object.entries(favorite.reorder)) {
+                        const update = {
+                            id: reorder_item.id,
+                            is_favorite: isNumeric(reorder_item.favorite_position),
+                            favorite_position: isNumeric(reorder_item.favorite_position) ? reorder_item.favorite_position : null,
+                            updated: now
+                        };
+                        batch_updates.push(update);
+                        updateCacheItem(cache_data, token, update);
                     }
+
+                    await batchUpdate(userTableData.name, batch_updates);
+
+                    resolve();
+                } catch(e) {
+                    console.error(e);
+                    return reject();
                 }
-            }
+            });
+        };
 
-            // Update database
-            let update = await conn(userTableData.name)
-                .where('id', section_item_id)
-                .where('person_id', person.id)
-                .update(data);
+        const handleRegularUpdate = (cache_data, userTableData, person) => {
+            return new Promise(async (resolve, reject) => {
+                try {
+                    const { section_item_id, favorite, secondary, is_delete } = body;
+                    const now = timeNow();
+                    const data = { updated: now };
 
-            if (update === 1) {
-                // Update cache
-                let cache_key = cacheService.keys.person_sections_data(
-                    person.person_token,
-                    section_key,
-                );
-
-                let cache_data = await cacheService.getObj(cache_key);
-
-                if (cache_data) {
-                    for (let token in cache_data) {
-                        let item = cache_data[token];
-
-                        if (item.id === section_item_id) {
-                            item.updated = data.updated;
-
-                            if (is_delete) {
-                                item.deleted = data.deleted;
-                            } else {
-                                if (secondary !== undefined) {
-                                    item.secondary = secondary;
-                                }
-                                if (favorite !== undefined) {
-                                    if(typeof favorite.active !== 'undefined') {
-                                        item.is_favorite = favorite.active;
-                                    }
-
-                                    if(typeof favorite.position !== 'undefined') {
-                                        item.favorite_position = favorite.position;
-                                    }
-                                }
+                    if (is_delete) {
+                        data.deleted = now;
+                    } else {
+                        if (secondary !== undefined) {
+                            data[userTableData.cols.secondary] = secondary;
+                        }
+                        if (favorite !== undefined) {
+                            if (typeof favorite.active !== 'undefined') {
+                                data.is_favorite = favorite.active;
                             }
-                            break;
+                            if (typeof favorite.position !== 'undefined') {
+                                data.favorite_position = favorite.position;
+                            }
                         }
                     }
 
-                    await cacheService.setCache(cache_key, cache_data);
+                    const conn = await dbService.conn();
+                    const update = await conn(userTableData.name)
+                        .where('id', section_item_id)
+                        .where('person_id', person.id)
+                        .update(data);
+
+                    if (update === 1 && cache_data) {
+                        updateCacheItem(cache_data, null, data, section_item_id);
+                    }
+
+                    resolve();
+                } catch(e) {
+                    console.error(e);
+                    return reject();
                 }
+            });
+        };
+
+        const updateCacheItem = (cache_data, token, data, id = null) => {
+            if (!cache_data) return;
+
+            const targetItem = token ?
+                cache_data[token] :
+                Object.values(cache_data).find(item => item.id === id);
+
+            if (targetItem) {
+                Object.assign(targetItem, data);
+            }
+        };
+
+        try {
+            // Validate inputs
+            validateRequiredFields();
+            validateUpdateFields();
+            validateFavoriteField();
+
+            // Get section data
+            const { userTableData } = getSection();
+            const person = await getPerson(body.person_token);
+            if (!person) return reject('Person not found');
+
+            // Get cache data
+            const cache_key = cacheService.keys.person_sections_data(
+                person.person_token,
+                body.section_key
+            );
+            const cache_data = await cacheService.getObj(cache_key);
+
+            // Handle updates
+            if (body.favorite?.reorder && Object.keys(body.favorite.reorder).length) {
+                await handleReorderUpdate(cache_data, userTableData);
+            } else {
+                await handleRegularUpdate(cache_data, userTableData, person);
+            }
+
+            // Update cache if data exists
+            if (cache_data) {
+                await cacheService.setCache(cache_key, cache_data);
             }
 
             resolve();
-        } catch (e) {
-            console.error(e);
-            return reject(e);
+        } catch (error) {
+            console.error(error);
+            reject(error);
         }
     });
 }
+
 function getPersonSectionItems(person, section_key) {
     return new Promise(async (resolve, reject) => {
         try {
@@ -684,7 +738,7 @@ function getActiveData(person, sections, country) {
         }
 
         let missing_keys = {};
-        let multi = cacheService.conn.multi();
+        let multi = cacheService.startPipeline();
 
         try {
             // Get data from cache in batch

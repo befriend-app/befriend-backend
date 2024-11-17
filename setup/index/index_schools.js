@@ -52,7 +52,7 @@ function indexSchools() {
                 // Index prefixes
                 const nameLower = school.name.toLowerCase();
                 const words = nameLower.split(/\s+/);
-                let delete_multi = cacheService.conn.multi();
+                let delete_multi = cacheService.startPipeline();
 
                 // Index start of full name
                 for (let i = 1; i <= Math.min(nameLower.length, schoolService.prefixLimit); i++) {
@@ -115,7 +115,7 @@ function indexSchools() {
 
             // Add to Redis
             let count = 0;
-            let pipeline = cacheService.conn.multi();
+            let pipeline = cacheService.startPipeline();
 
             // Store schools, by country
             for (const [countryCode, schools] of Object.entries(schoolsByCountry)) {
@@ -124,7 +124,7 @@ function indexSchools() {
 
                 if (count % BATCH_SIZE === 0) {
                     await pipeline.execAsPipeline();
-                    pipeline = cacheService.conn.multi();
+                    pipeline = cacheService.startPipeline();
                 }
             }
 
@@ -140,7 +140,7 @@ function indexSchools() {
 
                     if (count % BATCH_SIZE === 0) {
                         await pipeline.execAsPipeline();
-                        pipeline = cacheService.conn.multi();
+                        pipeline = cacheService.startPipeline();
                     }
                 }
             }
@@ -157,7 +157,7 @@ function indexSchools() {
 
                     if (count % BATCH_SIZE === 0) {
                         await pipeline.execAsPipeline();
-                        pipeline = cacheService.conn.multi();
+                        pipeline = cacheService.startPipeline();
                     }
                 }
             }

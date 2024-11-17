@@ -20,7 +20,7 @@ function getTopArtistsForGenre(genre_token) {
                  return reject("No items found");
              }
 
-             let pipeline = cacheService.conn.multi();
+             let pipeline = cacheService.startPipeline();
 
              for(let item of data) {
                  pipeline = pipeline.hGet(cacheService.keys.music_artists, item.artist_token);
@@ -62,7 +62,7 @@ function musicAutoComplete(search_term, category, user_location) {
             const artist_tokens = await cacheService.getSetMembers(prefix_key);
 
             if (artist_tokens?.length) {
-                let pipeline = cacheService.conn.multi();
+                let pipeline = cacheService.startPipeline();
 
                 for (let token of artist_tokens) {
                     pipeline.hGet(cacheService.keys.music_artists, token);
