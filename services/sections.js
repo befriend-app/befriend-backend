@@ -358,15 +358,21 @@ function addMeSectionItem(person_token, section_key, table_key, item_token, hash
 
 function updateMeSectionItem(body) {
     return new Promise(async (resolve, reject) => {
+        if(typeof body !== 'object') {
+            return reject('No body');
+        }
+
+        const { person_token, section_key, table_key, section_item_id,
+                favorite, secondary, is_delete
+        } = body;
+
         const validateRequiredFields = () => {
-            const { person_token, section_key, table_key, section_item_id } = body;
             if (!person_token || !section_key || !section_item_id || !table_key) {
                 return reject('Missing required fields');
             }
         };
 
         const validateUpdateFields = () => {
-            const { favorite, secondary, is_delete } = body;
             const updates = { favorite, secondary, is_delete };
             if (!Object.values(updates).some(val => val !== undefined)) {
                 return reject('No valid update fields provided');
@@ -374,7 +380,6 @@ function updateMeSectionItem(body) {
         };
 
         const validateFavoriteField = () => {
-            const { favorite } = body;
             if (typeof favorite === 'undefined') return;
 
             if (typeof favorite !== 'object') {
@@ -390,7 +395,6 @@ function updateMeSectionItem(body) {
         };
 
         const getSection = () => {
-            const { section_key, table_key } = body;
             const sectionData = sectionsData[section_key];
             if (!sectionData) return reject('Section not found');
 
@@ -403,20 +407,26 @@ function updateMeSectionItem(body) {
         const handleReorderUpdate = (cache_data, userTableData) => {
             return new Promise(async (resolve, reject) => {
                 try {
-                    const { section_item_id, favorite } = body;
                     const batch_updates = [];
                     const now = timeNow();
 
-                    // Handle main item favorite status if provided
-                    if (typeof favorite.active !== 'undefined') {
-                        const update = {
-                            id: section_item_id,
-                            is_favorite: favorite.active,
-                            favorite_position: isNumeric(favorite.position) ? favorite.position : null,
-                            updated: now
-                        };
-                        batch_updates.push(update);
-                        updateCacheItem(cache_data, section_item_id, update);
+                    let mainItemUpdate = {
+                        id: section_item_id,
+                        updated: now
+                    };
+
+                    if(is_delete) {
+                        mainItemUpdate.is_favorite = false;
+                        mainItemUpdate.favorite_position = null;
+                        mainItemUpdate.deleted = now;
+                        batch_updates.push(mainItemUpdate);
+                        updateCacheItem(cache_data, mainItemUpdate,  section_item_id);
+                    } else if(typeof favorite.active !== 'undefined') {
+                        mainItemUpdate.is_favorite = favorite.active;
+                        mainItemUpdate.favorite_position = isNumeric(favorite.position) ? favorite.position : null;
+                        mainItemUpdate.deleted = null;
+                        batch_updates.push(mainItemUpdate);
+                        updateCacheItem(cache_data, mainItemUpdate,  section_item_id);
                     }
 
                     // Handle reorder updates
@@ -425,10 +435,11 @@ function updateMeSectionItem(body) {
                             id: reorder_item.id,
                             is_favorite: isNumeric(reorder_item.favorite_position),
                             favorite_position: isNumeric(reorder_item.favorite_position) ? reorder_item.favorite_position : null,
-                            updated: now
+                            updated: now,
+                            deleted: null
                         };
                         batch_updates.push(update);
-                        updateCacheItem(cache_data, token, update);
+                        updateCacheItem(cache_data, update, null, token);
                     }
 
                     await batchUpdate(userTableData.name, batch_updates);
@@ -444,7 +455,6 @@ function updateMeSectionItem(body) {
         const handleRegularUpdate = (cache_data, userTableData, person) => {
             return new Promise(async (resolve, reject) => {
                 try {
-                    const { section_item_id, favorite, secondary, is_delete } = body;
                     const now = timeNow();
                     const data = { updated: now };
 
@@ -471,7 +481,7 @@ function updateMeSectionItem(body) {
                         .update(data);
 
                     if (update === 1 && cache_data) {
-                        updateCacheItem(cache_data, null, data, section_item_id);
+                        updateCacheItem(cache_data, data, section_item_id);
                     }
 
                     resolve();
@@ -482,7 +492,7 @@ function updateMeSectionItem(body) {
             });
         };
 
-        const updateCacheItem = (cache_data, token, data, id = null) => {
+        const updateCacheItem = (cache_data, data, id = null, token = null) => {
             if (!cache_data) return;
 
             const targetItem = token ?
