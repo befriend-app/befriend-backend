@@ -50,16 +50,27 @@ exports.up = function (knex) {
             .createTable('persons_movies', (table) => {
                 table.bigIncrements('id').primary();
 
-                table.bigInteger('person_id').unsigned().notNullable();
+                table.integer('person_id').unsigned().notNullable();
                 table.integer('movie_id').unsigned().notNullable();
-                table.integer('position').notNullable().defaultTo(0);
+                table.string('movie_token', 32).notNullable();
+
+                table.boolean('is_favorite').defaultTo(false);
+                table.integer('favorite_position').nullable();
 
                 table.bigInteger('created').notNullable();
                 table.bigInteger('updated').notNullable();
                 table.bigInteger('deleted').nullable();
 
-                table.foreign('person_id').references('id').inTable('persons');
-                table.foreign('movie_id').references('id').inTable('movies');
+                table.index('person_id');
+                table.index('movie_id');
+
+                table.foreign('person_id')
+                    .references('id')
+                    .inTable('persons');
+
+                table.foreign('movie_id')
+                    .references('id')
+                    .inTable('movies');
             });
 
         resolve();
