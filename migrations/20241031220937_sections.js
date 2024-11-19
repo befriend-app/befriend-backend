@@ -39,10 +39,11 @@ exports.up = function (knex) {
                 table.date('release_date').notNullable();
                 table.float('popularity', 10, 4).nullable();
                 table.integer('users_added_count').notNullable().defaultTo(0);
-                table.enum('type', ['movie', 'genre']).notNullable();
+                table.boolean('genre_processed').notNullable().defaultTo(false);
 
                 table.bigInteger('created').notNullable();
                 table.bigInteger('updated').notNullable();
+                table.bigInteger('deleted').nullable();
 
                 table.index('token');
             })

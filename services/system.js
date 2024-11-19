@@ -67,6 +67,10 @@ module.exports = {
         sync: {
             data: {
                 locations: 'sync_open_locations',
+                movies: {
+                    all: 'sync_movies',
+                    genres: 'sync_movies_genres',
+                },
                 music: {
                     artists: 'sync_music_artists',
                     artists_genres: 'sync_music_artists_genres',

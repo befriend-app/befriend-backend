@@ -50,8 +50,6 @@ function main(is_me) {
         }
 
         if (is_me) {
-            await require('../data/me_sections/add_movies').main();
-
             process.exit();
         }
 
