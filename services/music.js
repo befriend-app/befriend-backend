@@ -1,5 +1,4 @@
 let cacheService = require('./cache');
-let dbService = require('./db');
 const { getObj } = require('./cache');
 const { normalizeSearch, timeNow } = require('./shared');
 const { getCitiesByCountry, getStates } = require('./locations');
@@ -81,7 +80,7 @@ function musicAutoComplete(search_term, category, user_location) {
                     }
                 }
 
-                artistResults.sort((a, b) => b.score - a.score);
+                artistResults.sort((a, b) => b.followers - a.followers);
             }
 
             // For genre categories, prepend genre-specific artists

@@ -1068,21 +1068,20 @@ function getCategoriesMusic(country) {
 
         let code = country?.code || section.categories.defaultCountry;
 
-        // code = 'CA';
-
         try {
              let allGenres = await hGetAllObj(cacheService.keys.music_genres);
-             let countryGenres = await hGetAllObj(cacheService.keys.music_genres_country(code));
 
              let categoryGenres = [];
 
-             for(let k in countryGenres) {
-                 if(allGenres[k].is_active) {
+             for(let k in allGenres) {
+                 let genre = allGenres[k];
+
+                 if(genre.is_active) {
                      categoryGenres.push({
                          table_key: 'artists',
                          heading: 'Artists',
-                         name: allGenres[k].name,
-                         position: countryGenres[k].position,
+                         name: genre.name,
+                         position: genre.position,
                          token: k,
                      });
                  }

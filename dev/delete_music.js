@@ -26,7 +26,7 @@ async function deleteDb() {
         });
 
         //delete sync
-        let db_sync_keys = [systemKeys.sync.data.music.artists];
+        let db_sync_keys = [systemKeys.sync.data.music.artists_genres, systemKeys.sync.data.music.artists];
 
         for(let key of db_sync_keys) {
             try {
@@ -63,7 +63,6 @@ async function deleteRedis() {
     });
 
     await cacheService.deleteKeys(keys);
-
 }
 
 function main(is_me) {
@@ -75,7 +74,7 @@ function main(is_me) {
             return resolve();
         }
 
-        // await deleteDb();
+        await deleteDb();
         await deleteRedis();
 
         if (is_me) {

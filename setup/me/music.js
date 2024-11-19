@@ -11,28 +11,12 @@ function syncGenres() {
         console.log("Sync genres");
 
         let main_table = 'music_genres';
-        let countries_table = 'music_genres_countries';
 
         let batch_insert = [];
         let batch_update = [];
 
-        let batch_insert_countries = [];
-        let batch_update_countries = [];
-
         try {
             let conn = await dbService.conn();
-
-            // Countries lookup
-            let countries_dict = {
-                byId: {},
-                byToken: {}
-            };
-            let countries = await conn('open_countries');
-
-            for(let country of countries) {
-                countries_dict.byId[country.id] = country;
-                countries_dict.byToken[country.country_code] = country;
-            }
 
             // Existing genres lookup
             let genres_dict = {
@@ -44,21 +28,6 @@ function syncGenres() {
             for(let genre of genres) {
                 genres_dict.byId[genre.id] = genre;
                 genres_dict.byToken[genre.token] = genre;
-            }
-
-            // country genres lookup
-            let country_genres_dict = {};
-            let country_genres = await conn(countries_table);
-
-            for(let cg of country_genres) {
-                let country = countries_dict.byId[cg.country_id];
-                let genre = genres_dict.byId[cg.genre_id];
-
-                if(!(country.country_code in country_genres_dict)) {
-                    country_genres_dict[country.country_code] = {};
-                }
-
-                country_genres_dict[country.country_code][genre.token] = cg;
             }
 
             let endpoint = dataEndpoint(`/music/genres`);
@@ -80,9 +49,10 @@ function syncGenres() {
                     let new_item = {
                         token: token,
                         name: genre.name,
-                        parent_id: null, // Will update after all genres are inserted
+                        parent_id: null,
                         is_active: genre.is_active,
                         is_featured: genre.is_featured,
+                        position: genre.position,
                         created: timeNow(),
                         updated: timeNow()
                     };
@@ -136,65 +106,11 @@ function syncGenres() {
                 }
             }
 
-            // Process country associations
-            if(items.countries) {
-                for(let [country_code, genres] of Object.entries(items.countries)) {
-                    let country = countries_dict.byToken[country_code];
-
-                    if(!country) {
-                        console.warn(`Country not found: ${country_code}`);
-                        continue;
-                    }
-
-                    for(let [genre_token, data] of Object.entries(genres)) {
-                        let genre = genres_dict.byToken[genre_token];
-
-                        if(!genre) {
-                            console.warn(`Genre not found: ${genre}`);
-                            continue;
-                        }
-
-                        //check if already in db
-                        let existing_row = country_genres_dict[country_code]?.[genre_token];
-
-                        delete data.token;
-
-                        if(existing_row) {
-                            if(data.updated > existing_row.updated) {
-                                data.id = existing_row.id;
-                                data.deleted = data.deleted ? timeNow() : null;
-                                batch_update_countries.push(data);
-                            }
-                        } else {
-                            batch_insert_countries.push({
-                                country_id: country.id,
-                                genre_id: genre.id,
-                                position: data.position,
-                                created: timeNow(),
-                                updated: timeNow(),
-                            });
-                        }
-                    }
-                }
-            }
-
-            if(batch_insert_countries.length) {
-                await dbService.batchInsert(countries_table, batch_insert_countries);
-            }
-
-            if(batch_update_countries.length) {
-                await dbService.batchUpdate(countries_table, batch_update_countries);
-            }
-
             console.log({
                 genres: {
                     added: batch_insert.length,
                     updated: batch_update.length
                 },
-                genresByCountry: {
-                    added: batch_insert_countries.length,
-                    updated: batch_update_countries.length
-                }
             });
         } catch(e) {
             console.error(e);
@@ -245,7 +161,7 @@ function syncArtists() {
                     endpoint += `&updated=${last_sync.last_updated}`;
                 }
 
-                console.log(`Fetching artists with offset ${offset}`);
+                console.log(`Syncing artists: offset ${offset}`);
 
                 let r = await axios.get(endpoint);
 
@@ -272,9 +188,10 @@ function syncArtists() {
                             token: item.token,
                             name: item.name,
                             sort_name: item.sort_name,
-                            type: item.type,
+                            spotify_followers: item.spotify_followers,
+                            spotify_popularity: item.spotify_popularity,
+                            spotify_genres: item.spotify_genres,
                             is_active: item.is_active,
-                            mb_score: item.mb_score,
                             created: timeNow(),
                             updated: timeNow()
                         };
@@ -451,7 +368,7 @@ function syncArtistsGenres() {
                     endpoint += `&updated=${last_sync.last_updated}`;
                 }
 
-                console.log(`Fetching artist genres with offset ${offset}`);
+                console.log(`Syncing artist genres: offset ${offset}`);
 
                 let r = await axios.get(endpoint);
                 let {items, next_offset, has_more, timestamp} = r.data;
@@ -484,7 +401,6 @@ function syncArtistsGenres() {
                         let new_item = {
                             artist_id: artist.id,
                             genre_id: genre.id,
-                            popularity: item.popularity || 0,
                             created: timeNow(),
                             updated: timeNow()
                         };
@@ -499,7 +415,6 @@ function syncArtistsGenres() {
                     } else if (item.updated > existing_assoc.updated) {
                         let update_obj = {
                             id: existing_assoc.id,
-                            popularity: item.popularity || 0,
                             updated: timeNow(),
                             deleted: item.deleted ? timeNow() : null
                         };

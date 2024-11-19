@@ -29,10 +29,6 @@ exports.up = async function (knex) {
             table.index('spotify_id');
         }),
 
-        knex.schema.alterTable('music_artists_genres', function (table) {
-            table.integer('popularity').nullable().defaultTo(0);
-        }),
-
         knex.schema.dropTableIfExists('music_artists_genres_countries')
     ]);
 };
@@ -62,10 +58,6 @@ exports.down = async function (knex) {
             });
         }
     };
-
-    await dropColumn('music_artists_genres', [
-        'popularity'
-    ]);
 
     await dropColumn('music_artists', [
         'sort_name',

@@ -5,28 +5,14 @@ const { prefixLimit, topGenreArtistsCount } = require('../../services/music');
 
 loadScriptEnv();
 
-const BATCH_SIZE = 5000;
-
 function indexGenres() {
     return new Promise(async (resolve, reject) => {
         try {
             let conn = await dbService.conn();
             let pipeline = cacheService.startPipeline();
 
-            // Get all required data in parallel
-            const [countries, genres, countryGenres] = await Promise.all([
-                conn('open_countries').orderBy('id'),
-                conn('music_genres')
-                    .orderBy('id'),
-                conn('music_genres_countries')
-                    .orderBy(['country_id', 'position'])
-            ]);
-
-            // Create lookup dictionaries
-            const countriesDict = countries.reduce((acc, country) => {
-                acc[country.id] = country;
-                return acc;
-            }, {});
+            const genres = await conn('music_genres')
+                    .orderBy('position');
 
             const genresDict = genres.reduce((acc, genre) => {
                 acc[genre.id] = genre;
@@ -35,7 +21,6 @@ function indexGenres() {
 
             // Organize data structures for Redis
             const genresAll = {};
-            const genresByCountry = {};
             const prefixGroups = {};
             const deletePrefixGroups = {};
 
@@ -47,6 +32,7 @@ function indexGenres() {
                     name: genre.name,
                     parent_token: genre.parent_id ? genresDict[genre.parent_id]?.token : '',
                     is_active: genre.is_active ? 1 : '',
+                    position: genre.position,
                     updated: genre.updated,
                     deleted: genre.deleted ? 1 : '',
                 });
@@ -94,35 +80,11 @@ function indexGenres() {
                 }
             }
 
-            // Process country associations
-            for (const countryGenre of countryGenres) {
-                const genre = genresDict[countryGenre.genre_id];
-                if (!genre) continue;
-
-                const countryCode = countriesDict[countryGenre.country_id].country_code;
-
-                if (!genresByCountry[countryCode]) {
-                    genresByCountry[countryCode] = {};
-                }
-
-                genresByCountry[countryCode][genre.token] = JSON.stringify({
-                    token: genre.token,
-                    position: countryGenre.position,
-                    updated: countryGenre.updated,
-                    deleted: countryGenre.deleted ? 1 : '',
-                });
-            }
-
             // Add to Redis in batches
             // 1. Store all genres
             pipeline.hSet(cacheService.keys.music_genres, genresAll);
 
-            // 2. Store country-specific genres
-            for (const [countryCode, countryGenres] of Object.entries(genresByCountry)) {
-                pipeline.hSet(cacheService.keys.music_genres_country(countryCode), countryGenres);
-            }
-
-            // 3. Store prefix indexes
+            // 2. Store prefix indexes
             for (const [prefix, tokens] of Object.entries(prefixGroups)) {
                 pipeline.sAdd(
                     cacheService.keys.music_genres_prefix(prefix),
@@ -130,7 +92,7 @@ function indexGenres() {
                 );
             }
 
-            // 4. Remove deleted items from prefix sets
+            // 3. Remove deleted items from prefix sets
             for (const [prefix, tokens] of Object.entries(deletePrefixGroups)) {
                 if (tokens.size > 0) {
                     pipeline.sRem(
@@ -156,16 +118,16 @@ function indexArtists() {
             let conn = await dbService.conn();
             let pipeline = cacheService.startPipeline();
 
-            // Get all artists
+            // Get all artists w/ spotify followers
             const artists = await conn('music_artists')
+                .whereNotNull('spotify_followers')
                 .orderBy('id')
                 .select(
                     'id',
                     'token',
                     'name',
-                    'sort_name',
-                    'type',
-                    'mb_score',
+                    'spotify_popularity AS popularity',
+                    'spotify_followers AS followers',
                     'is_active',
                     'updated',
                     'deleted'
@@ -182,8 +144,7 @@ function indexArtists() {
                 return acc;
             }, {});
 
-            let artists_genres = await conn('music_artists_genres')
-                .orderBy('popularity', 'desc');
+            let artists_genres = await conn('music_artists_genres');
 
             let artists_genres_dict = artists_genres.reduce((acc, ag) => {
                 let artist = artists_dict[ag.artist_id];
@@ -216,9 +177,8 @@ function indexArtists() {
                     id: artist.id,
                     token: artist.token,
                     name: artist.name,
-                    sort: artist.sort_name || '',
-                    type: artist.type || '',
-                    score: artist.mb_score || 0,
+                    popularity: artist.popularity,
+                    followers: artist.followers,
                     active: artist.is_active ? 1 : '',
                     updated: artist.updated,
                     deleted: artist.deleted ? 1 : '',
@@ -265,49 +225,6 @@ function indexArtists() {
                         }
                     }
                 }
-
-                // Handle sort_name prefixes if different from name
-                if (artist.sort_name && artist.sort_name !== artist.name) {
-                    const sortNameLower = artist.sort_name.toLowerCase();
-                    const sortWords = sortNameLower.split(/\s+/);
-
-                    // Full sort_name prefixes
-                    for (let i = 1; i <= Math.min(sortNameLower.length, 20); i++) {
-                        const prefix = sortNameLower.slice(0, i);
-
-                        if (artist.deleted || !artist.is_active) {
-                            if (!deletePrefixGroups[prefix]) {
-                                deletePrefixGroups[prefix] = new Set();
-                            }
-                            deletePrefixGroups[prefix].add(artist.token);
-                        } else {
-                            if (!prefixGroups[prefix]) {
-                                prefixGroups[prefix] = new Set();
-                            }
-                            prefixGroups[prefix].add(artist.token);
-                        }
-                    }
-
-                    // Sort name word prefixes
-                    for (const word of sortWords) {
-                        if (word.length < 2) continue;
-                        for (let i = 1; i <= Math.min(word.length, prefixLimit); i++) {
-                            const prefix = word.slice(0, i);
-
-                            if (artist.deleted || !artist.is_active) {
-                                if (!deletePrefixGroups[prefix]) {
-                                    deletePrefixGroups[prefix] = new Set();
-                                }
-                                deletePrefixGroups[prefix].add(artist.token);
-                            } else {
-                                if (!prefixGroups[prefix]) {
-                                    prefixGroups[prefix] = new Set();
-                                }
-                                prefixGroups[prefix].add(artist.token);
-                            }
-                        }
-                    }
-                }
             }
 
             // Add to Redis in batches
@@ -350,19 +267,24 @@ function indexArtistsGenres() {
             let pipeline = cacheService.startPipeline();
 
             let genres = await conn('music_genres');
+
             let genres_dict = genres.reduce((acc, genre) => {
                 acc[genre.id] = genre;
                 return acc;
             }, {});
 
             let artists = await conn('music_artists');
+
             let artists_dict = artists.reduce((acc, artist) => {
                 acc[artist.id] = artist;
                 return acc;
             }, {});
 
-            let artists_genres = await conn('music_artists_genres')
-                .orderBy('popularity', 'desc');
+            let artists_genres = await conn('music_artists_genres AS mag')
+                .join('music_artists AS ma', 'ma.id', '=', 'mag.artist_id')
+                .orderBy('followers', 'desc')
+                .select('ma.spotify_followers AS followers', 'ma.spotify_popularity AS popularity',
+                    'artist_id', 'genre_id', 'mag.deleted');
 
             // Organize data by genre
             const genreArtists = {};
@@ -385,12 +307,14 @@ function indexArtistsGenres() {
 
                     genreArtists[genre.token][artist.token] = {
                         artist_token: artist.token,
+                        followers: artist.followers,
                         popularity: ag.popularity,
                     }
 
                     if(genreTopArtists[genre.token].length < topGenreArtistsCount) {
                         genreTopArtists[genre.token].push({
                             artist_token: artist.token,
+                            followers: artist.followers,
                             popularity: ag.popularity,
                         });
                     }
@@ -420,11 +344,6 @@ function indexArtistsGenres() {
                         key,
                         JSON.stringify(topArtists)
                     );
-
-                    // pipeline.zAdd(
-                    //     cacheService.keys.music_genre_top_artists(genreToken),
-                    //     topArtists
-                    // );
                 }
             }
 
