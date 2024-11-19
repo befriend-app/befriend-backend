@@ -11,6 +11,8 @@ module.exports = {
         me_sections: `sections:me`,
         instruments: `instruments`,
         instruments_common: `instruments:common`,
+        movies: `movies`,
+        movie_genres: `movie:genres`,
         music_genres: `music:genres`,
         music_artists: `music:artists`,
         activity: function (activity_token) {
@@ -88,14 +90,20 @@ module.exports = {
         instruments_prefix: function (prefix) {
             return `instruments:prefix:${prefix}`;
         },
-        movie: function (token) {
-            return `movies:${token}`;
-        },
         movies_prefix: function (prefix) {
             return `movies:prefix:${prefix}`;
         },
-        music_genres_country: function (country_code) {
-            return `music:genres:country:${country_code}`;
+        movie_genres_prefix: function (prefix) {
+            return `movie:genres:prefix:${prefix}`;
+        },
+        movie_genre_movies: function(genre_token) {
+            return `movie:genres:movies:${genre_token}`;
+        },
+        movie_genre_top_movies: function(genre_token) {
+            return `movie:genres:top:movies:${genre_token}`;
+        },
+        movies_decade: function(decade) {
+            return `movies:decade:${decade}`;
         },
         music_genres_prefix: function (prefix) {
             return `music:genres:prefix:${prefix}`;

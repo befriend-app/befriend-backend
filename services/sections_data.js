@@ -67,6 +67,76 @@ module.exports = {
             rowCols: 'cols-2'
         }
     },
+    movies: {
+        myStr: 'My Movies',
+        tabs: [
+            {
+                name: 'All',
+                key: 'movies'
+            },
+            {
+                name: 'Genres',
+                key: 'genres'
+            }
+        ],
+        tables: {
+            movies: {
+                isFavorable: true,
+                data: {
+                    name: 'movies'
+                },
+                user: {
+                    name: 'persons_movies',
+                    cols: {
+                        id: 'movie_id',
+                        token: 'movie_token',
+                    },
+                },
+            },
+            genres: {
+                isFavorable: true,
+                data: {
+                    name: 'movies_genres'
+                },
+                user: {
+                    name: 'persons_movie_genres',
+                    cols: {
+                        id: 'genre_id',
+                        token: 'genre_token',
+                    },
+                },
+            }
+        },
+        categories: {
+            endpoint: `/movies/top/genre`,
+            options: null,
+            fn: 'getCategoriesMovies',
+        },
+        autoComplete: {
+            minChars: 2,
+            endpoint: '/autocomplete/movies',
+            placeholders: {
+                main: 'Search movies',
+            },
+        },
+        cacheKeys: {
+            movies: {
+                byHash: cacheService.keys.movies,
+            },
+            genres: {
+                byHash: cacheService.keys.movie_genres,
+            },
+        },
+        functions: {
+            data: 'getMovies',
+        },
+        styles: {
+            rowCols: {
+                default: 'cols-2',
+                my: 'cols-1',
+            }
+        }
+    },
     music: {
         myStr: 'My Music',
         tabs: [

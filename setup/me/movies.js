@@ -416,7 +416,7 @@ async function main() {
             await syncMovies();
             await syncMoviesGenres();
 
-            // await require('../index/index_movies').main();
+            await require('../index/index_movies').main();
         } catch(e) {
             console.error(e);
             return reject(e);
