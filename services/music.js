@@ -69,11 +69,29 @@ function musicAutoComplete(search_term, category, user_location) {
 
                 let artists = await cacheService.execMulti(pipeline);
 
+                // Break search term into words
+                const searchWords = search_term.toLowerCase().split(/\s+/);
+
                 for (let artist of artists) {
                     if (artist) {
                         try {
                             artist = JSON.parse(artist);
-                            artistResults.push(artist);
+
+                            if (artist?.name) {
+                                const artistName = artist.name.toLowerCase();
+                                const artistWords = artistName.split(/\s+/);
+
+                                // Different matching categories
+                                const exactMatch = artistName === search_term;
+                                const containsFullPhrase = artistName.includes(search_term);
+                                const matchesAllWords = searchWords.every(searchWord =>
+                                    artistWords.some(artistWord => artistWord.includes(searchWord))
+                                );
+
+                                if (exactMatch || containsFullPhrase || matchesAllWords) {
+                                    artistResults.push(artist);
+                                }
+                            }
                         } catch (e) {
                             console.error('Error parsing artist data:', e);
                         }
