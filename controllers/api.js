@@ -1698,23 +1698,23 @@ module.exports = {
     getTopMoviesByGenre: function(req, res) {
         return new Promise(async (resolve, reject) => {
             try {
-                const { genre_token } = req.query;
+                const { category_token } = req.query;
 
-                if (!genre_token) {
+                if (!category_token) {
                     return res.json({ items: [] }, 200);
                 }
 
                 let items;
 
-                if (genre_token.match(/^\d{4}$/)) {
-                    // If token is a decade (e.g., "2020"), get movies from that decade
-                    items = await moviesService.getMoviesByDecade(parseInt(genre_token));
-                } else if (genre_token === 'new_releases') {
+                if (category_token === 'new_releases') {
                     // Get new releases
                     items = await moviesService.getNewReleases();
+                } else if (category_token.match(/^\d{4}s$/)) {
+                    // If token is a decade (e.g., "2020s"), get movies from that decade
+                    items = await moviesService.getMoviesByDecade(parseInt(category_token));
                 } else {
                     // Get top movies for genre
-                    items = await moviesService.getTopMoviesForGenre(genre_token);
+                    items = await moviesService.getTopMoviesForGenre(category_token);
                 }
 
                 // Format response
@@ -1723,6 +1723,7 @@ module.exports = {
                     name: movie.name,
                     poster: movie.poster,
                     release_date: movie.release_date,
+                    label: movie.release_date?.substring(0, 4),
                     popularity: movie.popularity
                 }));
 
@@ -1731,7 +1732,7 @@ module.exports = {
                 }, 200);
             } catch (e) {
                 console.error('Error getting top movies by genre:', e);
-                res.json({ error: 'Error getting movies' }, 500);
+                res.json({ error: 'Error getting movies' }, 400);
             }
 
             resolve();

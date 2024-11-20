@@ -13,6 +13,7 @@ module.exports = {
         instruments_common: `instruments:common`,
         movies: `movies`,
         movie_genres: `movie:genres`,
+        movies_new: 'movies:new',
         music_genres: `music:genres`,
         music_artists: `music:artists`,
         activity: function (activity_token) {

@@ -1144,7 +1144,8 @@ function getCategoriesMovies() {
                 },
                 {
                     table_key: 'movies',
-                    name: 'New Releases'
+                    name: 'New Releases',
+                    token: 'new_releases'
                 },
             ];
 
@@ -1162,8 +1163,7 @@ function getCategoriesMovies() {
                         table_key: 'movies',
                         heading: 'Films',
                         name: genre.name,
-                        token: k,
-                        position: genre.position
+                        token: k
                     });
 
                     // Add to items list

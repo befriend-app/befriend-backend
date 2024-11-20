@@ -241,7 +241,7 @@ function indexMovies() {
                     .map(m => m.token);
 
                 pipeline.sAdd(
-                    cacheService.keys.movies_decade(decade),
+                    cacheService.keys.movies_decade(decade + 's'),
                     topMovies
                 );
             }

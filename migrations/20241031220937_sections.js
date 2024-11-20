@@ -46,6 +46,7 @@ exports.up = function (knex) {
                 table.bigInteger('deleted').nullable();
 
                 table.index('token');
+                table.index('release_date');
             })
             .createTable('persons_movies', (table) => {
                 table.bigIncrements('id').primary();

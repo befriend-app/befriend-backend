@@ -132,7 +132,7 @@ module.exports = {
         },
         styles: {
             rowCols: {
-                default: 'cols-2',
+                default: 'cols-1',
                 my: 'cols-1',
             }
         }

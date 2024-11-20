@@ -1,6 +1,6 @@
 const cacheService = require('./cache');
 const dbService = require('./db');
-const { getObj } = require('./cache');
+const { getObj, getSetMembers } = require('./cache');
 const { normalizeSearch } = require('./shared');
 const sectionsData = require('./sections_data');
 
@@ -43,9 +43,9 @@ function getTopMoviesForDecade(decade) {
 function getTopMoviesForGenre(genre_token) {
     return new Promise(async (resolve, reject) => {
         try {
-            const movieTokens = JSON.parse(await getObj(
+            const movieTokens = await getObj(
                 cacheService.keys.movie_genre_top_movies(genre_token)
-            ));
+            );
 
             if (!movieTokens?.length) {
                 return reject("No movies found for genre");
@@ -168,6 +168,17 @@ function moviesAutoComplete(search_term, category, params = {}) {
 function getNewReleases(limit = 100) {
     return new Promise(async (resolve, reject) => {
         try {
+            let cache_key = cacheService.keys.movies_new;
+
+            // Try to get from cache first
+            let cached_data = await cacheService.getObj(cache_key);
+
+            //todo remove
+            if (false && cached_data?.length) {
+                return resolve(cached_data);
+            }
+
+            // If not in cache, get from DB
             const conn = await dbService.conn();
 
             // Get movies released in the last 90 days
@@ -185,6 +196,7 @@ function getNewReleases(limit = 100) {
                 return resolve([]);
             }
 
+            // Get full movie data from Redis
             let pipeline = cacheService.startPipeline();
 
             for (const movie of movies) {
@@ -195,6 +207,14 @@ function getNewReleases(limit = 100) {
             const parsed = results
                 .filter(Boolean)
                 .map(m => JSON.parse(m));
+
+            // Save to cache with 30-day expiry
+            const CACHE_DAYS = 30;
+            const SECONDS_PER_DAY = 86400;
+            await cacheService.setCache(
+                cache_key, parsed,
+                CACHE_DAYS * SECONDS_PER_DAY
+            );
 
             resolve(parsed);
         } catch (e) {
