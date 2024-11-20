@@ -458,10 +458,16 @@ function updateMeSectionItem(body) {
                     const now = timeNow();
                     const data = { updated: now };
 
+                    let section = getSection();
+
                     if (is_delete) {
                         data.deleted = now;
-                        data.is_favorite = false;
-                        data.favorite_position = null;
+
+                        //only update these columns if table is favorable
+                        if(section.sectionData.tables?.[table_key]?.isFavorable) {
+                            data.is_favorite = false;
+                            data.favorite_position = null;
+                        }
                     } else {
                         if (secondary !== undefined) {
                             data[userTableData.cols.secondary] = secondary;
