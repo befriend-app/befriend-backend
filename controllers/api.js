@@ -28,6 +28,7 @@ const { cityAutoComplete } = require('../services/locations');
 const { schoolAutoComplete } = require('../services/schools');
 const { hGetAll } = require('../services/cache');
 const { getTopArtistsForGenre, musicAutoComplete } = require('../services/music');
+const moviesService = require('../services/movies');
 
 module.exports = {
     getNetworks: function (req, res) {
@@ -1647,6 +1648,95 @@ module.exports = {
             }
         });
     },
+    getTopMusicArtistsByGenre: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            let genre_token = req.query.category_token;
+
+            if (!genre_token) {
+                res.json('Genre token required', 400);
+                return resolve();
+            }
+
+            try {
+                let items = await getTopArtistsForGenre(genre_token)
+
+                res.json({
+                    items: items
+                });
+            } catch(e) {
+                console.error(e);
+
+                res.json('Error getting artists', 400);
+                return resolve();
+            }
+        });
+    },
+    autoCompleteMovies: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            let search = req.query.search;
+            let category = req.query.category;
+
+            if (!search) {
+                res.json('Invalid search', 400);
+                return resolve();
+            }
+
+            try {
+                let items = await moviesService.moviesAutoComplete(search, category);
+
+                res.json({
+                    items: items
+                });
+            } catch(e) {
+                console.error(e);
+
+                res.json('Autocomplete error', 400);
+                return resolve();
+            }
+        });
+    },
+    getTopMoviesByGenre: function(req, res) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const { genre_token } = req.query;
+
+                if (!genre_token) {
+                    return res.json({ items: [] }, 200);
+                }
+
+                let items;
+
+                if (genre_token.match(/^\d{4}$/)) {
+                    // If token is a decade (e.g., "2020"), get movies from that decade
+                    items = await moviesService.getMoviesByDecade(parseInt(genre_token));
+                } else if (genre_token === 'new_releases') {
+                    // Get new releases
+                    items = await moviesService.getNewReleases();
+                } else {
+                    // Get top movies for genre
+                    items = await moviesService.getTopMoviesForGenre(genre_token);
+                }
+
+                // Format response
+                const formattedItems = items.map(movie => ({
+                    token: movie.token,
+                    name: movie.name,
+                    poster: movie.poster,
+                    release_date: movie.release_date,
+                    popularity: movie.popularity
+                }));
+
+                res.json({
+                    items: formattedItems
+                }, 200);
+            } catch (e) {
+                console.error('Error getting top movies by genre:', e);
+                res.json({ error: 'Error getting movies' }, 500);
+            }
+
+            resolve();
+        });
+    },
     autoCompleteSchools: function (req, res) {
         return new Promise(async (resolve, reject) => {
             let countryId = req.query.filterId;
@@ -1668,29 +1758,6 @@ module.exports = {
                 console.error(e);
 
                 res.json('Autocomplete error', 400);
-                return resolve();
-            }
-        });
-    },
-    getMusicTopArtistsForGenre: function (req, res) {
-        return new Promise(async (resolve, reject) => {
-            let genre_token = req.query.category_token;
-
-            if (!genre_token) {
-                res.json('Genre token required', 400);
-                return resolve();
-            }
-
-            try {
-                let items = await getTopArtistsForGenre(genre_token)
-
-                res.json({
-                    items: items
-                });
-            } catch(e) {
-                console.error(e);
-
-                res.json('Error getting artists', 400);
                 return resolve();
             }
         });

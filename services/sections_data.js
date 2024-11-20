@@ -71,7 +71,7 @@ module.exports = {
         myStr: 'My Movies',
         tabs: [
             {
-                name: 'All',
+                name: 'Movies',
                 key: 'movies'
             },
             {

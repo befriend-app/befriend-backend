@@ -460,6 +460,8 @@ function updateMeSectionItem(body) {
 
                     if (is_delete) {
                         data.deleted = now;
+                        data.is_favorite = false;
+                        data.favorite_position = null;
                     } else {
                         if (secondary !== undefined) {
                             data[userTableData.cols.secondary] = secondary;
@@ -1129,6 +1131,127 @@ function getCategoriesMusic(country) {
     });
 }
 
+function getCategoriesMovies() {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let allGenres = await hGetAllObj(cacheService.keys.movie_genres);
+
+            // Main categories
+            let mainCategories = [
+                {
+                    table_key: 'genres',
+                    name: 'Genres',
+                },
+                {
+                    table_key: 'movies',
+                    name: 'New Releases'
+                },
+            ];
+
+            // Process genres
+            let genreCategories = [];
+            let genreItems = [];
+
+            // Build genre categories and items
+            for(let k in allGenres) {
+                let genre = allGenres[k];
+
+                if(!genre.deleted) {
+                    // Add to category options
+                    genreCategories.push({
+                        table_key: 'movies',
+                        heading: 'Films',
+                        name: genre.name,
+                        token: k,
+                        position: genre.position
+                    });
+
+                    // Add to items list
+                    genreItems.push({
+                        token: k,
+                        name: genre.name,
+                        category: 'genres'
+                    });
+                }
+            }
+
+            // Sort genre categories alphabetically
+            genreCategories.sort((a, b) => a.name.localeCompare(b.name));
+
+            // Build decade categories
+            let decadeCategories = [];
+            let currentYear = new Date().getFullYear();
+            let currentDecade = Math.floor(currentYear / 10) * 10;
+
+            for(let decade = currentDecade; decade >= 1930; decade -= 10) {
+                let name = `${decade}s`;
+                decadeCategories.push({
+                    table_key: 'movies',
+                    heading: 'Films',
+                    name: name,
+                    token: name
+                });
+            }
+
+            // Combine categories in specific order:
+            // 1. Main categories (Genres, New Releases)
+            // 2. Film genres (alphabetically)
+            // 3. Decades (newest to oldest)
+            const categories = [
+                ...mainCategories,
+                ...genreCategories,
+                ...decadeCategories
+            ];
+
+            // Sort genre items alphabetically
+            genreItems.sort((a, b) => a.name.localeCompare(b.name));
+
+            resolve({
+                options: categories,
+                items: genreItems
+            });
+        } catch(e) {
+            console.error(e);
+            return reject(e);
+        }
+    });
+}
+function getMovies() {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let section = sectionsData.movies;
+
+            // Get categories data
+            let categoryData = await getCategoriesMovies();
+
+            let data = {
+                myStr: section.myStr,
+                tabs: section.tabs,
+                options: categoryData.items,
+                autoComplete: section.autoComplete,
+                categories: {
+                    endpoint: section.categories.endpoint,
+                    options: categoryData.options,
+                },
+                styles: section.styles,
+                tables: Object.keys(section.tables).reduce((acc, key) => {
+                    acc.push({
+                        name: key,
+                        isFavorable: section.tables[key].isFavorable
+                    });
+                    return acc;
+                }, []),
+            };
+
+            resolve(data);
+        } catch(e) {
+            console.error(e);
+            return reject(e);
+        }
+    });
+
+}
+
 module.exports = {
     sections: sectionsData,
     addMeSection,
@@ -1144,5 +1267,7 @@ module.exports = {
     allInstruments,
     getMusic,
     getSchools,
-    getCategoriesMusic
+    getCategoriesMusic,
+    getMovies,
+    getCategoriesMovies,
 };

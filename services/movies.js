@@ -70,7 +70,7 @@ function getTopMoviesForGenre(genre_token) {
     });
 }
 
-function movieAutoComplete(search_term, category, params = {}) {
+function moviesAutoComplete(search_term, category, params = {}) {
     return new Promise(async (resolve, reject) => {
         const minLength = sectionsData.movies.autoComplete.minChars;
         search_term = normalizeSearch(search_term);
@@ -251,7 +251,7 @@ module.exports = {
     topGenreCount: TOP_GENRE_COUNT,
     getTopMoviesForGenre,
     getTopMoviesForDecade,
-    movieAutoComplete,
+    moviesAutoComplete,
     getNewReleases,
     getMoviesByDecade,
 };
