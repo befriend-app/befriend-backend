@@ -70,7 +70,7 @@ function getTopMoviesForGenre(genre_token) {
     });
 }
 
-function moviesAutoComplete(search_term, category, params = {}) {
+function moviesAutoComplete(search_term, category) {
     return new Promise(async (resolve, reject) => {
         const minLength = sectionsData.movies.autoComplete.minChars;
         search_term = normalizeSearch(search_term);
@@ -118,15 +118,6 @@ function moviesAutoComplete(search_term, category, params = {}) {
                                 );
 
                                 if (exactMatch || containsFullPhrase || matchesAllWords) {
-                                    // Filter by decade if specified
-                                    if (params.decade) {
-                                        const year = new Date(movie.release_date).getFullYear();
-                                        const movieDecade = Math.floor(year / 10) * 10;
-                                        if (movieDecade !== parseInt(params.decade)) {
-                                            continue;
-                                        }
-                                    }
-
                                     movieResults.push(movie);
                                 }
                             }
@@ -138,24 +129,57 @@ function moviesAutoComplete(search_term, category, params = {}) {
 
                 // For genre categories, separate movies by genre
                 if (category?.token) {
-                    for (let movie of movieResults) {
-                        if (movie.genres && category.token in movie.genres) {
-                            genreMovies.push(movie);
-                        } else {
-                            remainingMovies.push(movie);
+                    if(category.token === 'new_releases') {
+                        const cutoffDate = new Date();
+                        cutoffDate.setDate(cutoffDate.getDate() - 365);
+
+                        for (let movie of movieResults) {
+                            if (movie.release_date && new Date(movie.release_date) >= cutoffDate) {
+                                genreMovies.push(movie);
+                            } else {
+                                remainingMovies.push(movie);
+                            }
+                        }
+                    } else if (category.token.match(/^\d{4}s$/)) {
+                        for (let movie of movieResults) {
+                            const year = new Date(movie.release_date).getFullYear();
+                            const movieDecade = Math.floor(year / 10) * 10;
+
+                            if (category.token.includes(movieDecade)) {
+                                genreMovies.push(movie);
+                            } else {
+                                remainingMovies.push(movie);
+                            }
+                        }
+                    } else {
+                        for (let movie of movieResults) {
+                            if (movie.genres && category.token in movie.genres) {
+                                genreMovies.push(movie);
+                            } else {
+                                remainingMovies.push(movie);
+                            }
                         }
                     }
 
-                    // Combine with genre movies first
-                    movieResults = genreMovies.concat(remainingMovies);
-                }
+                    genreMovies.sort((a, b) => b.popularity - a.popularity);
+                    remainingMovies.sort((a, b) => b.popularity - a.popularity);
 
-                // Sort by popularity within each group
-                movieResults.sort((a, b) => b.popularity - a.popularity);
+                    movieResults = genreMovies.concat(remainingMovies);
+                } else {
+                    // Sort by popularity
+                    movieResults.sort((a, b) => b.popularity - a.popularity);
+                }
             }
 
             // Limit final results
             movieResults = movieResults.slice(0, RESULTS_LIMIT);
+
+            //add year to results
+            movieResults.map((item) => {
+                if(!item.meta) {
+                    item.meta = item.release_date?.substring(0, 4);
+                }
+            });
 
             resolve(movieResults);
         } catch (e) {
