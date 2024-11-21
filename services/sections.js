@@ -10,14 +10,18 @@ function addMeSection(person_token, section_key, location) {
     function addDataToSection(section) {
         return new Promise(async (resolve, reject) => {
             if (section_key in sectionsData) {
-                let fnData = sectionsData[section_key].functions.data;
-                let fnFilterList = sectionsData[section_key].functions.filterList;
+                let sectionData = sectionsData[section_key];
+                let fnData = sectionData.functions.data;
+                let fnFilterList = sectionData.functions.filterList;
 
                 try {
-                    let country = await latLonLookup(location?.lat, location?.lon);
-
                     if (fnData) {
-                        section.data = await module.exports[fnData](country);
+                        if(sectionData?.type?.name === 'buttons') {
+                            section.data = await module.exports[fnData]();
+                        } else {
+                            let country = await latLonLookup(location?.lat, location?.lon);
+                            section.data = await module.exports[fnData](country);
+                        }
                     }
 
                     if (fnFilterList) {
