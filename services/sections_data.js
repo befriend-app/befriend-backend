@@ -26,6 +26,31 @@ module.exports = {
             rowCols: 'cols-1'
         }
     },
+    politics: {
+        type: {
+            name: 'buttons',
+            single: true
+        },
+        tables: {
+            politics: {
+                data: {
+                    name: 'politics'
+                },
+                user: {
+                    name: 'persons_politics',
+                    cols: {
+                        id: 'politics_id'
+                    }
+                }
+            }
+        },
+        functions: {
+            data: 'getPolitics'
+        },
+        styles: {
+            rowCols: 'cols-1'
+        }
+    },
     religion: {
         type: {
             name: 'buttons',
