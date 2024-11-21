@@ -603,17 +603,27 @@ function getPersonSectionItems(person, section_key) {
                             section_option = options.byId[item[col_name]];
                         } else if (cacheObj?.byHash) {
                             let cache_key = cacheObj.byHash;
-
                             section_option = await cacheService.hGetItem(cache_key, item[token_col]);
                         } else if (cacheObj?.byHashKey) {
                             let cache_key = cacheObj.byHashKey(item[hash_key_col]);
-
                             section_option = await cacheService.hGetItem(cache_key, item[token_col]);
+                        } else if (sectionData.type?.name === 'buttons') {
+                            // For button-type sections like drinking
+                            let allOptions = await module.exports[sectionData.functions.data](true);
+                            section_option = allOptions.find(opt => opt.id === item[col_name]);
                         }
 
-                        item.secondary = item[secondary_col_name];
+                        if (!section_option) {
+                            continue;
+                        }
 
-                        organized[section_option.token] = {
+                        if (secondary_col_name) {
+                            item.secondary = item[secondary_col_name];
+                        }
+
+                        let itemKey = section_option.token || `option_${section_option.id}`;
+
+                        organized[itemKey] = {
                             ...section_option,
                             ...item,
                         };
@@ -1077,7 +1087,6 @@ function getMusic(country) {
     });
 }
 
-
 function getSchools() {
     return new Promise(async (resolve, reject) => {
         //list of countries for autocomplete
@@ -1267,6 +1276,7 @@ function getCategoriesMovies() {
         }
     });
 }
+
 function getMovies() {
     return new Promise(async (resolve, reject) => {
         try {
