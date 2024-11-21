@@ -94,13 +94,14 @@ module.exports = {
     selectMeSectionOptionItem: function (req, res) {
         return new Promise(async (resolve, reject) => {
             try {
-                const { person_token, section_key, table_key, item_token } = req.body;
+                const { person_token, section_key, table_key, item_token, is_select } = req.body;
 
                 let result = await selectSectionOptionItem(
                     person_token,
                     section_key,
                     table_key,
                     item_token,
+                    is_select
                 );
 
                 res.json({

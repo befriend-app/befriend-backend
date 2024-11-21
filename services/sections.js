@@ -1399,11 +1399,10 @@ function getSmoking(options_data_only) {
     });
 }
 
-function selectSectionOptionItem(person_token, section_key, table_key, item_token = null) {
+function selectSectionOptionItem(person_token, section_key, table_key, item_token, is_select) {
     return new Promise(async (resolve, reject) => {
-        //item token can be null for deselection
         try {
-            if (!person_token || !section_key || !table_key) {
+            if (!person_token || !section_key || !table_key || !item_token || typeof is_select !== 'boolean') {
                 return reject('Missing required fields');
             }
 
@@ -1432,18 +1431,15 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
                 return reject("Options not found");
             }
 
-            let itemOption;
-            if (item_token) {
-                itemOption = options.find(option => option.token === item_token);
-                if (!itemOption) {
-                    return reject('Invalid item token');
-                }
+            let itemOption = options.find(option => option.token === item_token);
+            if (!itemOption) {
+                return reject('Invalid item token');
             }
 
             const conn = await dbService.conn();
             const now = timeNow();
 
-            if (sectionData.type.single) {
+            if (sectionData.type.single || (sectionData.type.exclusive && item_token === sectionData.type.exclusive.token)) {
                 let existing = await conn(userTableData.name)
                     .where('person_id', person.id)
                     .whereNull('deleted')
@@ -1452,15 +1448,15 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
                 let response_data = null;
 
                 if (existing) {
-                    if (!item_token || (itemOption && existing[userTableData.cols.id] === itemOption.id)) {
-                        // Deselect: either explicit deselection or toggling same item
+                    if (!is_select) {
+                        // Deselect
                         await conn(userTableData.name)
                             .where('id', existing.id)
                             .update({
                                 deleted: now,
                                 updated: now
                             });
-                    } else {
+                    } else if (existing[userTableData.cols.id] !== itemOption.id) {
                         // Change selection to new item
                         await conn(userTableData.name)
                             .where('id', existing.id)
@@ -1474,10 +1470,11 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
                             token: item_token,
                             name: itemOption.name,
                             created: existing.created,
-                            updated: now
+                            updated: now,
+                            deleted: null
                         };
                     }
-                } else if (itemOption) {
+                } else if (is_select) {
                     // No existing selection, add new one
                     const [id] = await conn(userTableData.name).insert({
                         person_id: person.id,
@@ -1495,6 +1492,17 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
                     };
                 }
 
+                // If exclusive token is selected, delete all other selections
+                if (is_select && sectionData.type.exclusive && item_token === sectionData.type.exclusive.token && response_data) {
+                    await conn(userTableData.name)
+                        .where('person_id', person.id)
+                        .whereNot('id', response_data.id)
+                        .update({
+                            deleted: now,
+                            updated: now
+                        });
+                }
+
                 const cache_key = cacheService.keys.persons_section_data(
                     person.person_token,
                     section_key
@@ -1502,7 +1510,7 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
 
                 let cache_data = await cacheService.getObj(cache_key) || {};
 
-                // Clear old selections
+                // Clear old selections for single select
                 for (let token in cache_data) {
                     delete cache_data[token];
                 }
@@ -1516,7 +1524,98 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
 
                 return resolve(response_data);
             } else {
-                return reject("Other config not implemented");
+                // Handle multi-select case
+                let existing = await conn(userTableData.name)
+                    .where('person_id', person.id)
+                    .where(userTableData.cols.id, itemOption.id)
+                    .whereNull('deleted')
+                    .first();
+
+                // Handle deselection
+                if (existing && !is_select) {
+                    // Deselect
+                    await conn(userTableData.name)
+                        .where('id', existing.id)
+                        .update({
+                            deleted: now,
+                            updated: now
+                        });
+
+                    // Update cache
+                    const cache_key = cacheService.keys.persons_section_data(
+                        person.person_token,
+                        section_key
+                    );
+
+                    let cache_data = await cacheService.getObj(cache_key) || {};
+                    delete cache_data[item_token];
+                    await cacheService.setCache(cache_key, cache_data);
+
+                    return resolve(null);
+                }
+                // Handle selection
+                else if (!existing && is_select) {
+                    let response_data = null;
+                    const cache_key = cacheService.keys.persons_section_data(
+                        person.person_token,
+                        section_key
+                    );
+                    let cache_data = await cacheService.getObj(cache_key) || {};
+
+                    // If selecting non-exclusive option, deselect exclusive if it exists
+                    if (sectionData.type.exclusive?.token && item_token !== sectionData.type.exclusive.token) {
+                        let exclusiveOption = options.find(opt => opt.token === sectionData.type.exclusive.token);
+                        if (exclusiveOption) {
+                            await conn(userTableData.name)
+                                .where('person_id', person.id)
+                                .where(userTableData.cols.id, exclusiveOption.id)
+                                .whereNull('deleted')
+                                .update({
+                                    deleted: now,
+                                    updated: now
+                                });
+
+                            delete cache_data[sectionData.type.exclusive.token];
+                        }
+                    }
+                    // If selecting exclusive option, deselect all others
+                    else if (sectionData.type.exclusive?.token && item_token === sectionData.type.exclusive.token) {
+                        await conn(userTableData.name)
+                            .where('person_id', person.id)
+                            .whereNull('deleted')
+                            .update({
+                                deleted: now,
+                                updated: now
+                            });
+
+                        cache_data = {};
+                    }
+
+                    // Add new selection
+                    const [id] = await conn(userTableData.name).insert({
+                        person_id: person.id,
+                        [userTableData.cols.id]: itemOption.id,
+                        created: now,
+                        updated: now
+                    });
+
+                    response_data = {
+                        id,
+                        token: item_token,
+                        name: itemOption.name,
+                        created: now,
+                        updated: now
+                    };
+
+                    // Update cache
+                    cache_data[item_token] = response_data;
+                    await cacheService.setCache(cache_key, cache_data);
+
+                    return resolve(response_data);
+                }
+
+                // No action needed if trying to select already selected or deselect already deselected
+                return resolve(null);
             }
         } catch(e) {
             console.error(e);
@@ -1536,6 +1635,7 @@ module.exports = {
     getMeSections,
     getActiveData,
     dataForSchema,
+    selectSectionOptionItem,
     getInstruments,
     allInstruments,
     getMusic,
@@ -1546,5 +1646,4 @@ module.exports = {
     getDrinking,
     getReligions,
     getSmoking,
-    selectSectionOptionItem
 };
