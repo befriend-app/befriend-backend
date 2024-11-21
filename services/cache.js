@@ -83,7 +83,7 @@ module.exports = {
         person_sections: function (person_token) {
             return `persons:sections:${person_token}`;
         },
-        person_sections_data: function (person_token, data_name) {
+        persons_section_data: function (person_token, data_name) {
             return `persons:sections:data:${data_name}:${person_token}`;
         },
         instrument: function (token) {

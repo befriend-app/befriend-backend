@@ -335,7 +335,7 @@ function addMeSectionItem(person_token, section_key, table_key, item_token, hash
                     ...item_data,
                 };
 
-                let cache_key = cacheService.keys.person_sections_data(
+                let cache_key = cacheService.keys.persons_section_data(
                     person.person_token,
                     section_key,
                 );
@@ -524,7 +524,7 @@ function updateMeSectionItem(body) {
             if (!person) return reject('Person not found');
 
             // Get cache data
-            const cache_key = cacheService.keys.person_sections_data(
+            const cache_key = cacheService.keys.persons_section_data(
                 person.person_token,
                 body.section_key
             );
@@ -553,7 +553,7 @@ function updateMeSectionItem(body) {
 function getPersonSectionItems(person, section_key) {
     return new Promise(async (resolve, reject) => {
         try {
-            let cache_key = cacheService.keys.person_sections_data(
+            let cache_key = cacheService.keys.persons_section_data(
                 person.person_token,
                 section_key,
             );
@@ -775,7 +775,7 @@ function getActiveData(person, sections, country) {
                 }
 
                 // Always get person-specific items
-                const cache_key_items = cacheService.keys.person_sections_data(
+                const cache_key_items = cacheService.keys.persons_section_data(
                     person.person_token,
                     key
                 );
@@ -926,17 +926,42 @@ function dataForSchema(table_name, cache_key, filter, sort_by, sort_direction) {
     });
 }
 
-function getDrinking() {
+function getDrinking(options_data_only) {
     return new Promise(async (resolve, reject) => {
         try {
             const cache_key = cacheService.keys.drinking;
-            let data = await cacheService.getObj(cache_key);
+            let options = await cacheService.getObj(cache_key);
 
-            if (!data) {
+            if (!options) {
                 let conn = await dbService.conn();
-                data = await conn('drinking').select('id', 'token', 'name');
-                await cacheService.setCache(cache_key, data);
+
+                options = await conn('drinking')
+                    .where('is_visible', true)
+                    .order('sort_position')
+                    .select('id', 'token', 'name');
+
+                await cacheService.setCache(cache_key, options);
             }
+
+            if(options_data_only) {
+                return resolve(options);
+            }
+
+            let section = sectionsData.drinking;
+
+            let data = {
+                type: section.type,
+                options: options,
+                styles: section.styles,
+                tables: Object.keys(section.tables).reduce((acc, key) => {
+                    acc.push({
+                        name: key,
+                        isFavorable: !!section.tables[key].isFavorable
+                    });
+
+                    return acc;
+                }, []),
+            };
 
             resolve(data);
         } catch (e) {
@@ -1275,7 +1300,132 @@ function getMovies() {
             return reject(e);
         }
     });
+}
 
+function selectSectionOptionItem(person_token, section_key, table_key, item_token = null) {
+    return new Promise(async (resolve, reject) => {
+        //item token can be null for deselection
+        try {
+            if (!person_token || !section_key || !table_key) {
+                return reject('Missing required fields');
+            }
+
+            const person = await getPerson(person_token);
+
+            if (!person) {
+                return reject('Person not found');
+            }
+
+            // Get section data to verify it's a button type section
+            const sectionData = sectionsData[section_key];
+
+            if (sectionData?.type?.name !== 'buttons') {
+                return reject('Invalid section type');
+            }
+
+            const userTableData = sectionData.tables[table_key]?.user;
+            if (!userTableData) {
+                return reject('Invalid table configuration');
+            }
+
+            //validate token
+            let options = await module.exports[sectionData.functions.data](true);
+
+            if(!options) {
+                return reject("Options not found");
+            }
+
+            let itemOption;
+            if (item_token) {
+                itemOption = options.find(option => option.token === item_token);
+                if (!itemOption) {
+                    return reject('Invalid item token');
+                }
+            }
+
+            const conn = await dbService.conn();
+            const now = timeNow();
+
+            if (sectionData.type.single) {
+                let existing = await conn(userTableData.name)
+                    .where('person_id', person.id)
+                    .whereNull('deleted')
+                    .first();
+
+                let response_data = null;
+
+                if (existing) {
+                    if (!item_token || (itemOption && existing[userTableData.cols.id] === itemOption.id)) {
+                        // Deselect: either explicit deselection or toggling same item
+                        await conn(userTableData.name)
+                            .where('id', existing.id)
+                            .update({
+                                deleted: now,
+                                updated: now
+                            });
+                    } else {
+                        // Change selection to new item
+                        await conn(userTableData.name)
+                            .where('id', existing.id)
+                            .update({
+                                [userTableData.cols.id]: itemOption.id,
+                                updated: now
+                            });
+
+                        response_data = {
+                            id: existing.id,
+                            token: item_token,
+                            name: itemOption.name,
+                            created: existing.created,
+                            updated: now
+                        };
+                    }
+                } else if (itemOption) {
+                    // No existing selection, add new one
+                    const [id] = await conn(userTableData.name).insert({
+                        person_id: person.id,
+                        [userTableData.cols.id]: itemOption.id,
+                        created: now,
+                        updated: now
+                    });
+
+                    response_data = {
+                        id,
+                        token: item_token,
+                        name: itemOption.name,
+                        created: now,
+                        updated: now
+                    };
+                }
+
+                const cache_key = cacheService.keys.persons_section_data(
+                    person.person_token,
+                    section_key
+                );
+
+                let cache_data = await cacheService.getObj(cache_key) || {};
+
+                // Clear old selections
+                for (let token in cache_data) {
+                    delete cache_data[token];
+                }
+
+                // Add new selection if there is one
+                if (response_data) {
+                    cache_data[item_token] = response_data;
+                }
+
+                await cacheService.setCache(cache_key, cache_data);
+
+                return resolve(response_data);
+            } else {
+                return reject("Other config not implemented");
+            }
+        } catch(e) {
+            console.error(e);
+            return reject(e);
+        }
+    });
 }
 
 module.exports = {
@@ -1297,4 +1447,5 @@ module.exports = {
     getCategoriesMusic,
     getMovies,
     getCategoriesMovies,
+    selectSectionOptionItem
 };

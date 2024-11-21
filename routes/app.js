@@ -29,6 +29,17 @@ router.post('/me/sections', function (req, res, next) {
     });
 });
 
+router.put('/me/sections/selection', async (req, res) => {
+    try {
+        await personsController.selectMeSectionOptionItem(req, res);
+    } catch(e) {
+        console.error(e);
+        res.status(400).json({
+            error: 'Error updating section selection'
+        });
+    }
+});
+
 router.delete('/me/sections/:section_key', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {

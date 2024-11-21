@@ -14,7 +14,7 @@ module.exports = {
                 user: {
                     name: 'persons_drinking',
                     cols: {
-                        id: 'drinking_id'
+                        id: 'drinking_id',
                     },
                 },
             }

@@ -9,9 +9,10 @@ const {
     addMeSection,
     deleteMeSection,
     addMeSectionItem,
-    updateMeSectionItem,
+    updateMeSectionItem, selectSectionOptionItem,
 } = require('../services/sections');
 const { findMatches, notifyMatches, prepareActivity } = require('../services/activities');
+const { result } = require('lodash/object');
 
 module.exports = {
     getMe: function (req, res) {
@@ -82,6 +83,29 @@ module.exports = {
                 );
 
                 res.json(data, 201);
+
+                resolve();
+            } catch (e) {
+                console.error(e);
+                res.json('Error adding section item', 400);
+            }
+        });
+    },
+    selectMeSectionOptionItem: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const { person_token, section_key, table_key, item_token } = req.body;
+
+                let result = await selectSectionOptionItem(
+                    person_token,
+                    section_key,
+                    table_key,
+                    item_token,
+                );
+
+                res.json({
+                    data: result
+                });
 
                 resolve();
             } catch (e) {

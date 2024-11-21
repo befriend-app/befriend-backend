@@ -1,6 +1,7 @@
 const dbService = require('../../services/db');
 const { loadScriptEnv, dataEndpoint, timeNow } = require('../../services/shared');
 const axios = require('axios');
+const { deleteKeys, keys } = require('../../services/cache');
 
 loadScriptEnv();
 
@@ -13,6 +14,8 @@ function main() {
         let updated = 0;
 
         try {
+            await deleteKeys(keys.drinking);
+
             let conn = await dbService.conn();
 
             let endpoint = dataEndpoint(`/drinking`);
