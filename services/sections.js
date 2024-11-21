@@ -926,6 +926,26 @@ function dataForSchema(table_name, cache_key, filter, sort_by, sort_direction) {
     });
 }
 
+function getDrinking() {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const cache_key = cacheService.keys.drinking;
+            let data = await cacheService.getObj(cache_key);
+
+            if (!data) {
+                let conn = await dbService.conn();
+                data = await conn('drinking').select('id', 'token', 'name');
+                await cacheService.setCache(cache_key, data);
+            }
+
+            resolve(data);
+        } catch (e) {
+            console.error(e);
+            reject(e);
+        }
+    });
+}
+
 function getInstruments() {
     return new Promise(async (resolve, reject) => {
         try {
@@ -1269,6 +1289,7 @@ module.exports = {
     getMeSections,
     getActiveData,
     dataForSchema,
+    getDrinking,
     getInstruments,
     allInstruments,
     getMusic,

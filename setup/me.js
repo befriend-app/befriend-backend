@@ -4,11 +4,10 @@ function main() {
             console.log('Loading me data');
 
             await require('./me/sections').main();
+            await require('./me/drinking').main();
             await require('./me/instruments').main();
-
             await require('./me/schools').main();
-
-            // await require('./me/movies').main();
+            await require('./me/movies').main();
         } catch (e) {
             console.error(e);
             return reject();

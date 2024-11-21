@@ -9,6 +9,7 @@ module.exports = {
         activity_type_default: `activity_type:default`,
         countries: `countries`,
         me_sections: `sections:me`,
+        drinking: 'drinking',
         instruments: `instruments`,
         instruments_common: `instruments:common`,
         movies: `movies`,

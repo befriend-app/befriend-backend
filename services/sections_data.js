@@ -1,6 +1,31 @@
 const cacheService = require('./cache');
 
 module.exports = {
+    drinking: {
+        type: {
+            name: 'buttons',
+            single: true
+        },
+        tables: {
+            drinking: {
+                data: {
+                    name: 'drinking'
+                },
+                user: {
+                    name: 'persons_drinking',
+                    cols: {
+                        id: 'drinking_id'
+                    },
+                },
+            }
+        },
+        functions: {
+            data: 'getDrinking',
+        },
+        styles: {
+            rowCols: 'cols-1'
+        }
+    },
     instruments: {
         myStr: 'My Instruments',
         tables: {

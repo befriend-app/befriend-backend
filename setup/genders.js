@@ -3,6 +3,8 @@ const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 const { loadScriptEnv } = require('../services/shared');
 
+loadScriptEnv();
+
 function main() {
     return new Promise(async (resolve, reject) => {
         console.log('Add genders');
