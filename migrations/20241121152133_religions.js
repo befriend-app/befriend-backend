@@ -14,8 +14,6 @@ exports.up = function(knex) {
             table.bigInteger('created').notNullable();
             table.bigInteger('updated').notNullable();
             table.bigInteger('deleted').nullable();
-
-            table.foreign('parent_id').references('id').inTable('religions');
         }),
 
         knex.schema.createTable('persons_religions', function(table) {
