@@ -6,6 +6,7 @@ function main() {
             await require('./me/sections').main();
             await require('./me/drinking').main();
             await require('./me/instruments').main();
+            await require('./me/languages').main();
             await require('./me/smoking').main();
 
             await require('./me/schools').main();

@@ -26,6 +26,31 @@ module.exports = {
             rowCols: 'cols-1'
         }
     },
+    languages: {
+        type: {
+            name: 'buttons',
+            multi: true
+        },
+        tables: {
+            languages: {
+                data: {
+                    name: 'languages'
+                },
+                user: {
+                    name: 'persons_languages',
+                    cols: {
+                        id: 'language_id'
+                    }
+                }
+            }
+        },
+        functions: {
+            data: 'getLanguages'
+        },
+        styles: {
+            rowCols: 'cols-2'
+        }
+    },
     politics: {
         type: {
             name: 'buttons',

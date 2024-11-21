@@ -11,7 +11,7 @@ exports.up = function(knex) {
             table.bigInteger('deleted').nullable();
         }),
 
-        knex.schema.createTable('languages_countries', function(table) {
+        knex.schema.createTable('top_languages_countries', function(table) {
             table.increments('id').primary();
             table.integer('language_id').unsigned().notNullable();
             table.integer('country_id').unsigned().notNullable();

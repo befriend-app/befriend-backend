@@ -12,7 +12,6 @@ const {
     updateMeSectionItem, selectSectionOptionItem,
 } = require('../services/sections');
 const { findMatches, notifyMatches, prepareActivity } = require('../services/activities');
-const { result } = require('lodash/object');
 
 module.exports = {
     getMe: function (req, res) {

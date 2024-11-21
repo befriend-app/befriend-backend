@@ -10,6 +10,7 @@ module.exports = {
         countries: `countries`,
         me_sections: `sections:me`,
         drinking: 'drinking',
+        languages: 'languages',
         politics: 'politics',
         religions: 'religions',
         smoking: 'smoking',
@@ -128,6 +129,9 @@ module.exports = {
         schools_country_prefix: function (code, prefix) {
             return `schools:prefix:${code}:${prefix}`;
         },
+        languages_country: function(country_code) {
+            return `languages:country:${country_code}`;
+        },
     },
     init: function () {
         return new Promise(async (resolve, reject) => {
@@ -173,18 +177,30 @@ module.exports = {
             }
         });
     },
-    getKeysWithPrefix: function(prefix, cursor = '0') {
+    getKeysWithPrefix: function(prefix, cursor = '0', allKeys = []) {
         return new Promise(async (resolve, reject) => {
             try {
-                const [newCursor, keysArray] = await module.exports.conn.scan(cursor, 'MATCH', `${prefix}*`, 'COUNT', 1000);
-                let keys = keysArray;
-
-                if (newCursor !== '0') {
-                    const moreKeys = await module.exports.getKeysWithPrefix(prefix, newCursor);
-                    keys = keys.concat(moreKeys);
+                if (!module.exports.conn) {
+                    try {
+                        await module.exports.init();
+                    } catch (e) {
+                        return reject(e);
+                    }
                 }
 
-                return resolve(keys);
+                const result = await module.exports.conn.scan(cursor, {
+                    MATCH: `${prefix}*`,
+                    COUNT: 1000
+                });
+
+                allKeys = allKeys.concat(result.keys);
+
+                if (result.cursor === 0) {
+                    return resolve(allKeys);
+                }
+
+                return resolve(await module.exports.getKeysWithPrefix(prefix, result.cursor, allKeys));
+
             } catch(e) {
                 console.error(e);
                 return reject(e);

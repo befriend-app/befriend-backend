@@ -7,6 +7,8 @@ let sectionsData = require('./sections_data');
 const { batchUpdate } = require('./db');
 
 function addMeSection(person_token, section_key, location) {
+    let country;
+
     function addDataToSection(section) {
         return new Promise(async (resolve, reject) => {
             if (section_key in sectionsData) {
@@ -17,9 +19,8 @@ function addMeSection(person_token, section_key, location) {
                 try {
                     if (fnData) {
                         if(sectionData?.type?.name === 'buttons') {
-                            section.data = await module.exports[fnData]();
+                            section.data = await module.exports[fnData](false, country);
                         } else {
-                            let country = await latLonLookup(location?.lat, location?.lon);
                             section.data = await module.exports[fnData](country);
                         }
                     }
@@ -47,6 +48,8 @@ function addMeSection(person_token, section_key, location) {
         };
 
         try {
+            country = await latLonLookup(location?.lat, location?.lon);
+
             let person = await getPerson(person_token);
 
             if (!person) {
@@ -138,7 +141,7 @@ function addMeSection(person_token, section_key, location) {
 
             await addDataToSection(existing_section);
 
-            existing_section.items = await getPersonSectionItems(person, section_key);
+            existing_section.items = await getPersonSectionItems(person, section_key, location);
 
             resolve(existing_section);
         } catch (e) {
@@ -554,7 +557,7 @@ function updateMeSectionItem(body) {
     });
 }
 
-function getPersonSectionItems(person, section_key) {
+function getPersonSectionItems(person, section_key, country) {
     return new Promise(async (resolve, reject) => {
         try {
             let cache_key = cacheService.keys.persons_section_data(
@@ -613,7 +616,7 @@ function getPersonSectionItems(person, section_key) {
                             section_option = await cacheService.hGetItem(cache_key, item[token_col]);
                         } else if (sectionData.type?.name === 'buttons') {
                             // For button-type sections like drinking
-                            let allOptions = await module.exports[sectionData.functions.data](true);
+                            let allOptions = await module.exports[sectionData.functions.data](true, country);
                             section_option = allOptions.find(opt => opt.id === item[col_name]);
                         }
 
@@ -876,7 +879,7 @@ function getActiveData(person, sections, country) {
             // Handle missing data
             for (let key in missing_keys) {
                 if (sectionsData[key].functions?.data) {
-                    let data = await module.exports[sectionsData[key].functions.data]();
+                    let data = await module.exports[sectionsData[key].functions.data](null, country);
                     let items = await getPersonSectionItems(person, key);
 
                     sections[key].data = data;
@@ -1315,6 +1318,124 @@ function getMovies() {
     });
 }
 
+function getLanguages(options_data_only, country) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const country_code = country?.code || 'US';
+            const cache_key = cacheService.keys.languages_country(country_code);
+            let options = await cacheService.getObj(cache_key);
+
+            if ( 1 || !options) {
+                const conn = await dbService.conn();
+
+                // Get all languages and build initial dictionary
+                let [languages, countries] = await Promise.all([
+                    conn('languages')
+                        .whereNull('deleted')
+                        .where('is_visible', true)
+                        .select(
+                            'id',
+                            'token',
+                            'name'
+                        ),
+                    conn('open_countries')
+                        .where('country_code', country_code)
+                        .select('id')
+                ]);
+
+                // Build initial dictionary with all languages
+                let languagesDict = {};
+                for(let lang of languages) {
+                    languagesDict[lang.id] = {
+                        id: lang.id,
+                        token: lang.token,
+                        name: lang.name,
+                        source: 'other',
+                        sort_position: lang.name.toLowerCase() // Use name for alphabetical fallback
+                    };
+                }
+
+                // Get and apply country-specific top languages if country exists
+                if (countries.length) {
+                    let topLanguages = await conn('top_languages_countries AS tlc')
+                        .join('languages AS l', 'l.id', 'tlc.language_id')
+                        .where('tlc.country_id', countries[0].id)
+                        .whereNull('tlc.deleted')
+                        .select(
+                            'l.id',
+                            'tlc.sort_position'
+                        )
+                        .orderBy('tlc.sort_position', 'asc');
+
+                    for(let lang of topLanguages) {
+                        if(lang.id in languagesDict) {
+                            languagesDict[lang.id].source = 'top';
+                            languagesDict[lang.id].sort_position = lang.sort_position;
+                        }
+                    }
+                }
+
+                // Add common Western languages as second priority if not already in top
+                const commonTokens = ['english', 'spanish', 'french', 'german'];
+                let commonLangs = await conn('languages')
+                    .whereIn('token', commonTokens)
+                    .select('id', 'token');
+
+                let nextCommonPosition = 1000; // Arbitrary gap after top languages
+                for(let lang of commonLangs) {
+                    if(languagesDict[lang.id].source === 'other') {
+                        languagesDict[lang.id].source = 'common';
+                        languagesDict[lang.id].sort_position = nextCommonPosition++;
+                    }
+                }
+
+                // Convert to array and sort
+                options = Object.values(languagesDict)
+                    .sort((a, b) => {
+                        // First by source priority (top > common > other)
+                        const sourcePriority = { top: 0, common: 1, other: 2 };
+                        if(sourcePriority[a.source] !== sourcePriority[b.source]) {
+                            return sourcePriority[a.source] - sourcePriority[b.source];
+                        }
+
+                        // Within same source type, sort by position/name
+                        if(a.source === 'top') {
+                            return a.sort_position - b.sort_position;
+                        }
+                        if(a.source === 'common') {
+                            return a.sort_position - b.sort_position;
+                        }
+                        // Alphabetical for 'other'
+                        return a.sort_position.localeCompare(b.sort_position);
+                    })
+                    .map(({id, token, name}) => ({id, token, name}));
+
+                await cacheService.setCache(cache_key, options);
+            }
+
+            if(options_data_only) {
+                return resolve(options);
+            }
+
+            // Build section data response
+            const section = sectionsData.languages;
+            const data = {
+                type: section.type,
+                options: options,
+                styles: section.styles,
+                tables: Object.keys(section.tables).map(key => ({
+                    name: key
+                }))
+            };
+
+            resolve(data);
+        } catch(e) {
+            console.error(e);
+            reject(e);
+        }
+    });
+}
+
 function getPolitics(options_data_only) {
     return new Promise(async (resolve, reject) => {
         try {
@@ -1686,6 +1807,7 @@ module.exports = {
     getMovies,
     getCategoriesMovies,
     getDrinking,
+    getLanguages,
     getPolitics,
     getReligions,
     getSmoking,
