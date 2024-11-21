@@ -26,6 +26,31 @@ module.exports = {
             rowCols: 'cols-1'
         }
     },
+    smoking: {
+        type: {
+            name: 'buttons',
+            single: true
+        },
+        tables: {
+            smoking: {
+                data: {
+                    name: 'smoking'
+                },
+                user: {
+                    name: 'persons_smoking',
+                    cols: {
+                        id: 'smoking_id',
+                    },
+                },
+            }
+        },
+        functions: {
+            data: 'getSmoking',
+        },
+        styles: {
+            rowCols: 'cols-1'
+        }
+    },
     instruments: {
         myStr: 'My Instruments',
         tables: {
