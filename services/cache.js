@@ -169,6 +169,24 @@ module.exports = {
             }
         });
     },
+    getKeysWithPrefix: function(prefix, cursor = '0') {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const [newCursor, keysArray] = await module.exports.conn.scan(cursor, 'MATCH', `${prefix}*`, 'COUNT', 1000);
+                let keys = keysArray;
+
+                if (newCursor !== '0') {
+                    const moreKeys = await module.exports.getKeysWithPrefix(prefix, newCursor);
+                    keys = keys.concat(moreKeys);
+                }
+
+                return resolve(keys);
+            } catch(e) {
+                console.error(e);
+                return reject(e);
+            }
+        });
+    },
     get: function (key, json) {
         return new Promise(async (resolve, reject) => {
             //init conn in case first time

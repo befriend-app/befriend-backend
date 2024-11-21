@@ -1005,6 +1005,25 @@ function normalizePort(val) {
     return false;
 }
 
+function stringDistance(str1, str2) {
+    const grid = [];
+    for (let i = 0; i <= str1.length; i++) {
+        grid[i] = [i];
+    }
+    for (let j = 0; j <= str2.length; j++) {
+        grid[0][j] = j;
+    }
+    for (let i = 1; i <= str1.length; i++) {
+        for (let j = 1; j <= str2.length; j++) {
+            const substitution = grid[i - 1][j - 1] + (str1[i - 1] === str2[j - 1] ? 0 : 1);
+            grid[i][j] = Math.min(grid[i - 1][j] + 1, // deletion
+                grid[i][j - 1] + 1, // insertion
+                substitution);     // substitution
+        }
+    }
+    return grid[str1.length][str2.length];
+}
+
 function normalizeSearch(search, skip_lowercase) {
     if (!search) {
         return null;
@@ -1195,6 +1214,28 @@ function writeFile(file_path, data) {
     });
 }
 
+let mdpTiming = {};
+
+function mdp(key) {
+    mdpTiming[key] = {
+        start: timeNow()
+    }
+}
+
+function mdpe(key) {
+    if(!(key in mdpTiming)) {
+        return;
+    }
+
+    let t = timeNow() - mdpTiming[key].start;
+
+    let obj = {};
+
+    obj[key] = t;
+
+    console.info(obj);
+}
+
 module.exports = {
     birthDatePure: birthDatePure,
     changeTimezone: changeTimezone,
@@ -1243,6 +1284,7 @@ module.exports = {
     joinPaths: joinPaths,
     latLonLookup: latLonLookup,
     loadScriptEnv: loadScriptEnv,
+    mdp, mdpe,
     normalizeDistance: normalizeDistance,
     normalizePort: normalizePort,
     normalizeSearch: normalizeSearch,
@@ -1253,6 +1295,7 @@ module.exports = {
     sendEmail: sendEmail,
     shuffleFunc: shuffleFunc,
     slugName: slugName,
+    stringDistance: stringDistance,
     timeNow: timeNow,
     timeoutAwait: timeoutAwait,
     useKM: useKM,

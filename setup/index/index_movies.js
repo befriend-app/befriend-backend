@@ -2,108 +2,18 @@ const { loadScriptEnv } = require('../../services/shared');
 const cacheService = require('../../services/cache');
 const dbService = require('../../services/db');
 const { prefixLimit, topGenreCount } = require('../../services/movies');
+const { getKeysWithPrefix, deleteKeys } = require('../../services/cache');
 
 loadScriptEnv();
 
-function indexGenres() {
-    return new Promise(async (resolve, reject) => {
-        try {
-            let conn = await dbService.conn();
-            let pipeline = cacheService.startPipeline();
+async function deletePreviousCustomKeys() {
+    try {
+         let keys = await getKeysWithPrefix('movies:');
 
-            const genres = await conn('movie_genres')
-                .whereNull('deleted')
-                .orderBy('name');
-
-            // Organize data structures for Redis
-            const genresAll = {};
-            const prefixGroups = {};
-            const deletePrefixGroups = {};
-
-            // Process all genres
-            for (const genre of genres) {
-                genresAll[genre.token] = JSON.stringify({
-                    id: genre.id,
-                    token: genre.token,
-                    name: genre.name,
-                    tmdb_id: genre.tmdb_id,
-                    updated: genre.updated,
-                    deleted: genre.deleted ? 1 : ''
-                });
-
-                // Index genre name prefixes
-                const nameLower = genre.name.toLowerCase();
-                const words = nameLower.split(/\s+/);
-
-                // Full name prefixes
-                for (let i = 1; i <= Math.min(nameLower.length, prefixLimit); i++) {
-                    const prefix = nameLower.slice(0, i);
-
-                    if (genre.deleted) {
-                        if (!deletePrefixGroups[prefix]) {
-                            deletePrefixGroups[prefix] = new Set();
-                        }
-                        deletePrefixGroups[prefix].add(genre.token);
-                    } else {
-                        if (!prefixGroups[prefix]) {
-                            prefixGroups[prefix] = new Set();
-                        }
-                        prefixGroups[prefix].add(genre.token);
-                    }
-                }
-
-                // Word prefixes
-                for (const word of words) {
-                    if (word.length < 2) continue;
-
-                    for (let i = 1; i <= Math.min(word.length, prefixLimit); i++) {
-                        const prefix = word.slice(0, i);
-
-                        if (genre.deleted) {
-                            if (!deletePrefixGroups[prefix]) {
-                                deletePrefixGroups[prefix] = new Set();
-                            }
-                            deletePrefixGroups[prefix].add(genre.token);
-                        } else {
-                            if (!prefixGroups[prefix]) {
-                                prefixGroups[prefix] = new Set();
-                            }
-                            prefixGroups[prefix].add(genre.token);
-                        }
-                    }
-                }
-            }
-
-            // Add to Redis
-            // 1. Store all genres
-            pipeline.hSet(cacheService.keys.movie_genres, genresAll);
-
-            // 2. Store prefix indexes
-            for (const [prefix, tokens] of Object.entries(prefixGroups)) {
-                pipeline.sAdd(
-                    cacheService.keys.movie_genres_prefix(prefix),
-                    Array.from(tokens)
-                );
-            }
-
-            // 3. Remove deleted items from prefix sets
-            for (const [prefix, tokens] of Object.entries(deletePrefixGroups)) {
-                if (tokens.size > 0) {
-                    pipeline.sRem(
-                        cacheService.keys.movie_genres_prefix(prefix),
-                        Array.from(tokens)
-                    );
-                }
-            }
-
-            await pipeline.execAsPipeline();
-        } catch (e) {
-            console.error('Error in indexGenres:', e);
-            return reject(e);
-        }
-
-        resolve();
-    });
+         await deleteKeys(keys);
+    } catch(e) {
+        console.error(e);
+    }
 }
 
 function indexMovies() {
@@ -192,13 +102,14 @@ function indexMovies() {
                     }
                     prefixGroups[prefix].push({
                         token: movie.token,
-                        score: movie.popularity
+                        popularity: movie.popularity
                     });
                 }
 
                 // Process word prefixes
                 for (const word of words) {
                     if (word.length < 2) continue;
+
                     for (let i = 1; i <= Math.min(word.length, prefixLimit); i++) {
                         const prefix = word.slice(0, i);
                         if (!prefixGroups[prefix]) {
@@ -206,7 +117,7 @@ function indexMovies() {
                         }
                         prefixGroups[prefix].push({
                             token: movie.token,
-                            score: movie.popularity
+                            popularity: movie.popularity
                         });
                     }
                 }
@@ -365,8 +276,7 @@ module.exports = {
                 console.log('Indexing movie data');
                 await cacheService.init();
 
-                console.log('Indexing genres...');
-                await indexGenres();
+                await deletePreviousCustomKeys();
 
                 console.log('Indexing movies...');
                 await indexMovies();

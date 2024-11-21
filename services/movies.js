@@ -1,12 +1,19 @@
 const cacheService = require('./cache');
 const dbService = require('./db');
 const { getObj, getSetMembers } = require('./cache');
-const { normalizeSearch } = require('./shared');
+const { normalizeSearch, stringDistance, timeNow, mdp, mdpe } = require('./shared');
 const sectionsData = require('./sections_data');
 
-const MAX_PREFIX_LIMIT = 3;
+const MAX_PREFIX_LENGTH = 5;
 const RESULTS_LIMIT = 50;
 const TOP_GENRE_COUNT = 100;
+const INITIAL_LIMIT = 1000;
+const DECADE_PATTERN = /^\d{4}s$/;
+
+const COMMON_WORDS = [
+    'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
+    'of', 'with', 'by'
+];
 
 
 function getTopMoviesForDecade(decade) {
@@ -79,110 +86,179 @@ function moviesAutoComplete(search_term, category) {
             return resolve([]);
         }
 
-        let prefix = search_term.substring(0, MAX_PREFIX_LIMIT);
-        let movieResults = [];
-        let genreMovies = [];
-        let remainingMovies = [];
-
         try {
-            // Get prefix-matching movies
-            const prefix_key = cacheService.keys.movies_prefix(prefix);
-            const movie_tokens = await cacheService.getSetMembers(prefix_key);
+            // If we have a category, we should always do a full search
+            // to ensure we don't miss category-relevant results
 
-            if (movie_tokens?.length) {
+            if (category?.token) {
+                const results = await searchMovies(search_term, category);
+                return resolve(results.slice(0, RESULTS_LIMIT));
+            }
+
+            // Two-pass search
+            const results = await searchMovies(search_term, category, INITIAL_LIMIT);
+
+            // If we have enough results after filtering, return them
+            if (results.length >= RESULTS_LIMIT) {
+                return resolve(results.slice(0, RESULTS_LIMIT));
+            }
+
+            const fullResults = await searchMovies(search_term, category);
+            return resolve(fullResults.slice(0, RESULTS_LIMIT));
+        } catch (e) {
+            console.error(e);
+            return reject(e);
+        }
+    });
+}
+
+function searchMovies(search_term, category, limit = null) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const searchWords = search_term.toLowerCase().split(/\s+/);
+            const prefix = search_term.substring(0, MAX_PREFIX_LENGTH);
+
+            let prefix_key = cacheService.keys.movies_prefix(prefix);
+
+            let movie_tokens = await getSetMembers(prefix_key)
+
+            if (!movie_tokens.length) {
+                return resolve([]);
+            }
+
+            // Get movie data in batches if needed
+            const batches = [];
+            const batchSize = 1000;
+
+            // Apply initial limit if specified
+            const effectiveTokens = limit ? movie_tokens.slice(0, limit) : movie_tokens;
+
+            for (let i = 0; i < effectiveTokens.length; i += batchSize) {
+                const batch = effectiveTokens.slice(i, i + batchSize);
                 let pipeline = cacheService.startPipeline();
 
-                for (let token of movie_tokens) {
+                for (let token of batch) {
                     pipeline.hGet(cacheService.keys.movies, token);
                 }
 
-                let movies = await pipeline.execAsPipeline();
+                batches.push(pipeline.execAsPipeline());
+            }
 
-                // Break search term into words
-                const searchWords = search_term.toLowerCase().split(/\s+/);
+            const batchResults = await Promise.all(batches);
 
-                for (let movie of movies) {
-                    if (movie) {
-                        try {
-                            movie = JSON.parse(movie);
+            const categoryMovies = [];
+            const otherMovies = [];
 
-                            if (movie?.name) {
-                                const movieName = movie.name.toLowerCase();
-                                const movieWords = movieName.split(/\s+/);
+            // Process movies from all batches
+            for (let batch of batchResults) {
+                for (let movieData of batch) {
+                    if (!movieData) continue;
 
-                                // Different matching categories
-                                const exactMatch = movieName === search_term;
-                                const containsFullPhrase = movieName.includes(search_term);
-                                const matchesAllWords = searchWords.every(searchWord =>
-                                    movieWords.some(movieWord => movieWord.includes(searchWord))
-                                );
+                    let movie;
+                    try {
+                        movie = JSON.parse(movieData);
+                    } catch (e) {
+                        continue;
+                    }
 
-                                if (exactMatch || containsFullPhrase || matchesAllWords) {
-                                    movieResults.push(movie);
+                    const movieName = movie.name.toLowerCase();
+                    const movieWords = movieName.split(/\s+/);
+
+                    // Match criteria
+                    const exactMatch = movieName === search_term;
+                    const containsPhrase = movieName.includes(search_term);
+                    const matchesAllWords = searchWords.every(searchWord =>
+                        movieWords.some(movieWord => movieWord.includes(searchWord))
+                    );
+
+                    if (!(exactMatch || containsPhrase || matchesAllWords)) {
+                        continue;
+                    }
+
+                    let similarity = stringDistance(movieName, search_term)
+
+                    // Calculate match score
+                    let matchScore = 0;
+
+                    // Exact match gets highest score
+                    if (movieName === search_term) {
+                        matchScore = 1;
+                    }
+                    // Full phrase match gets high score
+                    else if (movieName.includes(search_term)) {
+                        matchScore = 0.8;
+                    }
+                    // All words match in any order gets medium score
+                    else if (searchWords.every(searchWord =>
+                        movieWords.some(movieWord => movieWord.includes(searchWord))
+                    )) {
+                        matchScore = 0.6;
+                    }
+                    // Some words match gets lower score
+                    else {
+                        let matchCount = 0;
+                        for (let searchWord of searchWords) {
+                            for (let movieWord of movieWords) {
+                                if (movieWord.includes(searchWord)) {
+                                    matchCount++;
+                                    break;
                                 }
                             }
-                        } catch (e) {
-                            console.error('Error parsing movie data:', e);
+                        }
+                        if (matchCount > 0) {
+                            matchScore = 0.2 + (matchCount / searchWords.length) * 0.2;
                         }
                     }
-                }
 
-                // For genre categories, separate movies by genre
-                if (category?.token) {
-                    if(category.token === 'new_releases') {
-                        const cutoffDate = new Date();
-                        cutoffDate.setDate(cutoffDate.getDate() - 365);
+                    // Skip if no match
+                    if (matchScore === 0) continue;
 
-                        for (let movie of movieResults) {
-                            if (movie.release_date && new Date(movie.release_date) >= cutoffDate) {
-                                genreMovies.push(movie);
-                            } else {
-                                remainingMovies.push(movie);
-                            }
+                    movie.score = (matchScore * 0.4 + movie.popularity * 0.6);
+
+                    // Check category context
+                    let isInCategory = false;
+
+                    if (category?.token) {
+                        if (category.token === 'new_releases') {
+                            const movieYear = new Date(movie.release_date).getFullYear();
+                            const currentYear = new Date().getFullYear();
+                            isInCategory = movieYear >= currentYear - 1;
                         }
-                    } else if (category.token.match(/^\d{4}s$/)) {
-                        for (let movie of movieResults) {
-                            const year = new Date(movie.release_date).getFullYear();
-                            const movieDecade = Math.floor(year / 10) * 10;
-
-                            if (category.token.includes(movieDecade)) {
-                                genreMovies.push(movie);
-                            } else {
-                                remainingMovies.push(movie);
-                            }
+                        else if (DECADE_PATTERN.test(category.token)) {
+                            const movieYear = new Date(movie.release_date).getFullYear();
+                            const decadeStart = parseInt(category.token);
+                            isInCategory = movieYear >= decadeStart && movieYear < decadeStart + 10;
                         }
+                        else if (movie.genres && category.token in movie.genres) {
+                            isInCategory = true;
+                        }
+                    }
+
+                    // Add to appropriate result array
+                    if (isInCategory) {
+                        categoryMovies.push(movie);
                     } else {
-                        for (let movie of movieResults) {
-                            if (movie.genres && category.token in movie.genres) {
-                                genreMovies.push(movie);
-                            } else {
-                                remainingMovies.push(movie);
-                            }
-                        }
+                        otherMovies.push(movie);
                     }
-
-                    genreMovies.sort((a, b) => b.popularity - a.popularity);
-                    remainingMovies.sort((a, b) => b.popularity - a.popularity);
-
-                    movieResults = genreMovies.concat(remainingMovies);
-                } else {
-                    // Sort by popularity
-                    movieResults.sort((a, b) => b.popularity - a.popularity);
                 }
             }
 
-            // Limit final results
-            movieResults = movieResults.slice(0, RESULTS_LIMIT);
+            // Sort both arrays by score
+            categoryMovies.sort((a, b) => b.score - a.score);
+            otherMovies.sort((a, b) => b.score - a.score);
 
-            //add year to results
-            movieResults.map((item) => {
-                if(!item.meta) {
-                    item.meta = item.release_date?.substring(0, 4);
+            // Combine results, category matches first
+            const searchResults = categoryMovies.concat(otherMovies);
+
+            // Add year metadata
+            for(let movie of searchResults) {
+                if (!movie.meta) {
+                    movie.meta = movie.release_date?.substring(0, 4);
                 }
-            });
+            }
 
-            resolve(movieResults);
-        } catch (e) {
+            resolve(searchResults);
+        } catch(e) {
             console.error(e);
             return reject(e);
         }
@@ -291,7 +367,7 @@ function getMoviesByDecade(decade, page = 1, limit = 20) {
 }
 
 module.exports = {
-    prefixLimit: MAX_PREFIX_LIMIT,
+    prefixLimit: MAX_PREFIX_LENGTH,
     topGenreCount: TOP_GENRE_COUNT,
     getTopMoviesForGenre,
     getTopMoviesForDecade,
