@@ -26,6 +26,34 @@ module.exports = {
             rowCols: 'cols-1'
         }
     },
+    religion: {
+        type: {
+            name: 'buttons',
+            multi: true,
+            exclusive: {
+                token: 'not_religious'  // This token will deselect all others when selected
+            }
+        },
+        tables: {
+            religion: {
+                data: {
+                    name: 'religions'
+                },
+                user: {
+                    name: 'persons_religions',
+                    cols: {
+                        id: 'religion_id',
+                    },
+                },
+            }
+        },
+        functions: {
+            data: 'getReligions',
+        },
+        styles: {
+            rowCols: 'cols-2'
+        }
+    },
     smoking: {
         type: {
             name: 'buttons',

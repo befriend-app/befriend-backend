@@ -29,6 +29,8 @@ function main() {
 
                 if (existingItem) {
                     if(item.updated > existingItem.updated) {
+                        item.updated = timeNow();
+
                         // Update existing item
                         await conn(table_name)
                             .where('token', item.token)

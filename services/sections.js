@@ -1311,6 +1311,50 @@ function getMovies() {
     });
 }
 
+function getReligions(options_data_only) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const cache_key = cacheService.keys.religions;
+            let options = await cacheService.getObj(cache_key);
+
+            if (!options) {
+                let conn = await dbService.conn();
+
+                options = await conn('religions')
+                    .where('is_visible', true)
+                    .orderBy('sort_position')
+                    .select('id', 'token', 'name');
+
+                await cacheService.setCache(cache_key, options);
+            }
+
+            if(options_data_only) {
+                return resolve(options);
+            }
+
+            let section = sectionsData.religion;
+
+            let data = {
+                type: section.type,
+                options: options,
+                styles: section.styles,
+                tables: Object.keys(section.tables).reduce((acc, key) => {
+                    acc.push({
+                        name: key,
+                    });
+
+                    return acc;
+                }, []),
+            };
+
+            resolve(data);
+        } catch (e) {
+            console.error(e);
+            reject(e);
+        }
+    });
+}
+
 function getSmoking(options_data_only) {
     return new Promise(async (resolve, reject) => {
         try {
@@ -1492,7 +1536,6 @@ module.exports = {
     getMeSections,
     getActiveData,
     dataForSchema,
-    getDrinking,
     getInstruments,
     allInstruments,
     getMusic,
@@ -1500,6 +1543,8 @@ module.exports = {
     getCategoriesMusic,
     getMovies,
     getCategoriesMovies,
+    getDrinking,
+    getReligions,
     getSmoking,
     selectSectionOptionItem
 };

@@ -7,22 +7,22 @@ loadScriptEnv();
 
 function main() {
     return new Promise(async (resolve, reject) => {
-        console.log('Add smoking');
+        console.log('Add religions');
 
-        let table_name = 'smoking';
+        let table_name = 'religions';
         let added = 0;
         let updated = 0;
 
         try {
-            await deleteKeys(keys.smoking);
+            await deleteKeys(keys.religions);
 
             let conn = await dbService.conn();
 
-            let endpoint = dataEndpoint(`/smoking`);
+            let endpoint = dataEndpoint(`/religions`);
             let response = await axios.get(endpoint);
-            let data = response.data;
+            let religionsData = response.data;
 
-            for (let item of data.items) {
+            for (let item of religionsData.items) {
                 let existingItem = await conn(table_name)
                     .where('token', item.token)
                     .first();
@@ -50,7 +50,7 @@ function main() {
             return reject();
         }
 
-        console.log('Smoking added', {
+        console.log('Religions added', {
             added, updated
         });
 

@@ -10,6 +10,7 @@ module.exports = {
         countries: `countries`,
         me_sections: `sections:me`,
         drinking: 'drinking',
+        religions: 'religions',
         smoking: 'smoking',
         instruments: `instruments`,
         instruments_common: `instruments:common`,
