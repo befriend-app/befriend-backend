@@ -7,7 +7,7 @@ loadScriptEnv();
 
 function main() {
     return new Promise(async (resolve, reject) => {
-        console.log("Sync politics");
+        console.log('Sync politics');
 
         let table_name = 'politics';
         let added = 0;
@@ -20,18 +20,14 @@ function main() {
             let endpoint = dataEndpoint('/politics');
             let response = await axios.get(endpoint);
 
-            for(let item of response.data.items) {
-                let existing = await conn(table_name)
-                    .where('token', item.token)
-                    .first();
+            for (let item of response.data.items) {
+                let existing = await conn(table_name).where('token', item.token).first();
 
-                if(existing) {
-                    if(item.updated > existing.updated) {
+                if (existing) {
+                    if (item.updated > existing.updated) {
                         item.updated = timeNow();
 
-                        await conn(table_name)
-                            .where('token', item.token)
-                            .update(item);
+                        await conn(table_name).where('token', item.token).update(item);
                         updated++;
                     }
                 } else {
@@ -43,7 +39,7 @@ function main() {
                     added++;
                 }
             }
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return reject(e);
         }

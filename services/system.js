@@ -1,7 +1,6 @@
 const dbService = require('./db');
 const { timeNow, isNumeric } = require('./shared');
 
-
 function setProcessRan(system_key) {
     return new Promise(async (resolve, reject) => {
         try {
@@ -61,7 +60,6 @@ function getProcessRan(system_key) {
     });
 }
 
-
 module.exports = {
     keys: {
         sync: {
@@ -78,13 +76,11 @@ module.exports = {
                 schools: 'sync_schools',
             },
             network: {
-                persons: 'sync_persons'
+                persons: 'sync_persons',
             },
         },
-        system: {
-
-        }
+        system: {},
     },
     setProcessRan,
-    getProcessRan
-}
+    getProcessRan,
+};

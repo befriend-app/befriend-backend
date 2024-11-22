@@ -29,13 +29,24 @@ router.post('/me/sections', function (req, res, next) {
     });
 });
 
+router.put('/me/sections/positions', async (req, res) => {
+    try {
+        await personsController.updateMeSectionPositions(req, res);
+    } catch (e) {
+        console.error(e);
+        res.status(400).json({
+            error: 'Error updating section selection',
+        });
+    }
+});
+
 router.put('/me/sections/selection', async (req, res) => {
     try {
         await personsController.selectMeSectionOptionItem(req, res);
-    } catch(e) {
+    } catch (e) {
         console.error(e);
         res.status(400).json({
-            error: 'Error updating section selection'
+            error: 'Error updating section selection',
         });
     }
 });
@@ -171,6 +182,5 @@ router.get('/autocomplete/schools', function (req, res, next) {
         resolve();
     });
 });
-
 
 module.exports = router;

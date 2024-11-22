@@ -65,13 +65,9 @@ exports.up = function (knex) {
                 table.index('person_id');
                 table.index('movie_id');
 
-                table.foreign('person_id')
-                    .references('id')
-                    .inTable('persons');
+                table.foreign('person_id').references('id').inTable('persons');
 
-                table.foreign('movie_id')
-                    .references('id')
-                    .inTable('movies');
+                table.foreign('movie_id').references('id').inTable('movies');
             });
 
         resolve();

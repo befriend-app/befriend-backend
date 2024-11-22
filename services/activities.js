@@ -43,7 +43,7 @@ module.exports = {
             390: { id: 390, value: '6.5', unit: 'hrs', in_mins: 390 },
             420: { id: 420, value: '7', unit: 'hrs', in_mins: 420 },
             450: { id: 450, value: '7.5', unit: 'hrs', in_mins: 450 },
-            480: { id: 480, value: '8', unit: 'hrs', in_mins: 480 }
+            480: { id: 480, value: '8', unit: 'hrs', in_mins: 480 },
         },
     },
     getActivityType: function (activity_type_token) {

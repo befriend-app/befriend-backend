@@ -35,9 +35,7 @@ function main(is_me) {
             });
 
             //delete sync
-            await knex('sync')
-                .where('sync_process', systemKeys.sync.data.schools)
-                .delete();
+            await knex('sync').where('sync_process', systemKeys.sync.data.schools).delete();
 
             let tables = ['persons_schools', 'schools'];
 

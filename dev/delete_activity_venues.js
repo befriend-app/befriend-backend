@@ -75,7 +75,6 @@ function main(is_me) {
         //delete cache
         await cacheService.deleteKeys(cacheService.keys.activity_types);
 
-
         if (is_me) {
             // try {
             //     await require('../data/add_activity_types_venues').main();

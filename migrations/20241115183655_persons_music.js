@@ -38,7 +38,7 @@ exports.up = function (knex) {
 
             table.foreign('person_id').references('id').inTable('persons');
             table.foreign('artist_id').references('id').inTable('music_artists');
-        })
+        }),
     ]);
 };
 

@@ -14,7 +14,7 @@ let db_dict_states = {};
 
 async function syncCountries() {
     return new Promise(async (resolve, reject) => {
-        console.log("Sync countries");
+        console.log('Sync countries');
 
         let added = 0;
         let updated = 0;
@@ -24,7 +24,7 @@ async function syncCountries() {
 
             let previous = await conn('open_countries');
 
-            for(let item of previous) {
+            for (let item of previous) {
                 db_dict_countries[item.country_code] = item;
             }
 
@@ -34,17 +34,16 @@ async function syncCountries() {
 
             let update_cache = false;
 
-            for(let item of r.data.items) {
+            for (let item of r.data.items) {
                 let db_item = db_dict_countries[item.country_code];
 
-                if(!db_item) {
+                if (!db_item) {
                     update_cache = true;
                     let new_item = structuredClone(item);
                     new_item.created = timeNow();
                     new_item.updated = timeNow();
 
-                    let [id] = await conn('open_countries')
-                        .insert(new_item);
+                    let [id] = await conn('open_countries').insert(new_item);
 
                     added++;
 
@@ -52,23 +51,21 @@ async function syncCountries() {
 
                     db_dict_countries[item.country_code] = new_item;
                 } else {
-                    if(item.updated > db_item.updated) {
+                    if (item.updated > db_item.updated) {
                         update_cache = true;
 
                         let update_obj = {};
 
-                        for(let k in item) {
-                            if(db_item[k] !== item[k]) {
+                        for (let k in item) {
+                            if (db_item[k] !== item[k]) {
                                 update_obj[k] = item[k];
                             }
                         }
 
-                        if(Object.keys(update_obj).length) {
+                        if (Object.keys(update_obj).length) {
                             update_obj.updated = timeNow();
 
-                            await conn('open_countries')
-                                .where('id', db_item.id)
-                                .update(update_obj);
+                            await conn('open_countries').where('id', db_item.id).update(update_obj);
 
                             updated++;
                         }
@@ -76,15 +73,15 @@ async function syncCountries() {
                 }
             }
 
-            if(update_cache) {
+            if (update_cache) {
                 await cacheService.deleteKeys(cacheService.keys.countries);
             }
 
             console.log({
                 added,
-                updated
+                updated,
             });
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return reject();
         }
@@ -95,16 +92,16 @@ async function syncCountries() {
 
 async function syncStates() {
     return new Promise(async (resolve, reject) => {
-        console.log("Sync states");
+        console.log('Sync states');
 
         try {
             let conn = await dbService.conn();
 
             let previous = await conn('open_states AS os')
                 .join('open_countries AS oc', 'os.country_id', '=', 'oc.id')
-                .select('os.*', 'oc.country_code')
+                .select('os.*', 'oc.country_code');
 
-            for(let item of previous) {
+            for (let item of previous) {
                 db_dict_states[item.token] = item;
             }
 
@@ -115,10 +112,10 @@ async function syncStates() {
             let batch_insert = [];
             let batch_update = [];
 
-            for(let item of r.data.items) {
+            for (let item of r.data.items) {
                 let db_item = db_dict_states[item.token];
 
-                if(!db_item) {
+                if (!db_item) {
                     let new_item = structuredClone(item);
 
                     delete new_item.country_code;
@@ -131,7 +128,7 @@ async function syncStates() {
 
                     batch_insert.push(new_item);
                 } else {
-                    if(item.updated > db_item.updated) {
+                    if (item.updated > db_item.updated) {
                         delete item.country_code;
                         delete db_item.country_code;
 
@@ -139,18 +136,18 @@ async function syncStates() {
 
                         let has_changes = false;
 
-                        for(let k in item) {
-                            if(k === 'updated') {
+                        for (let k in item) {
+                            if (k === 'updated') {
                                 continue;
                             }
 
-                            if(db_item[k] !== item[k]) {
+                            if (db_item[k] !== item[k]) {
                                 update_obj[k] = item[k];
                                 has_changes = true;
                             }
                         }
 
-                        if(has_changes) {
+                        if (has_changes) {
                             update_obj.updated = timeNow();
 
                             batch_update.push(update_obj);
@@ -160,31 +157,30 @@ async function syncStates() {
             }
 
             //batch insert
-            if(batch_insert.length) {
+            if (batch_insert.length) {
                 try {
-                    await batchInsert('open_states', batch_insert, true)
+                    await batchInsert('open_states', batch_insert, true);
 
                     console.log({
                         added: batch_insert.length,
                     });
-                } catch(e) {
+                } catch (e) {
                     console.error(e);
                 }
             }
 
-            if(batch_update.length) {
+            if (batch_update.length) {
                 try {
-                    await batchUpdate('open_states', batch_update)
+                    await batchUpdate('open_states', batch_update);
 
                     console.log({
-                        updated: batch_update.length
+                        updated: batch_update.length,
                     });
-                } catch(e) {
+                } catch (e) {
                     console.error(e);
                 }
             }
-
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return reject();
         }
@@ -195,7 +191,7 @@ async function syncStates() {
 
 async function syncCities() {
     return new Promise(async (resolve, reject) => {
-        console.log("Sync cities");
+        console.log('Sync cities');
 
         let main_table = 'open_cities';
 
@@ -211,15 +207,13 @@ async function syncCities() {
             let conn = await dbService.conn();
 
             // Last sync time
-            let last_sync = await conn('sync')
-                .where('sync_process', sync_name)
-                .first();
+            let last_sync = await conn('sync').where('sync_process', sync_name).first();
 
             // Countries lookup
             let countries = await conn('open_countries');
             let countries_dict = {};
 
-            for(let country of countries) {
+            for (let country of countries) {
                 countries_dict[country.country_code] = country;
             }
 
@@ -227,14 +221,14 @@ async function syncCities() {
             let states = await conn('open_states');
             let states_dict = {};
 
-            for(let state of states) {
+            for (let state of states) {
                 states_dict[state.token] = state;
             }
 
             // Existing cities
             let previous = await conn(main_table);
 
-            for(let item of previous) {
+            for (let item of previous) {
                 db_dict_cities[item.token] = item;
             }
 
@@ -242,10 +236,10 @@ async function syncCities() {
             let hasMore = true;
             let saveTimestamp = null;
 
-            while(hasMore) {
+            while (hasMore) {
                 let endpoint = dataEndpoint(`/cities?offset=${offset}`);
 
-                if(last_sync?.last_updated) {
+                if (last_sync?.last_updated) {
                     endpoint += `&updated=${last_sync.last_updated}`;
                 }
 
@@ -253,17 +247,17 @@ async function syncCities() {
 
                 let r = await axios.get(endpoint);
 
-                let {items, next_offset, has_more, timestamp} = r.data;
+                let { items, next_offset, has_more, timestamp } = r.data;
 
-                if(!has_more) {
+                if (!has_more) {
                     saveTimestamp = timestamp;
                 }
 
-                if(!items.length) {
+                if (!items.length) {
                     break;
                 }
 
-                for(let item of items) {
+                for (let item of items) {
                     // Get country and state IDs from lookup dictionaries
                     let country = countries_dict[item.country_code];
 
@@ -275,13 +269,15 @@ async function syncCities() {
                     let state = states_dict[item.state_token] || null;
 
                     if (item.state_token && !state) {
-                        console.warn(`State not found: ${item.state_token} for country ${item.country_code}`);
+                        console.warn(
+                            `State not found: ${item.state_token} for country ${item.country_code}`,
+                        );
                         continue;
                     }
 
                     let db_item = db_dict_cities[item.token];
 
-                    if(!db_item) {
+                    if (!db_item) {
                         let new_item = {
                             token: item.token,
                             country_id: country.id,
@@ -305,17 +301,17 @@ async function syncCities() {
                             bbox_lon_min_1000: item.bbox_lon_min_1000,
                             bbox_lon_max_1000: item.bbox_lon_max_1000,
                             created: timeNow(),
-                            updated: timeNow()
+                            updated: timeNow(),
                         };
 
                         batch_insert.push(new_item);
                         added++;
 
-                        if(batch_insert.length >= BATCH_SIZE) {
+                        if (batch_insert.length >= BATCH_SIZE) {
                             await dbService.batchInsert(main_table, batch_insert);
                             batch_insert = [];
                         }
-                    } else if(item.updated > db_item.updated) {
+                    } else if (item.updated > db_item.updated) {
                         let update_obj = structuredClone(db_item);
 
                         let has_changes = false;
@@ -327,30 +323,30 @@ async function syncCities() {
                         delete item.country_code;
                         delete item.state_token;
 
-                        if(state_lookup && state_lookup.id !== db_item.state_id) {
+                        if (state_lookup && state_lookup.id !== db_item.state_id) {
                             db_item.state_id = state_lookup.id;
                             has_changes = true;
                         }
 
-                        for(let k in item) {
-                            if(k === 'updated') {
+                        for (let k in item) {
+                            if (k === 'updated') {
                                 continue;
                             }
 
-                            if(db_item[k] !== item[k]) {
+                            if (db_item[k] !== item[k]) {
                                 update_obj[k] = item[k];
                                 has_changes = true;
                             }
                         }
 
-                        if(has_changes) {
+                        if (has_changes) {
                             update_obj.updated = timeNow();
 
                             batch_update.push(update_obj);
                             updated++;
                         }
 
-                        if(batch_update.length >= BATCH_SIZE) {
+                        if (batch_update.length >= BATCH_SIZE) {
                             await dbService.batchUpdate(main_table, batch_update);
                             batch_update = [];
                         }
@@ -358,12 +354,12 @@ async function syncCities() {
                 }
 
                 // Process any remaining batch items
-                if(batch_insert.length) {
+                if (batch_insert.length) {
                     await dbService.batchInsert(main_table, batch_insert);
                     batch_insert = [];
                 }
 
-                if(batch_update.length) {
+                if (batch_update.length) {
                     await dbService.batchUpdate(main_table, batch_update);
                     batch_update = [];
                 }
@@ -371,7 +367,7 @@ async function syncCities() {
                 // Update offset and hasMore based on API response
                 hasMore = has_more;
 
-                if(next_offset !== null) {
+                if (next_offset !== null) {
                     offset = next_offset;
                 } else {
                     hasMore = false;
@@ -381,35 +377,33 @@ async function syncCities() {
                     processed: items.length,
                     added,
                     updated,
-                    offset
+                    offset,
                 });
 
                 // Add delay to avoid overwhelming the server
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                await new Promise((resolve) => setTimeout(resolve, 1000));
             }
 
             // Update sync table with last sync time
-            if(last_sync) {
-                await conn('sync')
-                    .where('id', last_sync.id)
-                    .update({
-                        last_updated: timeNow(),
-                        updated: timeNow()
-                    });
+            if (last_sync) {
+                await conn('sync').where('id', last_sync.id).update({
+                    last_updated: timeNow(),
+                    updated: timeNow(),
+                });
             } else {
-                await conn('sync')
-                    .insert({
-                        sync_process: sync_name,
-                        last_updated: timeNow(),
-                        created: timeNow(),
-                        updated: timeNow()
-                    });
+                await conn('sync').insert({
+                    sync_process: sync_name,
+                    last_updated: timeNow(),
+                    created: timeNow(),
+                    updated: timeNow(),
+                });
             }
 
             console.log({
-                added, updated
+                added,
+                updated,
             });
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return reject();
         }
@@ -430,7 +424,7 @@ async function main() {
             console.log('Locations sync completed');
 
             await require('./index/index_locations').main();
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
 
@@ -439,7 +433,7 @@ async function main() {
 }
 
 module.exports = {
-    main: main
+    main: main,
 };
 
 if (require.main === module) {

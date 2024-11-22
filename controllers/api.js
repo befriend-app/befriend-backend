@@ -1638,9 +1638,9 @@ module.exports = {
                 let items = await musicAutoComplete(search, category, location);
 
                 res.json({
-                    items: items
-                })
-            } catch(e) {
+                    items: items,
+                });
+            } catch (e) {
                 console.error(e);
 
                 res.json('Autocomplete error', 400);
@@ -1658,12 +1658,12 @@ module.exports = {
             }
 
             try {
-                let items = await getTopArtistsForGenre(genre_token)
+                let items = await getTopArtistsForGenre(genre_token);
 
                 res.json({
-                    items: items
+                    items: items,
                 });
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
 
                 res.json('Error getting artists', 400);
@@ -1685,9 +1685,9 @@ module.exports = {
                 let items = await moviesService.moviesAutoComplete(search, category);
 
                 res.json({
-                    items: items
+                    items: items,
                 });
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
 
                 res.json('Autocomplete error', 400);
@@ -1695,7 +1695,7 @@ module.exports = {
             }
         });
     },
-    getTopMoviesByGenre: function(req, res) {
+    getTopMoviesByGenre: function (req, res) {
         return new Promise(async (resolve, reject) => {
             try {
                 const { category_token } = req.query;
@@ -1718,18 +1718,21 @@ module.exports = {
                 }
 
                 // Format response
-                const formattedItems = items.map(movie => ({
+                const formattedItems = items.map((movie) => ({
                     token: movie.token,
                     name: movie.name,
                     poster: movie.poster,
                     release_date: movie.release_date,
                     label: movie.release_date?.substring(0, 4),
-                    popularity: movie.popularity
+                    popularity: movie.popularity,
                 }));
 
-                res.json({
-                    items: formattedItems
-                }, 200);
+                res.json(
+                    {
+                        items: formattedItems,
+                    },
+                    200,
+                );
             } catch (e) {
                 console.error('Error getting top movies by genre:', e);
                 res.json({ error: 'Error getting movies' }, 400);
@@ -1753,9 +1756,9 @@ module.exports = {
                 let items = await schoolAutoComplete(countryId, search, location);
 
                 res.json({
-                    items: items
-                })
-            } catch(e) {
+                    items: items,
+                });
+            } catch (e) {
                 console.error(e);
 
                 res.json('Autocomplete error', 400);

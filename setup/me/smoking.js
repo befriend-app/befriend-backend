@@ -23,18 +23,14 @@ function main() {
             let data = response.data;
 
             for (let item of data.items) {
-                let existingItem = await conn(table_name)
-                    .where('token', item.token)
-                    .first();
+                let existingItem = await conn(table_name).where('token', item.token).first();
 
                 if (existingItem) {
-                    if(item.updated > existingItem.updated) {
+                    if (item.updated > existingItem.updated) {
                         item.updated = timeNow();
 
                         // Update existing item
-                        await conn(table_name)
-                            .where('token', item.token)
-                            .update(item);
+                        await conn(table_name).where('token', item.token).update(item);
                         updated++;
                     }
                 } else {
@@ -45,13 +41,14 @@ function main() {
                     added++;
                 }
             }
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return reject();
         }
 
         console.log('Smoking added', {
-            added, updated
+            added,
+            updated,
         });
 
         resolve();

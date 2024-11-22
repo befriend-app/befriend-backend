@@ -4,12 +4,12 @@ module.exports = {
     drinking: {
         type: {
             name: 'buttons',
-            single: true
+            single: true,
         },
         tables: {
             drinking: {
                 data: {
-                    name: 'drinking'
+                    name: 'drinking',
                 },
                 user: {
                     name: 'persons_drinking',
@@ -17,77 +17,77 @@ module.exports = {
                         id: 'drinking_id',
                     },
                 },
-            }
+            },
         },
         functions: {
             data: 'getDrinking',
         },
         styles: {
-            rowCols: 'cols-1'
-        }
+            rowCols: 'cols-1',
+        },
     },
     languages: {
         type: {
             name: 'buttons',
-            multi: true
+            multi: true,
         },
         tables: {
             languages: {
                 data: {
-                    name: 'languages'
+                    name: 'languages',
                 },
                 user: {
                     name: 'persons_languages',
                     cols: {
-                        id: 'language_id'
-                    }
-                }
-            }
+                        id: 'language_id',
+                    },
+                },
+            },
         },
         functions: {
-            data: 'getLanguages'
+            data: 'getLanguages',
         },
         styles: {
-            rowCols: 'cols-2'
-        }
+            rowCols: 'cols-2',
+        },
     },
     politics: {
         type: {
             name: 'buttons',
-            single: true
+            single: true,
         },
         tables: {
             politics: {
                 data: {
-                    name: 'politics'
+                    name: 'politics',
                 },
                 user: {
                     name: 'persons_politics',
                     cols: {
-                        id: 'politics_id'
-                    }
-                }
-            }
+                        id: 'politics_id',
+                    },
+                },
+            },
         },
         functions: {
-            data: 'getPolitics'
+            data: 'getPolitics',
         },
         styles: {
-            rowCols: 'cols-1'
-        }
+            rowCols: 'cols-1',
+        },
     },
     religion: {
         type: {
             name: 'buttons',
             multi: true,
             exclusive: {
-                token: 'not_religious'  // This token will deselect all others when selected
-            }
+                token: 'not_religious', // This token will deselect all others when selected
+            },
         },
         tables: {
             religion: {
                 data: {
-                    name: 'religions'
+                    name: 'religions',
                 },
                 user: {
                     name: 'persons_religions',
@@ -95,24 +95,24 @@ module.exports = {
                         id: 'religion_id',
                     },
                 },
-            }
+            },
         },
         functions: {
             data: 'getReligions',
         },
         styles: {
-            rowCols: 'cols-2'
-        }
+            rowCols: 'cols-2',
+        },
     },
     smoking: {
         type: {
             name: 'buttons',
-            single: true
+            single: true,
         },
         tables: {
             smoking: {
                 data: {
-                    name: 'smoking'
+                    name: 'smoking',
                 },
                 user: {
                     name: 'persons_smoking',
@@ -120,61 +120,61 @@ module.exports = {
                         id: 'smoking_id',
                     },
                 },
-            }
+            },
         },
         functions: {
             data: 'getSmoking',
         },
         styles: {
-            rowCols: 'cols-1'
-        }
+            rowCols: 'cols-1',
+        },
     },
     instruments: {
         myStr: 'My Instruments',
         tables: {
             instruments: {
                 data: {
-                    name: 'instruments'
+                    name: 'instruments',
                 },
                 user: {
                     name: 'persons_instruments',
                     cols: {
                         id: 'instrument_id',
-                        secondary: 'skill_level'
+                        secondary: 'skill_level',
                     },
                 },
-            }
+            },
         },
         categories: {
             options: [
                 {
-                    name: 'String'
+                    name: 'String',
                 },
                 {
-                    name: 'Keyboard'
+                    name: 'Keyboard',
                 },
                 {
-                    name: 'Voice'
+                    name: 'Voice',
                 },
                 {
-                    name: 'Wind'
+                    name: 'Wind',
                 },
                 {
-                    name: 'Brass'
+                    name: 'Brass',
                 },
                 {
-                    name: 'Percussion'
+                    name: 'Percussion',
                 },
 
                 {
-                    name: 'Electronic'
+                    name: 'Electronic',
                 },
             ],
             cacheKeys: {
                 items: {
-                    key: cacheService.keys.instruments_common
+                    key: cacheService.keys.instruments_common,
                 },
-            }
+            },
         },
         secondary: {
             options: ['Beginner', 'Intermediate', 'Advanced', 'Expert', 'Virtuoso'],
@@ -192,26 +192,26 @@ module.exports = {
             all: 'allInstruments',
         },
         styles: {
-            rowCols: 'cols-2'
-        }
+            rowCols: 'cols-2',
+        },
     },
     movies: {
         myStr: 'My Movies',
         tabs: [
             {
                 name: 'Movies',
-                key: 'movies'
+                key: 'movies',
             },
             {
                 name: 'Genres',
-                key: 'genres'
-            }
+                key: 'genres',
+            },
         ],
         tables: {
             movies: {
                 isFavorable: true,
                 data: {
-                    name: 'movies'
+                    name: 'movies',
                 },
                 user: {
                     name: 'persons_movies',
@@ -224,7 +224,7 @@ module.exports = {
             genres: {
                 isFavorable: true,
                 data: {
-                    name: 'movies_genres'
+                    name: 'movies_genres',
                 },
                 user: {
                     name: 'persons_movie_genres',
@@ -233,7 +233,7 @@ module.exports = {
                         token: 'genre_token',
                     },
                 },
-            }
+            },
         },
         categories: {
             endpoint: `/movies/top/genre`,
@@ -262,26 +262,26 @@ module.exports = {
             rowCols: {
                 default: 'cols-1',
                 my: 'cols-1',
-            }
-        }
+            },
+        },
     },
     music: {
         myStr: 'My Music',
         tabs: [
             {
                 name: 'Artists',
-                key: 'artists'
+                key: 'artists',
             },
             {
                 name: 'Genres',
-                key: 'genres'
-            }
+                key: 'genres',
+            },
         ],
         tables: {
             genres: {
                 isFavorable: true,
                 data: {
-                    name: 'music_genres'
+                    name: 'music_genres',
                 },
                 user: {
                     name: 'persons_music_genres',
@@ -294,7 +294,7 @@ module.exports = {
             artists: {
                 isFavorable: true,
                 data: {
-                    name: 'music_artists'
+                    name: 'music_artists',
                 },
                 user: {
                     name: 'persons_music_artists',
@@ -309,7 +309,7 @@ module.exports = {
             endpoint: `/music/top/artists/genre`,
             options: null,
             fn: 'getCategoriesMusic',
-            defaultCountry: 'US'
+            defaultCountry: 'US',
         },
         autoComplete: {
             minChars: 2,
@@ -333,24 +333,24 @@ module.exports = {
             rowCols: {
                 default: 'cols-2',
                 my: 'cols-1',
-            }
-        }
+            },
+        },
     },
     schools: {
         tables: {
             schools: {
                 data: {
-                    name: 'schools'
+                    name: 'schools',
                 },
                 user: {
                     name: 'persons_schools',
                     cols: {
                         id: 'school_id',
                         token: 'school_token',
-                        hashKey: 'hash_token'
+                        hashKey: 'hash_token',
                     },
                 },
-            }
+            },
         },
         autoComplete: {
             minChars: 2,
@@ -362,22 +362,22 @@ module.exports = {
             filter: {
                 hashKey: 'code',
                 list: [],
-                noResults: 'No countries found'
+                noResults: 'No countries found',
             },
             groups: {
                 college: {
-                    name: 'Universities and Colleges'
+                    name: 'Universities and Colleges',
                 },
                 hs: {
-                    name: 'High Schools'
+                    name: 'High Schools',
                 },
                 grade: {
-                    name: 'Middle Schools'
+                    name: 'Middle Schools',
                 },
                 other: {
                     name: 'Other',
-                }
-            }
+                },
+            },
         },
         cacheKeys: {
             schools: {
@@ -388,7 +388,7 @@ module.exports = {
             filterList: 'getSchools',
         },
         styles: {
-            rowCols: 'cols-1'
-        }
+            rowCols: 'cols-1',
+        },
     },
-}
+};

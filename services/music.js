@@ -13,26 +13,26 @@ function getTopArtistsForGenre(genre_token) {
         let cache_key = cacheService.keys.music_genre_top_artists(genre_token);
 
         try {
-             let data = await getObj(cache_key);
+            let data = await getObj(cache_key);
 
-             if(!data) {
-                 return reject("No items found");
-             }
+            if (!data) {
+                return reject('No items found');
+            }
 
-             let pipeline = cacheService.startPipeline();
+            let pipeline = cacheService.startPipeline();
 
-             for(let item of data) {
-                 pipeline = pipeline.hGet(cacheService.keys.music_artists, item.artist_token);
-             }
+            for (let item of data) {
+                pipeline = pipeline.hGet(cacheService.keys.music_artists, item.artist_token);
+            }
 
-             let items = await pipeline.execAsPipeline();
+            let items = await pipeline.execAsPipeline();
 
-             for(let i = 0; i < items.length; i++) {
-                 items[i] = JSON.parse(items[i]);
-             }
+            for (let i = 0; i < items.length; i++) {
+                items[i] = JSON.parse(items[i]);
+            }
 
-             resolve(items);
-        } catch(e) {
+            resolve(items);
+        } catch (e) {
             console.error(e);
             return reject(e);
         }
@@ -84,8 +84,10 @@ function musicAutoComplete(search_term, category, user_location) {
                                 // Different matching categories
                                 const exactMatch = artistName === search_term;
                                 const containsFullPhrase = artistName.includes(search_term);
-                                const matchesAllWords = searchWords.every(searchWord =>
-                                    artistWords.some(artistWord => artistWord.includes(searchWord))
+                                const matchesAllWords = searchWords.every((searchWord) =>
+                                    artistWords.some((artistWord) =>
+                                        artistWord.includes(searchWord),
+                                    ),
                                 );
 
                                 if (exactMatch || containsFullPhrase || matchesAllWords) {
@@ -102,9 +104,9 @@ function musicAutoComplete(search_term, category, user_location) {
             }
 
             // For genre categories, prepend genre-specific artists
-            if(category.token) {
-                for(let artist of artistResults) {
-                    if(artist.genres && category.token in artist.genres) {
+            if (category.token) {
+                for (let artist of artistResults) {
+                    if (artist.genres && category.token in artist.genres) {
                         genreArtists.push(artist);
                     } else {
                         remainingArtists.push(artist);
@@ -119,7 +121,7 @@ function musicAutoComplete(search_term, category, user_location) {
             artistResults = artistResults.slice(0, RESULTS_LIMIT);
 
             resolve(artistResults);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return reject(e);
         }

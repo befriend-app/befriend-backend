@@ -8,10 +8,10 @@ loadScriptEnv();
 
 async function deletePreviousCustomKeys() {
     try {
-         let keys = await getKeysWithPrefix('movies:');
+        let keys = await getKeysWithPrefix('movies:');
 
-         await deleteKeys(keys);
-    } catch(e) {
+        await deleteKeys(keys);
+    } catch (e) {
         console.error(e);
     }
 }
@@ -26,8 +26,13 @@ function indexMovies() {
                 .whereNull('deleted')
                 .orderBy('popularity', 'desc')
                 .select(
-                    'id', 'token', 'name', 'tmdb_poster_path',
-                    'original_language', 'release_date', 'popularity'
+                    'id',
+                    'token',
+                    'name',
+                    'tmdb_poster_path',
+                    'original_language',
+                    'release_date',
+                    'popularity',
                 );
 
             // Create dictionary and prefix structures
@@ -46,7 +51,7 @@ function indexMovies() {
                     language: movie.original_language,
                     release_date: movie.release_date,
                     popularity: movie.popularity,
-                    genres: {}
+                    genres: {},
                 };
             }
 
@@ -60,7 +65,7 @@ function indexMovies() {
                 if (moviesDict[mg.movie_id]) {
                     moviesDict[mg.movie_id].genres[mg.token] = {
                         token: mg.token,
-                        name: mg.name
+                        name: mg.name,
                     };
                 }
             }
@@ -76,7 +81,7 @@ function indexMovies() {
                     language: movie.language,
                     release_date: movie.release_date,
                     popularity: movie.popularity,
-                    genres: movie.genres
+                    genres: movie.genres,
                 });
 
                 // Handle decade grouping
@@ -87,7 +92,7 @@ function indexMovies() {
                 }
                 decadeGroups[decade].push({
                     token: movie.token,
-                    popularity: movie.popularity
+                    popularity: movie.popularity,
                 });
 
                 // Index prefixes with popularity scores
@@ -102,7 +107,7 @@ function indexMovies() {
                     }
                     prefixGroups[prefix].push({
                         token: movie.token,
-                        popularity: movie.popularity
+                        popularity: movie.popularity,
                     });
                 }
 
@@ -117,7 +122,7 @@ function indexMovies() {
                         }
                         prefixGroups[prefix].push({
                             token: movie.token,
-                            popularity: movie.popularity
+                            popularity: movie.popularity,
                         });
                     }
                 }
@@ -142,7 +147,7 @@ function indexMovies() {
             for (const [prefix, movies] of Object.entries(prefixGroups)) {
                 const key = cacheService.keys.movies_prefix(prefix);
 
-                const entries = movies.map(m => m.token);
+                const entries = movies.map((m) => m.token);
 
                 pipeline.del(key);
                 pipeline.sAdd(key, entries);
@@ -152,9 +157,7 @@ function indexMovies() {
             for (const [decade, movies] of Object.entries(decadeGroups)) {
                 const key = cacheService.keys.movies_decade(decade + 's');
 
-                const topMovies = movies
-                    .slice(0, topGenreCount)
-                    .map(m => m.token);
+                const topMovies = movies.slice(0, topGenreCount).map((m) => m.token);
 
                 pipeline.del(key);
                 pipeline.sAdd(key, topMovies);
@@ -166,7 +169,7 @@ function indexMovies() {
                 total_movies: Object.keys(moviesDict).length,
                 with_genres: movieGenres.length,
                 prefixes: Object.keys(prefixGroups).length,
-                decades: Object.keys(decadeGroups).length
+                decades: Object.keys(decadeGroups).length,
             });
         } catch (e) {
             console.error('Error in indexMovies:', e);
@@ -184,8 +187,7 @@ function indexMoviesGenres() {
             let pipeline = cacheService.startPipeline();
 
             // Get all genres and create lookup dictionary
-            let genres = await conn('movie_genres')
-                .whereNull('deleted');
+            let genres = await conn('movie_genres').whereNull('deleted');
 
             let genresDict = genres.reduce((acc, genre) => {
                 acc[genre.id] = genre;
@@ -198,11 +200,7 @@ function indexMoviesGenres() {
                 .whereNull('mg.deleted')
                 .whereNull('m.deleted')
                 .orderBy('m.popularity', 'desc')
-                .select(
-                    'm.token AS movie_token',
-                    'm.popularity',
-                    'mg.genre_id'
-                );
+                .select('m.token AS movie_token', 'm.popularity', 'mg.genre_id');
 
             // Organize by genre
             const genreMovies = {};
@@ -225,7 +223,7 @@ function indexMoviesGenres() {
                 if (genreTopMovies[genre.token].length < topGenreCount) {
                     genreTopMovies[genre.token].push({
                         movie_token: mg.movie_token,
-                        popularity: mg.popularity
+                        popularity: mg.popularity,
                     });
                 }
             }
@@ -236,19 +234,19 @@ function indexMoviesGenres() {
                 if (movieTokens.size > 0) {
                     pipeline.sAdd(
                         cacheService.keys.movie_genre_movies(genreToken),
-                        Array.from(movieTokens)
+                        Array.from(movieTokens),
                     );
                 }
 
                 // Store top movies for this genre
                 const topMovies = genreTopMovies[genreToken]
                     .sort((a, b) => b.popularity - a.popularity)
-                    .map(m => m.movie_token);
+                    .map((m) => m.movie_token);
 
                 if (topMovies.length > 0) {
                     pipeline.set(
                         cacheService.keys.movie_genre_top_movies(genreToken),
-                        JSON.stringify(topMovies)
+                        JSON.stringify(topMovies),
                     );
                 }
             }
@@ -258,7 +256,8 @@ function indexMoviesGenres() {
             console.log({
                 genres_processed: Object.keys(genresDict).length,
                 movies_genres_processed: movies_genres.length,
-                genres_with_movies: Object.keys(genreMovies).filter(k => genreMovies[k].size > 0).length
+                genres_with_movies: Object.keys(genreMovies).filter((k) => genreMovies[k].size > 0)
+                    .length,
             });
         } catch (e) {
             console.error('Error in indexMoviesGenres:', e);
@@ -270,7 +269,7 @@ function indexMoviesGenres() {
 }
 
 module.exports = {
-    main: async function() {
+    main: async function () {
         return new Promise(async (resolve, reject) => {
             try {
                 console.log('Indexing movie data');
@@ -284,18 +283,18 @@ module.exports = {
                 console.log('Indexing movies-genres...');
                 await indexMoviesGenres();
 
-                console.log("Movie indexing completed");
+                console.log('Movie indexing completed');
                 resolve();
             } catch (e) {
                 console.error('Error in main indexing execution:', e);
                 reject(e);
             }
         });
-    }
+    },
 };
 
 if (require.main === module) {
-    (async function() {
+    (async function () {
         try {
             await module.exports.main();
             process.exit();

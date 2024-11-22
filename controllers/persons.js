@@ -9,7 +9,8 @@ const {
     addMeSection,
     deleteMeSection,
     addMeSectionItem,
-    updateMeSectionItem, selectSectionOptionItem,
+    updateMeSectionItem,
+    selectSectionOptionItem, updateSectionPositions,
 } = require('../services/sections');
 const { findMatches, notifyMatches, prepareActivity } = require('../services/activities');
 
@@ -78,10 +79,26 @@ module.exports = {
                     req.body.section_key,
                     req.body.table_key,
                     req.body.item_token,
-                    req.body.hash_token
+                    req.body.hash_token,
                 );
 
                 res.json(data, 201);
+
+                resolve();
+            } catch (e) {
+                console.error(e);
+                res.json('Error adding section item', 400);
+            }
+        });
+    },
+    updateMeSectionPositions: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const { person_token, positions } = req.body;
+
+                await updateSectionPositions(person_token, positions);
+
+                res.json();
 
                 resolve();
             } catch (e) {
@@ -100,11 +117,11 @@ module.exports = {
                     section_key,
                     table_key,
                     item_token,
-                    is_select
+                    is_select,
                 );
 
                 res.json({
-                    data: result
+                    data: result,
                 });
 
                 resolve();

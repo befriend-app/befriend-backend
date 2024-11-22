@@ -11,8 +11,7 @@ function indexGenres() {
             let conn = await dbService.conn();
             let pipeline = cacheService.startPipeline();
 
-            const genres = await conn('music_genres')
-                    .orderBy('position');
+            const genres = await conn('music_genres').orderBy('position');
 
             const genresDict = genres.reduce((acc, genre) => {
                 acc[genre.id] = genre;
@@ -86,10 +85,7 @@ function indexGenres() {
 
             // 2. Store prefix indexes
             for (const [prefix, tokens] of Object.entries(prefixGroups)) {
-                pipeline.sAdd(
-                    cacheService.keys.music_genres_prefix(prefix),
-                    Array.from(tokens)
-                );
+                pipeline.sAdd(cacheService.keys.music_genres_prefix(prefix), Array.from(tokens));
             }
 
             // 3. Remove deleted items from prefix sets
@@ -97,7 +93,7 @@ function indexGenres() {
                 if (tokens.size > 0) {
                     pipeline.sRem(
                         cacheService.keys.music_genres_prefix(prefix),
-                        Array.from(tokens)
+                        Array.from(tokens),
                     );
                 }
             }
@@ -130,7 +126,7 @@ function indexArtists() {
                     'spotify_followers AS followers',
                     'is_active',
                     'updated',
-                    'deleted'
+                    'deleted',
                 );
 
             let artists_dict = artists.reduce((acc, artist) => {
@@ -150,7 +146,7 @@ function indexArtists() {
                 let artist = artists_dict[ag.artist_id];
                 let genre = genres_dict[ag.genre_id];
 
-                if(!(artist.id in acc)) {
+                if (!(artist.id in acc)) {
                     acc[artist.id] = {};
                 }
 
@@ -158,7 +154,7 @@ function indexArtists() {
                     id: genre.id,
                     token: genre.token,
                     name: genre.name,
-                }
+                };
 
                 return acc;
             }, {});
@@ -182,7 +178,7 @@ function indexArtists() {
                     active: artist.is_active ? 1 : '',
                     updated: artist.updated,
                     deleted: artist.deleted ? 1 : '',
-                    genres: artist_genres
+                    genres: artist_genres,
                 });
 
                 // Index artist name prefixes
@@ -233,10 +229,7 @@ function indexArtists() {
 
             // 2. Store prefix indexes
             for (const [prefix, tokens] of Object.entries(prefixGroups)) {
-                pipeline.sAdd(
-                    cacheService.keys.music_artists_prefix(prefix),
-                    Array.from(tokens)
-                );
+                pipeline.sAdd(cacheService.keys.music_artists_prefix(prefix), Array.from(tokens));
             }
 
             // 3. Remove deleted items from prefix sets
@@ -244,13 +237,12 @@ function indexArtists() {
                 if (tokens.size > 0) {
                     pipeline.sRem(
                         cacheService.keys.music_artists_prefix(prefix),
-                        Array.from(tokens)
+                        Array.from(tokens),
                     );
                 }
             }
 
             await pipeline.execAsPipeline();
-
         } catch (e) {
             console.error('Error in indexArtists:', e);
             return reject(e);
@@ -283,25 +275,30 @@ function indexArtistsGenres() {
             let artists_genres = await conn('music_artists_genres AS mag')
                 .join('music_artists AS ma', 'ma.id', '=', 'mag.artist_id')
                 .orderBy('followers', 'desc')
-                .select('ma.spotify_followers AS followers', 'ma.spotify_popularity AS popularity',
-                    'artist_id', 'genre_id', 'mag.deleted');
+                .select(
+                    'ma.spotify_followers AS followers',
+                    'ma.spotify_popularity AS popularity',
+                    'artist_id',
+                    'genre_id',
+                    'mag.deleted',
+                );
 
             // Organize data by genre
             const genreArtists = {};
             const genreTopArtists = {};
 
-            for(let ag of artists_genres) {
+            for (let ag of artists_genres) {
                 let artist = artists_dict[ag.artist_id];
                 let genre = genres_dict[ag.genre_id];
 
-                if(artist.deleted || ag.deleted) {
-                   //do nothing
+                if (artist.deleted || ag.deleted) {
+                    //do nothing
                 } else {
-                    if(!(genre.token in genreArtists)) {
+                    if (!(genre.token in genreArtists)) {
                         genreArtists[genre.token] = {};
                     }
 
-                    if(!(genre.token in genreTopArtists)) {
+                    if (!(genre.token in genreTopArtists)) {
                         genreTopArtists[genre.token] = [];
                     }
 
@@ -309,9 +306,9 @@ function indexArtistsGenres() {
                         artist_token: artist.token,
                         followers: artist.followers,
                         popularity: ag.popularity,
-                    }
+                    };
 
-                    if(genreTopArtists[genre.token].length < topGenreArtistsCount) {
+                    if (genreTopArtists[genre.token].length < topGenreArtistsCount) {
                         genreTopArtists[genre.token].push({
                             artist_token: artist.token,
                             followers: artist.followers,
@@ -331,7 +328,7 @@ function indexArtistsGenres() {
 
                 pipeline.hSet(
                     cacheService.keys.music_genre_artists(genreToken),
-                    stringifiedArtists
+                    stringifiedArtists,
                 );
 
                 // 2. Store top artists for this genre
@@ -340,15 +337,12 @@ function indexArtistsGenres() {
                 if (topArtists.length) {
                     let key = cacheService.keys.music_genre_top_artists(genreToken);
 
-                    pipeline.set(
-                        key,
-                        JSON.stringify(topArtists)
-                    );
+                    pipeline.set(key, JSON.stringify(topArtists));
                 }
             }
 
             await pipeline.execAsPipeline();
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
 
@@ -356,9 +350,8 @@ function indexArtistsGenres() {
     });
 }
 
-
 module.exports = {
-    main: async function() {
+    main: async function () {
         return new Promise(async (resolve, reject) => {
             try {
                 console.log('Indexing music data');
@@ -373,18 +366,18 @@ module.exports = {
                 console.log('Indexing artists-genres...');
                 await indexArtistsGenres();
 
-                console.log("Music indexing completed");
+                console.log('Music indexing completed');
                 resolve();
             } catch (e) {
                 console.error('Error in main indexing execution:', e);
                 reject(e);
             }
         });
-    }
+    },
 };
 
 if (require.main === module) {
-    (async function() {
+    (async function () {
         try {
             await module.exports.main();
             process.exit();

@@ -9,7 +9,7 @@ exports.up = async function (knex) {
         }),
 
         knex.schema.alterTable('music_artists', function (table) {
-            if(has_old_name_col) {
+            if (has_old_name_col) {
                 table.renameColumn('artist_name', 'name');
                 table.string('sort_name').nullable().after('artist_name');
             } else {
@@ -29,7 +29,7 @@ exports.up = async function (knex) {
             table.index('spotify_id');
         }),
 
-        knex.schema.dropTableIfExists('music_artists_genres_countries')
+        knex.schema.dropTableIfExists('music_artists_genres_countries'),
     ]);
 };
 
@@ -40,19 +40,19 @@ exports.down = async function (knex) {
 
     const dropColumn = async (table, columns) => {
         const existingColumns = await Promise.all(
-            columns.map(async column => ({
+            columns.map(async (column) => ({
                 column,
-                exists: await hasColumn(table, column)
-            }))
+                exists: await hasColumn(table, column),
+            })),
         );
 
         const columnsToDrop = existingColumns
-            .filter(({exists}) => exists)
-            .map(({column}) => column);
+            .filter(({ exists }) => exists)
+            .map(({ column }) => column);
 
         if (columnsToDrop.length > 0) {
             await knex.schema.alterTable(table, (t) => {
-                columnsToDrop.forEach(column => {
+                columnsToDrop.forEach((column) => {
                     t.dropColumn(column);
                 });
             });
@@ -69,12 +69,8 @@ exports.down = async function (knex) {
         'spotify_processed',
         'mb_id',
         'mb_type',
-        'mb_tags'
+        'mb_tags',
     ]);
 
-    await dropColumn('music_genres', [
-        'is_featured',
-        'position',
-        'spotify_genres'
-    ]);
+    await dropColumn('music_genres', ['is_featured', 'position', 'spotify_genres']);
 };

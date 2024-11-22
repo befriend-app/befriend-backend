@@ -1,6 +1,6 @@
 const cacheService = require('../services/cache');
 const { loadScriptEnv, isProdApp } = require('../services/shared');
-const {keys: systemKeys} = require('../services/system');
+const { keys: systemKeys } = require('../services/system');
 const { getKeys } = require('../services/cache');
 
 loadScriptEnv();
@@ -26,21 +26,25 @@ async function deleteDb() {
         });
 
         //delete sync
-        let db_sync_keys = [systemKeys.sync.data.music.artists_genres, systemKeys.sync.data.music.artists];
+        let db_sync_keys = [
+            systemKeys.sync.data.music.artists_genres,
+            systemKeys.sync.data.music.artists,
+        ];
 
-        for(let key of db_sync_keys) {
+        for (let key of db_sync_keys) {
             try {
-                await knex('sync')
-                    .where('sync_process', key)
-                    .delete();
-            } catch(e) {
+                await knex('sync').where('sync_process', key).delete();
+            } catch (e) {
                 console.error(e);
             }
         }
 
         let tables = [
-            'music_artists_genres', 'music_artists',
-            'music_genres_countries', 'music_genres'];
+            'music_artists_genres',
+            'music_artists',
+            'music_genres_countries',
+            'music_genres',
+        ];
 
         for (let table of tables) {
             try {
@@ -59,7 +63,7 @@ async function deleteRedis() {
     let keys = await getKeys('music:*');
 
     console.log({
-        keys: keys.length
+        keys: keys.length,
     });
 
     await cacheService.deleteKeys(keys);

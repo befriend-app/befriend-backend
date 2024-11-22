@@ -102,13 +102,13 @@ module.exports = {
         movie_genres_prefix: function (prefix) {
             return `movie:genres:prefix:${prefix}`;
         },
-        movie_genre_movies: function(genre_token) {
+        movie_genre_movies: function (genre_token) {
             return `movie:genres:movies:${genre_token}`;
         },
-        movie_genre_top_movies: function(genre_token) {
+        movie_genre_top_movies: function (genre_token) {
             return `movie:genres:top:movies:${genre_token}`;
         },
-        movies_decade: function(decade) {
+        movies_decade: function (decade) {
             return `movies:decade:${decade}`;
         },
         music_genres_prefix: function (prefix) {
@@ -117,10 +117,10 @@ module.exports = {
         music_artists_prefix: function (prefix) {
             return `music:artists:prefix:${prefix}`;
         },
-        music_genre_artists: function(genre_token) {
+        music_genre_artists: function (genre_token) {
             return `music:genres:artists:${genre_token}`;
         },
-        music_genre_top_artists: function(genre_token) {
+        music_genre_top_artists: function (genre_token) {
             return `music:genres:top:artists:${genre_token}`;
         },
         schools_country: function (code) {
@@ -129,7 +129,7 @@ module.exports = {
         schools_country_prefix: function (code, prefix) {
             return `schools:prefix:${code}:${prefix}`;
         },
-        languages_country: function(country_code) {
+        languages_country: function (country_code) {
             return `languages:country:${country_code}`;
         },
     },
@@ -177,7 +177,7 @@ module.exports = {
             }
         });
     },
-    getKeysWithPrefix: function(prefix, cursor = '0', allKeys = []) {
+    getKeysWithPrefix: function (prefix, cursor = '0', allKeys = []) {
         return new Promise(async (resolve, reject) => {
             try {
                 if (!module.exports.conn) {
@@ -190,7 +190,7 @@ module.exports = {
 
                 const result = await module.exports.conn.scan(cursor, {
                     MATCH: `${prefix}*`,
-                    COUNT: 1000
+                    COUNT: 1000,
                 });
 
                 allKeys = allKeys.concat(result.keys);
@@ -199,9 +199,10 @@ module.exports = {
                     return resolve(allKeys);
                 }
 
-                return resolve(await module.exports.getKeysWithPrefix(prefix, result.cursor, allKeys));
-
-            } catch(e) {
+                return resolve(
+                    await module.exports.getKeysWithPrefix(prefix, result.cursor, allKeys),
+                );
+            } catch (e) {
                 console.error(e);
                 return reject(e);
             }
@@ -264,7 +265,7 @@ module.exports = {
             try {
                 let data = await module.exports.conn.hGet(key, item_id);
 
-                if(typeof data === 'string') {
+                if (typeof data === 'string') {
                     data = JSON.parse(data);
                 }
 
@@ -317,11 +318,11 @@ module.exports = {
                 let data = await module.exports.conn.hGetAll(key);
 
                 try {
-                    if(typeof data === 'object') {
-                        for(let k in data) {
+                    if (typeof data === 'object') {
+                        for (let k in data) {
                             let v = data[k];
 
-                            if(typeof v === 'string') {
+                            if (typeof v === 'string') {
                                 data[k] = JSON.parse(v);
                             }
                         }
@@ -390,7 +391,7 @@ module.exports = {
                 }
             }
 
-            if(typeof keys === 'string') {
+            if (typeof keys === 'string') {
                 keys = [keys];
             }
 
@@ -427,10 +428,10 @@ module.exports = {
     execPipeline: function (pipeline) {
         return new Promise(async (resolve, reject) => {
             try {
-                 let data = await pipeline.execAsPipeline();
+                let data = await pipeline.execAsPipeline();
 
-                 resolve(data);
-            } catch(e) {
+                resolve(data);
+            } catch (e) {
                 console.error(e);
                 return reject(e);
             }

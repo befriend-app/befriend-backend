@@ -6,7 +6,8 @@ exports.up = function (knex) {
     return knex.schema
         .alterTable('open_cities', (table) => {
             table.string('token').notNullable().after('id');
-        }).alterTable('open_states', (table) => {
+        })
+        .alterTable('open_states', (table) => {
             table.string('token').notNullable().after('id');
         });
 };
@@ -19,7 +20,8 @@ exports.down = function (knex) {
     return knex.schema
         .alterTable('open_cities', (table) => {
             table.dropColumn('token');
-        }).alterTable('open_states', (table) => {
+        })
+        .alterTable('open_states', (table) => {
             table.dropColumn('token');
         });
 };

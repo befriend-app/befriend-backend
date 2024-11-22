@@ -10,7 +10,7 @@ let db_dict_venues = {};
 
 function syncActivityTypes() {
     return new Promise(async (resolve, reject) => {
-        console.log("Add activity types");
+        console.log('Add activity types');
 
         let table_name = 'activity_types';
         let token_key = 'activity_type_token';
@@ -18,87 +18,87 @@ function syncActivityTypes() {
         let updated = 0;
 
         try {
-             let conn = await dbService.conn();
+            let conn = await dbService.conn();
 
-             let previous = await conn(table_name);
+            let previous = await conn(table_name);
 
-             for(let item of previous) {
-                 db_dict_activities[item[token_key]] = item;
-             }
+            for (let item of previous) {
+                db_dict_activities[item[token_key]] = item;
+            }
 
-             let endpoint = dataEndpoint(`/activity-types`);
+            let endpoint = dataEndpoint(`/activity-types`);
 
-             let r = await axios.get(endpoint);
+            let r = await axios.get(endpoint);
 
-             let update_cache = false;
+            let update_cache = false;
 
-             for(let item of r.data.items) {
-                 let db_item = db_dict_activities[item[token_key]];
+            for (let item of r.data.items) {
+                let db_item = db_dict_activities[item[token_key]];
 
-                 if(!db_item) {
-                     update_cache = true;
-                     let new_item = structuredClone(item);
-                     new_item.created = timeNow();
-                     new_item.updated = timeNow();
+                if (!db_item) {
+                    update_cache = true;
+                    let new_item = structuredClone(item);
+                    new_item.created = timeNow();
+                    new_item.updated = timeNow();
 
-                     if(item.parent_token) {
-                         try {
-                             new_item.parent_activity_type_id = db_dict_activities[item.parent_token].id;
-                         } catch(e) {
-                             console.error(e);
-                         }
-                     }
+                    if (item.parent_token) {
+                        try {
+                            new_item.parent_activity_type_id =
+                                db_dict_activities[item.parent_token].id;
+                        } catch (e) {
+                            console.error(e);
+                        }
+                    }
 
-                     delete new_item.parent_token;
+                    delete new_item.parent_token;
 
-                     let [id] = await conn(table_name)
-                         .insert(new_item);
+                    let [id] = await conn(table_name).insert(new_item);
 
-                     added++;
+                    added++;
 
-                     new_item.id = id;
+                    new_item.id = id;
 
-                     db_dict_activities[item[token_key]] = new_item;
-                 } else {
-                     if(item.updated > db_item.updated) {
-                         update_cache = true;
-                         delete item.parent_token;
-                         delete item.updated;
+                    db_dict_activities[item[token_key]] = new_item;
+                } else {
+                    if (item.updated > db_item.updated) {
+                        update_cache = true;
+                        delete item.parent_token;
+                        delete item.updated;
 
-                         let update_obj = {};
+                        let update_obj = {};
 
-                         for(let k in item) {
-                            if(db_item[k] !== item[k]) {
+                        for (let k in item) {
+                            if (db_item[k] !== item[k]) {
                                 update_obj[k] = item[k];
                             }
-                         }
+                        }
 
-                         if(Object.keys(update_obj).length) {
-                             update_obj.updated = timeNow();
+                        if (Object.keys(update_obj).length) {
+                            update_obj.updated = timeNow();
 
-                             await conn(table_name)
-                                 .where('id', db_item.id)
-                                 .update(update_obj);
+                            await conn(table_name).where('id', db_item.id).update(update_obj);
 
-                             //remove specific activity type from cache
-                             await cacheService.deleteKeys(cacheService.keys.activity_type(item[token_key]));
+                            //remove specific activity type from cache
+                            await cacheService.deleteKeys(
+                                cacheService.keys.activity_type(item[token_key]),
+                            );
 
-                             updated++;
-                         }
-                     }
-                 }
-             }
+                            updated++;
+                        }
+                    }
+                }
+            }
 
-             if(update_cache) {
-                 //remove previous cache
-                 await cacheService.deleteKeys(cacheService.keys.activity_types);
-             }
+            if (update_cache) {
+                //remove previous cache
+                await cacheService.deleteKeys(cacheService.keys.activity_types);
+            }
 
             console.log({
                 added,
-                updated
+                updated,
             });
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return reject();
         }
@@ -122,7 +122,7 @@ function syncVenueCategories() {
 
             let previous = await conn(table_name);
 
-            for(let item of previous) {
+            for (let item of previous) {
                 db_dict_venues[item[token_key]] = item;
             }
 
@@ -132,23 +132,22 @@ function syncVenueCategories() {
 
             let update_cache = false;
 
-            for(let item of r.data.items) {
+            for (let item of r.data.items) {
                 let db_item = db_dict_venues[item[token_key]];
 
-                if(!db_item) {
+                if (!db_item) {
                     update_cache = true;
                     let new_item = structuredClone(item);
                     new_item.created = timeNow();
                     new_item.updated = timeNow();
 
-                    if(item.parent_token) {
+                    if (item.parent_token) {
                         new_item.parent_id = db_dict_venues[item.parent_token].id;
                     }
 
                     delete new_item.parent_token;
 
-                    let [id] = await conn(table_name)
-                        .insert(new_item);
+                    let [id] = await conn(table_name).insert(new_item);
 
                     added++;
 
@@ -156,25 +155,23 @@ function syncVenueCategories() {
 
                     db_dict_venues[item[token_key]] = new_item;
                 } else {
-                    if(item.updated > db_item.updated) {
+                    if (item.updated > db_item.updated) {
                         update_cache = true;
                         delete item.parent_token;
                         delete item.updated;
 
                         let update_obj = {};
 
-                        for(let k in item) {
-                            if(db_item[k] !== item[k]) {
+                        for (let k in item) {
+                            if (db_item[k] !== item[k]) {
                                 update_obj[k] = item[k];
                             }
                         }
 
-                        if(Object.keys(update_obj).length) {
+                        if (Object.keys(update_obj).length) {
                             update_obj.updated = timeNow();
 
-                            await conn(table_name)
-                                .where('id', db_item.id)
-                                .update(update_obj);
+                            await conn(table_name).where('id', db_item.id).update(update_obj);
 
                             updated++;
                         }
@@ -183,9 +180,10 @@ function syncVenueCategories() {
             }
 
             console.log({
-                added, updated
+                added,
+                updated,
             });
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return reject();
         }
@@ -196,7 +194,7 @@ function syncVenueCategories() {
 
 function syncActivitiesVenues() {
     return new Promise(async (resolve, reject) => {
-        console.log("Add activity-venue-categories");
+        console.log('Add activity-venue-categories');
 
         let table_name = 'activity_type_venues';
         let token_key_1 = 'activity_type_token';
@@ -213,10 +211,17 @@ function syncActivitiesVenues() {
             let previous = await conn(`${table_name} AS atv`)
                 .join('activity_types AS at', 'at.id', '=', 'atv.activity_type_id')
                 .join('venues_categories AS vc', 'vc.id', '=', 'atv.venue_category_id')
-                .select('atv.id', 'activity_type_token', 'category_token', 'atv.sort_position', 'atv.is_active', 'atv.updated');
+                .select(
+                    'atv.id',
+                    'activity_type_token',
+                    'category_token',
+                    'atv.sort_position',
+                    'atv.is_active',
+                    'atv.updated',
+                );
 
-            for(let item of previous) {
-                if(!(item[token_key_1] in db_dict)) {
+            for (let item of previous) {
+                if (!(item[token_key_1] in db_dict)) {
                     db_dict[item[token_key_1]] = {};
                 }
 
@@ -229,10 +234,10 @@ function syncActivitiesVenues() {
 
             let update_cache = false;
 
-            for(let item of r.data.items) {
+            for (let item of r.data.items) {
                 let db_item = db_dict[item[token_key_1]]?.[item[token_key_2]];
 
-                if(!db_item) {
+                if (!db_item) {
                     update_cache = true;
                     let new_item = structuredClone(item);
 
@@ -244,14 +249,13 @@ function syncActivitiesVenues() {
                     new_item.created = timeNow();
                     new_item.updated = timeNow();
 
-                    let [id] = await conn(table_name)
-                        .insert(new_item);
+                    let [id] = await conn(table_name).insert(new_item);
 
                     added++;
 
                     new_item.id = id;
                 } else {
-                    if(item.updated > db_item.updated) {
+                    if (item.updated > db_item.updated) {
                         update_cache = true;
 
                         let activity_type_token = item[token_key_1];
@@ -261,20 +265,22 @@ function syncActivitiesVenues() {
 
                         let update_obj = {};
 
-                        for(let k in item) {
-                            if(db_item[k] !== item[k]) {
+                        for (let k in item) {
+                            if (db_item[k] !== item[k]) {
                                 update_obj[k] = item[k];
                             }
                         }
 
-                        if(Object.keys(update_obj).length) {
+                        if (Object.keys(update_obj).length) {
                             update_obj.updated = timeNow();
 
-                            await conn(table_name)
-                                .where('id', db_item.id)
-                                .update(update_obj);
+                            await conn(table_name).where('id', db_item.id).update(update_obj);
 
-                            await cacheService.deleteKeys(cacheService.keys.activity_type_venue_categories(activity_type_token))
+                            await cacheService.deleteKeys(
+                                cacheService.keys.activity_type_venue_categories(
+                                    activity_type_token,
+                                ),
+                            );
 
                             updated++;
                         }
@@ -283,9 +289,10 @@ function syncActivitiesVenues() {
             }
 
             console.log({
-                added, updated
+                added,
+                updated,
             });
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return reject();
         }

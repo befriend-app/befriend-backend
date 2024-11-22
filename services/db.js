@@ -81,10 +81,11 @@ module.exports = {
                 const cols = await conn(table_name).columnInfo();
 
                 // Get column names from the first row that exist in the table
-                let columnNames = Object.keys(update_rows[0]).filter(col => cols[col]);
-                const updateColumns = columnNames.filter(name => name !== id_column);
+                let columnNames = Object.keys(update_rows[0]).filter((col) => cols[col]);
+                const updateColumns = columnNames.filter((name) => name !== id_column);
 
-                const chunk_items_count = Number.parseInt(module.exports.max_placeholders / columnNames.length) - 1;
+                const chunk_items_count =
+                    Number.parseInt(module.exports.max_placeholders / columnNames.length) - 1;
                 const chunks = require('lodash').chunk(update_rows, chunk_items_count);
 
                 for (let chunk of chunks) {
@@ -94,7 +95,7 @@ module.exports = {
 
                     const updateSQL = `
                         UPDATE ??
-                        SET ${updateColumns.map(name => `?? = CASE ?? ${chunk.map(() => 'WHEN ? THEN ?').join(' ')} END`).join(', ')}
+                        SET ${updateColumns.map((name) => `?? = CASE ?? ${chunk.map(() => 'WHEN ? THEN ?').join(' ')} END`).join(', ')}
                         WHERE ?? IN (${chunk.map(() => '?').join(',')})
                     `;
 
@@ -102,14 +103,14 @@ module.exports = {
                     const insertBindings = [
                         table_name,
                         // For each update column, add the column name and CASE/WHEN/THEN values
-                        ...updateColumns.flatMap(colName => [
+                        ...updateColumns.flatMap((colName) => [
                             colName,
                             id_column,
-                            ...chunk.flatMap(row => [row[id_column], row[colName]])
+                            ...chunk.flatMap((row) => [row[id_column], row[colName]]),
                         ]),
                         // WHERE IN clause
                         id_column,
-                        ...chunk.map(row => row[id_column])
+                        ...chunk.map((row) => row[id_column]),
                     ];
 
                     // Execute the query
@@ -122,5 +123,5 @@ module.exports = {
                 return reject();
             }
         });
-    }
+    },
 };

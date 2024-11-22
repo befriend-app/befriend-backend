@@ -158,15 +158,17 @@ function getCityCountryIds(parsed, locationCountry) {
 
                 let countryCityIds = await cacheService.getSortedSet(countryPrefixKey);
 
-                for(let id of countryCityIds) {
+                for (let id of countryCityIds) {
                     citiesCountry.add(`${id}:${locationCountry.code}`);
                 }
             }
 
-            let cityKey = cacheService.keys.cities_prefix(parsed.city.substring(0, MAX_PREFIX_LIMIT));
+            let cityKey = cacheService.keys.cities_prefix(
+                parsed.city.substring(0, MAX_PREFIX_LIMIT),
+            );
             let globalCities = await cacheService.getSortedSetByScore(cityKey, 1000);
 
-            for(let city of globalCities) {
+            for (let city of globalCities) {
                 citiesCountry.add(city);
             }
 
@@ -190,7 +192,7 @@ function fetchCityDetails(cityCountryIds) {
 
             let cities = await cacheService.execMulti(pipeline);
 
-            cities = cities.map(c => JSON.parse(c));
+            cities = cities.map((c) => JSON.parse(c));
 
             resolve(cities);
         } catch (e) {
@@ -203,8 +205,8 @@ function fetchCityDetails(cityCountryIds) {
 function getCitiesByCountry(countryCode, cityIds) {
     return new Promise(async (resolve, reject) => {
         try {
-            if(!countryCode || !cityIds.length) {
-                return reject("No country code/city ids provided")
+            if (!countryCode || !cityIds.length) {
+                return reject('No country code/city ids provided');
             }
 
             let pipeline = cacheService.startPipeline();
@@ -215,7 +217,7 @@ function getCitiesByCountry(countryCode, cityIds) {
 
             let cities = await cacheService.execMulti(pipeline);
 
-            cities = cities.map(c => JSON.parse(c));
+            cities = cities.map((c) => JSON.parse(c));
 
             resolve(cities);
         } catch (e) {

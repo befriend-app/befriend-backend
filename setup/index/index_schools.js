@@ -43,10 +43,14 @@ function indexSchools() {
                     lat: school.lat || '',
                     lon: school.lon || '',
                     sc: school.student_count,
-                    type: school.is_college ? schoolService.typeNames.is_college :
-                        school.is_high_school ? schoolService.typeNames.is_high_school :
-                            school.is_grade_school ? schoolService.typeNames.is_grade_school : '',
-                    d: school.deleted ? 1 : ''
+                    type: school.is_college
+                        ? schoolService.typeNames.is_college
+                        : school.is_high_school
+                          ? schoolService.typeNames.is_high_school
+                          : school.is_grade_school
+                            ? schoolService.typeNames.is_grade_school
+                            : '',
+                    d: school.deleted ? 1 : '',
                 });
 
                 // Index prefixes
@@ -70,7 +74,7 @@ function indexSchools() {
                         prefixGroups[country_code][prefix] = [];
                     }
 
-                    if(school.deleted) {
+                    if (school.deleted) {
                         if (!deletePrefixGroups[country_code][prefix]) {
                             deletePrefixGroups[country_code][prefix] = [];
                         }
@@ -100,7 +104,7 @@ function indexSchools() {
                             prefixGroups[country_code][prefix] = [];
                         }
 
-                        if(school.deleted) {
+                        if (school.deleted) {
                             if (!deletePrefixGroups[country_code][prefix]) {
                                 deletePrefixGroups[country_code][prefix] = [];
                             }
@@ -133,7 +137,7 @@ function indexSchools() {
                 for (const [prefix, schools] of Object.entries(prefixes)) {
                     pipeline.sAdd(
                         cacheService.keys.schools_country_prefix(countryCode, prefix),
-                        schools
+                        schools,
                     );
 
                     count++;
@@ -150,7 +154,7 @@ function indexSchools() {
                 for (const [prefix, schools] of Object.entries(prefixes)) {
                     pipeline.sRem(
                         cacheService.keys.schools_country_prefix(countryCode, prefix),
-                        schools
+                        schools,
                     );
 
                     count++;
@@ -175,14 +179,14 @@ function indexSchools() {
 }
 
 module.exports = {
-    main: async function(is_me) {
+    main: async function (is_me) {
         return new Promise(async (resolve, reject) => {
             try {
                 console.log('Index Schools');
                 await cacheService.init();
                 await indexSchools();
 
-                console.log("Index completed");
+                console.log('Index completed');
                 resolve();
             } catch (e) {
                 console.error(e);
@@ -193,7 +197,7 @@ module.exports = {
 };
 
 if (require.main === module) {
-    (async function() {
+    (async function () {
         await module.exports.main(true);
         process.exit();
     })();

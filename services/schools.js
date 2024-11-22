@@ -7,14 +7,14 @@ const MAX_PREFIX_LIMIT = 3;
 const schoolTypes = {
     is_college: 'college',
     is_high_school: 'hs',
-    is_grade_school: 'grade'
+    is_grade_school: 'grade',
 };
 
 const TYPE_SCORES = {
-    'college': 1.0,
-    'hs': 0.8,
-    'grade': 0.6,
-    '': 0.4
+    college: 1.0,
+    hs: 0.8,
+    grade: 0.6,
+    '': 0.4,
 };
 
 function scoreSchools(schools, location) {
@@ -29,8 +29,10 @@ function scoreSchools(schools, location) {
         if (!distance || distance < 0) return 1;
         if (distance < BASE_DISTANCE) return 1;
 
-        const score = 1 - (Math.log(distance) - Math.log(BASE_DISTANCE)) /
-            (Math.log(MAX_DISTANCE) - Math.log(BASE_DISTANCE));
+        const score =
+            1 -
+            (Math.log(distance) - Math.log(BASE_DISTANCE)) /
+                (Math.log(MAX_DISTANCE) - Math.log(BASE_DISTANCE));
 
         return Math.max(0, Math.min(1, score));
     }
@@ -53,40 +55,45 @@ function scoreSchools(schools, location) {
             return results;
         }
 
-        return results.map(school => {
-            const distance = getDistanceMeters({
-                lat: userLat, lon: userLon
-            }, {
-                lat: school.lat,
-                lon: school.lon
-            });
+        return results
+            .map((school) => {
+                const distance = getDistanceMeters(
+                    {
+                        lat: userLat,
+                        lon: userLon,
+                    },
+                    {
+                        lat: school.lat,
+                        lon: school.lon,
+                    },
+                );
 
-            const distanceScore = calculateDistanceScore(distance);
+                const distanceScore = calculateDistanceScore(distance);
 
-            // Calculate size score
-            const sizeScore = calculateSizeScore(school.sc);
+                // Calculate size score
+                const sizeScore = calculateSizeScore(school.sc);
 
-            // Calculate type score
-            const typeScore = calculateTypeScore(school.type);
+                // Calculate type score
+                const typeScore = calculateTypeScore(school.type);
 
-            // Calculate final weighted score
-            const finalScore = (
-                (distanceScore * DISTANCE_WEIGHT) +
-                (sizeScore * SIZE_WEIGHT) +
-                (typeScore * TYPE_WEIGHT)
-            );
+                // Calculate final weighted score
+                const finalScore =
+                    distanceScore * DISTANCE_WEIGHT +
+                    sizeScore * SIZE_WEIGHT +
+                    typeScore * TYPE_WEIGHT;
 
-            return {
-                ...school,
-                distance,
-                relevanceScore: finalScore,
-                _scores: {
-                    distance: distanceScore,
-                    size: sizeScore,
-                    type: typeScore
-                }
-            };
-        }).sort((a, b) => b.relevanceScore - a.relevanceScore);
+                return {
+                    ...school,
+                    distance,
+                    relevanceScore: finalScore,
+                    _scores: {
+                        distance: distanceScore,
+                        size: sizeScore,
+                        type: typeScore,
+                    },
+                };
+            })
+            .sort((a, b) => b.relevanceScore - a.relevanceScore);
     }
 
     // Parse coordinates as floats
@@ -96,10 +103,10 @@ function scoreSchools(schools, location) {
     if (isNaN(lat) || isNaN(lon)) {
         // If no valid coordinates, return results sorted by size/type
         return schools.sort((a, b) => {
-            const aScore = (calculateSizeScore(a.sc) * SIZE_WEIGHT) +
-                (calculateTypeScore(a.type) * TYPE_WEIGHT);
-            const bScore = (calculateSizeScore(b.sc) * SIZE_WEIGHT) +
-                (calculateTypeScore(b.type) * TYPE_WEIGHT);
+            const aScore =
+                calculateSizeScore(a.sc) * SIZE_WEIGHT + calculateTypeScore(a.type) * TYPE_WEIGHT;
+            const bScore =
+                calculateSizeScore(b.sc) * SIZE_WEIGHT + calculateTypeScore(b.type) * TYPE_WEIGHT;
             return bScore - aScore;
         });
     }
@@ -108,14 +115,13 @@ function scoreSchools(schools, location) {
     const scoredResults = scoreResults(schools, lat, lon);
 
     // Add formatted distance
-    return scoredResults.map(result => ({
+    return scoredResults.map((result) => ({
         ...result,
-        distanceFormatted: result.distance ?
-            `${(result.distance / 1000).toFixed(1)}km` :
-            'Unknown distance'
+        distanceFormatted: result.distance
+            ? `${(result.distance / 1000).toFixed(1)}km`
+            : 'Unknown distance',
     }));
 }
-
 
 function schoolAutoComplete(country_id, search_term, user_location) {
     return new Promise(async (resolve, reject) => {
@@ -157,13 +163,13 @@ function schoolAutoComplete(country_id, search_term, user_location) {
                 }
             }
 
-            if(search_term.length > MAX_PREFIX_LIMIT) {
+            if (search_term.length > MAX_PREFIX_LIMIT) {
                 items = items.filter(function (item) {
                     return item.name.toLowerCase().includes(search_term);
                 });
             }
 
-            if(!items.length) {
+            if (!items.length) {
                 return resolve({});
             }
 
@@ -174,34 +180,34 @@ function schoolAutoComplete(country_id, search_term, user_location) {
                 grade: [],
                 hs: [],
                 college: [],
-                other: []
+                other: [],
             };
 
             //add city/state
             //prepare city ids
             let city_ids = {};
 
-            for(let school of sorted) {
-                if(school.type === schoolTypes.is_college) {
-                    if(schoolGroups.college.length < RESULTS_LIMIT) {
+            for (let school of sorted) {
+                if (school.type === schoolTypes.is_college) {
+                    if (schoolGroups.college.length < RESULTS_LIMIT) {
                         schoolGroups.college.push(school);
 
                         city_ids[school.city_id] = 1;
                     }
-                } else if(school.type === schoolTypes.is_high_school) {
-                    if(schoolGroups.hs.length < RESULTS_LIMIT) {
+                } else if (school.type === schoolTypes.is_high_school) {
+                    if (schoolGroups.hs.length < RESULTS_LIMIT) {
                         schoolGroups.hs.push(school);
 
                         city_ids[school.city_id] = 1;
                     }
-                } else if(school.type === schoolTypes.is_grade_school) {
-                    if(schoolGroups.grade.length < RESULTS_LIMIT) {
+                } else if (school.type === schoolTypes.is_grade_school) {
+                    if (schoolGroups.grade.length < RESULTS_LIMIT) {
                         schoolGroups.grade.push(school);
 
                         city_ids[school.city_id] = 1;
                     }
                 } else {
-                    if(schoolGroups.other.length < RESULTS_LIMIT) {
+                    if (schoolGroups.other.length < RESULTS_LIMIT) {
                         schoolGroups.other.push(school);
 
                         city_ids[school.city_id] = 1;
@@ -219,9 +225,9 @@ function schoolAutoComplete(country_id, search_term, user_location) {
             let states_lookup = {};
 
             //get states (us only for now)
-            if(country.code === 'US') {
+            if (country.code === 'US') {
                 let stateIds = cities.reduce((acc, city) => {
-                    if(city.state_id) {
+                    if (city.state_id) {
                         acc[city.state_id] = 1;
                     }
 
@@ -236,19 +242,19 @@ function schoolAutoComplete(country_id, search_term, user_location) {
                     return acc;
                 }, {});
             }
-            
-            for(let schoolType in schoolGroups) {
+
+            for (let schoolType in schoolGroups) {
                 let schools = schoolGroups[schoolType];
 
-                for(let school of schools) {
+                for (let school of schools) {
                     let city = cities_lookup[school.city_id];
 
-                    if(city) {
+                    if (city) {
                         school.city = city.name;
 
                         let state = states_lookup[city.state_id];
 
-                        if(state) {
+                        if (state) {
                             school.state = state.short;
                         }
                     }
@@ -268,5 +274,5 @@ function schoolAutoComplete(country_id, search_term, user_location) {
 module.exports = {
     typeNames: schoolTypes,
     prefixLimit: MAX_PREFIX_LIMIT,
-    schoolAutoComplete
-}
+    schoolAutoComplete,
+};

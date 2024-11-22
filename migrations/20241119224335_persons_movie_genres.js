@@ -1,5 +1,5 @@
-exports.up = function(knex) {
-    return knex.schema.createTable('persons_movie_genres', function(table) {
+exports.up = function (knex) {
+    return knex.schema.createTable('persons_movie_genres', function (table) {
         table.bigIncrements('id').primary();
 
         table.bigInteger('person_id').unsigned().notNullable();
@@ -15,16 +15,12 @@ exports.up = function(knex) {
 
         table.index('person_id');
 
-        table.foreign('person_id')
-            .references('id')
-            .inTable('persons');
+        table.foreign('person_id').references('id').inTable('persons');
 
-        table.foreign('genre_id')
-            .references('id')
-            .inTable('movie_genres');
+        table.foreign('genre_id').references('id').inTable('movie_genres');
     });
 };
 
-exports.down = function(knex) {
+exports.down = function (knex) {
     return knex.schema.dropTableIfExists('persons_movie_genres');
 };

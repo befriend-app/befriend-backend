@@ -19,9 +19,7 @@ exports.up = function (knex) {
             table.index('token');
             table.index('apple_id');
 
-            table.foreign('parent_id')
-                .references('id')
-                .inTable('music_genres');
+            table.foreign('parent_id').references('id').inTable('music_genres');
         }),
 
         knex.schema.createTable('music_genres_countries', function (table) {
@@ -40,20 +38,16 @@ exports.up = function (knex) {
             table.index('country_id');
             table.index('genre_id');
 
-            table.foreign('country_id')
-                .references('id')
-                .inTable('open_countries');
+            table.foreign('country_id').references('id').inTable('open_countries');
 
-            table.foreign('genre_id')
-                .references('id')
-                .inTable('music_genres');
-        })
+            table.foreign('genre_id').references('id').inTable('music_genres');
+        }),
     ]);
 };
 
 exports.down = function (knex) {
     return Promise.all([
         knex.schema.dropTableIfExists('music_genres_countries'),
-        knex.schema.dropTableIfExists('music_genres')
+        knex.schema.dropTableIfExists('music_genres'),
     ]);
 };

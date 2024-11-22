@@ -18,7 +18,7 @@ function addMeSection(person_token, section_key, location) {
 
                 try {
                     if (fnData) {
-                        if(sectionData?.type?.name === 'buttons') {
+                        if (sectionData?.type?.name === 'buttons') {
                             section.data = await module.exports[fnData](false, country);
                         } else {
                             section.data = await module.exports[fnData](country);
@@ -28,7 +28,7 @@ function addMeSection(person_token, section_key, location) {
                     if (fnFilterList) {
                         section.data = await module.exports[fnFilterList]();
                     }
-                } catch(e) {
+                } catch (e) {
                     console.error(e);
                 }
             }
@@ -220,23 +220,23 @@ function addMeSectionItem(person_token, section_key, table_key, item_token, hash
                 return reject('Section key required');
             }
 
-            if(!table_key) {
+            if (!table_key) {
                 return reject('Table key required');
             }
 
-            if(!item_token) {
+            if (!item_token) {
                 return reject('Item token required');
             }
 
             let sectionData = sectionsData[section_key];
 
-            if(!sectionData) {
+            if (!sectionData) {
                 return reject('Invalid section key');
             }
 
             let userTableData = sectionData.tables[table_key]?.user;
 
-            if(!userTableData) {
+            if (!userTableData) {
                 return reject('Invalid table key');
             }
 
@@ -316,12 +316,13 @@ function addMeSectionItem(person_token, section_key, table_key, item_token, hash
                         updated: timeNow(),
                     };
 
-                    if(userTableData.cols.token) {
+                    if (userTableData.cols.token) {
                         insert_data[userTableData.cols.token] = section_option.token;
                     }
 
-                    if(userTableData.cols.hashKey) {
-                        insert_data[userTableData.cols.hashKey] = section_option[sectionData.autoComplete.filter.hashKey];
+                    if (userTableData.cols.hashKey) {
+                        insert_data[userTableData.cols.hashKey] =
+                            section_option[sectionData.autoComplete.filter.hashKey];
                     }
 
                     insert_data[userTableData.cols.id] = section_option.id;
@@ -354,7 +355,7 @@ function addMeSectionItem(person_token, section_key, table_key, item_token, hash
                     ...item_data,
                 });
             } else {
-                return reject("Item already exists in section");
+                return reject('Item already exists in section');
             }
         } catch (e) {
             console.error(e);
@@ -365,12 +366,18 @@ function addMeSectionItem(person_token, section_key, table_key, item_token, hash
 
 function updateMeSectionItem(body) {
     return new Promise(async (resolve, reject) => {
-        if(typeof body !== 'object') {
+        if (typeof body !== 'object') {
             return reject('No body');
         }
 
-        const { person_token, section_key, table_key, section_item_id,
-                favorite, secondary, is_delete
+        const {
+            person_token,
+            section_key,
+            table_key,
+            section_item_id,
+            favorite,
+            secondary,
+            is_delete,
         } = body;
 
         const validateRequiredFields = () => {
@@ -381,7 +388,7 @@ function updateMeSectionItem(body) {
 
         const validateUpdateFields = () => {
             const updates = { favorite, secondary, is_delete };
-            if (!Object.values(updates).some(val => val !== undefined)) {
+            if (!Object.values(updates).some((val) => val !== undefined)) {
                 return reject('No valid update fields provided');
             }
         };
@@ -394,7 +401,7 @@ function updateMeSectionItem(body) {
             }
 
             const validFields = ['active', 'position', 'reorder'];
-            const hasValidField = Object.keys(favorite).some(key => validFields.includes(key));
+            const hasValidField = Object.keys(favorite).some((key) => validFields.includes(key));
 
             if (!hasValidField) {
                 return reject('Invalid favorite fields');
@@ -419,21 +426,23 @@ function updateMeSectionItem(body) {
 
                     let mainItemUpdate = {
                         id: section_item_id,
-                        updated: now
+                        updated: now,
                     };
 
-                    if(is_delete) {
+                    if (is_delete) {
                         mainItemUpdate.is_favorite = false;
                         mainItemUpdate.favorite_position = null;
                         mainItemUpdate.deleted = now;
                         batch_updates.push(mainItemUpdate);
-                        updateCacheItem(cache_data, mainItemUpdate,  section_item_id);
-                    } else if(typeof favorite.active !== 'undefined') {
+                        updateCacheItem(cache_data, mainItemUpdate, section_item_id);
+                    } else if (typeof favorite.active !== 'undefined') {
                         mainItemUpdate.is_favorite = favorite.active;
-                        mainItemUpdate.favorite_position = isNumeric(favorite.position) ? favorite.position : null;
+                        mainItemUpdate.favorite_position = isNumeric(favorite.position)
+                            ? favorite.position
+                            : null;
                         mainItemUpdate.deleted = null;
                         batch_updates.push(mainItemUpdate);
-                        updateCacheItem(cache_data, mainItemUpdate,  section_item_id);
+                        updateCacheItem(cache_data, mainItemUpdate, section_item_id);
                     }
 
                     // Handle reorder updates
@@ -441,9 +450,11 @@ function updateMeSectionItem(body) {
                         const update = {
                             id: reorder_item.id,
                             is_favorite: isNumeric(reorder_item.favorite_position),
-                            favorite_position: isNumeric(reorder_item.favorite_position) ? reorder_item.favorite_position : null,
+                            favorite_position: isNumeric(reorder_item.favorite_position)
+                                ? reorder_item.favorite_position
+                                : null,
                             updated: now,
-                            deleted: null
+                            deleted: null,
                         };
                         batch_updates.push(update);
                         updateCacheItem(cache_data, update, null, token);
@@ -452,7 +463,7 @@ function updateMeSectionItem(body) {
                     await batchUpdate(userTableData.name, batch_updates);
 
                     resolve();
-                } catch(e) {
+                } catch (e) {
                     console.error(e);
                     return reject();
                 }
@@ -471,7 +482,7 @@ function updateMeSectionItem(body) {
                         data.deleted = now;
 
                         //only update these columns if table is favorable
-                        if(section.sectionData.tables?.[table_key]?.isFavorable) {
+                        if (section.sectionData.tables?.[table_key]?.isFavorable) {
                             data.is_favorite = false;
                             data.favorite_position = null;
                         }
@@ -500,7 +511,7 @@ function updateMeSectionItem(body) {
                     }
 
                     resolve();
-                } catch(e) {
+                } catch (e) {
                     console.error(e);
                     return reject();
                 }
@@ -510,9 +521,9 @@ function updateMeSectionItem(body) {
         const updateCacheItem = (cache_data, data, id = null, token = null) => {
             if (!cache_data) return;
 
-            const targetItem = token ?
-                cache_data[token] :
-                Object.values(cache_data).find(item => item.id === id);
+            const targetItem = token
+                ? cache_data[token]
+                : Object.values(cache_data).find((item) => item.id === id);
 
             if (targetItem) {
                 Object.assign(targetItem, data);
@@ -533,7 +544,7 @@ function updateMeSectionItem(body) {
             // Get cache data
             const cache_key = cacheService.keys.persons_section_data(
                 person.person_token,
-                body.section_key
+                body.section_key,
             );
             const cache_data = await cacheService.getObj(cache_key);
 
@@ -569,7 +580,7 @@ function getPersonSectionItems(person, section_key, country) {
 
             let sectionData = sectionsData[section_key];
 
-            if(!sectionData) {
+            if (!sectionData) {
                 return resolve({});
             }
 
@@ -587,7 +598,7 @@ function getPersonSectionItems(person, section_key, country) {
 
                 let conn = await dbService.conn();
 
-                for(let table_key in sectionData.tables) {
+                for (let table_key in sectionData.tables) {
                     let userTableData = sectionData.tables[table_key]?.user;
 
                     let qry = await conn(userTableData.name)
@@ -610,14 +621,23 @@ function getPersonSectionItems(person, section_key, country) {
                             section_option = options.byId[item[col_name]];
                         } else if (cacheObj?.byHash) {
                             let cache_key = cacheObj.byHash;
-                            section_option = await cacheService.hGetItem(cache_key, item[token_col]);
+                            section_option = await cacheService.hGetItem(
+                                cache_key,
+                                item[token_col],
+                            );
                         } else if (cacheObj?.byHashKey) {
                             let cache_key = cacheObj.byHashKey(item[hash_key_col]);
-                            section_option = await cacheService.hGetItem(cache_key, item[token_col]);
+                            section_option = await cacheService.hGetItem(
+                                cache_key,
+                                item[token_col],
+                            );
                         } else if (sectionData.type?.name === 'buttons') {
                             // For button-type sections like drinking
-                            let allOptions = await module.exports[sectionData.functions.data](true, country);
-                            section_option = allOptions.find(opt => opt.id === item[col_name]);
+                            let allOptions = await module.exports[sectionData.functions.data](
+                                true,
+                                country,
+                            );
+                            section_option = allOptions.find((opt) => opt.id === item[col_name]);
                         }
 
                         if (!section_option) {
@@ -794,7 +814,7 @@ function getActiveData(person, sections, country) {
                 // Always get person-specific items
                 const cache_key_items = cacheService.keys.persons_section_data(
                     person.person_token,
-                    key
+                    key,
                 );
 
                 multi.get(cache_key_items);
@@ -827,9 +847,10 @@ function getActiveData(person, sections, country) {
                 }
 
                 // Get category options
-                if(section?.categories?.fn) {
-                    if(section_key === 'music') {
-                        let sectionCategories = categoryOptions = await module.exports[section.categories.fn](country);
+                if (section?.categories?.fn) {
+                    if (section_key === 'music') {
+                        let sectionCategories = (categoryOptions =
+                            await module.exports[section.categories.fn](country));
 
                         categoryOptions = sectionCategories.options;
                         categoryItems = sectionCategories.items;
@@ -856,14 +877,14 @@ function getActiveData(person, sections, country) {
                         autoComplete: section.autoComplete,
                         categories: {
                             endpoint: section.categories?.endpoint || null,
-                            options: section.categories?.options || categoryOptions || null
+                            options: section.categories?.options || categoryOptions || null,
                         },
                         secondary: section.secondary || null,
                         styles: section.styles || null,
                         tables: Object.keys(section.tables).reduce((acc, key) => {
                             acc.push({
                                 name: key,
-                                isFavorable: !!section.tables[key].isFavorable
+                                isFavorable: !!section.tables[key].isFavorable,
                             });
 
                             return acc;
@@ -879,7 +900,10 @@ function getActiveData(person, sections, country) {
             // Handle missing data
             for (let key in missing_keys) {
                 if (sectionsData[key].functions?.data) {
-                    let data = await module.exports[sectionsData[key].functions.data](null, country);
+                    let data = await module.exports[sectionsData[key].functions.data](
+                        null,
+                        country,
+                    );
                     let items = await getPersonSectionItems(person, key);
 
                     sections[key].data = data;
@@ -960,7 +984,7 @@ function getDrinking(options_data_only) {
                 await cacheService.setCache(cache_key, options);
             }
 
-            if(options_data_only) {
+            if (options_data_only) {
                 return resolve(options);
             }
 
@@ -1005,15 +1029,15 @@ function getInstruments() {
                 myStr: section.myStr,
                 autoComplete: section.autoComplete,
                 categories: {
-                    options: section.categories.options
+                    options: section.categories.options,
                 },
                 secondary: section.secondary,
                 styles: section.styles,
                 tables: Object.keys(section.tables).reduce((acc, key) => {
                     acc.push({
-                            name: key,
-                            isFavorable: !!section.tables[key].isFavorable
-                        });
+                        name: key,
+                        isFavorable: !!section.tables[key].isFavorable,
+                    });
 
                     return acc;
                 }, []),
@@ -1042,11 +1066,14 @@ function allInstruments() {
 
             data = await conn('instruments').orderBy('popularity', 'desc');
 
-            data = data.reduce((acc, item) => {
-                acc.byId[item.id] = item;
-                acc.byToken[item.token] = item;
-                return acc;
-            }, {byId: {}, byToken: {}});
+            data = data.reduce(
+                (acc, item) => {
+                    acc.byId[item.id] = item;
+                    acc.byToken[item.token] = item;
+                    return acc;
+                },
+                { byId: {}, byToken: {} },
+            );
 
             await cacheService.setCache(cache_key, data);
 
@@ -1078,7 +1105,7 @@ function getMusic(country) {
                 tables: Object.keys(section.tables).reduce((acc, key) => {
                     acc.push({
                         name: key,
-                        isFavorable: section.tables[key].isFavorable
+                        isFavorable: section.tables[key].isFavorable,
                     });
 
                     return acc;
@@ -1106,7 +1133,7 @@ function getSchools() {
                 tables: Object.keys(section.tables).reduce((acc, key) => {
                     acc.push({
                         name: key,
-                        isFavorable: section.tables[key].isFavorable
+                        isFavorable: section.tables[key].isFavorable,
                     });
 
                     return acc;
@@ -1137,60 +1164,58 @@ function getCategoriesMusic(country) {
         let code = country?.code || section.categories.defaultCountry;
 
         try {
-             let allGenres = await hGetAllObj(cacheService.keys.music_genres);
+            let allGenres = await hGetAllObj(cacheService.keys.music_genres);
 
-             let categoryGenres = [];
+            let categoryGenres = [];
 
-             for(let k in allGenres) {
-                 let genre = allGenres[k];
+            for (let k in allGenres) {
+                let genre = allGenres[k];
 
-                 if(genre.is_active) {
-                     categoryGenres.push({
-                         table_key: 'artists',
-                         heading: 'Artists',
-                         name: genre.name,
-                         position: genre.position,
-                         token: k,
-                     });
-                 }
-             }
+                if (genre.is_active) {
+                    categoryGenres.push({
+                        table_key: 'artists',
+                        heading: 'Artists',
+                        name: genre.name,
+                        position: genre.position,
+                        token: k,
+                    });
+                }
+            }
 
-             categoryGenres.sort((a, b) => {
-                 return a.position - b.position;
-             });
+            categoryGenres.sort((a, b) => {
+                return a.position - b.position;
+            });
 
-             let categories = [
-                 {
-                     table_key: 'genres',
-                     name: 'Genres',
-                 },
-                 ...categoryGenres
-             ];
+            let categories = [
+                {
+                    table_key: 'genres',
+                    name: 'Genres',
+                },
+                ...categoryGenres,
+            ];
 
-             let genres = [
-                 ...categoryGenres
-             ];
+            let genres = [...categoryGenres];
 
-             for(let k in allGenres) {
-                 let genre = allGenres[k];
+            for (let k in allGenres) {
+                let genre = allGenres[k];
 
-                 if(genre.is_featured) {
-                     genres.push({
-                         name: genre.name,
-                         token: genre.token,
-                     });
-                 }
-             }
+                if (genre.is_featured) {
+                    genres.push({
+                        name: genre.name,
+                        token: genre.token,
+                    });
+                }
+            }
 
-             genres.map(item => {
+            genres.map((item) => {
                 item.category = 'genres';
-             });
+            });
 
-             resolve({
-                 options: categories,
-                 items: genres
-             });
-        } catch(e) {
+            resolve({
+                options: categories,
+                items: genres,
+            });
+        } catch (e) {
             console.error(e);
             return reject(e);
         }
@@ -1211,7 +1236,7 @@ function getCategoriesMovies() {
                 {
                     table_key: 'movies',
                     name: 'New Releases',
-                    token: 'new_releases'
+                    token: 'new_releases',
                 },
             ];
 
@@ -1220,23 +1245,23 @@ function getCategoriesMovies() {
             let genreItems = [];
 
             // Build genre categories and items
-            for(let k in allGenres) {
+            for (let k in allGenres) {
                 let genre = allGenres[k];
 
-                if(!genre.deleted) {
+                if (!genre.deleted) {
                     // Add to category options
                     genreCategories.push({
                         table_key: 'movies',
                         heading: 'Films',
                         name: genre.name,
-                        token: k
+                        token: k,
                     });
 
                     // Add to items list
                     genreItems.push({
                         token: k,
                         name: genre.name,
-                        category: 'genres'
+                        category: 'genres',
                     });
                 }
             }
@@ -1249,13 +1274,13 @@ function getCategoriesMovies() {
             let currentYear = new Date().getFullYear();
             let currentDecade = Math.floor(currentYear / 10) * 10;
 
-            for(let decade = currentDecade; decade >= 1930; decade -= 10) {
+            for (let decade = currentDecade; decade >= 1930; decade -= 10) {
                 let name = `${decade}s`;
                 decadeCategories.push({
                     table_key: 'movies',
                     heading: 'Films',
                     name: name,
-                    token: name
+                    token: name,
                 });
             }
 
@@ -1263,20 +1288,16 @@ function getCategoriesMovies() {
             // 1. Main categories (Genres, New Releases)
             // 2. Film genres (alphabetically)
             // 3. Decades (newest to oldest)
-            const categories = [
-                ...mainCategories,
-                ...genreCategories,
-                ...decadeCategories
-            ];
+            const categories = [...mainCategories, ...genreCategories, ...decadeCategories];
 
             // Sort genre items alphabetically
             genreItems.sort((a, b) => a.name.localeCompare(b.name));
 
             resolve({
                 options: categories,
-                items: genreItems
+                items: genreItems,
             });
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return reject(e);
         }
@@ -1304,14 +1325,14 @@ function getMovies() {
                 tables: Object.keys(section.tables).reduce((acc, key) => {
                     acc.push({
                         name: key,
-                        isFavorable: section.tables[key].isFavorable
+                        isFavorable: section.tables[key].isFavorable,
                     });
                     return acc;
                 }, []),
             };
 
             resolve(data);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return reject(e);
         }
@@ -1325,7 +1346,7 @@ function getLanguages(options_data_only, country) {
             const cache_key = cacheService.keys.languages_country(country_code);
             let options = await cacheService.getObj(cache_key);
 
-            if ( 1 || !options) {
+            if (!options) {
                 const conn = await dbService.conn();
 
                 // Get all languages and build initial dictionary
@@ -1333,25 +1354,19 @@ function getLanguages(options_data_only, country) {
                     conn('languages')
                         .whereNull('deleted')
                         .where('is_visible', true)
-                        .select(
-                            'id',
-                            'token',
-                            'name'
-                        ),
-                    conn('open_countries')
-                        .where('country_code', country_code)
-                        .select('id')
+                        .select('id', 'token', 'name'),
+                    conn('open_countries').where('country_code', country_code).select('id'),
                 ]);
 
                 // Build initial dictionary with all languages
                 let languagesDict = {};
-                for(let lang of languages) {
+                for (let lang of languages) {
                     languagesDict[lang.id] = {
                         id: lang.id,
                         token: lang.token,
                         name: lang.name,
                         source: 'other',
-                        sort_position: lang.name.toLowerCase() // Use name for alphabetical fallback
+                        sort_position: lang.name.toLowerCase(), // Use name for alphabetical fallback
                     };
                 }
 
@@ -1361,29 +1376,26 @@ function getLanguages(options_data_only, country) {
                         .join('languages AS l', 'l.id', 'tlc.language_id')
                         .where('tlc.country_id', countries[0].id)
                         .whereNull('tlc.deleted')
-                        .select(
-                            'l.id',
-                            'tlc.sort_position'
-                        )
+                        .select('l.id', 'tlc.sort_position')
                         .orderBy('tlc.sort_position', 'asc');
 
-                    for(let lang of topLanguages) {
-                        if(lang.id in languagesDict) {
+                    for (let lang of topLanguages) {
+                        if (lang.id in languagesDict) {
                             languagesDict[lang.id].source = 'top';
                             languagesDict[lang.id].sort_position = lang.sort_position;
                         }
                     }
                 }
 
-                // Add common Western languages as second priority if not already in top
+                // After top languages
                 const commonTokens = ['english', 'spanish', 'french', 'german'];
                 let commonLangs = await conn('languages')
                     .whereIn('token', commonTokens)
                     .select('id', 'token');
 
                 let nextCommonPosition = 1000; // Arbitrary gap after top languages
-                for(let lang of commonLangs) {
-                    if(languagesDict[lang.id].source === 'other') {
+                for (let lang of commonLangs) {
+                    if (languagesDict[lang.id].source === 'other') {
                         languagesDict[lang.id].source = 'common';
                         languagesDict[lang.id].sort_position = nextCommonPosition++;
                     }
@@ -1394,26 +1406,26 @@ function getLanguages(options_data_only, country) {
                     .sort((a, b) => {
                         // First by source priority (top > common > other)
                         const sourcePriority = { top: 0, common: 1, other: 2 };
-                        if(sourcePriority[a.source] !== sourcePriority[b.source]) {
+                        if (sourcePriority[a.source] !== sourcePriority[b.source]) {
                             return sourcePriority[a.source] - sourcePriority[b.source];
                         }
 
                         // Within same source type, sort by position/name
-                        if(a.source === 'top') {
+                        if (a.source === 'top') {
                             return a.sort_position - b.sort_position;
                         }
-                        if(a.source === 'common') {
+                        if (a.source === 'common') {
                             return a.sort_position - b.sort_position;
                         }
                         // Alphabetical for 'other'
                         return a.sort_position.localeCompare(b.sort_position);
                     })
-                    .map(({id, token, name}) => ({id, token, name}));
+                    .map(({ id, token, name }) => ({ id, token, name }));
 
                 await cacheService.setCache(cache_key, options);
             }
 
-            if(options_data_only) {
+            if (options_data_only) {
                 return resolve(options);
             }
 
@@ -1423,13 +1435,13 @@ function getLanguages(options_data_only, country) {
                 type: section.type,
                 options: options,
                 styles: section.styles,
-                tables: Object.keys(section.tables).map(key => ({
-                    name: key
-                }))
+                tables: Object.keys(section.tables).map((key) => ({
+                    name: key,
+                })),
             };
 
             resolve(data);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             reject(e);
         }
@@ -1442,7 +1454,7 @@ function getPolitics(options_data_only) {
             const cache_key = cacheService.keys.politics;
             let options = await cacheService.getObj(cache_key);
 
-            if(!options) {
+            if (!options) {
                 let conn = await dbService.conn();
                 options = await conn('politics')
                     .where('is_visible', true)
@@ -1451,7 +1463,7 @@ function getPolitics(options_data_only) {
                 await cacheService.setCache(cache_key, options);
             }
 
-            if(options_data_only) {
+            if (options_data_only) {
                 return resolve(options);
             }
 
@@ -1463,11 +1475,11 @@ function getPolitics(options_data_only) {
                 tables: Object.keys(section.tables).reduce((acc, key) => {
                     acc.push({ name: key });
                     return acc;
-                }, [])
+                }, []),
             };
 
             resolve(data);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             reject(e);
         }
@@ -1491,7 +1503,7 @@ function getReligions(options_data_only) {
                 await cacheService.setCache(cache_key, options);
             }
 
-            if(options_data_only) {
+            if (options_data_only) {
                 return resolve(options);
             }
 
@@ -1535,7 +1547,7 @@ function getSmoking(options_data_only) {
                 await cacheService.setCache(cache_key, options);
             }
 
-            if(options_data_only) {
+            if (options_data_only) {
                 return resolve(options);
             }
 
@@ -1565,7 +1577,13 @@ function getSmoking(options_data_only) {
 function selectSectionOptionItem(person_token, section_key, table_key, item_token, is_select) {
     return new Promise(async (resolve, reject) => {
         try {
-            if (!person_token || !section_key || !table_key || !item_token || typeof is_select !== 'boolean') {
+            if (
+                !person_token ||
+                !section_key ||
+                !table_key ||
+                !item_token ||
+                typeof is_select !== 'boolean'
+            ) {
                 return reject('Missing required fields');
             }
 
@@ -1590,11 +1608,11 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
             //validate token
             let options = await module.exports[sectionData.functions.data](true);
 
-            if(!options) {
-                return reject("Options not found");
+            if (!options) {
+                return reject('Options not found');
             }
 
-            let itemOption = options.find(option => option.token === item_token);
+            let itemOption = options.find((option) => option.token === item_token);
             if (!itemOption) {
                 return reject('Invalid item token');
             }
@@ -1602,7 +1620,10 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
             const conn = await dbService.conn();
             const now = timeNow();
 
-            if (sectionData.type.single || (sectionData.type.exclusive && item_token === sectionData.type.exclusive.token)) {
+            if (
+                sectionData.type.single ||
+                (sectionData.type.exclusive && item_token === sectionData.type.exclusive.token)
+            ) {
                 let existing = await conn(userTableData.name)
                     .where('person_id', person.id)
                     .whereNull('deleted')
@@ -1613,19 +1634,17 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
                 if (existing) {
                     if (!is_select) {
                         // Deselect
-                        await conn(userTableData.name)
-                            .where('id', existing.id)
-                            .update({
-                                deleted: now,
-                                updated: now
-                            });
+                        await conn(userTableData.name).where('id', existing.id).update({
+                            deleted: now,
+                            updated: now,
+                        });
                     } else if (existing[userTableData.cols.id] !== itemOption.id) {
                         // Change selection to new item
                         await conn(userTableData.name)
                             .where('id', existing.id)
                             .update({
                                 [userTableData.cols.id]: itemOption.id,
-                                updated: now
+                                updated: now,
                             });
 
                         response_data = {
@@ -1634,7 +1653,7 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
                             name: itemOption.name,
                             created: existing.created,
                             updated: now,
-                            deleted: null
+                            deleted: null,
                         };
                     }
                 } else if (is_select) {
@@ -1643,7 +1662,7 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
                         person_id: person.id,
                         [userTableData.cols.id]: itemOption.id,
                         created: now,
-                        updated: now
+                        updated: now,
                     });
 
                     response_data = {
@@ -1651,27 +1670,32 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
                         token: item_token,
                         name: itemOption.name,
                         created: now,
-                        updated: now
+                        updated: now,
                     };
                 }
 
                 // If exclusive token is selected, delete all other selections
-                if (is_select && sectionData.type.exclusive && item_token === sectionData.type.exclusive.token && response_data) {
+                if (
+                    is_select &&
+                    sectionData.type.exclusive &&
+                    item_token === sectionData.type.exclusive.token &&
+                    response_data
+                ) {
                     await conn(userTableData.name)
                         .where('person_id', person.id)
                         .whereNot('id', response_data.id)
                         .update({
                             deleted: now,
-                            updated: now
+                            updated: now,
                         });
                 }
 
                 const cache_key = cacheService.keys.persons_section_data(
                     person.person_token,
-                    section_key
+                    section_key,
                 );
 
-                let cache_data = await cacheService.getObj(cache_key) || {};
+                let cache_data = (await cacheService.getObj(cache_key)) || {};
 
                 // Clear old selections for single select
                 for (let token in cache_data) {
@@ -1697,20 +1721,18 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
                 // Handle deselection
                 if (existing && !is_select) {
                     // Deselect
-                    await conn(userTableData.name)
-                        .where('id', existing.id)
-                        .update({
-                            deleted: now,
-                            updated: now
-                        });
+                    await conn(userTableData.name).where('id', existing.id).update({
+                        deleted: now,
+                        updated: now,
+                    });
 
                     // Update cache
                     const cache_key = cacheService.keys.persons_section_data(
                         person.person_token,
-                        section_key
+                        section_key,
                     );
 
-                    let cache_data = await cacheService.getObj(cache_key) || {};
+                    let cache_data = (await cacheService.getObj(cache_key)) || {};
                     delete cache_data[item_token];
                     await cacheService.setCache(cache_key, cache_data);
 
@@ -1721,13 +1743,18 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
                     let response_data = null;
                     const cache_key = cacheService.keys.persons_section_data(
                         person.person_token,
-                        section_key
+                        section_key,
                     );
-                    let cache_data = await cacheService.getObj(cache_key) || {};
+                    let cache_data = (await cacheService.getObj(cache_key)) || {};
 
                     // If selecting non-exclusive option, deselect exclusive if it exists
-                    if (sectionData.type.exclusive?.token && item_token !== sectionData.type.exclusive.token) {
-                        let exclusiveOption = options.find(opt => opt.token === sectionData.type.exclusive.token);
+                    if (
+                        sectionData.type.exclusive?.token &&
+                        item_token !== sectionData.type.exclusive.token
+                    ) {
+                        let exclusiveOption = options.find(
+                            (opt) => opt.token === sectionData.type.exclusive.token,
+                        );
                         if (exclusiveOption) {
                             await conn(userTableData.name)
                                 .where('person_id', person.id)
@@ -1735,20 +1762,23 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
                                 .whereNull('deleted')
                                 .update({
                                     deleted: now,
-                                    updated: now
+                                    updated: now,
                                 });
 
                             delete cache_data[sectionData.type.exclusive.token];
                         }
                     }
                     // If selecting exclusive option, deselect all others
-                    else if (sectionData.type.exclusive?.token && item_token === sectionData.type.exclusive.token) {
+                    else if (
+                        sectionData.type.exclusive?.token &&
+                        item_token === sectionData.type.exclusive.token
+                    ) {
                         await conn(userTableData.name)
                             .where('person_id', person.id)
                             .whereNull('deleted')
                             .update({
                                 deleted: now,
-                                updated: now
+                                updated: now,
                             });
 
                         cache_data = {};
@@ -1759,7 +1789,7 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
                         person_id: person.id,
                         [userTableData.cols.id]: itemOption.id,
                         created: now,
-                        updated: now
+                        updated: now,
                     });
 
                     response_data = {
@@ -1767,7 +1797,7 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
                         token: item_token,
                         name: itemOption.name,
                         created: now,
-                        updated: now
+                        updated: now,
                     };
 
                     // Update cache
@@ -1780,10 +1810,72 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
                 // No action needed if trying to select already selected or deselect already deselected
                 return resolve(null);
             }
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return reject(e);
         }
+    });
+}
+
+function updateSectionPositions(person_token, positions) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            if(!person_token || !positions) {
+                return reject('Missing required fields');
+            }
+
+            if(typeof positions !== 'object' || !Object.keys(positions).length) {
+                return reject('Invalid positions');
+            }
+
+            const person = await getPerson(person_token);
+
+            if (!person) {
+                return reject('Person not found');
+            }
+
+            //person sections
+            let person_sections_cache_key = cacheService.keys.person_sections(person.person_token);
+
+            let person_sections = await cacheService.getObj(person_sections_cache_key);
+
+            let batch_update = [];
+
+            for(let key in positions) {
+                if(!(key in person_sections)) {
+                    continue;
+                }
+
+                let prevData = person_sections[key];
+
+                let data = positions[key];
+
+                if(data.position === prevData.position) {
+                    continue;
+                }
+
+                prevData.position = data.position;
+                prevData.updated = timeNow();
+
+                batch_update.push({
+                    id: prevData.id,
+                    position: data.position,
+                    updated: timeNow()
+                });
+            }
+
+            if(!batch_update.length) {
+                return resolve();
+            }
+
+            await batchUpdate('persons_sections', batch_update);
+
+            await cacheService.setCache(person_sections_cache_key, person_sections);
+        } catch (e) {
+            console.error(e);
+        }
+
+        resolve();
     });
 }
 
@@ -1811,4 +1903,5 @@ module.exports = {
     getPolitics,
     getReligions,
     getSmoking,
+    updateSectionPositions,
 };

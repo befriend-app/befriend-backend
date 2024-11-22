@@ -4,7 +4,7 @@ const dbService = require('../../services/db');
 
 loadScriptEnv();
 
-let {prefixLimit, countryPrefixLimit} = require('../../services/locations');
+let { prefixLimit, countryPrefixLimit } = require('../../services/locations');
 
 const BATCH_SIZE = 10000;
 
@@ -21,8 +21,7 @@ function indexCities() {
                 countries_dict[country.id] = country;
             });
 
-            let schools = await conn('schools')
-                .whereNull('deleted');
+            let schools = await conn('schools').whereNull('deleted');
 
             let schools_cities = schools.reduce((acc, school) => {
                 acc[school.city_id] = 1;
@@ -39,7 +38,7 @@ function indexCities() {
             for (let city of cities) {
                 let country_code = countries_dict[city.country_id].country_code;
 
-                if(city.population || (city.id in schools_cities)) {
+                if (city.population || city.id in schools_cities) {
                     pipeline.hSet(
                         cacheService.keys.cities_country(country_code),
                         city.id.toString(),
@@ -49,8 +48,8 @@ function indexCities() {
                             state_id: city.state_id || '',
                             country_id: city.country_id || '',
                             population: Math.floor(city.population) || 0,
-                            ll: [Number(city.lat.toFixed(4)), Number(city.lon.toFixed(4))]
-                        })
+                            ll: [Number(city.lat.toFixed(4)), Number(city.lon.toFixed(4))],
+                        }),
                     );
 
                     commandCount++;
@@ -68,7 +67,7 @@ function indexCities() {
 
             for (let city of cities) {
                 //skip cities without a known population
-                if(!city.population) {
+                if (!city.population) {
                     continue;
                 }
 
@@ -81,7 +80,7 @@ function indexCities() {
 
                     for (let i = 1; i <= Math.min(word.length, prefixLimit); i++) {
                         const prefix = word.slice(0, i);
-                        
+
                         if (!prefixGroups[prefix]) {
                             prefixGroups[prefix] = [];
                         }
@@ -90,7 +89,7 @@ function indexCities() {
 
                         prefixGroups[prefix].push({
                             score: Math.floor(city.population),
-                            value: `${city.id}:${country_code}`
+                            value: `${city.id}:${country_code}`,
                         });
 
                         //add to country prefix for small number of characters
@@ -110,10 +109,10 @@ function indexCities() {
 
                 // Also index start of full name for direct matches
                 const nameLower = city.city_name.toLowerCase();
-                
+
                 for (let i = 1; i <= Math.min(nameLower.length, prefixLimit); i++) {
                     const prefix = nameLower.slice(0, i);
-                    
+
                     if (!prefixGroups[prefix]) {
                         prefixGroups[prefix] = [];
                     }
@@ -122,22 +121,21 @@ function indexCities() {
 
                     prefixGroups[prefix].push({
                         score: Math.floor(city.population),
-                        value: `${city.id}:${country_code}`
+                        value: `${city.id}:${country_code}`,
                     });
                 }
             }
 
-            console.log("Add prefix groups");
-            
+            console.log('Add prefix groups');
+
             for (const [prefix, cities] of Object.entries(prefixGroups)) {
                 if (cities.length > 0) {
                     pipeline.zAdd(cacheService.keys.cities_prefix(prefix), cities);
                 }
             }
 
-            console.log("Exec pipeline");
+            console.log('Exec pipeline');
             await pipeline.execAsPipeline();
-
         } catch (e) {
             console.error(e);
             return reject();
@@ -222,7 +220,7 @@ function indexCountries() {
 }
 
 module.exports = {
-    main: async function(is_me) {
+    main: async function (is_me) {
         try {
             console.log('Index Locations');
 
@@ -231,7 +229,7 @@ module.exports = {
             await indexStates();
             await indexCities();
 
-            if(is_me) {
+            if (is_me) {
                 process.exit();
             }
         } catch (e) {
@@ -241,7 +239,7 @@ module.exports = {
 };
 
 if (require.main === module) {
-    (async function() {
+    (async function () {
         await module.exports.main(true);
     })();
 }

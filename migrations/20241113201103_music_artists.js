@@ -33,13 +33,9 @@ exports.up = function (knex) {
             table.index('artist_id');
             table.index('genre_id');
 
-            table.foreign('artist_id')
-                .references('id')
-                .inTable('music_artists');
+            table.foreign('artist_id').references('id').inTable('music_artists');
 
-            table.foreign('genre_id')
-                .references('id')
-                .inTable('music_genres');
+            table.foreign('genre_id').references('id').inTable('music_genres');
         }),
 
         knex.schema.createTable('music_artists_genres_countries', function (table) {
@@ -58,18 +54,12 @@ exports.up = function (knex) {
             table.index('country_id');
             table.index('genre_id');
 
-            table.foreign('artist_id')
-                .references('id')
-                .inTable('music_artists');
+            table.foreign('artist_id').references('id').inTable('music_artists');
 
-            table.foreign('country_id')
-                .references('id')
-                .inTable('open_countries');
+            table.foreign('country_id').references('id').inTable('open_countries');
 
-            table.foreign('genre_id')
-                .references('id')
-                .inTable('music_genres');
-        })
+            table.foreign('genre_id').references('id').inTable('music_genres');
+        }),
     ]);
 };
 
@@ -77,6 +67,6 @@ exports.down = function (knex) {
     return Promise.all([
         knex.schema.dropTableIfExists('music_artists_genres_countries'),
         knex.schema.dropTableIfExists('music_artists_genres'),
-        knex.schema.dropTableIfExists('music_artists')
+        knex.schema.dropTableIfExists('music_artists'),
     ]);
 };

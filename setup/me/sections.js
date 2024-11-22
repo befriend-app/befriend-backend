@@ -18,7 +18,7 @@ function main() {
 
             let previous = await conn(table_name);
 
-            for(let item of previous) {
+            for (let item of previous) {
                 db_dict[item[token_key]] = item;
             }
 
@@ -26,16 +26,15 @@ function main() {
 
             let r = await axios.get(endpoint);
 
-            for(let item of r.data.items) {
+            for (let item of r.data.items) {
                 let db_item = db_dict[item[token_key]];
 
-                if(!db_item) {
+                if (!db_item) {
                     let new_item = structuredClone(item);
                     new_item.created = timeNow();
                     new_item.updated = timeNow();
 
-                    let [id] = await conn(table_name)
-                        .insert(new_item);
+                    let [id] = await conn(table_name).insert(new_item);
 
                     added++;
 
@@ -43,23 +42,21 @@ function main() {
 
                     db_dict[item[token_key]] = new_item;
                 } else {
-                    if(item.updated > db_item.updated) {
+                    if (item.updated > db_item.updated) {
                         delete item.updated;
 
                         let update_obj = {};
 
-                        for(let k in item) {
-                            if(db_item[k] !== item[k]) {
+                        for (let k in item) {
+                            if (db_item[k] !== item[k]) {
                                 update_obj[k] = item[k];
                             }
                         }
 
-                        if(Object.keys(update_obj).length) {
+                        if (Object.keys(update_obj).length) {
                             update_obj.updated = timeNow();
 
-                            await conn(table_name)
-                                .where('id', db_item.id)
-                                .update(update_obj);
+                            await conn(table_name).where('id', db_item.id).update(update_obj);
 
                             updated++;
                         }
@@ -71,9 +68,9 @@ function main() {
 
             console.log({
                 added,
-                updated
+                updated,
             });
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return reject();
         }
