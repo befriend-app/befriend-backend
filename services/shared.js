@@ -711,7 +711,15 @@ function getOptionDateTime(option) {
 
     let date = date_now.add(option.in_mins, 'minutes');
 
-    let round_minutes = 5;
+    let round_minutes;
+
+    if (option.in_mins >= 240) { // 4 hours or more
+        round_minutes = 30;
+    } else if (option.in_mins >= 120) { // 2 hours or more
+        round_minutes = 15;
+    } else {
+        round_minutes = 5;
+    }
 
     //make time round
     let js_date = roundTimeMinutes(date, round_minutes);
@@ -721,7 +729,7 @@ function getOptionDateTime(option) {
     let minutes_diff = date.diff(date_now, 'minutes') - option.in_mins;
 
     if (minutes_diff < 0) {
-        let add_mins = Math.ceil(Math.abs(minutes_diff) / 5) * 5;
+        let add_mins = Math.ceil(Math.abs(minutes_diff) / round_minutes) * round_minutes;
 
         date = date.add(add_mins, 'minutes');
     }
