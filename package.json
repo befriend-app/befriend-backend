@@ -10,10 +10,6 @@
         {
             "name": "Eugene Gekhter",
             "email": "eugene@befriend.app"
-        },
-        {
-            "name": "Logan Phillips",
-            "email": "logan@befriend.app"
         }
     ],
     "main": "server.js",
