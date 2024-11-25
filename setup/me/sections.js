@@ -9,11 +9,13 @@ function main() {
     return new Promise(async (resolve, reject) => {
         let db_dict = {};
         let table_name = 'me_sections';
-        let token_key = 'section_key';
+        let token_key = 'token';
         let added = 0;
         let updated = 0;
 
         try {
+            await cacheService.deleteKeys(cacheService.keys.me_sections);
+
             let conn = await dbService.conn();
 
             let previous = await conn(table_name);
@@ -63,8 +65,6 @@ function main() {
                     }
                 }
             }
-
-            await cacheService.deleteKeys(cacheService.keys.me_sections);
 
             console.log({
                 added,

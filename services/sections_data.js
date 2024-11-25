@@ -26,6 +26,32 @@ module.exports = {
             rowCols: 'cols-1',
         },
     },
+    genders: {
+        type: {
+            name: 'buttons',
+            single: true,
+        },
+        tables: {
+            genders: {
+                data: {
+                    name: 'genders',
+                },
+                user: {
+                    name: 'persons',
+                    cols: {
+                        id: 'gender_id',
+                        person_id: 'id'
+                    },
+                },
+            },
+        },
+        functions: {
+            data: 'getGenders',
+        },
+        styles: {
+            rowCols: 'cols-3',
+        },
+    },
     languages: {
         type: {
             name: 'buttons',

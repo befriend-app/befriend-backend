@@ -601,8 +601,10 @@ function getPersonSectionItems(person, section_key, country) {
                 for (let table_key in sectionData.tables) {
                     let userTableData = sectionData.tables[table_key]?.user;
 
+                    let person_id_col = userTableData?.cols?.person_id || 'person_id';
+
                     let qry = await conn(userTableData.name)
-                        .where('person_id', person.id)
+                        .where(person_id_col, person.id)
                         .whereNull('deleted');
 
                     let col_name = userTableData.cols.id;
@@ -978,7 +980,7 @@ function getDrinking(options_data_only) {
 
                 options = await conn('drinking')
                     .where('is_visible', true)
-                    .order('sort_position')
+                    .orderBy('sort_position')
                     .select('id', 'token', 'name');
 
                 await cacheService.setCache(cache_key, options);
@@ -989,6 +991,50 @@ function getDrinking(options_data_only) {
             }
 
             let section = sectionsData.drinking;
+
+            let data = {
+                type: section.type,
+                options: options,
+                styles: section.styles,
+                tables: Object.keys(section.tables).reduce((acc, key) => {
+                    acc.push({
+                        name: key,
+                    });
+
+                    return acc;
+                }, []),
+            };
+
+            resolve(data);
+        } catch (e) {
+            console.error(e);
+            reject(e);
+        }
+    });
+}
+
+function getGenders(options_data_only) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const cache_key = cacheService.keys.genders;
+            let options = await cacheService.getObj(cache_key);
+
+            if (!options) {
+                let conn = await dbService.conn();
+
+                options = await conn('genders')
+                    .where('is_visible', true)
+                    .orderBy('sort_position')
+                    .select('id', 'gender_token AS token', 'gender_name as name');
+
+                await cacheService.setCache(cache_key, options);
+            }
+
+            if (options_data_only) {
+                return resolve(options);
+            }
+
+            let section = sectionsData.genders;
 
             let data = {
                 type: section.type,
@@ -1605,6 +1651,8 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
                 return reject('Invalid table configuration');
             }
 
+            let person_id_col = userTableData?.cols?.person_id || 'person_id';
+
             //validate token
             let options = await module.exports[sectionData.functions.data](true);
 
@@ -1625,7 +1673,7 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
                 (sectionData.type.exclusive && item_token === sectionData.type.exclusive.token)
             ) {
                 let existing = await conn(userTableData.name)
-                    .where('person_id', person.id)
+                    .where(person_id_col, person.id)
                     .whereNull('deleted')
                     .first();
 
@@ -1682,7 +1730,7 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
                     response_data
                 ) {
                     await conn(userTableData.name)
-                        .where('person_id', person.id)
+                        .where(person_id_col, person.id)
                         .whereNot('id', response_data.id)
                         .update({
                             deleted: now,
@@ -1713,7 +1761,7 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
             } else {
                 // Handle multi-select case
                 let existing = await conn(userTableData.name)
-                    .where('person_id', person.id)
+                    .where(person_id_col, person.id)
                     .where(userTableData.cols.id, itemOption.id)
                     .whereNull('deleted')
                     .first();
@@ -1757,7 +1805,7 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
                         );
                         if (exclusiveOption) {
                             await conn(userTableData.name)
-                                .where('person_id', person.id)
+                                .where(person_id_col, person.id)
                                 .where(userTableData.cols.id, exclusiveOption.id)
                                 .whereNull('deleted')
                                 .update({
@@ -1774,7 +1822,7 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
                         item_token === sectionData.type.exclusive.token
                     ) {
                         await conn(userTableData.name)
-                            .where('person_id', person.id)
+                            .where(person_id_col, person.id)
                             .whereNull('deleted')
                             .update({
                                 deleted: now,
@@ -1899,6 +1947,7 @@ module.exports = {
     getMovies,
     getCategoriesMovies,
     getDrinking,
+    getGenders,
     getLanguages,
     getPolitics,
     getReligions,
