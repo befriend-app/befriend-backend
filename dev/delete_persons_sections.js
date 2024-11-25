@@ -34,11 +34,12 @@ function main(is_me) {
             //delete activities
             let tables = [
                 'persons_sections',
+                'me_sections'
             ];
 
             for(let table of tables) {
                 try {
-                    await knex('persons_sections').delete();
+                    await knex(table).delete();
                 } catch(e) {
 
                 }
@@ -46,6 +47,8 @@ function main(is_me) {
         }
 
         await deleteKeys(await getKeysWithPrefix('persons:sections:'));
+
+        await require('../setup/me/sections').main();
 
         resolve();
     });

@@ -7,6 +7,7 @@ exports.up = function (knex) {
         await knex.schema
             .createTable('me_sections', (table) => {
                 table.increments('id').primary();
+                table.string('token').notNullable();
                 table.string('section_key').notNullable();
                 table.string('section_name').notNullable();
                 table.text('icon').nullable();
