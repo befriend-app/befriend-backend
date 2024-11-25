@@ -2,9 +2,11 @@ const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 const { timeNow, getCountries, latLonLookup, isNumeric } = require('./shared');
 const { setCache, getObj, execMulti, execPipeline, hGetAll, hGetAllObj } = require('./cache');
-const { getPerson } = require('./persons');
+const { getPerson, updatePerson } = require('./persons');
 let sectionsData = require('./sections_data');
 const { batchUpdate } = require('./db');
+
+const modes = ['solo', 'plus-one', 'plus-kids'];
 
 
 function getModes(me) {
@@ -98,6 +100,31 @@ function getModes(me) {
         resolve(modes);
     });
 }
+
+function putMode(person_token, mode) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let person = await getPerson(person_token);
+
+            if(!person) {
+                return reject("Person not found");
+            }
+
+            if(!mode || !modes.includes(mode)) {
+                return reject("Invalid mode");
+            }
+
+            await updatePerson(person_token, {
+                mode: mode,
+            });
+        } catch(e) {
+            console.error(e);
+            return reject(e);
+        }
+        resolve();
+    });
+}
+
 
 function addSection(person_token, section_key, location) {
     let country;
@@ -2170,6 +2197,7 @@ function updateSectionPositions(person_token, positions) {
 module.exports = {
     sections: sectionsData,
     getModes,
+    putMode,
     addSection,
     deleteSection,
     addSectionItem,

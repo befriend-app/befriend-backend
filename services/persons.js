@@ -1,5 +1,6 @@
 const cacheService = require('../services/cache');
 const dbService = require('../services/db');
+const { timeNow } = require('./shared');
 
 module.exports = {
     isAuthenticated: function (person_token, login_token) {
@@ -51,6 +52,40 @@ module.exports = {
                 if (person) {
                     await cacheService.setCache(cache_key, person);
                 }
+
+                resolve(person);
+            } catch (e) {
+                reject(e);
+            }
+        });
+    },
+    updatePerson: function (person_token, data) {
+        return new Promise(async (resolve, reject) => {
+            if (!person_token) {
+                return reject('Person token required');
+            }
+
+            try {
+                let person = await module.exports.getPerson(person_token);
+
+                if(!person) {
+                    return reject("No person found");
+                }
+
+                //use cached data
+                let cache_key = cacheService.keys.person(person_token);
+
+                let conn = await dbService.conn();
+
+                data.updated = timeNow();
+
+                await conn('persons')
+                    .where('id', person.id)
+                    .update(data);
+
+                Object.assign(person, data);
+
+                await cacheService.setCache(cache_key, person);
 
                 resolve(person);
             } catch (e) {

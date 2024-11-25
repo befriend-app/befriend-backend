@@ -17,6 +17,18 @@ router.get('/me', function (req, res, next) {
     });
 });
 
+router.put('/me/mode', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await personsController.putMeMode(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
 router.post('/me/sections', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {

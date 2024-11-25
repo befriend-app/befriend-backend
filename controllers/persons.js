@@ -10,7 +10,7 @@ const {
     deleteSection,
     addSectionItem,
     updateSectionItem,
-    selectSectionOptionItem, updateSectionPositions, getModes,
+    selectSectionOptionItem, updateSectionPositions, getModes, getGenders, putMode,
 } = require('../services/me');
 const { findMatches, notifyMatches, prepareActivity } = require('../services/activities');
 
@@ -24,12 +24,15 @@ module.exports = {
 
                 let country = await latLonLookup(req.query.location?.lat, req.query.location?.lon);
 
+                let genders = await getGenders(true);
+
                 let modes = await getModes(me);
                 
                 let sections = await getSections(me, country);
 
                 res.json({
                     me,
+                    genders,
                     modes,
                     sections,
                     country,
@@ -39,6 +42,23 @@ module.exports = {
             } catch (e) {
                 console.error(e);
                 res.json('Error getting person', 400);
+            }
+        });
+    },
+    putMeMode: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let data = await putMode(
+                    req.body.person_token,
+                    req.body.mode,
+                );
+
+                res.json(data, 200);
+
+                resolve();
+            } catch (e) {
+                console.error(e);
+                res.json('Error adding section', 400);
             }
         });
     },
