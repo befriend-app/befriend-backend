@@ -14,6 +14,7 @@ module.exports = {
         languages: 'sections:languages',
         life_stages: `sections:life_stages`,
         politics: 'sections:politics',
+        relationship_status: 'sections:relationship_status',
         religions: 'sections:religions',
         smoking: 'sections:smoking',
         instruments: `sections:instruments`,

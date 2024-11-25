@@ -129,6 +129,31 @@ module.exports = {
             rowCols: 'cols-1',
         },
     },
+    relationships: {
+        type: {
+            name: 'buttons',
+            single: true,
+        },
+        tables: {
+            relationship_status: {
+                data: {
+                    name: 'relationship_status',
+                },
+                user: {
+                    name: 'persons_relationship_status',
+                    cols: {
+                        id: 'relationship_status_id',
+                    },
+                },
+            },
+        },
+        functions: {
+            data: 'getRelationshipStatus',
+        },
+        styles: {
+            rowCols: 'cols-2',
+        },
+    },
     religion: {
         type: {
             name: 'buttons',
