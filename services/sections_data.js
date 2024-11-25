@@ -77,6 +77,33 @@ module.exports = {
             rowCols: 'cols-2',
         },
     },
+    life_stages: {
+        type: {
+            name: 'buttons',
+            multi: true,
+            exclusive: {
+            },
+        },
+        tables: {
+            life_stages: {
+                data: {
+                    name: 'life_stages',
+                },
+                user: {
+                    name: 'persons_life_stages',
+                    cols: {
+                        id: 'life_stage_id',
+                    },
+                },
+            },
+        },
+        functions: {
+            data: 'getLifeStages',
+        },
+        styles: {
+            rowCols: 'cols-2',
+        },
+    },
     politics: {
         type: {
             name: 'buttons',

@@ -12,6 +12,7 @@ module.exports = {
         drinking: 'sections:drinking',
         genders: 'sections:genders',
         languages: 'sections:languages',
+        life_stages: `sections:life_stages`,
         politics: 'sections:politics',
         religions: 'sections:religions',
         smoking: 'sections:smoking',

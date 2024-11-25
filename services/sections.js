@@ -507,7 +507,30 @@ function updateMeSectionItem(body) {
                         .update(data);
 
                     if (update === 1 && cache_data) {
-                        updateCacheItem(cache_data, data, section_item_id);
+                        let targetItem;
+
+                        for(let k in cache_data) {
+                            let item = cache_data[k];
+
+                            if(table_key && table_key !== item.table_key) {
+                                continue;
+                            }
+
+                            if(item.id === section_item_id) {
+                                targetItem = item;
+                                break;
+                            }
+                        }
+
+                        if (targetItem) {
+                            if (is_delete) {
+                                const itemToken = targetItem.token;
+                                delete cache_data[itemToken];
+                            } else {
+                                // For update, merge new data
+                                Object.assign(targetItem, data);
+                            }
+                        }
                     }
 
                     resolve();
@@ -1530,6 +1553,51 @@ function getLanguages(options_data_only, country) {
     });
 }
 
+function getLifeStages(options_data_only) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const cache_key = cacheService.keys.life_stages;
+            let options = await cacheService.getObj(cache_key);
+
+            if (!options) {
+                let conn = await dbService.conn();
+
+                options = await conn('life_stages')
+                    .where('is_visible', true)
+                    .orderBy('sort_position')
+                    .select('id', 'token', 'name');
+
+                await cacheService.setCache(cache_key, options);
+            }
+
+            if (options_data_only) {
+                return resolve(options);
+            }
+
+            let section = sectionsData.life_stages;
+
+            let data = {
+                type: section.type,
+                options: options,
+                styles: section.styles,
+                tables: Object.keys(section.tables).reduce((acc, key) => {
+                    acc.push({
+                        name: key,
+                    });
+
+                    return acc;
+                }, []),
+            };
+
+            resolve(data);
+        } catch (e) {
+            console.error(e);
+            reject(e);
+        }
+    });
+}
+
+
 function getPolitics(options_data_only) {
     return new Promise(async (resolve, reject) => {
         try {
@@ -1980,6 +2048,7 @@ module.exports = {
     getMusic,
     getSchools,
     getCategoriesMusic,
+    getLifeStages,
     getMovies,
     getCategoriesMovies,
     getDrinking,

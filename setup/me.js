@@ -4,6 +4,9 @@ function main() {
             console.log('Loading me data');
 
             await require('./me/sections').main();
+
+            await require('./me/life_stages').main();
+
             await require('./me/drinking').main();
             await require('./me/instruments').main();
             await require('./me/languages').main();
