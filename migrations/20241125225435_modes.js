@@ -4,7 +4,7 @@
  */
 exports.up = function(knex) {
     return knex.schema.alterTable('persons', (table) => {
-        // table.string('mode').nullable().after('person_token');
+        table.string('mode').nullable().after('person_token');
         table.boolean('is_online').notNullable().after('mode').alter();
     }).createTable('persons_partner', table => {
         table.bigIncrements('id').primary();
