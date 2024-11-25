@@ -11,6 +11,7 @@ module.exports = {
         me_sections: `sections:me`,
         drinking: 'sections:drinking',
         genders: 'sections:genders',
+        kids_ages: 'sections:kids_ages',
         languages: 'sections:languages',
         life_stages: `sections:life_stages`,
         politics: 'sections:politics',
@@ -92,6 +93,12 @@ module.exports = {
         },
         persons_section_data: function (person_token, data_name) {
             return `persons:sections:data:${data_name}:${person_token}`;
+        },
+        persons_partner: function (person_token) {
+            return `persons:partner:${person_token}`;
+        },
+        persons_kids: function (person_token) {
+            return `persons:kids:${person_token}`;
         },
         instrument: function (token) {
             return `instruments:${token}`;

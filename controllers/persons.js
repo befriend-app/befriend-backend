@@ -5,13 +5,13 @@ const { timeNow, generateToken, latLonLookup } = require('../services/shared');
 
 const { getPerson } = require('../services/persons');
 const {
-    getMeSections,
-    addMeSection,
-    deleteMeSection,
-    addMeSectionItem,
-    updateMeSectionItem,
-    selectSectionOptionItem, updateSectionPositions,
-} = require('../services/sections');
+    getSections,
+    addSection,
+    deleteSection,
+    addSectionItem,
+    updateSectionItem,
+    selectSectionOptionItem, updateSectionPositions, getModes,
+} = require('../services/me');
 const { findMatches, notifyMatches, prepareActivity } = require('../services/activities');
 
 module.exports = {
@@ -24,10 +24,13 @@ module.exports = {
 
                 let country = await latLonLookup(req.query.location?.lat, req.query.location?.lon);
 
-                let sections = await getMeSections(me, country);
+                let modes = await getModes(me);
+                
+                let sections = await getSections(me, country);
 
                 res.json({
                     me,
+                    modes,
                     sections,
                     country,
                 });
@@ -42,7 +45,7 @@ module.exports = {
     addMeSection: function (req, res) {
         return new Promise(async (resolve, reject) => {
             try {
-                let data = await addMeSection(
+                let data = await addSection(
                     req.body.person_token,
                     req.body.key,
                     req.body.location,
@@ -60,7 +63,7 @@ module.exports = {
     deleteMeSection: function (req, res) {
         return new Promise(async (resolve, reject) => {
             try {
-                let data = await deleteMeSection(req.body.person_token, req.params.section_key);
+                let data = await deleteSection(req.body.person_token, req.params.section_key);
 
                 res.json(data, 200);
 
@@ -74,7 +77,7 @@ module.exports = {
     addMeSectionItem: function (req, res) {
         return new Promise(async (resolve, reject) => {
             try {
-                let data = await addMeSectionItem(
+                let data = await addSectionItem(
                     req.body.person_token,
                     req.body.section_key,
                     req.body.table_key,
@@ -134,7 +137,7 @@ module.exports = {
     updateMeSectionItem: function (req, res) {
         return new Promise(async (resolve, reject) => {
             try {
-                let data = await updateMeSectionItem(req.body);
+                let data = await updateSectionItem(req.body);
 
                 res.json(data, 201);
 

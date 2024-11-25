@@ -22,6 +22,8 @@ exports.up = function(knex) {
         table.string('name').notNullable();
         table.integer('age_min').notNullable();
         table.integer('age_max').notNullable();
+        table.boolean('is_visible').defaultTo(true);
+        table.integer('sort_position').nullable();
         table.bigInteger('created').notNullable();
         table.bigInteger('updated').notNullable();
         table.bigInteger('deleted').nullable();
@@ -31,6 +33,7 @@ exports.up = function(knex) {
         table.bigInteger('person_id').unsigned().notNullable();
         table.integer('age_id').unsigned().notNullable();
         table.integer('gender_id').unsigned().nullable();
+        table.boolean('is_active').defaultTo(true);
         table.bigInteger('created').notNullable();
         table.bigInteger('updated').notNullable();
         table.bigInteger('deleted').nullable();

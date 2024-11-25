@@ -6,7 +6,100 @@ const { getPerson } = require('./persons');
 let sectionsData = require('./sections_data');
 const { batchUpdate } = require('./db');
 
-function addMeSection(person_token, section_key, location) {
+
+function getModes(me) {
+    return new Promise(async (resolve, reject) => {
+        let modes = {
+            data: {
+                partner: {},
+                kids: {},
+            },
+            options: {
+                kids: {}
+            },
+        };
+
+        // Cache keys
+        let cache_key_kid_ages = cacheService.keys.kids_ages;
+        let cache_key_partner = cacheService.keys.persons_partner(me.person_token);
+        let cache_key_kids = cacheService.keys.persons_kids(me.person_token);
+
+        // Try to get data from cache first
+        const [cached_ages, cached_partner, cached_kids] = await Promise.all([
+            cacheService.getObj(cache_key_kid_ages),
+            cacheService.getObj(cache_key_partner),
+            cacheService.getObj(cache_key_kids)
+        ]);
+
+        // If we have all cached data, use it
+        if (cached_ages && cached_partner && cached_kids) {
+            modes.options.kids = cached_ages;
+            modes.data.partner = cached_partner;
+            modes.data.kids = cached_kids;
+            return resolve(modes);
+        }
+
+        // Otherwise fetch from database
+        let conn = await dbService.conn();
+
+        // Get kid age options
+        let ages = await conn('kids_ages')
+            .whereNull('deleted')
+            .orderBy('age_min')
+            .select('id', 'token', 'name', 'age_min', 'age_max');
+
+        // Get partner data
+        let partner = await conn('persons_partner')
+            .where('person_id', me.id)
+            .whereNull('deleted')
+            .select('token', 'gender_id')
+            .first();
+
+        // Get kids data
+        let kids = await conn('persons_kids')
+            .where('person_id', me.id)
+            .whereNull('deleted')
+            .select('token', 'age_id', 'gender_id');
+
+        // Organize data
+        let ages_dict = {};
+        for (let age of ages) {
+            ages_dict[age.token] = {
+                token: age.token,
+                name: age.name,
+                range: {
+                    min: age.age_min,
+                    max: age.age_max
+                }
+            };
+        }
+
+        let kids_dict = {};
+
+        for (let kid of kids) {
+            kids_dict[kid.token] = {
+                token: kid.token,
+                gender_id: kid.gender_id,
+                age_id: kid.age_id
+            };
+        }
+
+        // Update cache
+        await Promise.all([
+            cacheService.setCache(cache_key_kid_ages, ages_dict),
+            cacheService.setCache(cache_key_partner, partner || {}),
+            cacheService.setCache(cache_key_kids, kids_dict)
+        ]);
+
+        modes.options.kids = ages_dict;
+        modes.data.partner = partner || {};
+        modes.data.kids = kids_dict;
+
+        resolve(modes);
+    });
+}
+
+function addSection(person_token, section_key, location) {
     let country;
 
     function addDataToSection(section) {
@@ -59,7 +152,7 @@ function addMeSection(person_token, section_key, location) {
             let conn = await dbService.conn();
             let cache_key = cacheService.keys.person_sections(person.person_token);
 
-            let all_sections = await getAllMeSections();
+            let all_sections = await getAllSections();
 
             for (let section of all_sections) {
                 sections_dict.byId[section.id] = section;
@@ -151,7 +244,7 @@ function addMeSection(person_token, section_key, location) {
     });
 }
 
-function deleteMeSection(person_token, section_key) {
+function deleteSection(person_token, section_key) {
     return new Promise(async (resolve, reject) => {
         if (!person_token || !section_key) {
             return reject('Person and section key required');
@@ -171,7 +264,7 @@ function deleteMeSection(person_token, section_key) {
             let conn = await dbService.conn();
             let cache_key = cacheService.keys.person_sections(person.person_token);
 
-            let all_sections = await getAllMeSections();
+            let all_sections = await getAllSections();
 
             for (let section of all_sections) {
                 sections_dict.byKey[section.section_key] = section;
@@ -213,7 +306,7 @@ function deleteMeSection(person_token, section_key) {
     });
 }
 
-function addMeSectionItem(person_token, section_key, table_key, item_token, hash_key) {
+function addSectionItem(person_token, section_key, table_key, item_token, hash_key) {
     return new Promise(async (resolve, reject) => {
         try {
             if (!section_key) {
@@ -252,7 +345,7 @@ function addMeSectionItem(person_token, section_key, table_key, item_token, hash
                 return reject('No person found');
             }
 
-            let me_sections = await getAllMeSections();
+            let me_sections = await getAllSections();
 
             let this_section = me_sections.find((section) => section.section_key === section_key);
 
@@ -364,7 +457,7 @@ function addMeSectionItem(person_token, section_key, table_key, item_token, hash
     });
 }
 
-function updateMeSectionItem(body) {
+function updateSectionItem(body) {
     return new Promise(async (resolve, reject) => {
         if (typeof body !== 'object') {
             return reject('No body');
@@ -702,7 +795,7 @@ function getPersonSectionItems(person, section_key, country) {
     });
 }
 
-function getAllMeSections() {
+function getAllSections() {
     return new Promise(async (resolve, reject) => {
         let me_sections_cache_key = cacheService.keys.me_sections;
 
@@ -729,7 +822,7 @@ function getAllMeSections() {
     });
 }
 
-function getMeSections(person, country) {
+function getSections(person, country) {
     return new Promise(async (resolve, reject) => {
         if (!person || !person.person_token) {
             return resolve('person required');
@@ -756,7 +849,7 @@ function getMeSections(person, country) {
             let person_sections_cache_key = cacheService.keys.person_sections(person.person_token);
 
             //all me sections
-            let all_me_sections = await getAllMeSections();
+            let all_me_sections = await getAllSections();
 
             for (let section of all_me_sections) {
                 me_dict.byId[section.id] = section;
@@ -1597,7 +1690,6 @@ function getLifeStages(options_data_only) {
     });
 }
 
-
 function getPolitics(options_data_only) {
     return new Promise(async (resolve, reject) => {
         try {
@@ -1723,7 +1815,6 @@ function getRelationshipStatus(options_data_only) {
         }
     });
 }
-
 
 function getSmoking(options_data_only) {
     return new Promise(async (resolve, reject) => {
@@ -2078,13 +2169,14 @@ function updateSectionPositions(person_token, positions) {
 
 module.exports = {
     sections: sectionsData,
-    addMeSection,
-    deleteMeSection,
-    addMeSectionItem,
-    updateMeSectionItem,
+    getModes,
+    addSection,
+    deleteSection,
+    addSectionItem,
+    updateSectionItem,
     getPersonSectionItems,
-    getAllMeSections,
-    getMeSections,
+    getAllSections,
+    getSections,
     getActiveData,
     dataForSchema,
     selectSectionOptionItem,
