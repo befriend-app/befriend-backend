@@ -40,6 +40,8 @@ async function deleteDb() {
         }
 
         let tables = [
+            'persons_music_artists',
+            'persons_music_genres',
             'music_artists_genres',
             'music_artists',
             'music_genres_countries',

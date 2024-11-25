@@ -40,7 +40,7 @@ function main(is_me) {
                 await knex(table).delete();
             }
 
-            let keys = await cacheService.getKeys(`${cacheService.keys.person_sections('')}*`);
+            let keys = await cacheService.getKeysWithPrefix(`${cacheService.keys.person_sections('')}`);
 
             keys.push(cacheService.keys.me_sections);
 
