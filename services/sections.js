@@ -775,6 +775,42 @@ function getMeSections(person, country) {
                 }
             }
 
+            // Set genders automatically if:
+            // 1. Not in active sections
+            // 2. Not previously deleted
+            if (!('genders' in organized.active)) {
+                const wasDeleted = person_sections['genders']?.deleted;
+
+                if (!wasDeleted) {
+                    // Get the genders section data
+                    const gendersSection = me_dict.byKey['genders'];
+
+                    if (gendersSection) {
+                        // Create new section record
+                        const newSection = {
+                            person_id: person.id,
+                            section_id: gendersSection.id,
+                            position: Object.keys(organized.active).length,
+                            created: timeNow(),
+                            updated: timeNow()
+                        };
+
+                        // Insert into database
+                        const [id] = await conn('persons_sections').insert(newSection);
+
+                        newSection.id = id;
+
+                        // Update cache
+                        person_sections['genders'] = newSection;
+                        await setCache(person_sections_cache_key, person_sections);
+
+                        // Add to active sections and remove from options
+                        organized.active['genders'] = newSection;
+                        delete organized.options['genders'];
+                    }
+                }
+            }
+
             //add data options to active
             organized.active = await getActiveData(person, organized.active, country);
 
