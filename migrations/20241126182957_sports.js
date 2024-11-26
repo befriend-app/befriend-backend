@@ -5,6 +5,7 @@ exports.up = async function(knex) {
             knex.schema.dropTableIfExists('persons_sports_watch'),
             knex.schema.dropTableIfExists('sports_teams_leagues'),
             knex.schema.dropTableIfExists('sports_teams'),
+            knex.schema.dropTableIfExists('sports_leagues_countries'),
             knex.schema.dropTableIfExists('sports_leagues'),
             knex.schema.dropTableIfExists('sports_countries'),
             knex.schema.dropTableIfExists('sports')
@@ -175,6 +176,7 @@ exports.down = function(knex) {
         knex.schema.dropTableIfExists('persons_sports_watch'),
         knex.schema.dropTableIfExists('sports_teams_leagues'),
         knex.schema.dropTableIfExists('sports_teams'),
+        knex.schema.dropTableIfExists('sports_leagues_countries'),
         knex.schema.dropTableIfExists('sports_leagues'),
         knex.schema.dropTableIfExists('sports_countries'),
         knex.schema.dropTableIfExists('sports')
