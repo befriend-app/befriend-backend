@@ -16,6 +16,8 @@ exports.up = function(knex) {
         table.bigInteger('deleted').nullable();
         table.foreign('person_id').references('id').inTable('persons');
         table.foreign('gender_id').references('id').inTable('genders');
+
+        table.index('token');
     }).createTable('kids_ages', table => {
         table.increments('id').primary();
         table.string('token').notNullable();
@@ -31,7 +33,7 @@ exports.up = function(knex) {
         table.bigIncrements('id').primary();
         table.string('token').notNullable();
         table.bigInteger('person_id').unsigned().notNullable();
-        table.integer('age_id').unsigned().notNullable();
+        table.integer('age_id').unsigned().nullable();
         table.integer('gender_id').unsigned().nullable();
         table.boolean('is_active').defaultTo(true);
         table.bigInteger('created').notNullable();
@@ -40,6 +42,8 @@ exports.up = function(knex) {
         table.foreign('person_id').references('id').inTable('persons');
         table.foreign('age_id').references('id').inTable('kids_ages');
         table.foreign('gender_id').references('id').inTable('genders');
+
+        table.index('token');
     })
 };
 

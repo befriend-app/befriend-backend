@@ -67,6 +67,7 @@ function getModes(me) {
         let ages_dict = {};
         for (let age of ages) {
             ages_dict[age.token] = {
+                id: age.id,
                 token: age.token,
                 name: age.name,
                 range: {
@@ -80,6 +81,7 @@ function getModes(me) {
 
         for (let kid of kids) {
             kids_dict[kid.token] = {
+                id: kid.id,
                 token: kid.token,
                 gender_id: kid.gender_id,
                 age_id: kid.age_id
@@ -192,6 +194,188 @@ function putPartner(person_token, gender_token, is_select) {
             console.error(e);
             return reject(e);
         }
+        resolve();
+    });
+}
+
+function addKid(person_token) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let person = await getPerson(person_token);
+
+            if(!person) {
+                return reject("Person not found");
+            }
+
+            let conn = await dbService.conn();
+
+            // Generate new kid
+            let kid = {
+                token: generateToken(14),
+                person_id: person.id,
+                created: timeNow(),
+                updated: timeNow()
+            };
+
+            let [id] = await conn('persons_kids').insert(kid);
+            kid.id = id;
+
+            // Update cache
+            const cache_key = cacheService.keys.persons_kids(person.person_token);
+            let cached_kids = await cacheService.getObj(cache_key) || {};
+
+            cached_kids[kid.token] = {
+                token: kid.token,
+                gender_id: null,
+                age_id: null
+            };
+
+            await cacheService.setCache(cache_key, cached_kids);
+
+            resolve(kid);
+        } catch (e) {
+            return reject(e);
+        }
+
+        resolve();
+    });
+}
+
+function updateKid(person_token, kid_token, age_token, gender_token, is_select) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let person = await getPerson(person_token);
+
+            if(!person) {
+                return reject("Person not found");
+            }
+
+            if (!kid_token) {
+                return reject("Kid token required");
+            }
+
+            let conn = await dbService.conn();
+
+            // Get kid
+            let kid = await conn('persons_kids')
+                .where('token', kid_token)
+                .where('person_id', person.id)
+                .first();
+
+            if(!kid) {
+                return reject('Kid not found');
+            }
+
+            // Get age and gender records if tokens provided
+            let age_id = null;
+            let gender_id = null;
+
+            let ages = await getObj(cacheService.keys.kids_ages);
+
+            if(ages?.[age_token]) {
+                let age = ages[age_token];
+
+                if(age) {
+                    age_id = age.id;
+                }
+            }
+
+            if(gender_token) {
+                let genders = await getGenders(true);
+
+                if(genders) {
+                    let gender = genders.find(x => x.token === gender_token);
+
+                    if(gender) {
+                        gender_id = gender.id;
+                    }
+                }
+            }
+
+            // Update DB
+            const updates = {
+                updated: timeNow()
+            };
+
+            if(age_id !== null) {
+                updates.age_id = age_id;
+            }
+
+            if(gender_id !== null) {
+                if(is_select) {
+                    updates.gender_id = gender_id;
+                } else {
+                    updates.gender_id = null;
+                }
+            }
+
+            await conn('persons_kids')
+                .where('id', kid.id)
+                .update(updates);
+
+            // Update cache
+            const cache_key = cacheService.keys.persons_kids(person.person_token);
+            let cached_kids = await cacheService.getObj(cache_key) || {};
+
+            if(cached_kids[kid_token]) {
+                if(age_id !== null) {
+                    cached_kids[kid_token].age_id = age_id;
+                }
+                if(gender_id !== null) {
+                    if(is_select) {
+                        cached_kids[kid_token].gender_id = gender_id;
+                    } else {
+                        cached_kids[kid_token].gender_id = null;
+                    }
+
+                }
+                await cacheService.setCache(cache_key, cached_kids);
+            }
+        } catch (e) {
+            return reject(e);
+        }
+
+        resolve();
+    });
+}
+
+function removeKid(person_token, kid_token) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let person = await getPerson(person_token);
+
+            if(!person) {
+                return reject("Person not found");
+            }
+
+            if (!kid_token) {
+                return reject("Kid token required");
+            }
+
+            let conn = await dbService.conn();
+
+            // Soft delete in DB
+            await conn('persons_kids')
+                .where('token', kid_token)
+                .where('person_id', person.id)
+                .update({
+                    deleted: timeNow(),
+                    updated: timeNow()
+                });
+
+            // Update cache
+            const cache_key = cacheService.keys.persons_kids(person.person_token);
+            let cached_kids = await cacheService.getObj(cache_key);
+
+            if(cached_kids) {
+                delete cached_kids[kid_token];
+                await cacheService.setCache(cache_key, cached_kids);
+            }
+        } catch(e) {
+            console.error(e);
+            return reject('Error deleting kid');
+        }
+
         resolve();
     });
 }
@@ -2270,6 +2454,9 @@ module.exports = {
     getModes,
     putMode,
     putPartner,
+    addKid,
+    updateKid,
+    removeKid,
     addSection,
     deleteSection,
     addSectionItem,

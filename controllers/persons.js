@@ -10,7 +10,8 @@ const {
     deleteSection,
     addSectionItem,
     updateSectionItem,
-    selectSectionOptionItem, updateSectionPositions, getModes, getGenders, putMode, putPartner,
+    selectSectionOptionItem, updateSectionPositions, getModes, getGenders, putMode, putPartner, addKid, updateKid,
+    removeKid,
 } = require('../services/me');
 const { findMatches, notifyMatches, prepareActivity } = require('../services/activities');
 
@@ -72,6 +73,63 @@ module.exports = {
                 );
 
                 res.json("partner updated", 200);
+
+                resolve();
+            } catch (e) {
+                console.error(e);
+                res.json('Error adding section', 400);
+            }
+        });
+    },
+    postMeKids: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let kid = await addKid(
+                    req.body.person_token,
+                );
+
+                res.json(kid, 201);
+
+                resolve();
+            } catch (e) {
+                console.error(e);
+                res.json('Error adding section', 400);
+            }
+        });
+    },
+    putMeKids: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                await updateKid(
+                    req.body.person_token,
+                    req.body.kid_token,
+                    req.body.age_token,
+                    req.body.gender_token,
+                    req.body.is_select
+                );
+
+                res.json({
+                    success: true
+                });
+
+                resolve();
+            } catch (e) {
+                console.error(e);
+                res.json('Error adding section', 400);
+            }
+        });
+    },
+    removeMeKids: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                await removeKid(
+                    req.body.person_token,
+                    req.body.kid_token,
+                );
+
+                res.json({
+                    success: true
+                });
 
                 resolve();
             } catch (e) {

@@ -41,6 +41,42 @@ router.put('/me/mode/partner', function (req, res, next) {
     });
 });
 
+router.post('/me/mode/kids', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await personsController.postMeKids(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
+router.put('/me/mode/kids', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await personsController.putMeKids(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
+router.delete('/me/mode/kids', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await personsController.removeMeKids(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
 router.post('/me/sections', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
