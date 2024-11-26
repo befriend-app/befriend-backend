@@ -10,7 +10,7 @@ const {
     deleteSection,
     addSectionItem,
     updateSectionItem,
-    selectSectionOptionItem, updateSectionPositions, getModes, getGenders, putMode,
+    selectSectionOptionItem, updateSectionPositions, getModes, getGenders, putMode, putPartner,
 } = require('../services/me');
 const { findMatches, notifyMatches, prepareActivity } = require('../services/activities');
 
@@ -54,6 +54,24 @@ module.exports = {
                 );
 
                 res.json(data, 200);
+
+                resolve();
+            } catch (e) {
+                console.error(e);
+                res.json('Error adding section', 400);
+            }
+        });
+    },
+    putMePartner: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                await putPartner(
+                    req.body.person_token,
+                    req.body.gender,
+                    req.body.isSelect
+                );
+
+                res.json("partner updated", 200);
 
                 resolve();
             } catch (e) {

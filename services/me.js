@@ -1,6 +1,6 @@
 const cacheService = require('../services/cache');
 const dbService = require('../services/db');
-const { timeNow, getCountries, latLonLookup, isNumeric } = require('./shared');
+const { timeNow, getCountries, latLonLookup, isNumeric, generateToken } = require('./shared');
 const { setCache, getObj, execMulti, execPipeline, hGetAll, hGetAllObj } = require('./cache');
 const { getPerson, updatePerson } = require('./persons');
 let sectionsData = require('./sections_data');
@@ -117,6 +117,77 @@ function putMode(person_token, mode) {
             await updatePerson(person_token, {
                 mode: mode,
             });
+        } catch(e) {
+            console.error(e);
+            return reject(e);
+        }
+        resolve();
+    });
+}
+
+function putPartner(person_token, gender_token, is_select) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let person = await getPerson(person_token);
+
+            if(!person) {
+                return reject("Person not found");
+            }
+
+            let genders = await getGenders(true);
+
+            let gender = genders.find(x => x.token === gender_token);
+
+            if(!gender) {
+                return reject("Gender not found");
+            }
+
+            let cache_key = cacheService.keys.persons_partner(person_token);
+
+            let conn = await dbService.conn();
+
+            //check if record exists
+            let check = await conn('persons_partner')
+                .where('person_id', person.id)
+                .first();
+
+            if(check) {
+                let updateData = {};
+
+                if(is_select) {
+                    updateData.gender_id = gender.id;
+                    updateData.updated = timeNow();
+                    updateData.deleted = null;
+                } else {
+                    updateData.gender_id = null;
+                    updateData.updated = timeNow();
+                }
+
+                await conn('persons_partner')
+                    .where('id', check.id)
+                    .update(updateData);
+
+                let cacheData = Object.assign(check, updateData);
+
+                await cacheService.setCache(cache_key, cacheData)
+            } else {
+                let token = generateToken(16);
+
+                let createData = {
+                    person_id: person.id,
+                    gender_id: gender.id,
+                    token: token,
+                    created: timeNow(),
+                    updated: timeNow()
+                };
+
+                let [id] = await conn('persons_partner')
+                    .insert(createData);
+
+                createData.id = id;
+
+                await cacheService.setCache(cache_key, createData);
+            }
         } catch(e) {
             console.error(e);
             return reject(e);
@@ -2198,6 +2269,7 @@ module.exports = {
     sections: sectionsData,
     getModes,
     putMode,
+    putPartner,
     addSection,
     deleteSection,
     addSectionItem,
