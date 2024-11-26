@@ -84,7 +84,8 @@ function getModes(me) {
                 id: kid.id,
                 token: kid.token,
                 gender_id: kid.gender_id,
-                age_id: kid.age_id
+                age_id: kid.age_id,
+                is_active: kid.is_active
             };
         }
 
@@ -213,6 +214,7 @@ function addKid(person_token) {
             let kid = {
                 token: generateToken(14),
                 person_id: person.id,
+                is_active: true,
                 created: timeNow(),
                 updated: timeNow()
             };
@@ -227,7 +229,8 @@ function addKid(person_token) {
             cached_kids[kid.token] = {
                 token: kid.token,
                 gender_id: null,
-                age_id: null
+                age_id: null,
+                is_active: true
             };
 
             await cacheService.setCache(cache_key, cached_kids);
@@ -241,7 +244,7 @@ function addKid(person_token) {
     });
 }
 
-function updateKid(person_token, kid_token, age_token, gender_token, is_select) {
+function updateKid(person_token, kid_token, age_token = null, gender_token = null, is_select = null, is_active = null) {
     return new Promise(async (resolve, reject) => {
         try {
             let person = await getPerson(person_token);
@@ -309,6 +312,10 @@ function updateKid(person_token, kid_token, age_token, gender_token, is_select) 
                 }
             }
 
+            if(is_active !== null) {
+                updates.is_active = is_active;
+            }
+
             await conn('persons_kids')
                 .where('id', kid.id)
                 .update(updates);
@@ -329,6 +336,10 @@ function updateKid(person_token, kid_token, age_token, gender_token, is_select) 
                     }
 
                 }
+                if(is_active !== null) {
+                    cached_kids[kid_token].is_active = is_active;
+                }
+
                 await cacheService.setCache(cache_key, cached_kids);
             }
         } catch (e) {

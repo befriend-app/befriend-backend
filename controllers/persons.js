@@ -105,7 +105,8 @@ module.exports = {
                     req.body.kid_token,
                     req.body.age_token,
                     req.body.gender_token,
-                    req.body.is_select
+                    req.body.is_select,
+                    req.body.is_active
                 );
 
                 res.json({
