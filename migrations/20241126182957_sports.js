@@ -47,18 +47,30 @@ exports.up = async function(knex) {
             table.string('name', 255).notNullable();
             table.string('short_name', 100).nullable();
             table.integer('sport_id').unsigned().notNullable();
-            table.integer('country_id').unsigned().nullable();
             table.boolean('is_active').notNullable().defaultTo(true);
-            table.integer('popularity').nullable();
-            table.integer('season').nullable();
+            table.integer('position').nullable();
             table.bigInteger('created').notNullable();
             table.bigInteger('updated').notNullable();
             table.bigInteger('deleted').nullable();
 
             table.foreign('sport_id').references('id').inTable('sports');
-            table.foreign('country_id').references('id').inTable('open_countries');
             table.index('token');
             table.index('external_id');
+        }),
+
+        knex.schema.createTable('sports_leagues_countries', function(table) {
+            table.increments('id').primary();
+            table.integer('country_id').unsigned().notNullable();
+            table.integer('league_id').unsigned().notNullable();
+            table.integer('position').notNullable();
+            table.foreign('country_id').references('id').inTable('open_countries');
+            table.foreign('league_id').references('id').inTable('sports_leagues');
+            table.bigInteger('created').notNullable();
+            table.bigInteger('updated').notNullable();
+            table.bigInteger('deleted').nullable();
+
+            // Composite unique to prevent duplicates
+            table.unique(['country_id', 'league_id']);
         }),
 
         knex.schema.createTable('sports_teams', function(table) {
