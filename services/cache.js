@@ -146,6 +146,18 @@ module.exports = {
         languages_country: function (country_code) {
             return `languages:country:${country_code}`;
         },
+        sports_country_order: function (country_code) {
+            return `sports:countries:top:${country_code}`;
+        },
+        sports_leagues_prefix: function (prefix) {
+            return `sports:leagues:prefix:${prefix}`;
+        },
+        sports_teams_prefix: function (prefix) {
+            return `sports:teams:prefix:${prefix}`;
+        },
+        sports_country_top_teams: function(sport_token, country_code) {
+            return `sports:countries:top:teams:${country_code}:${sport_token}`;
+        }
     },
     init: function () {
         return new Promise(async (resolve, reject) => {

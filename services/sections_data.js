@@ -386,7 +386,7 @@ module.exports = {
         categories: {
             endpoint: `/music/top/artists/genre`,
             options: null,
-            fn: 'getCategoriesMusic',
+            fn: 'getMusicCategories',
             defaultCountry: 'US',
         },
         autoComplete: {
@@ -468,5 +468,91 @@ module.exports = {
         styles: {
             rowCols: 'cols-1',
         },
+    },
+    sports: {
+        myStr: 'My Sports',
+        tabs: [
+            {
+                name: 'Teams',
+                key: 'teams'
+            },
+            {
+                name: 'Leagues',
+                key: 'leagues'
+            },
+            {
+                name: 'Play',
+                key: 'play'
+            }
+        ],
+        tables: {
+            teams: {
+                isFavorable: true,
+                user: {
+                    name: 'persons_sports_teams',
+                    cols: {
+                        id: 'team_id',
+                        token: 'team_token',
+                        secondary: 'level'
+                    }
+                }
+            },
+            leagues: {
+                isFavorable: true,
+                user: {
+                    name: 'persons_sports_leagues',
+                    cols: {
+                        id: 'league_id',
+                        token: 'league_token',
+                        secondary: 'level'
+                    }
+                }
+            },
+            play: {
+                isFavorable: true,
+                user: {
+                    name: 'persons_sports_play',
+                    cols: {
+                        id: 'sport_id',
+                        token: 'sport_token',
+                        secondary: 'level'
+                    }
+                }
+            }
+        },
+        categories: {
+            endpoint: `/sports/top/teams`,
+            options: null,
+            fn: 'getSportCategories',
+            defaultCountry: 'US'
+        },
+        autoComplete: {
+            minChars: 2,
+            endpoint: '/autocomplete/sports',
+            placeholders: {
+                main: 'Search sports, teams, or leagues'
+            }
+        },
+        cacheKeys: {
+            play: {
+                byHash: cacheService.keys.sports
+            },
+            teams: {
+                byHash: cacheService.keys.sports_teams
+            },
+            leagues: {
+                byHash: cacheService.keys.sports_leagues
+            }
+        },
+        secondary: {
+            options: ['Casual', 'Regular', 'Avid', 'Superfan'],
+            unselectedStr: 'Fan Level'
+        },
+        styles: {
+            rowCols: {
+                default: 'cols-2',
+                my: 'cols-1'
+            }
+        }
     },
 };

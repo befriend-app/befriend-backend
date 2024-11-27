@@ -377,18 +377,18 @@ function syncTeams() {
             let r = await axios.get(endpoint);
 
             // First pass: Process all teams
-            for (let [token, team] of Object.entries(r.data.items)) {
+            for (let team of r.data.items) {
                 const sport = lookups.sports[team.sport_token];
                 const country = lookups.countries[team.country_code];
                 if (!sport) continue;
 
-                const existing = lookups.teams[token];
+                const existing = lookups.teams[team.token];
 
                 if (!existing) {
                     if (team.deleted) continue;
 
                     let new_item = {
-                        token: token,
+                        token: team.token,
                         name: team.name,
                         short_name: team.short_name,
                         sport_id: sport.id,
@@ -438,10 +438,10 @@ function syncTeams() {
             }, {});
 
             // Second pass: Process league associations
-            for (let [token, team] of Object.entries(r.data.items)) {
+            for (let team of r.data.items) {
                 if (!team.leagues) continue;
 
-                const existing = lookups.teams[token];
+                const existing = lookups.teams[team.token];
                 if (!existing || existing.deleted) continue;
 
                 for (let [league_token, league_data] of Object.entries(team.leagues)) {
@@ -517,15 +517,11 @@ async function main() {
             console.log('Syncing teams...');
             await syncTeams();
 
-            // Update relevant caches
-            await Promise.all([
-                cacheService.deleteKeys(cacheService.keys.sports),
-                cacheService.deleteKeys(cacheService.keys.sports_countries),
-                cacheService.deleteKeys(cacheService.keys.sports_leagues),
-                cacheService.deleteKeys(cacheService.keys.sports_teams)
-            ]);
-
             console.log('Sports sync completed');
+
+            //index sports
+
+            await require('../index/index_sports').main();
             resolve();
         } catch (e) {
             console.error('Error in main sync execution:', e);

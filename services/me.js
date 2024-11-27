@@ -1581,7 +1581,7 @@ function getMusic(country) {
             let section = sectionsData.music;
 
             //categories
-            let categoryData = await getCategoriesMusic(country);
+            let categoryData = await getMusicCategories(country);
 
             let data = {
                 myStr: section.myStr,
@@ -1648,12 +1648,8 @@ function getSchools() {
     });
 }
 
-function getCategoriesMusic(country) {
+function getMusicCategories(country) {
     return new Promise(async (resolve, reject) => {
-        let section = sectionsData.music;
-
-        let code = country?.code || section.categories.defaultCountry;
-
         try {
             let allGenres = await hGetAllObj(cacheService.keys.music_genres);
 
@@ -2153,6 +2149,87 @@ function getSmoking(options_data_only) {
     });
 }
 
+function getSportCategories(country) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            //todo add cache
+            let section = sectionsData.sports;
+
+            // Get all sports data
+            let allSports = await cacheService.hGetAllObj(cacheService.keys.sports);
+
+            // Get country-specific sport ordering
+            const countryCode = country?.code || section.categories.defaultCountry;
+
+            const ordering = await cacheService.hGetAll(
+                cacheService.keys.sports_country_order(countryCode)
+            );
+
+            let categorySports = [];
+
+            // First organize sports with country ordering
+            for (let k in allSports) {
+                let sport = allSports[k];
+
+                if (sport.is_active) {
+                    categorySports.push({
+                        table_key: 'teams',
+                        heading: 'Teams',
+                        name: sport.name,
+                        position: ordering[k] || 999999,
+                        token: k,
+                    });
+                }
+            }
+
+            // Sort by country-specific position
+            categorySports.sort((a, b) => {
+                return a.position - b.position;
+            });
+
+            // Build categories array starting with Sports category
+            let categories = [
+                {
+                    table_key: 'play',
+                    name: 'Play',
+                },
+                {
+                    table_key: 'leagues',
+                    name: 'Leagues',
+                },
+                ...categorySports,
+            ];
+
+            // For items, include both regular and featured sports
+            let sports = [...categorySports];
+
+            // Add any featured sports
+            for (let k in allSports) {
+                let sport = allSports[k];
+
+                if (sport.is_featured) {
+                    sports.push({
+                        name: sport.name,
+                        token: sport.token,
+                    });
+                }
+            }
+
+            sports.map((item) => {
+                item.category = 'teams';
+            });
+
+            resolve({
+                options: categories,
+                items: sports,
+            });
+        } catch (e) {
+            console.error(e);
+            return reject(e);
+        }
+    });
+}
+
 function selectSectionOptionItem(person_token, section_key, table_key, item_token, is_select) {
     return new Promise(async (resolve, reject) => {
         try {
@@ -2482,7 +2559,7 @@ module.exports = {
     allInstruments,
     getMusic,
     getSchools,
-    getCategoriesMusic,
+    getMusicCategories,
     getLifeStages,
     getMovies,
     getCategoriesMovies,
@@ -2493,5 +2570,6 @@ module.exports = {
     getRelationshipStatus,
     getReligions,
     getSmoking,
+    getSportCategories,
     updateSectionPositions,
 };
