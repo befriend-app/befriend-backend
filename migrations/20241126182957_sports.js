@@ -1,6 +1,7 @@
 exports.up = async function(knex) {
     await Promise.all([
             knex.schema.dropTableIfExists('persons_sports_teams'),
+            knex.schema.dropTableIfExists('persons_sports_leagues'),
             knex.schema.dropTableIfExists('persons_sports_play'),
             knex.schema.dropTableIfExists('persons_sports_watch'),
             knex.schema.dropTableIfExists('sports_teams_leagues'),
@@ -166,12 +167,31 @@ exports.up = async function(knex) {
 
             table.unique(['person_id', 'team_id']);
         }),
+
+        knex.schema.createTable('persons_sports_leagues', function(table) {
+            table.bigIncrements('id').primary();
+            table.bigInteger('person_id').unsigned().notNullable();
+            table.integer('league_id').unsigned().notNullable();
+            table.string('league_token', 32).notNullable();
+            table.string('level', 32).nullable();
+            table.boolean('is_favorite').defaultTo(false);
+            table.integer('favorite_position').nullable();
+            table.bigInteger('created').notNullable();
+            table.bigInteger('updated').notNullable();
+            table.bigInteger('deleted').nullable();
+
+            table.foreign('person_id').references('id').inTable('persons');
+            table.foreign('league_id').references('id').inTable('sports_leagues');
+
+            table.unique(['person_id', 'league_id']);
+        }),
     ]);
 };
 
 exports.down = function(knex) {
     return Promise.all([
         knex.schema.dropTableIfExists('persons_sports_teams'),
+        knex.schema.dropTableIfExists('persons_sports_leagues'),
         knex.schema.dropTableIfExists('persons_sports_play'),
         knex.schema.dropTableIfExists('persons_sports_watch'),
         knex.schema.dropTableIfExists('sports_teams_leagues'),
