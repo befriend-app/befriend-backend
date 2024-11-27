@@ -394,7 +394,7 @@ function removeKid(person_token, kid_token) {
 
 
 function addSection(person_token, section_key, location) {
-    let country;
+    let person;
 
     function addDataToSection(section) {
         return new Promise(async (resolve, reject) => {
@@ -406,9 +406,9 @@ function addSection(person_token, section_key, location) {
                 try {
                     if (fnData) {
                         if (sectionData?.type?.name === 'buttons') {
-                            section.data = await module.exports[fnData](false, country);
+                            section.data = await module.exports[fnData](false, person.country_code);
                         } else {
-                            section.data = await module.exports[fnData](country);
+                            section.data = await module.exports[fnData](person.country_code);
                         }
                     }
 
@@ -435,9 +435,7 @@ function addSection(person_token, section_key, location) {
         };
 
         try {
-            country = await latLonLookup(location?.lat, location?.lon);
-
-            let person = await getPerson(person_token);
+            person = await getPerson(person_token);
 
             if (!person) {
                 return reject('No person found');
@@ -1116,7 +1114,7 @@ function getAllSections() {
     });
 }
 
-function getSections(person, country) {
+function getSections(person) {
     return new Promise(async (resolve, reject) => {
         if (!person || !person.person_token) {
             return resolve('person required');
@@ -1222,7 +1220,7 @@ function getSections(person, country) {
             }
 
             //add data options to active
-            organized.active = await getActiveData(person, organized.active, country);
+            organized.active = await getActiveData(person, organized.active);
 
             return resolve(organized);
         } catch (e) {
@@ -1232,7 +1230,7 @@ function getSections(person, country) {
     });
 }
 
-function getActiveData(person, sections, country) {
+function getActiveData(person, sections) {
     return new Promise(async (resolve, reject) => {
         let section_keys = Object.keys(sections);
 
@@ -1298,7 +1296,7 @@ function getActiveData(person, sections, country) {
                 if (section?.categories?.fn) {
                     if (section_key === 'music') {
                         let sectionCategories = (categoryOptions =
-                            await module.exports[section.categories.fn](country));
+                            await module.exports[section.categories.fn](person.country_code));
 
                         categoryOptions = sectionCategories.options;
                         categoryItems = sectionCategories.items;
@@ -1350,7 +1348,7 @@ function getActiveData(person, sections, country) {
                 if (sectionsData[key].functions?.data) {
                     let data = await module.exports[sectionsData[key].functions.data](
                         null,
-                        country,
+                        person.country_code,
                     );
                     let items = await getPersonSectionItems(person, key);
 
@@ -1576,13 +1574,13 @@ function allInstruments() {
     });
 }
 
-function getMusic(country) {
+function getMusic(country_code) {
     return new Promise(async (resolve, reject) => {
         try {
             let section = sectionsData.music;
 
             //categories
-            let categoryData = await getMusicCategories(country);
+            let categoryData = await getMusicCategories(country_code);
 
             let data = {
                 myStr: section.myStr,
@@ -1649,7 +1647,7 @@ function getSchools() {
     });
 }
 
-function getMusicCategories(country) {
+function getMusicCategories() {
     return new Promise(async (resolve, reject) => {
         try {
             let allGenres = await hGetAllObj(cacheService.keys.music_genres);
@@ -1827,10 +1825,9 @@ function getMovies() {
     });
 }
 
-function getLanguages(options_data_only, country) {
+function getLanguages(options_data_only, country_code = 'US') {
     return new Promise(async (resolve, reject) => {
         try {
-            const country_code = country?.code || 'US';
             const cache_key = cacheService.keys.languages_country(country_code);
             let options = await cacheService.getObj(cache_key);
 
@@ -2150,12 +2147,12 @@ function getSmoking(options_data_only) {
     });
 }
 
-function getSports(country) {
+function getSports(country_code) {
     return new Promise(async (resolve, reject) => {
         try {
             let section = sectionsData.sports;
 
-            let categoryData = await getSportCategories(country);
+            let categoryData = await getSportCategories(country_code);
 
             let data = {
                 myStr: section.myStr,
@@ -2185,7 +2182,7 @@ function getSports(country) {
     });
 }
 
-function getSportCategories(country) {
+function getSportCategories(country_code) {
     return new Promise(async (resolve, reject) => {
         try {
             let section = sectionsData.sports;
@@ -2193,16 +2190,17 @@ function getSportCategories(country) {
             // Get all sports data
             let allSports = await cacheService.hGetAllObj(cacheService.keys.sports);
 
-            // Get country-specific sport ordering
-            const countryCode = country?.code || section.categories.defaultCountry;
+            if(!country_code) {
+                country_code = section.categories.defaultCountry;
+            }
 
             const ordering = await cacheService.hGetAll(
-                cacheService.keys.sports_country_order(countryCode)
+                cacheService.keys.sports_country_order(country_code)
             );
 
             // Get top leagues for country
             const topLeagues = await cacheService.getObj(
-                cacheService.keys.sports_country_top_leagues(countryCode)
+                cacheService.keys.sports_country_top_leagues(country_code)
             ) || [];
 
             let categorySports = [];
