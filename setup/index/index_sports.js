@@ -26,7 +26,7 @@ function indexSports() {
                 .whereNull('deleted')
                 .orderBy('is_active', 'desc')
                 .orderBy('name', 'asc')
-                .select('id', 'token', 'name', 'is_active');
+                .select('id', 'token', 'name', 'is_play', 'is_active');
 
             // Create sports lookup dictionary and store in Redis
             const sportsAll = {};
@@ -35,6 +35,7 @@ function indexSports() {
                     id: sport.id,
                     token: sport.token,
                     name: sport.name,
+                    is_play: sport.is_play ? 1 : '',
                     is_active: sport.is_active ? 1 : '',
                 });
             }

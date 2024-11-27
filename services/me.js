@@ -2149,6 +2149,41 @@ function getSmoking(options_data_only) {
     });
 }
 
+function getSports(country) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let section = sectionsData.sports;
+
+            let categoryData = await getSportCategories(country);
+
+            let data = {
+                myStr: section.myStr,
+                tabs: section.tabs,
+                options: categoryData.items,
+                autoComplete: section.autoComplete,
+                categories: {
+                    endpoint: section.categories.endpoint,
+                    options: categoryData.options,
+                },
+                secondary: section.secondary,
+                styles: section.styles,
+                tables: Object.keys(section.tables).reduce((acc, key) => {
+                    acc.push({
+                        name: key,
+                        isFavorable: section.tables[key].isFavorable,
+                    });
+                    return acc;
+                }, []),
+            };
+
+            resolve(data);
+        } catch (e) {
+            console.error(e);
+            return reject(e);
+        }
+    });
+}
+
 function getSportCategories(country) {
     return new Promise(async (resolve, reject) => {
         try {
@@ -2178,6 +2213,7 @@ function getSportCategories(country) {
                         name: sport.name,
                         position: ordering[k] || 999999,
                         token: k,
+                        is_play: sport.is_play,
                     });
                 }
             }
@@ -2215,9 +2251,14 @@ function getSportCategories(country) {
                 }
             }
 
-            sports.map((item) => {
-                item.category = 'teams';
-            });
+            //filter, add category, sort
+            sports
+                .filter(item => item.is_play)
+                .map((item) => {
+                    item.category = 'play'
+                });
+
+            sports.sort((a, b) => a.name.localeCompare(b.name));
 
             resolve({
                 options: categories,
@@ -2570,6 +2611,7 @@ module.exports = {
     getRelationshipStatus,
     getReligions,
     getSmoking,
+    getSports,
     getSportCategories,
     updateSectionPositions,
 };

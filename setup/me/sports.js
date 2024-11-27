@@ -41,6 +41,7 @@ function syncSports() {
                     let new_item = {
                         token: item.token,
                         name: item.name,
+                        is_play: item.is_play,
                         is_active: item.is_active,
                         created: timeNow(),
                         updated: timeNow()
@@ -52,6 +53,7 @@ function syncSports() {
                     let update_obj = {
                         id: existing.id,
                         name: item.name,
+                        is_play: item.is_play,
                         is_active: item.is_active,
                         updated: timeNow(),
                         deleted: item.deleted ? timeNow() : null

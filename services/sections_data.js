@@ -548,6 +548,9 @@ module.exports = {
             options: ['Casual', 'Regular', 'Avid', 'Superfan'],
             unselectedStr: 'Fan Level'
         },
+        functions: {
+            data: 'getSports',
+        },
         styles: {
             rowCols: {
                 default: 'cols-2',
