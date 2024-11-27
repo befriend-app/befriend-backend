@@ -77,7 +77,7 @@ exports.up = async function(knex) {
         knex.schema.createTable('sports_teams', function(table) {
             table.increments('id').primary();
             table.string('external_id', 60).nullable();
-            table.string('token', 32).notNullable().unique();
+            table.string('token', 60).notNullable().unique();
             table.string('name', 255).notNullable();
             table.string('short_name', 100).nullable();
             table.integer('sport_id').unsigned().notNullable();
