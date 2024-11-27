@@ -13,7 +13,7 @@ const WEIGHTS = {
     NAME_MATCH: 0.3
 };
 
-function getTopTeamsForSport(sport_token, country_code) {
+function getTopTeamsBySport(sport_token, country_code) {
     return new Promise(async (resolve, reject) => {
         try {
             const cache_key = cacheService.keys.sport_country_top_teams(sport_token, country_code);
@@ -228,7 +228,7 @@ function leaguesAutoComplete(search_term, sport_token) {
 module.exports = {
     prefixLimit: MAX_PREFIX_LIMIT,
     topTeamsCount: TOP_TEAMS_COUNT,
-    getTopTeamsForSport,
+    getTopTeamsBySport,
     teamsAutoComplete,
     leaguesAutoComplete
 };

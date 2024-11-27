@@ -118,23 +118,25 @@ function latLonLookup(lat, lon) {
         //initialize geo lookup
         if (!geoLookup.countries) {
             try {
-                geoLookup.countries = await getCountries();
+                geoLookup.countries = (await require('./locations').getCountries()).list;
             } catch (e) {
                 console.error(e);
             }
 
             //add polygon data for each country
             for (let c of geoLookup.countries) {
-                let data_path = joinPaths(
-                    getRepoRoot(),
-                    'node_modules/geojson-places/data/countries',
-                    `${c.country_code}.json`,
-                );
+                if(!c.coordinates) {
+                    let data_path = joinPaths(
+                        getRepoRoot(),
+                        'node_modules/geojson-places/data/countries',
+                        `${c.country_code}.json`,
+                    );
 
-                if (await pathExists(data_path)) {
-                    let country_feature = require(data_path);
+                    if (await pathExists(data_path)) {
+                        let country_feature = require(data_path);
 
-                    c.coordinates = country_feature.geometry.coordinates;
+                        c.coordinates = country_feature.geometry.coordinates;
+                    }
                 }
             }
         }
@@ -566,31 +568,6 @@ function getCoordsFromPointDistance(lat, lon, distance_miles_or_km, direction) {
         lat: newLat,
         lon: newLon,
     };
-}
-
-function getCountries() {
-    return new Promise(async (resolve, reject) => {
-        try {
-            let cache_key = cacheService.keys.countries;
-
-            let data = await cacheService.getObj(cache_key);
-
-            if (data) {
-                return resolve(data);
-            }
-
-            let conn = await dbService.conn();
-
-            data = await conn('open_countries').orderBy('country_name', 'asc');
-
-            await cacheService.setCache(cache_key, data);
-
-            resolve(data);
-        } catch (e) {
-            console.error(e);
-            reject(e);
-        }
-    });
 }
 
 function getDateDiff(date_1, date_2, unit) {
@@ -1263,7 +1240,6 @@ module.exports = {
     getCleanDomain: getCleanDomain,
     getCoordsBoundBox: getCoordsBoundBox,
     getCoordsFromPointDistance: getCoordsFromPointDistance,
-    getCountries: getCountries,
     getDateDiff: getDateDiff,
     getDateStr: getDateStr,
     getDateTimeStr: getDateTimeStr,

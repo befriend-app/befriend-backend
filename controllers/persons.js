@@ -1,9 +1,9 @@
 const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 
-const { timeNow, generateToken, latLonLookup } = require('../services/shared');
+const { timeNow, generateToken, latLonLookup} = require('../services/shared');
 
-const { getPerson } = require('../services/persons');
+const { getPerson, updatePerson } = require('../services/persons');
 const {
     getSections,
     addSection,
@@ -13,7 +13,10 @@ const {
     selectSectionOptionItem, updateSectionPositions, getModes, getGenders, putMode, putPartner, addKid, updateKid,
     removeKid,
 } = require('../services/me');
+
 const { findMatches, notifyMatches, prepareActivity } = require('../services/activities');
+
+const { getCountryByCode } = require('../services/locations');
 
 module.exports = {
     getMe: function (req, res) {
@@ -23,20 +26,36 @@ module.exports = {
             try {
                 let me = await getPerson(person_token);
 
-                let country = await latLonLookup(req.query.location?.lat, req.query.location?.lon);
+                //set country
+                if(me.country_code) {
+                    me.country = await getCountryByCode(me.country_code);
+                } else {
+                    if(req.query.location?.lat && req.query.location?.lon) {
+                        try {
+                            let country = await latLonLookup(req.query.location?.lat, req.query.location?.lon);
+
+                            await updatePerson(person_token, {
+                                country_code: country.code,
+                            });
+
+                            me.country = country;
+                        } catch(e) {
+                            console.error(e);
+                        }
+                    }
+                }
 
                 let genders = await getGenders(true);
 
                 let modes = await getModes(me);
                 
-                let sections = await getSections(me, country);
+                let sections = await getSections(me);
 
                 res.json({
                     me,
                     genders,
                     modes,
                     sections,
-                    country,
                 });
 
                 resolve();
@@ -55,6 +74,49 @@ module.exports = {
                 );
 
                 res.json(data, 200);
+
+                resolve();
+            } catch (e) {
+                console.error(e);
+                res.json('Error adding section', 400);
+            }
+        });
+    },
+    putCountry: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let {lat, lon, person_token} = req.body;
+
+                if(!lat || !lon || !person_token) {
+                    res.json("required params missing", 400);
+
+                    return resolve();
+                }
+
+                let person = await getPerson(person_token);
+
+                if(!person) {
+                    res.json("person not found", 400);
+
+                    return resolve();
+                }
+
+                let country = await latLonLookup(lat, lon);
+
+                if(country?.code) {
+                    try {
+                        await updatePerson(person_token, {
+                            country_code: country.code
+                        });
+
+                        res.json(country, 201);
+                    } catch(e) {
+                        console.error(e);
+                        res.json("error updating person", 400);
+                    }
+                } else {
+                    res.json("Country not found", 400);
+                }
 
                 resolve();
             } catch (e) {

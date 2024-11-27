@@ -1,6 +1,6 @@
 const cacheService = require('../services/cache');
 const dbService = require('./db');
-const { getDistanceMeters, normalizeSearch, latLonLookup, timeNow } = require('./shared');
+const { getDistanceMeters, normalizeSearch, latLonLookup } = require('./shared');
 
 const RESULTS_LIMIT = 20;
 const MIN_COUNTRY_CHARS = 1;
@@ -8,28 +8,63 @@ const MAX_PREFIX_LIMIT = 4;
 const MAX_COUNTRY_PREFIX_LIMIT = 3;
 
 const countries = {
+    list: [],
+    byCode: {},
     codes: [],
     names: [],
 };
 
-function loadCountries() {
+function getCountries() {
     return new Promise(async (resolve, reject) => {
-        if (countries.names.length) {
-            return resolve();
+        if (countries.list.length) {
+            return resolve(countries);
         }
 
         try {
             let conn = await dbService.conn();
-            let dbCountries = await conn('open_countries');
+            let dbCountries = await conn('open_countries')
+                .orderBy('country_name', 'asc');
+
+            countries.list = dbCountries;
 
             for (let c of dbCountries) {
                 countries.names.push(c.country_name.toLowerCase());
                 countries.codes.push(c.country_code.toLowerCase());
+                countries.byCode[c.country_code.toLowerCase()] = c;
             }
-            resolve();
+
+            resolve(countries);
         } catch (e) {
             console.error('Error loading countries:', e);
             reject(e);
+        }
+    });
+}
+
+function getCountryByCode(country_code) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            if(!country_code) {
+                return reject("no country code");
+            }
+
+            let countries = await getCountries();
+
+            let country = countries?.byCode?.[country_code.toLowerCase()];
+
+            if(country) {
+                return resolve({
+                    id: country.id,
+                    name: country.country_name,
+                    code: country.country_code,
+                    emoji: country.emoji
+                });
+            }
+
+            resolve();
+        } catch(e) {
+            console.error(e);
+            return reject(e);
         }
     });
 }
@@ -302,7 +337,7 @@ function calculateCityScore(city, userLat, userLon, maxDistance, locationCountry
 function cityAutoComplete(search, userLat, userLon, maxDistance) {
     return new Promise(async (resolve, reject) => {
         try {
-            await loadCountries();
+            await getCountries();
 
             if (userLat) {
                 userLat = parseFloat(userLat);
@@ -384,7 +419,8 @@ function cityAutoComplete(search, userLat, userLon, maxDistance) {
 module.exports = {
     prefixLimit: MAX_PREFIX_LIMIT,
     countryPrefixLimit: MAX_COUNTRY_PREFIX_LIMIT,
-    countries,
+    getCountries,
+    getCountryByCode,
     cityAutoComplete,
     getCitiesByCountry,
     getStates,

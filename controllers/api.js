@@ -29,6 +29,7 @@ const { schoolAutoComplete } = require('../services/schools');
 const { hGetAll } = require('../services/cache');
 const { getTopArtistsForGenre, musicAutoComplete } = require('../services/music');
 const moviesService = require('../services/movies');
+const { getTopTeamsBySport } = require('../services/sports');
 
 module.exports = {
     getNetworks: function (req, res) {
@@ -1659,6 +1660,29 @@ module.exports = {
 
             try {
                 let items = await getTopArtistsForGenre(genre_token);
+
+                res.json({
+                    items: items,
+                });
+            } catch (e) {
+                console.error(e);
+
+                res.json('Error getting artists', 400);
+                return resolve();
+            }
+        });
+    },
+    getTopTeamsBySport: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            let token = req.query.category_token;
+
+            if (!token) {
+                res.json('Token required', 400);
+                return resolve();
+            }
+
+            try {
+                let items = await getTopTeamsBySport(token);
 
                 res.json({
                     items: items,

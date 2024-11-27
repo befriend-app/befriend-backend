@@ -29,6 +29,18 @@ router.put('/me/mode', function (req, res, next) {
     });
 });
 
+router.put('/me/country', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await personsController.putCountry(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
 router.put('/me/mode/partner', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
@@ -206,6 +218,19 @@ router.get('/music/top/artists/genre', function (req, res, next) {
         resolve();
     });
 });
+
+router.get('/sports/top/teams', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await apiController.getTopTeamsBySport(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
 
 router.get('/autocomplete/movies', function (req, res, next) {
     return new Promise(async (resolve, reject) => {

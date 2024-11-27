@@ -1,10 +1,11 @@
 const cacheService = require('../services/cache');
 const dbService = require('../services/db');
-const { timeNow, getCountries, latLonLookup, isNumeric, generateToken } = require('./shared');
+const { timeNow, latLonLookup, isNumeric, generateToken } = require('./shared');
 const { setCache, getObj, execMulti, execPipeline, hGetAll, hGetAllObj } = require('./cache');
 const { getPerson, updatePerson } = require('./persons');
 let sectionsData = require('./sections_data');
 const { batchUpdate } = require('./db');
+const { getCountries } = require('./locations');
 
 const modes = ['solo', 'plus-one', 'plus-kids'];
 
@@ -1631,10 +1632,10 @@ function getSchools() {
                 }, []),
             };
 
-            let countries = await getCountries();
+            let countries = (await getCountries()).list;
 
             countries.map((country) => {
-                if (country.country_name && !country.name) {
+                if(country.country_name && !country.name) {
                     country.name = country.country_name;
                 }
             });
