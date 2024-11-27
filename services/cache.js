@@ -25,6 +25,10 @@ module.exports = {
         movies_new: 'sections:movies:new',
         music_genres: `sections:music:genres`,
         music_artists: `sections:music:artists`,
+        sports: 'sections:sports',
+        sports_countries: `sections:sports:countries`,
+        sports_leagues: `sections:sports:leagues`,
+        sports_teams: `sections:sports:teams`,
         activity: function (activity_token) {
             return `activities:${activity_token}`;
         },
