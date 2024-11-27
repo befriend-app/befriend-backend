@@ -14,7 +14,7 @@ function main(is_me) {
 
         await cacheService.init();
 
-        let scripts = ['delete_schools', 'delete_movies', 'delete_instruments', 'delete_me'];
+        let scripts = ['delete_sports', 'delete_music', 'delete_schools', 'delete_movies', 'delete_instruments', 'delete_me'];
 
         for (let s of scripts) {
             await require(`./${s}`).main();
