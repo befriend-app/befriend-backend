@@ -255,8 +255,10 @@ module.exports = {
             },
         },
         secondary: {
-            options: ['Beginner', 'Intermediate', 'Advanced', 'Expert', 'Virtuoso'],
-            unselectedStr: 'Skill Level',
+            instruments: {
+                options: ['Beginner', 'Intermediate', 'Advanced', 'Expert', 'Virtuoso'],
+                unselectedStr: 'Skill Level',
+            },
         },
         autoComplete: {
             minChars: 1,
@@ -545,8 +547,18 @@ module.exports = {
             }
         },
         secondary: {
-            options: ['Casual', 'Regular', 'Avid', 'Superfan'],
-            unselectedStr: 'Fan Level'
+            play: {
+                options: ['Beginner', 'Intermediate', 'Advanced', 'Expert'],
+                unselectedStr: 'Skill Level'
+            },
+            teams: {
+                options: ['Casual', 'Regular', 'Avid', 'Superfan'],
+                unselectedStr: 'Fan Level'
+            },
+            leagues: {
+                options: ['Casual', 'Regular', 'Avid', 'Superfan'],
+                unselectedStr: 'Fan Level'
+            }
         },
         functions: {
             data: 'getSports',

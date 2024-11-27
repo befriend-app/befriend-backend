@@ -2187,7 +2187,6 @@ function getSports(country) {
 function getSportCategories(country) {
     return new Promise(async (resolve, reject) => {
         try {
-            //todo add cache
             let section = sectionsData.sports;
 
             // Get all sports data
@@ -2199,6 +2198,11 @@ function getSportCategories(country) {
             const ordering = await cacheService.hGetAll(
                 cacheService.keys.sports_country_order(countryCode)
             );
+
+            // Get top leagues for country
+            const topLeagues = await cacheService.getObj(
+                cacheService.keys.sports_country_top_leagues(countryCode)
+            ) || [];
 
             let categorySports = [];
 
@@ -2236,33 +2240,71 @@ function getSportCategories(country) {
                 ...categorySports,
             ];
 
-            // For items, include both regular and featured sports
-            let sports = [...categorySports];
+            // Initialize items array for both sports and leagues
+            let items = [];
+
+            // Process sports items
+            let sportsItems = [...categorySports];
 
             // Add any featured sports
             for (let k in allSports) {
                 let sport = allSports[k];
-
                 if (sport.is_featured) {
-                    sports.push({
+                    sportsItems.push({
                         name: sport.name,
                         token: sport.token,
+                        is_play: sport.is_play
                     });
                 }
             }
 
-            //filter, add category, sort
-            sports
-                .filter(item => item.is_play)
-                .map((item) => {
-                    item.category = 'play'
-                });
+            // Filter play sports and add category
+            for(let item of sportsItems) {
+                if (item.is_play) {
+                    items.push({
+                        ...item,
+                        category: 'play'
+                    });
+                }
+            }
 
-            sports.sort((a, b) => a.name.localeCompare(b.name));
+            // Get and process leagues
+            const leagues = await cacheService.hGetAllObj(cacheService.keys.sports_leagues);
+
+            // Add leagues to items
+            if (leagues && topLeagues.length) {
+                for(let index = 0; index < topLeagues.length; index++) {
+                    const league_token = topLeagues[index];
+
+                    const leagueData = leagues[league_token];
+
+                    if (leagueData) {
+                        items.push({
+                            name: leagueData.short_name || leagueData.name,
+                            token: leagueData.token,
+                            category: 'leagues',
+                            position: index
+                        });
+                    }
+                }
+            }
+
+            // Sort items:
+            // - Sports alphabetically by name
+            // - Leagues by position
+            items.sort((a, b) => {
+                if (a.category === b.category) {
+                    if (a.category === 'leagues') {
+                        return a.position - b.position;
+                    }
+                    return a.name.localeCompare(b.name);
+                }
+                return 0; // Maintain category grouping
+            });
 
             resolve({
                 options: categories,
-                items: sports,
+                items: items,
             });
         } catch (e) {
             console.error(e);

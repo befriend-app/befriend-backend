@@ -52,6 +52,7 @@ exports.up = async function(knex) {
             table.integer('sport_id').unsigned().notNullable();
             table.boolean('is_active').notNullable().defaultTo(true);
             table.integer('position').nullable();
+            table.boolean('processed_short_name').defaultTo(0);
             table.bigInteger('created').notNullable();
             table.bigInteger('updated').notNullable();
             table.bigInteger('deleted').nullable();

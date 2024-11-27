@@ -69,7 +69,7 @@ function indexSports() {
 
             console.log({
                 total_sports: Object.keys(sportsAll).length,
-                countries_with_ordering: Object.keys(countryOrdering).length
+                countries: Object.keys(countryOrdering).length
             });
         } catch (e) {
             console.error('Error in indexSports:', e);
@@ -85,7 +85,7 @@ function indexLeagues() {
             let conn = await dbService.conn();
             let pipeline = cacheService.startPipeline();
 
-            // Get all active leagues with their sports
+            // Get all active leagues with their sports and country associations
             const leagues = await conn('sports_leagues AS sl')
                 .join('sports AS s', 's.id', 'sl.sport_id')
                 .whereNull('sl.deleted')
@@ -100,10 +100,23 @@ function indexLeagues() {
                     'sl.is_active'
                 );
 
-            // Create dictionaries and prefix structures
+            // Get country associations and positions
+            const leagueCountries = await conn('sports_leagues_countries AS slc')
+                .join('open_countries AS oc', 'oc.id', 'slc.country_id')
+                .join('sports_leagues AS sl', 'sl.id', 'slc.league_id')
+                .whereNull('slc.deleted')
+                .whereNull('sl.deleted')
+                .select(
+                    'sl.token AS league_token',
+                    'oc.country_code',
+                    'slc.position'
+                )
+                .orderBy('slc.position');
+
+            // Create data structures
             const leaguesAll = {};
             const prefixGroups = {};
-            const deletePrefixGroups = {};
+            const countryTopLeagues = {};
 
             // Process all leagues
             for (const league of leagues) {
@@ -143,6 +156,33 @@ function indexLeagues() {
                 }
             }
 
+            // Process country-specific league rankings
+            for (const assoc of leagueCountries) {
+                const key = assoc.country_code;
+                if (!countryTopLeagues[key]) {
+                    countryTopLeagues[key] = [];
+                }
+                countryTopLeagues[key].push({
+                    token: assoc.league_token,
+                    position: assoc.position
+                });
+            }
+
+            // Sort country leagues by position and store top leagues
+            for (const [countryCode, leagues] of Object.entries(countryTopLeagues)) {
+                // Sort by position
+                leagues.sort((a, b) => a.position - b.position);
+
+                // Store tokens of top leagues
+                const topLeagueTokens = leagues.map(l => l.token);
+
+                // Store in Redis
+                pipeline.set(
+                    cacheService.keys.sports_country_top_leagues(countryCode),
+                    JSON.stringify(topLeagueTokens)
+                );
+            }
+
             // Store in Redis
             // 1. Store all leagues
             pipeline.hSet(cacheService.keys.sports_leagues, leaguesAll);
@@ -156,7 +196,8 @@ function indexLeagues() {
 
             console.log({
                 total_leagues: Object.keys(leaguesAll).length,
-                prefixes: Object.keys(prefixGroups).length
+                prefixes: Object.keys(prefixGroups).length,
+                countries_with_leagues: Object.keys(countryTopLeagues).length
             });
 
         } catch (e) {
