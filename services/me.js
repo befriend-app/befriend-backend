@@ -9,7 +9,6 @@ const { getCountries } = require('./locations');
 
 const modes = ['solo', 'plus-one', 'plus-kids'];
 
-
 function getModes(me) {
     return new Promise(async (resolve, reject) => {
         let modes = {
@@ -405,11 +404,9 @@ function addSection(person_token, section_key) {
 
                 try {
                     if (fnData) {
-                        if (sectionData?.type?.name === 'buttons') {
-                            section.data = await module.exports[fnData](false, person.country_code);
-                        } else {
-                            section.data = await module.exports[fnData](person.country_code);
-                        }
+                        section.data = await module.exports[fnData]({
+                            country_code: person.country_code
+                        });
                     }
 
                     if (fnFilterList) {
@@ -1042,10 +1039,11 @@ function getPersonSectionItems(person, section_key) {
                                 item[token_col],
                             );
                         } else if (sectionData.type?.name === 'buttons') {
-                            // For button-type sections like drinking
-                            let allOptions = await module.exports[sectionData.functions.data](
-                                true,
-                                person.country_code,
+                            // For button-type sections
+                            let allOptions = await module.exports[sectionData.functions.data]( {
+                                    country_code: person.country_code,
+                                    options_only: true
+                                }
                             );
                             section_option = allOptions.find((opt) => opt.id === item[col_name]);
                         }
@@ -1346,9 +1344,9 @@ function getActiveData(person, sections) {
             // Handle missing data
             for (let key in missing_keys) {
                 if (sectionsData[key].functions?.data) {
-                    let data = await module.exports[sectionsData[key].functions.data](
-                        null,
-                        person.country_code,
+                    let data = await module.exports[sectionsData[key].functions.data]( {
+                            country_code: person.country_code
+                        }
                     );
                     let items = await getPersonSectionItems(person, key);
 
@@ -1413,9 +1411,11 @@ function dataForSchema(table_name, cache_key, filter, sort_by, sort_direction) {
     });
 }
 
-function getDrinking(options_data_only) {
+function getDrinking(params = {}) {
     return new Promise(async (resolve, reject) => {
         try {
+            let { options_only } = params;
+
             const cache_key = cacheService.keys.drinking;
             let options = await cacheService.getObj(cache_key);
 
@@ -1430,7 +1430,7 @@ function getDrinking(options_data_only) {
                 await cacheService.setCache(cache_key, options);
             }
 
-            if (options_data_only) {
+            if (options_only) {
                 return resolve(options);
             }
 
@@ -1457,9 +1457,17 @@ function getDrinking(options_data_only) {
     });
 }
 
-function getGenders(options_data_only) {
+function getGenders(params = {}) {
     return new Promise(async (resolve, reject) => {
         try {
+            let options_only;
+
+            if(typeof params === 'boolean') {
+                options_only = params;
+            } else {
+                options_only = params.options_only;
+            }
+
             const cache_key = cacheService.keys.genders;
             let options = await cacheService.getObj(cache_key);
 
@@ -1474,7 +1482,7 @@ function getGenders(options_data_only) {
                 await cacheService.setCache(cache_key, options);
             }
 
-            if (options_data_only) {
+            if (options_only) {
                 return resolve(options);
             }
 
@@ -1708,7 +1716,7 @@ function getMusicCategories() {
     });
 }
 
-function getCategoriesMovies() {
+function getMovieCategories() {
     return new Promise(async (resolve, reject) => {
         try {
             let allGenres = await hGetAllObj(cacheService.keys.movie_genres);
@@ -1796,7 +1804,7 @@ function getMovies() {
             let section = sectionsData.movies;
 
             // Get categories data
-            let categoryData = await getCategoriesMovies();
+            let categoryData = await getMovieCategories();
 
             let data = {
                 myStr: section.myStr,
@@ -1825,9 +1833,11 @@ function getMovies() {
     });
 }
 
-function getLanguages(options_data_only, country_code = 'US') {
+function getLanguages(params = {}) {
     return new Promise(async (resolve, reject) => {
         try {
+            let { options_only, country_code } = params;
+
             const cache_key = cacheService.keys.languages_country(country_code);
             let options = await cacheService.getObj(cache_key);
 
@@ -1910,7 +1920,7 @@ function getLanguages(options_data_only, country_code = 'US') {
                 await cacheService.setCache(cache_key, options);
             }
 
-            if (options_data_only) {
+            if (options_only) {
                 return resolve(options);
             }
 
@@ -1933,9 +1943,11 @@ function getLanguages(options_data_only, country_code = 'US') {
     });
 }
 
-function getLifeStages(options_data_only) {
+function getLifeStages(params = {}) {
     return new Promise(async (resolve, reject) => {
         try {
+            let { options_only } = params;
+
             const cache_key = cacheService.keys.life_stages;
             let options = await cacheService.getObj(cache_key);
 
@@ -1950,7 +1962,7 @@ function getLifeStages(options_data_only) {
                 await cacheService.setCache(cache_key, options);
             }
 
-            if (options_data_only) {
+            if (options_only) {
                 return resolve(options);
             }
 
@@ -1977,9 +1989,11 @@ function getLifeStages(options_data_only) {
     });
 }
 
-function getPolitics(options_data_only) {
+function getPolitics(params = {}) {
     return new Promise(async (resolve, reject) => {
         try {
+            let { options_only } = params;
+
             const cache_key = cacheService.keys.politics;
             let options = await cacheService.getObj(cache_key);
 
@@ -1992,7 +2006,7 @@ function getPolitics(options_data_only) {
                 await cacheService.setCache(cache_key, options);
             }
 
-            if (options_data_only) {
+            if (options_only) {
                 return resolve(options);
             }
 
@@ -2015,9 +2029,11 @@ function getPolitics(options_data_only) {
     });
 }
 
-function getReligions(options_data_only) {
+function getReligions(params = {}) {
     return new Promise(async (resolve, reject) => {
         try {
+            let { options_only } = params;
+
             const cache_key = cacheService.keys.religions;
             let options = await cacheService.getObj(cache_key);
 
@@ -2032,7 +2048,7 @@ function getReligions(options_data_only) {
                 await cacheService.setCache(cache_key, options);
             }
 
-            if (options_data_only) {
+            if (options_only) {
                 return resolve(options);
             }
 
@@ -2059,9 +2075,11 @@ function getReligions(options_data_only) {
     });
 }
 
-function getRelationshipStatus(options_data_only) {
+function getRelationshipStatus(params = {}) {
     return new Promise(async (resolve, reject) => {
         try {
+            let { options_only } = params;
+
             const cache_key = cacheService.keys.relationship_status;
             let options = await cacheService.getObj(cache_key);
 
@@ -2076,7 +2094,7 @@ function getRelationshipStatus(options_data_only) {
                 await cacheService.setCache(cache_key, options);
             }
 
-            if (options_data_only) {
+            if (options_only) {
                 return resolve(options);
             }
 
@@ -2103,9 +2121,11 @@ function getRelationshipStatus(options_data_only) {
     });
 }
 
-function getSmoking(options_data_only) {
+function getSmoking(params = {}) {
     return new Promise(async (resolve, reject) => {
         try {
+            let { options_only } = params;
+
             const cache_key = cacheService.keys.smoking;
             let options = await cacheService.getObj(cache_key);
 
@@ -2120,7 +2140,7 @@ function getSmoking(options_data_only) {
                 await cacheService.setCache(cache_key, options);
             }
 
-            if (options_data_only) {
+            if (options_only) {
                 return resolve(options);
             }
 
@@ -2147,9 +2167,11 @@ function getSmoking(options_data_only) {
     });
 }
 
-function getSports(country_code) {
+function getSports(params = {}) {
     return new Promise(async (resolve, reject) => {
         try {
+            let { country_code } = params;
+            
             let section = sectionsData.sports;
 
             let categoryData = await getSportCategories(country_code);
@@ -2185,6 +2207,8 @@ function getSports(country_code) {
 function getSportCategories(country_code) {
     return new Promise(async (resolve, reject) => {
         try {
+            //todo cache results
+
             let section = sectionsData.sports;
             let allSports = await cacheService.hGetAllObj(cacheService.keys.sports);
             country_code = country_code || section.categories.defaultCountry;
@@ -2264,7 +2288,6 @@ function getSportCategories(country_code) {
             const leagues = await cacheService.hGetAllObj(cacheService.keys.sports_leagues);
 
             if (leagues && topLeagues.length) {
-
                 for(let index = 0; index < topLeagues.length; index++) {
                     const leagueData = leagues[topLeagues[index]];
                     if (leagueData) {
@@ -2334,7 +2357,9 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
             let person_id_col = userTableData?.cols?.person_id || 'person_id';
 
             //validate token
-            let options = await module.exports[sectionData.functions.data](true);
+            let options = await module.exports[sectionData.functions.data]({
+                options_only: true
+            });
 
             if (!options) {
                 return reject('Options not found');
@@ -2632,7 +2657,7 @@ module.exports = {
     getMusicCategories,
     getLifeStages,
     getMovies,
-    getCategoriesMovies,
+    getMovieCategories,
     getDrinking,
     getGenders,
     getLanguages,

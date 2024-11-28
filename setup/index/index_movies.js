@@ -186,11 +186,16 @@ function indexMoviesGenres() {
             let conn = await dbService.conn();
             let pipeline = cacheService.startPipeline();
 
-            // Get all genres and create lookup dictionary
+            // Get all genres
             let genres = await conn('movie_genres').whereNull('deleted');
 
             let genresDict = genres.reduce((acc, genre) => {
                 acc[genre.id] = genre;
+                return acc;
+            }, {});
+
+            let allGenres = genres.reduce((acc, genre) => {
+                acc[genre.token] = JSON.stringify(genre);
                 return acc;
             }, {});
 
@@ -229,6 +234,8 @@ function indexMoviesGenres() {
             }
 
             // Store in Redis
+            pipeline.hSet(cacheService.keys.movie_genres, allGenres);
+
             for (const [genreToken, movieTokens] of Object.entries(genreMovies)) {
                 // Store all movies for this genre
                 if (movieTokens.size > 0) {

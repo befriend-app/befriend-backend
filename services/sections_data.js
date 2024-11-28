@@ -318,7 +318,7 @@ module.exports = {
         categories: {
             endpoint: `/movies/top/genre`,
             options: null,
-            fn: 'getCategoriesMovies',
+            fn: 'getMovieCategories',
         },
         autoComplete: {
             minChars: 2,

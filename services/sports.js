@@ -17,6 +17,7 @@ const WEIGHTS = {
 function getTopTeamsBySport(sport_token, country_code) {
     return new Promise(async (resolve, reject) => {
         try {
+            //todo cache results
             if(!country_code) {
                 country_code = sectionsData.sports.categories.defaultCountry;
             }
@@ -35,9 +36,13 @@ function getTopTeamsBySport(sport_token, country_code) {
             }
 
             const teams = await pipeline.execAsPipeline();
-            const results = teams
+            let results = teams
                 .map(team => team ? JSON.parse(team) : null)
                 .filter(team => team !== null);
+
+            results.sort((a, b) => {
+                return a.name.localeCompare(b.name);
+            });
 
             resolve(results);
         } catch (e) {
