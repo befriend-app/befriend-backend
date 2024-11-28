@@ -532,7 +532,7 @@ module.exports = {
             minChars: 2,
             endpoint: '/autocomplete/sports',
             placeholders: {
-                main: 'Search sports, teams, or leagues'
+                main: 'Search teams or leagues'
             }
         },
         cacheKeys: {

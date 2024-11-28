@@ -110,6 +110,7 @@ function indexLeagues() {
                 .select(
                     'sl.token AS league_token',
                     'oc.country_code',
+                    'oc.country_name',
                     'slc.position'
                 )
                 .orderBy('slc.position');
@@ -118,6 +119,19 @@ function indexLeagues() {
             const leaguesAll = {};
             const prefixGroups = {};
             const countryTopLeagues = {};
+
+            // Group countries by league token
+            const leagueCountriesMap = {};
+            for (const assoc of leagueCountries) {
+                if (!leagueCountriesMap[assoc.league_token]) {
+                    leagueCountriesMap[assoc.league_token] = [];
+                }
+                leagueCountriesMap[assoc.league_token].push({
+                    code: assoc.country_code,
+                    name: assoc.country_name,
+                    position: assoc.position
+                });
+            }
 
             // Process all leagues
             for (const league of leagues) {
@@ -128,31 +142,38 @@ function indexLeagues() {
                     short_name: league.short_name || '',
                     sport_token: league.sport_token,
                     position: league.position,
-                    is_active: league.is_active ? 1 : ''
+                    is_active: league.is_active ? 1 : '',
+                    countries: leagueCountriesMap[league.token] || []
                 });
 
-                // Index league name prefixes
-                const nameLower = league.name.toLowerCase();
-                const words = nameLower.split(/\s+/);
-
-                // Process full name prefixes
-                for (let i = 1; i <= Math.min(nameLower.length, prefixLimit); i++) {
-                    const prefix = nameLower.slice(0, i);
-                    if (!prefixGroups[prefix]) {
-                        prefixGroups[prefix] = new Set();
-                    }
-                    prefixGroups[prefix].add(league.token);
+                // Index both full name and short name
+                const names = [league.name.toLowerCase()];
+                if (league.short_name) {
+                    names.push(league.short_name.toLowerCase());
                 }
 
-                // Process word prefixes
-                for (const word of words) {
-                    if (word.length < 2) continue;
-                    for (let i = 1; i <= Math.min(word.length, prefixLimit); i++) {
-                        const prefix = word.slice(0, i);
+                for (const name of names) {
+                    const words = name.split(/\s+/);
+
+                    // Process full name prefixes
+                    for (let i = 1; i <= Math.min(name.length, prefixLimit); i++) {
+                        const prefix = name.slice(0, i);
                         if (!prefixGroups[prefix]) {
                             prefixGroups[prefix] = new Set();
                         }
                         prefixGroups[prefix].add(league.token);
+                    }
+
+                    // Process word prefixes
+                    for (const word of words) {
+                        if (word.length < 2) continue;
+                        for (let i = 1; i <= Math.min(word.length, prefixLimit); i++) {
+                            const prefix = word.slice(0, i);
+                            if (!prefixGroups[prefix]) {
+                                prefixGroups[prefix] = new Set();
+                            }
+                            prefixGroups[prefix].add(league.token);
+                        }
                     }
                 }
             }

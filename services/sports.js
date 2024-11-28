@@ -82,28 +82,49 @@ function sportsAutoComplete(search_term, context = null, country_code = null) {
             if (search_term.length < 2) return resolve([]);
 
             country_code = country_code || sectionsData.sports.categories.defaultCountry;
-            const teamPrefix = search_term.substring(0, MAX_PREFIX_LIMIT);
+            const prefix = search_term.substring(0, MAX_PREFIX_LIMIT);
+            const searchTermLower = search_term.toLowerCase();
 
             const pipeline = cacheService.startPipeline();
             pipeline.hGetAll(cacheService.keys.sports);
-            pipeline.sMembers(cacheService.keys.sports_teams_prefix(teamPrefix));
+            pipeline.sMembers(cacheService.keys.sports_teams_prefix(prefix));
+            pipeline.sMembers(cacheService.keys.sports_leagues_prefix(prefix));
             pipeline.get(cacheService.keys.sports_country_top_leagues(country_code));
             pipeline.hGetAll(cacheService.keys.sports_country_order(country_code));
 
-            const [allSports, teamPrefixTokens, rawTopLeagues, countryOrdering] = await pipeline.execAsPipeline();
+            const [allSports, teamPrefixTokens, leaguePrefixTokens, rawTopLeagues, countryOrdering] =
+                await pipeline.execAsPipeline();
 
             for(let k in allSports) {
                 try {
                     allSports[k] = JSON.parse(allSports[k]);
-                } catch(e) {
-
-                }
+                } catch(e) {}
             }
 
-            if (!teamPrefixTokens?.length) return resolve([]);
+            if (!teamPrefixTokens?.length && !leaguePrefixTokens?.length) return resolve([]);
 
             const topLeagues = JSON.parse(rawTopLeagues || '[]');
 
+            // Get leagues
+            const leaguesPipeline = cacheService.startPipeline();
+            for(let token of leaguePrefixTokens) {
+                leaguesPipeline.hGet(cacheService.keys.sports_leagues, token);
+            }
+
+            const leaguesData = await leaguesPipeline.execAsPipeline();
+            const leagues = leaguesData
+                .map(l => l ? JSON.parse(l) : null)
+                .filter(l => l && (
+                    l.name.toLowerCase().includes(searchTermLower) ||
+                    (l.short_name && l.short_name.toLowerCase().includes(searchTermLower))
+                ))
+                .map(league => ({
+                    ...league,
+                    type: 'league',
+                    isContextSport: context?.token === league.sport_token
+                }));
+
+            // Get teams
             const teamsPipeline = cacheService.startPipeline();
             for(let token of teamPrefixTokens) {
                 teamsPipeline.hGet(cacheService.keys.sports_teams, token);
@@ -112,7 +133,7 @@ function sportsAutoComplete(search_term, context = null, country_code = null) {
             const teamsData = await teamsPipeline.execAsPipeline();
             let teams = teamsData
                 .map(t => t ? JSON.parse(t) : null)
-                .filter(t => t && t.name.toLowerCase().includes(search_term))
+                .filter(t => t && t.name.toLowerCase().includes(searchTermLower))
                 .map(team => ({
                     ...team,
                     type: 'team',
@@ -131,14 +152,29 @@ function sportsAutoComplete(search_term, context = null, country_code = null) {
             ];
 
             sortedTeams.map(item => {
+                item.table_key = 'teams';
                 item.meta = item.country?.name || '';
                 item.label = allSports?.[item.sport_token]?.name || '';
-            });
+            })
 
-            sortedTeams = sortedTeams.slice(0, RESULTS_LIMIT)
+            let sortedLeagues = leagues
+                .sort((a, b) => {
+                    if (a.isContextSport !== b.isContextSport) {
+                        return a.isContextSport ? -1 : 1;
+                    }
+                    return a.name.localeCompare(b.name);
+                });
 
-            resolve(sortedTeams);
+            sortedLeagues.map(item => {
+                const primaryCountry = item.countries?.[0];
 
+                item.table_key = 'leagues';
+                item.meta = primaryCountry ? `League: ${primaryCountry.name}` : 'League';
+                item.label = allSports?.[item.sport_token]?.name || '';
+            })
+
+            const results = [...sortedTeams, ...sortedLeagues].slice(0, RESULTS_LIMIT);
+            resolve(results);
         } catch (e) {
             console.error('Error in sportsAutoComplete:', e);
             reject(e);
