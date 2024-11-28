@@ -21,8 +21,9 @@ exports.up = function(knex) {
             table.string('year_from').nullable();
             table.string('year_to').nullable();
             table.float('popularity', 10, 4).nullable();
+            table.float('vote_average', 8, 4).nullable();
+            table.integer('vote_count').defaultTo(0);
             table.integer('users_added_count').notNullable().defaultTo(0);
-            table.boolean('genre_processed').notNullable().defaultTo(false);
 
             table.bigInteger('created').notNullable();
             table.bigInteger('updated').notNullable();
