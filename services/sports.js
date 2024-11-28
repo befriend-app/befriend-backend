@@ -1,6 +1,7 @@
 const cacheService = require('./cache');
 const { normalizeSearch, timeNow } = require('./shared');
 const { getCitiesByCountry } = require('./locations');
+let sectionsData = require('./sections_data');
 
 const MAX_PREFIX_LIMIT = 4;
 const RESULTS_LIMIT = 50;
@@ -16,7 +17,11 @@ const WEIGHTS = {
 function getTopTeamsBySport(sport_token, country_code) {
     return new Promise(async (resolve, reject) => {
         try {
-            const cache_key = cacheService.keys.sport_country_top_teams(sport_token, country_code);
+            if(!country_code) {
+                country_code = sectionsData.sports.categories.defaultCountry;
+            }
+
+            const cache_key = cacheService.keys.sports_country_top_teams(sport_token, country_code);
             const data = await cacheService.getObj(cache_key);
 
             if (!data) {
@@ -26,7 +31,7 @@ function getTopTeamsBySport(sport_token, country_code) {
             // Get full team data for each token
             const pipeline = cacheService.startPipeline();
             for (const team_token of data) {
-                pipeline.hGet(cacheService.keys.teams, team_token);
+                pipeline.hGet(cacheService.keys.sports_teams, team_token);
             }
 
             const teams = await pipeline.execAsPipeline();

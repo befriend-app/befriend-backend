@@ -1682,7 +1682,14 @@ module.exports = {
             }
 
             try {
-                let items = await getTopTeamsBySport(token);
+                let person = await getPerson(req.query.person_token);
+
+                if(!person) {
+                    res.json('Person not found', 400);
+                    return resolve();
+                }
+
+                let items = await getTopTeamsBySport(token, person.country_code);
 
                 res.json({
                     items: items,

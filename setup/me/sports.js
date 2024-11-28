@@ -42,6 +42,7 @@ function syncSports() {
                         token: item.token,
                         name: item.name,
                         is_play: item.is_play,
+                        has_teams: item.has_teams,
                         is_active: item.is_active,
                         created: timeNow(),
                         updated: timeNow()
@@ -54,6 +55,7 @@ function syncSports() {
                         id: existing.id,
                         name: item.name,
                         is_play: item.is_play,
+                        has_teams: item.has_teams,
                         is_active: item.is_active,
                         updated: timeNow(),
                         deleted: item.deleted ? timeNow() : null

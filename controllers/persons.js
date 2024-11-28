@@ -207,7 +207,6 @@ module.exports = {
                 let data = await addSection(
                     req.body.person_token,
                     req.body.key,
-                    req.body.location,
                 );
 
                 res.json(data, 201);

@@ -393,7 +393,7 @@ function removeKid(person_token, kid_token) {
 }
 
 
-function addSection(person_token, section_key, location) {
+function addSection(person_token, section_key) {
     let person;
 
     function addDataToSection(section) {
@@ -526,7 +526,7 @@ function addSection(person_token, section_key, location) {
 
             await addDataToSection(existing_section);
 
-            existing_section.items = await getPersonSectionItems(person, section_key, location);
+            existing_section.items = await getPersonSectionItems(person, section_key);
 
             resolve(existing_section);
         } catch (e) {
@@ -976,7 +976,7 @@ function updateSectionItem(body) {
     });
 }
 
-function getPersonSectionItems(person, section_key, country) {
+function getPersonSectionItems(person, section_key) {
     return new Promise(async (resolve, reject) => {
         try {
             let cache_key = cacheService.keys.persons_section_data(
@@ -1045,7 +1045,7 @@ function getPersonSectionItems(person, section_key, country) {
                             // For button-type sections like drinking
                             let allOptions = await module.exports[sectionData.functions.data](
                                 true,
-                                country,
+                                person.country_code,
                             );
                             section_option = allOptions.find((opt) => opt.id === item[col_name]);
                         }
@@ -2186,47 +2186,57 @@ function getSportCategories(country_code) {
     return new Promise(async (resolve, reject) => {
         try {
             let section = sectionsData.sports;
-
-            // Get all sports data
             let allSports = await cacheService.hGetAllObj(cacheService.keys.sports);
-
-            if(!country_code) {
-                country_code = section.categories.defaultCountry;
-            }
+            country_code = country_code || section.categories.defaultCountry;
 
             const ordering = await cacheService.hGetAll(
                 cacheService.keys.sports_country_order(country_code)
             );
-
-            // Get top leagues for country
             const topLeagues = await cacheService.getObj(
                 cacheService.keys.sports_country_top_leagues(country_code)
             ) || [];
 
+            // Separate team sports and play sports
             let categorySports = [];
+            let playSports = [];
 
-            // First organize sports with country ordering
             for (let k in allSports) {
                 let sport = allSports[k];
 
-                if (sport.is_active) {
-                    categorySports.push({
-                        table_key: 'teams',
-                        heading: 'Teams',
+                // Add to play sports if applicable
+                if (sport.is_active && sport.is_play) {
+                    playSports.push({
                         name: sport.name,
-                        position: ordering[k] || 999999,
                         token: k,
                         is_play: sport.is_play,
+                        position: ordering[k] || 999999,
                     });
+                }
+
+                // Add to team sports if applicable
+                if (sport.is_active && sport.has_teams) {
+                    const hasTeams = await cacheService.getObj(
+                        cacheService.keys.sports_country_top_teams(k, country_code)
+                    );
+
+                    if(hasTeams && hasTeams.length) {
+                        categorySports.push({
+                            table_key: 'teams',
+                            heading: 'Teams',
+                            name: sport.name,
+                            position: ordering[k] || 999999,
+                            token: k,
+                            is_play: sport.is_play,
+                        });
+                    }
                 }
             }
 
-            // Sort by country-specific position
-            categorySports.sort((a, b) => {
-                return a.position - b.position;
-            });
+            // Sort both arrays
+            categorySports.sort((a, b) => a.position - b.position);
+            playSports.sort((a, b) => a.position - b.position);
 
-            // Build categories array starting with Sports category
+            // Build categories array
             let categories = [
                 {
                     table_key: 'play',
@@ -2239,44 +2249,24 @@ function getSportCategories(country_code) {
                 ...categorySports,
             ];
 
-            // Initialize items array for both sports and leagues
+            // Build items array
             let items = [];
 
-            // Process sports items
-            let sportsItems = [...categorySports];
-
-            // Add any featured sports
-            for (let k in allSports) {
-                let sport = allSports[k];
-                if (sport.is_featured) {
-                    sportsItems.push({
-                        name: sport.name,
-                        token: sport.token,
-                        is_play: sport.is_play
-                    });
-                }
+            // Add play sports to items
+            for(let sport of playSports) {
+                items.push({
+                    ...sport,
+                    category: 'play'
+                });
             }
-
-            // Filter play sports and add category
-            for(let item of sportsItems) {
-                if (item.is_play) {
-                    items.push({
-                        ...item,
-                        category: 'play'
-                    });
-                }
-            }
-
-            // Get and process leagues
-            const leagues = await cacheService.hGetAllObj(cacheService.keys.sports_leagues);
 
             // Add leagues to items
+            const leagues = await cacheService.hGetAllObj(cacheService.keys.sports_leagues);
+
             if (leagues && topLeagues.length) {
+
                 for(let index = 0; index < topLeagues.length; index++) {
-                    const league_token = topLeagues[index];
-
-                    const leagueData = leagues[league_token];
-
+                    const leagueData = leagues[topLeagues[index]];
                     if (leagueData) {
                         items.push({
                             name: leagueData.short_name || leagueData.name,
@@ -2288,9 +2278,7 @@ function getSportCategories(country_code) {
                 }
             }
 
-            // Sort items:
-            // - Sports alphabetically by name
-            // - Leagues by position
+            // Sort items
             items.sort((a, b) => {
                 if (a.category === b.category) {
                     if (a.category === 'leagues') {
@@ -2298,7 +2286,7 @@ function getSportCategories(country_code) {
                     }
                     return a.name.localeCompare(b.name);
                 }
-                return 0; // Maintain category grouping
+                return 0;
             });
 
             resolve({
