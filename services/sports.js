@@ -2,6 +2,7 @@ const cacheService = require('./cache');
 const { normalizeSearch, timeNow } = require('./shared');
 const { getCitiesByCountry } = require('./locations');
 let sectionsData = require('./sections_data');
+const { hGetAllObj } = require('./cache');
 
 const MAX_PREFIX_LIMIT = 4;
 const RESULTS_LIMIT = 50;
@@ -74,163 +75,94 @@ function calculateRelevanceScore(result, searchTerm, userCountryCode) {
         (nameScore * WEIGHTS.NAME_MATCH);
 }
 
-function teamsAutoComplete(search_term, sport_token, user_location) {
+function sportsAutoComplete(search_term, context = null, country_code = null) {
     return new Promise(async (resolve, reject) => {
         try {
             search_term = normalizeSearch(search_term);
+
             if (search_term.length < 2) {
                 return resolve([]);
             }
 
-            const prefix = search_term.substring(0, MAX_PREFIX_LIMIT);
-            const prefix_key = cacheService.keys.teams_prefix(prefix);
+            let allSports = await hGetAllObj(cacheService.keys.sports);
 
-            // Get matching team tokens
-            const team_tokens = await cacheService.getSetMembers(prefix_key);
-            if (!team_tokens?.length) {
+            country_code = country_code || sectionsData.sports.categories.defaultCountry;
+
+            // Get teams prefix matches
+            const teamPrefix = search_term.substring(0, MAX_PREFIX_LIMIT);
+            const teamPrefixTokens = await cacheService.getSetMembers(
+                cacheService.keys.sports_teams_prefix(teamPrefix)
+            );
+
+            if (!teamPrefixTokens?.length) {
                 return resolve([]);
             }
 
-            // Get full team data
+            // Get top leagues for country to identify priority teams
+            const topLeagues = await cacheService.getObj(
+                cacheService.keys.sports_country_top_leagues(country_code)
+            ) || [];
+
+            // Fetch team data and league associations
             const pipeline = cacheService.startPipeline();
-            for (const token of team_tokens) {
-                pipeline.hGet(cacheService.keys.teams, token);
+
+            // Get team data
+            for(let token of teamPrefixTokens) {
+                pipeline.hGet(cacheService.keys.sports_teams, token);
             }
 
-            let teams = await cacheService.execMulti(pipeline);
-            teams = teams
-                .map(team => {
-                    try {
-                        return JSON.parse(team);
-                    } catch (e) {
-                        return null;
-                    }
-                })
-                .filter(team => team !== null);
+            const teamsData = await pipeline.execAsPipeline();
 
-            // Filter by sport if specified
-            if (sport_token) {
-                teams = teams.filter(team => team.sport_token === sport_token);
-            }
+            let teams = teamsData
+                .map(t => t ? JSON.parse(t) : null)
+                .filter(t => t && t.name.toLowerCase().includes(search_term));
 
-            // Further filter if search term is longer than prefix
-            if (search_term.length > MAX_PREFIX_LIMIT) {
-                teams = teams.filter(team =>
-                    team.name.toLowerCase().includes(search_term) ||
-                    (team.short_name && team.short_name.toLowerCase().includes(search_term))
-                );
-            }
+            // Teams with league and country data
+            teams = teams.map((team, index) => {
+                const topLeagueIndex = Object.keys(team.leagues || {})
+                    .findIndex(league_token => topLeagues.includes(league_token));
 
-            // Score and sort results
-            teams = teams
-                .map(team => ({
+                return {
                     ...team,
-                    relevance: calculateRelevanceScore(
-                        team,
-                        search_term,
-                        user_location?.country_code
-                    )
-                }))
-                .sort((a, b) => b.relevance - a.relevance)
-                .slice(0, RESULTS_LIMIT);
+                    type: 'team',
+                    isCountryTeam: team.country?.code === country_code,
+                    isInTopLeague: topLeagueIndex !== -1,
+                    topLeaguePosition: topLeagueIndex,
+                    isContextSport: context?.token === team.sport_token
+                };
+            });
 
-            // Add city data if available
-            const citiesNeeded = teams
-                .filter(team => team.city)
-                .reduce((acc, team) => {
-                    if (team.country_code) {
-                        if (!acc[team.country_code]) {
-                            acc[team.country_code] = new Set();
-                        }
-                        acc[team.country_code].add(team.city);
-                    }
-                    return acc;
-                }, {});
+            const sortTeams = (a, b) => {
+                // First by top league position if both are in top leagues
+                if (a.isInTopLeague && b.isInTopLeague) {
+                    return a.topLeaguePosition - b.topLeaguePosition;
+                }
+                // Then by whether they're in a top league at all
+                if (a.isInTopLeague !== b.isInTopLeague) {
+                    return a.isInTopLeague ? -1 : 1;
+                }
+                // Then alphabetically
+                return a.name.localeCompare(b.name);
+            };
 
-            for (const [countryCode, cities] of Object.entries(citiesNeeded)) {
-                const cityData = await getCitiesByCountry(
-                    countryCode,
-                    Array.from(cities)
-                );
+            let sortedTeams = [
+                // Context sport teams
+                ...teams.filter(t => t.isContextSport && t.isCountryTeam).sort(sortTeams),
+                ...teams.filter(t => t.isContextSport && !t.isCountryTeam).sort(sortTeams),
+                // Non-context sport teams
+                ...teams.filter(t => !t.isContextSport && t.isCountryTeam).sort(sortTeams),
+                ...teams.filter(t => !t.isContextSport && !t.isCountryTeam).sort(sortTeams)
+            ];
 
-                teams = teams.map(team => {
-                    if (team.country_code === countryCode && team.city) {
-                        const city = cityData.find(c => c.name === team.city);
-                        if (city) {
-                            team.city_data = {
-                                name: city.name,
-                                lat: city.lat,
-                                lon: city.lon
-                            };
-                        }
-                    }
-                    return team;
-                });
-            }
+            sortedTeams.map(item => {
+                item.meta = item.country?.name || '';
+                item.label = allSports?.[item.sport_token]?.name || '';
+            });
 
-            resolve(teams);
+            resolve(sortedTeams.slice(0, RESULTS_LIMIT));
         } catch (e) {
-            console.error(e);
-            return reject(e);
-        }
-    });
-}
-
-function leaguesAutoComplete(search_term, sport_token) {
-    return new Promise(async (resolve, reject) => {
-        try {
-            search_term = normalizeSearch(search_term);
-            if (search_term.length < 2) {
-                return resolve([]);
-            }
-
-            const prefix = search_term.substring(0, MAX_PREFIX_LIMIT);
-            const prefix_key = cacheService.keys.sports_leagues_prefix(prefix);
-
-            // Get matching league tokens
-            const league_tokens = await cacheService.getSetMembers(prefix_key);
-            if (!league_tokens?.length) {
-                return resolve([]);
-            }
-
-            // Get full league data
-            const pipeline = cacheService.startPipeline();
-            for (const token of league_tokens) {
-                pipeline.hGet(cacheService.keys.sports_leagues, token);
-            }
-
-            let leagues = await cacheService.execMulti(pipeline);
-            leagues = leagues
-                .map(league => {
-                    try {
-                        return JSON.parse(league);
-                    } catch (e) {
-                        return null;
-                    }
-                })
-                .filter(league => league !== null);
-
-            // Filter by sport if specified
-            if (sport_token) {
-                leagues = leagues.filter(league => league.sport_token === sport_token);
-            }
-
-            // Further filter if search term is longer than prefix
-            if (search_term.length > MAX_PREFIX_LIMIT) {
-                leagues = leagues.filter(league =>
-                    league.name.toLowerCase().includes(search_term) ||
-                    (league.short_name && league.short_name.toLowerCase().includes(search_term))
-                );
-            }
-
-            // Sort by popularity
-            leagues.sort((a, b) => b.popularity - a.popularity);
-            leagues = leagues.slice(0, RESULTS_LIMIT);
-
-            resolve(leagues);
-        } catch (e) {
-            console.error(e);
-            return reject(e);
+            console.error('Error in sportsAutoComplete:', e);
+            reject(e);
         }
     });
 }
@@ -239,6 +171,5 @@ module.exports = {
     prefixLimit: MAX_PREFIX_LIMIT,
     topTeamsCount: TOP_TEAMS_COUNT,
     getTopTeamsBySport,
-    teamsAutoComplete,
-    leaguesAutoComplete
+    sportsAutoComplete,
 };

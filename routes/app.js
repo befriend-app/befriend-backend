@@ -183,30 +183,6 @@ router.post('/devices', function (req, res, next) {
     });
 });
 
-router.get('/autocomplete/instruments', function (req, res, next) {
-    return new Promise(async (resolve, reject) => {
-        try {
-            await apiController.autoCompleteInstruments(req, res);
-        } catch (err) {
-            console.log(err);
-        }
-
-        resolve();
-    });
-});
-
-router.get('/autocomplete/music', function (req, res, next) {
-    return new Promise(async (resolve, reject) => {
-        try {
-            await apiController.autoCompleteMusic(req, res);
-        } catch (err) {
-            console.log(err);
-        }
-
-        resolve();
-    });
-});
-
 router.get('/music/top/artists/genre', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
@@ -231,6 +207,41 @@ router.get('/sports/top/teams', function (req, res, next) {
     });
 });
 
+router.get('/movies/top/genre', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await apiController.getTopMoviesByGenre(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
+router.get('/autocomplete/instruments', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await apiController.autoCompleteInstruments(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
+router.get('/autocomplete/music', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await apiController.autoCompleteMusic(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
 
 router.get('/autocomplete/movies', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
@@ -244,10 +255,10 @@ router.get('/autocomplete/movies', function (req, res, next) {
     });
 });
 
-router.get('/movies/top/genre', function (req, res, next) {
+router.get('/autocomplete/schools', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
-            await apiController.getTopMoviesByGenre(req, res);
+            await apiController.autoCompleteSchools(req, res);
         } catch (err) {
             console.log(err);
         }
@@ -256,10 +267,10 @@ router.get('/movies/top/genre', function (req, res, next) {
     });
 });
 
-router.get('/autocomplete/schools', function (req, res, next) {
+router.get('/autocomplete/sports', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
-            await apiController.autoCompleteSchools(req, res);
+            await apiController.autoCompleteSports(req, res);
         } catch (err) {
             console.log(err);
         }

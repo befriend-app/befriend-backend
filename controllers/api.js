@@ -29,7 +29,7 @@ const { schoolAutoComplete } = require('../services/schools');
 const { hGetAll } = require('../services/cache');
 const { getTopArtistsForGenre, musicAutoComplete } = require('../services/music');
 const moviesService = require('../services/movies');
-const { getTopTeamsBySport } = require('../services/sports');
+const { getTopTeamsBySport, sportsAutoComplete } = require('../services/sports');
 
 module.exports = {
     getNetworks: function (req, res) {
@@ -1785,6 +1785,32 @@ module.exports = {
 
             try {
                 let items = await schoolAutoComplete(countryId, search, location);
+
+                res.json({
+                    items: items,
+                });
+            } catch (e) {
+                console.error(e);
+
+                res.json('Autocomplete error', 400);
+                return resolve();
+            }
+        });
+    },
+    autoCompleteSports: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            let search = req.query.search;
+            let category = req.query.category;
+
+            if (!search) {
+                res.json('Invalid search', 400);
+                return resolve();
+            }
+
+            try {
+                let person = await getPerson(req.query.person_token);
+
+                let items = await sportsAutoComplete(search, category, person?.country_code);
 
                 res.json({
                     items: items,

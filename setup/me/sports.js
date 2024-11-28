@@ -524,7 +524,6 @@ async function main() {
             console.log('Sports sync completed');
 
             //index sports
-
             await require('../index/index_sports').main();
             resolve();
         } catch (e) {

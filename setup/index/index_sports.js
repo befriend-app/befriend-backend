@@ -215,11 +215,14 @@ function indexTeams() {
             let conn = await dbService.conn();
             let pipeline = cacheService.startPipeline();
 
-            // Get all teams with their sport and country info
+            // Get teams data with league associations
             const teams = await conn('sports_teams AS st')
                 .join('sports AS s', 's.id', 'st.sport_id')
                 .leftJoin('open_countries AS oc', 'oc.id', 'st.country_id')
+                .leftJoin('sports_teams_leagues AS stl', 'st.id', 'stl.team_id')
+                .leftJoin('sports_leagues AS sl', 'stl.league_id', 'sl.id')
                 .whereNull('st.deleted')
+                .whereNull('stl.deleted')
                 .orderBy('st.popularity', 'desc')
                 .select(
                     'st.id',
@@ -228,32 +231,53 @@ function indexTeams() {
                     'st.short_name',
                     's.token AS sport_token',
                     'oc.country_code',
+                    'oc.country_name',
                     'st.city',
                     'st.popularity',
-                    'st.is_active'
+                    'st.is_active',
+                    'sl.token AS league_token',
+                    'sl.name AS league_name'
                 );
 
-            // Create data structures
             const teamsAll = {};
             const prefixGroups = {};
             const sportCountryTeams = {};
 
-            // Process all teams
+            // Group teams by ID to handle multiple league associations
+            const teamsById = {};
             for (const team of teams) {
-                // Store complete team data
+                if (!teamsById[team.id]) {
+                    teamsById[team.id] = {
+                        ...team,
+                        leagues: {}
+                    };
+                }
+                if (team.league_token) {
+                    teamsById[team.id].leagues[team.league_token] = {
+                        token: team.league_token,
+                        name: team.league_name
+                    }
+                }
+            }
+
+            // Process grouped teams
+            for (const team of Object.values(teamsById)) {
                 teamsAll[team.token] = JSON.stringify({
                     id: team.id,
                     token: team.token,
                     name: team.name,
                     short_name: team.short_name || '',
                     sport_token: team.sport_token,
-                    country_code: team.country_code || '',
                     city: team.city || '',
                     popularity: team.popularity,
-                    is_active: team.is_active ? 1 : ''
+                    is_active: team.is_active ? 1 : '',
+                    country: {
+                        code: team.country_code || '',
+                        name: team.country_name || '',
+                    },
+                    leagues: team.leagues
                 });
 
-                // Group by sport and country for top teams
                 const key = `${team.sport_token}:${team.country_code}`;
                 if (!sportCountryTeams[key]) {
                     sportCountryTeams[key] = [];
@@ -263,7 +287,7 @@ function indexTeams() {
                     popularity: team.popularity
                 });
 
-                // Index team name prefixes
+                // Index name prefixes
                 const nameLower = team.name.toLowerCase();
                 const words = nameLower.split(/\s+/);
 
@@ -290,20 +314,16 @@ function indexTeams() {
             }
 
             // Store in Redis
-            // 1. Store all teams
             pipeline.hSet(cacheService.keys.sports_teams, teamsAll);
 
-            // 2. Store prefix indexes
             for (const [prefix, tokens] of Object.entries(prefixGroups)) {
                 pipeline.sAdd(cacheService.keys.sports_teams_prefix(prefix), Array.from(tokens));
             }
 
-            // 3. Store top teams by sport and country
             for (const [key, teams] of Object.entries(sportCountryTeams)) {
                 const [sportToken, countryCode] = key.split(':');
                 if (!countryCode) continue;
 
-                // Sort by popularity and take top N
                 const topTeams = teams
                     .sort((a, b) => b.popularity - a.popularity)
                     .slice(0, topTeamsCount)
