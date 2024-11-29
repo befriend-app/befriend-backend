@@ -94,11 +94,11 @@ const keyFunctions = {
 
     tv_prefix: (prefix) => `tv:shows:prefix:${prefix}`,
     tv_decade_shows: (decade) => `tv:decade:${decade}:shows`,
-    tv_decade_top: (decade) => `tv:decade:${decade}:top`,
+    tv_decade_top_shows: (decade) => `tv:decade:${decade}:top`,
     tv_network_shows: (network) => `tv:network:${network}:shows`,
-    tv_network_top: (network) => `tv:network:${network}:top`,
+    tv_network_top_shows: (network) => `tv:network:${network}:top`,
     tv_genre_shows: (token) => `tv:genre:${token}:shows`,
-    tv_genre_top: (token) => `tv:genre:${token}:top`
+    tv_genre_top_shows: (token) => `tv:genre:${token}:top`
 };
 
 module.exports = {
