@@ -1,6 +1,6 @@
 const cacheService = require('../services/cache');
-const db = require('../services/db');
 const { loadScriptEnv, isProdApp } = require('../services/shared');
+const { keys: systemKeys } = require('../services/system');
 
 loadScriptEnv();
 
@@ -40,13 +40,16 @@ function main(is_me) {
                 await knex(table).delete();
             }
 
+            //delete sync
+            for(let k in systemKeys.sync.data.movies) {
+                await knex('sync')
+                    .where('sync_process', systemKeys.sync.data.movies[k])
+                    .delete();
+            }
+
             let movie_keys = await cacheService.getKeysWithPrefix(`movie`);
 
             await cacheService.deleteKeys(movie_keys);
-        }
-
-        if (is_me) {
-            process.exit();
         }
 
         resolve();

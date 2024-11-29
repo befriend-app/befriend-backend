@@ -16,7 +16,7 @@ exports.up = function(knex) {
             table.string('tmdb_poster_path').nullable();
             table.string('token', 255).notNullable();
             table.string('name').notNullable();
-            table.string('networks').nullable();
+            table.string('networks', 600).nullable();
             table.string('original_language').nullable();
             table.string('origin_country').nullable();
             table.date('first_air_date').notNullable();
