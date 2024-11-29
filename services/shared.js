@@ -125,7 +125,7 @@ function latLonLookup(lat, lon) {
 
             //add polygon data for each country
             for (let c of geoLookup.countries) {
-                if(!c.coordinates) {
+                if (!c.coordinates) {
                     let data_path = joinPaths(
                         getRepoRoot(),
                         'node_modules/geojson-places/data/countries',
@@ -690,9 +690,11 @@ function getOptionDateTime(option) {
 
     let round_minutes;
 
-    if (option.in_mins >= 240) { // 4 hours or more
+    if (option.in_mins >= 240) {
+        // 4 hours or more
         round_minutes = 30;
-    } else if (option.in_mins >= 120) { // 2 hours or more
+    } else if (option.in_mins >= 120) {
+        // 2 hours or more
         round_minutes = 15;
     } else {
         round_minutes = 5;

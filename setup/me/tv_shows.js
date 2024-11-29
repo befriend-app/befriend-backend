@@ -43,7 +43,7 @@ function syncTvGenres() {
                         token: item.token,
                         name: item.name,
                         created: timeNow(),
-                        updated: timeNow()
+                        updated: timeNow(),
                     };
 
                     batch_insert.push(new_item);
@@ -53,7 +53,7 @@ function syncTvGenres() {
                         id: existing.id,
                         name: item.name,
                         updated: timeNow(),
-                        deleted: item.deleted ? timeNow() : null
+                        deleted: item.deleted ? timeNow() : null,
                     };
 
                     batch_update.push(update_obj);
@@ -156,7 +156,7 @@ function syncTvShows() {
                             episode_count: item.episode_count,
                             is_ended: item.is_ended,
                             created: timeNow(),
-                            updated: timeNow()
+                            updated: timeNow(),
                         };
 
                         batch_insert.push(new_item);
@@ -179,7 +179,7 @@ function syncTvShows() {
                             episode_count: item.episode_count,
                             is_ended: item.is_ended,
                             updated: timeNow(),
-                            deleted: item.deleted ? timeNow() : null
+                            deleted: item.deleted ? timeNow() : null,
                         };
 
                         batch_update.push(update_obj);
@@ -225,14 +225,14 @@ function syncTvShows() {
             if (last_sync) {
                 await conn('sync').where('id', last_sync.id).update({
                     last_updated: timeNow(),
-                    updated: timeNow()
+                    updated: timeNow(),
                 });
             } else {
                 await conn('sync').insert({
                     sync_process: systemKeys.sync.data.tv.shows,
                     last_updated: timeNow(),
                     created: timeNow(),
-                    updated: timeNow()
+                    updated: timeNow(),
                 });
             }
 
@@ -269,7 +269,7 @@ function syncTvShowsGenres() {
             // Get lookup dictionaries
             const [shows, genres] = await Promise.all([
                 conn('tv_shows').select('id', 'token'),
-                conn('tv_genres').select('id', 'token')
+                conn('tv_genres').select('id', 'token'),
             ]);
 
             let shows_dict = shows.reduce((acc, s) => {
@@ -317,7 +317,7 @@ function syncTvShowsGenres() {
                     const genre_id = genres_dict[item.genre_token];
 
                     if (!show_id || !genre_id) {
-                        console.error("Show/genre not found");
+                        console.error('Show/genre not found');
                         continue;
                     }
 
@@ -330,7 +330,7 @@ function syncTvShowsGenres() {
                             show_id: show_id,
                             genre_id: genre_id,
                             created: timeNow(),
-                            updated: timeNow()
+                            updated: timeNow(),
                         };
 
                         batch_insert.push(new_item);
@@ -344,7 +344,7 @@ function syncTvShowsGenres() {
                         let update_obj = {
                             id: existing_assoc.id,
                             updated: timeNow(),
-                            deleted: item.deleted ? timeNow() : null
+                            deleted: item.deleted ? timeNow() : null,
                         };
 
                         batch_update.push(update_obj);
@@ -379,7 +379,7 @@ function syncTvShowsGenres() {
                     processed: items.length,
                     added,
                     updated,
-                    offset
+                    offset,
                 });
 
                 await timeoutAwait(1000);
@@ -389,14 +389,14 @@ function syncTvShowsGenres() {
             if (last_sync) {
                 await conn('sync').where('id', last_sync.id).update({
                     last_updated: timeNow(),
-                    updated: timeNow()
+                    updated: timeNow(),
                 });
             } else {
                 await conn('sync').insert({
                     sync_process: systemKeys.sync.data.tv.genres,
                     last_updated: timeNow(),
                     created: timeNow(),
-                    updated: timeNow()
+                    updated: timeNow(),
                 });
             }
 

@@ -26,8 +26,7 @@ async function deleteDb() {
         });
 
         //delete sync
-        let db_sync_keys = [
-        ];
+        let db_sync_keys = [];
 
         for (let key of db_sync_keys) {
             try {
@@ -64,11 +63,10 @@ async function deleteRedis() {
 
     let keys = await getKeysWithPrefix('sports:');
 
-    keys
-        .push(cacheService.keys.sports)
+    keys.push(cacheService.keys.sports)
         .push(cacheService.keys.sports_countries)
         .push(cacheService.keys.sports_leagues)
-        .push(cacheService.keys.sports_teams)
+        .push(cacheService.keys.sports_teams);
 
     console.log({
         keys: keys.length,

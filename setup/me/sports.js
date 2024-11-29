@@ -45,7 +45,7 @@ function syncSports() {
                         has_teams: item.has_teams,
                         is_active: item.is_active,
                         created: timeNow(),
-                        updated: timeNow()
+                        updated: timeNow(),
                     };
 
                     batch_insert.push(new_item);
@@ -58,7 +58,7 @@ function syncSports() {
                         has_teams: item.has_teams,
                         is_active: item.is_active,
                         updated: timeNow(),
-                        deleted: item.deleted ? timeNow() : null
+                        deleted: item.deleted ? timeNow() : null,
                     };
 
                     batch_update.push(update_obj);
@@ -99,7 +99,7 @@ function syncSportsCountries() {
             // Get lookup data
             const [sports, countries] = await Promise.all([
                 conn('sports').select('id', 'token'),
-                conn('open_countries').select('id', 'country_code')
+                conn('open_countries').select('id', 'country_code'),
             ]);
 
             let sports_dict = sports.reduce((acc, s) => {
@@ -142,7 +142,7 @@ function syncSportsCountries() {
                             sport_id: sport.id,
                             position: data.position,
                             created: timeNow(),
-                            updated: timeNow()
+                            updated: timeNow(),
                         };
 
                         batch_insert.push(new_item);
@@ -151,7 +151,7 @@ function syncSportsCountries() {
                         let update_obj = {
                             id: existing_assoc.id,
                             position: data.position,
-                            updated: timeNow()
+                            updated: timeNow(),
                         };
 
                         batch_update.push(update_obj);
@@ -182,10 +182,10 @@ function syncLeagues() {
 
     const main_table = 'sports_leagues';
     const countries_table = 'sports_leagues_countries';
-    let added = {leagues: 0, countries: 0};
-    let updated = {leagues: 0, countries: 0};
-    let batch_insert = {leagues: [], countries: []};
-    let batch_update = {leagues: [], countries: []};
+    let added = { leagues: 0, countries: 0 };
+    let updated = { leagues: 0, countries: 0 };
+    let batch_insert = { leagues: [], countries: [] };
+    let batch_update = { leagues: [], countries: [] };
 
     return new Promise(async (resolve, reject) => {
         try {
@@ -196,7 +196,7 @@ function syncLeagues() {
                 conn('sports').select('id', 'token'),
                 conn('open_countries').select('id', 'country_code'),
                 conn(main_table),
-                conn(countries_table)
+                conn(countries_table),
             ]);
 
             let sports_dict = sports.reduce((acc, s) => {
@@ -243,7 +243,7 @@ function syncLeagues() {
                         is_active: league.is_active,
                         position: league.position,
                         created: timeNow(),
-                        updated: timeNow()
+                        updated: timeNow(),
                     };
 
                     batch_insert.leagues.push(new_item);
@@ -256,7 +256,7 @@ function syncLeagues() {
                         is_active: league.is_active,
                         position: league.position,
                         updated: timeNow(),
-                        deleted: league.deleted ? timeNow() : null
+                        deleted: league.deleted ? timeNow() : null,
                     };
 
                     batch_update.leagues.push(update_obj);
@@ -273,8 +273,8 @@ function syncLeagues() {
                 await dbService.batchUpdate(main_table, batch_update.leagues);
             }
 
-            for(let item of batch_insert.leagues) {
-                if(!(leagues_dict[item.token])) {
+            for (let item of batch_insert.leagues) {
+                if (!leagues_dict[item.token]) {
                     leagues_dict[item.token] = item;
                 }
             }
@@ -295,7 +295,7 @@ function syncLeagues() {
                             country_id: country.id,
                             position: data.position,
                             created: timeNow(),
-                            updated: timeNow()
+                            updated: timeNow(),
                         };
 
                         batch_insert.countries.push(new_item);
@@ -304,7 +304,7 @@ function syncLeagues() {
                         let update_obj = {
                             id: existing.id,
                             position: data.position,
-                            updated: timeNow()
+                            updated: timeNow(),
                         };
 
                         batch_update.countries.push(update_obj);
@@ -335,23 +335,24 @@ function syncTeams() {
 
     const main_table = 'sports_teams';
     const leagues_table = 'sports_teams_leagues';
-    let added = {teams: 0, leagues: 0};
-    let updated = {teams: 0, leagues: 0};
-    let batch_insert = {teams: [], leagues: []};
-    let batch_update = {teams: [], leagues: []};
+    let added = { teams: 0, leagues: 0 };
+    let updated = { teams: 0, leagues: 0 };
+    let batch_insert = { teams: [], leagues: [] };
+    let batch_update = { teams: [], leagues: [] };
 
     return new Promise(async (resolve, reject) => {
         try {
             let conn = await dbService.conn();
 
             // Get lookups
-            const [sports, countries, leagues, existing_teams, existing_leagues] = await Promise.all([
-                conn('sports').select('id', 'token'),
-                conn('open_countries').select('id', 'country_code'),
-                conn('sports_leagues').select('id', 'token'),
-                conn(main_table),
-                conn(leagues_table)
-            ]);
+            const [sports, countries, leagues, existing_teams, existing_leagues] =
+                await Promise.all([
+                    conn('sports').select('id', 'token'),
+                    conn('open_countries').select('id', 'country_code'),
+                    conn('sports_leagues').select('id', 'token'),
+                    conn(main_table),
+                    conn(leagues_table),
+                ]);
 
             let lookups = {
                 sports: sports.reduce((acc, s) => {
@@ -374,7 +375,7 @@ function syncTeams() {
                     if (!acc[l.team_id]) acc[l.team_id] = {};
                     acc[l.team_id][l.league_id] = l;
                     return acc;
-                }, {})
+                }, {}),
             };
 
             let endpoint = dataEndpoint(`/sports/teams`);
@@ -402,7 +403,7 @@ function syncTeams() {
                         is_active: team.is_active,
                         popularity: team.popularity,
                         created: timeNow(),
-                        updated: timeNow()
+                        updated: timeNow(),
                     };
 
                     batch_insert.teams.push(new_item);
@@ -417,7 +418,7 @@ function syncTeams() {
                         is_active: team.is_active,
                         popularity: team.popularity,
                         updated: timeNow(),
-                        deleted: team.deleted ? timeNow() : null
+                        deleted: team.deleted ? timeNow() : null,
                     };
 
                     batch_update.teams.push(update_obj);
@@ -461,7 +462,7 @@ function syncTeams() {
                             season: league_data.season,
                             is_active: league_data.is_active,
                             created: timeNow(),
-                            updated: timeNow()
+                            updated: timeNow(),
                         };
 
                         batch_insert.leagues.push(new_item);
@@ -471,7 +472,7 @@ function syncTeams() {
                             id: existing_league.id,
                             season: league_data.season,
                             is_active: league_data.is_active,
-                            updated: timeNow()
+                            updated: timeNow(),
                         };
 
                         batch_update.leagues.push(update_obj);
@@ -538,7 +539,7 @@ module.exports = {
     syncSports,
     syncSportsCountries,
     syncLeagues,
-    syncTeams
+    syncTeams,
 };
 
 if (require.main === module) {

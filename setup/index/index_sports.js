@@ -70,7 +70,7 @@ function indexSports() {
 
             console.log({
                 total_sports: Object.keys(sportsAll).length,
-                countries: Object.keys(countryOrdering).length
+                countries: Object.keys(countryOrdering).length,
             });
         } catch (e) {
             console.error('Error in indexSports:', e);
@@ -98,7 +98,7 @@ function indexLeagues() {
                     'sl.short_name',
                     's.token AS sport_token',
                     'sl.position',
-                    'sl.is_active'
+                    'sl.is_active',
                 );
 
             // Get country associations and positions
@@ -111,7 +111,7 @@ function indexLeagues() {
                     'sl.token AS league_token',
                     'oc.country_code',
                     'oc.country_name',
-                    'slc.position'
+                    'slc.position',
                 )
                 .orderBy('slc.position');
 
@@ -129,7 +129,7 @@ function indexLeagues() {
                 leagueCountriesMap[assoc.league_token].push({
                     code: assoc.country_code,
                     name: assoc.country_name,
-                    position: assoc.position
+                    position: assoc.position,
                 });
             }
 
@@ -143,7 +143,7 @@ function indexLeagues() {
                     sport_token: league.sport_token,
                     position: league.position,
                     is_active: league.is_active ? 1 : '',
-                    countries: leagueCountriesMap[league.token] || []
+                    countries: leagueCountriesMap[league.token] || [],
                 });
 
                 // Index both full name and short name
@@ -186,7 +186,7 @@ function indexLeagues() {
                 }
                 countryTopLeagues[key].push({
                     token: assoc.league_token,
-                    position: assoc.position
+                    position: assoc.position,
                 });
             }
 
@@ -196,12 +196,12 @@ function indexLeagues() {
                 leagues.sort((a, b) => a.position - b.position);
 
                 // Store tokens of top leagues
-                const topLeagueTokens = leagues.map(l => l.token);
+                const topLeagueTokens = leagues.map((l) => l.token);
 
                 // Store in Redis
                 pipeline.set(
                     cacheService.keys.sports_country_top_leagues(countryCode),
-                    JSON.stringify(topLeagueTokens)
+                    JSON.stringify(topLeagueTokens),
                 );
             }
 
@@ -219,9 +219,8 @@ function indexLeagues() {
             console.log({
                 total_leagues: Object.keys(leaguesAll).length,
                 prefixes: Object.keys(prefixGroups).length,
-                countries_with_leagues: Object.keys(countryTopLeagues).length
+                countries_with_leagues: Object.keys(countryTopLeagues).length,
             });
-
         } catch (e) {
             console.error('Error in indexLeagues:', e);
             return reject(e);
@@ -257,7 +256,7 @@ function indexTeams() {
                     'st.popularity',
                     'st.is_active',
                     'sl.token AS league_token',
-                    'sl.name AS league_name'
+                    'sl.name AS league_name',
                 );
 
             const teamsAll = {};
@@ -270,14 +269,14 @@ function indexTeams() {
                 if (!teamsById[team.id]) {
                     teamsById[team.id] = {
                         ...team,
-                        leagues: {}
+                        leagues: {},
                     };
                 }
                 if (team.league_token) {
                     teamsById[team.id].leagues[team.league_token] = {
                         token: team.league_token,
-                        name: team.league_name
-                    }
+                        name: team.league_name,
+                    };
                 }
             }
 
@@ -296,7 +295,7 @@ function indexTeams() {
                         code: team.country_code || '',
                         name: team.country_name || '',
                     },
-                    leagues: team.leagues
+                    leagues: team.leagues,
                 });
 
                 const key = `${team.sport_token}:${team.country_code}`;
@@ -305,7 +304,7 @@ function indexTeams() {
                 }
                 sportCountryTeams[key].push({
                     token: team.token,
-                    popularity: team.popularity
+                    popularity: team.popularity,
                 });
 
                 // Index name prefixes
@@ -348,11 +347,11 @@ function indexTeams() {
                 const topTeams = teams
                     .sort((a, b) => b.popularity - a.popularity)
                     .slice(0, topTeamsCount)
-                    .map(t => t.token);
+                    .map((t) => t.token);
 
                 pipeline.set(
                     cacheService.keys.sports_country_top_teams(sportToken, countryCode),
-                    JSON.stringify(topTeams)
+                    JSON.stringify(topTeams),
                 );
             }
 
@@ -361,9 +360,8 @@ function indexTeams() {
             console.log({
                 total_teams: Object.keys(teamsAll).length,
                 prefixes: Object.keys(prefixGroups).length,
-                sport_country_combinations: Object.keys(sportCountryTeams).length
+                sport_country_combinations: Object.keys(sportCountryTeams).length,
             });
-
         } catch (e) {
             console.error('Error in indexTeams:', e);
             return reject(e);

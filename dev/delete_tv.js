@@ -35,17 +35,21 @@ function main(is_me) {
                 connection: connection,
             });
 
-            let tables = ['persons_tv_shows', 'persons_tv_genres', 'tv_shows_genres', 'tv_shows', 'tv_genres'];
+            let tables = [
+                'persons_tv_shows',
+                'persons_tv_genres',
+                'tv_shows_genres',
+                'tv_shows',
+                'tv_genres',
+            ];
 
             for (let table of tables) {
                 await knex(table).delete();
             }
 
             //delete sync
-            for(let k in systemKeys.sync.data.tv) {
-                await knex('sync')
-                    .where('sync_process', systemKeys.sync.data.tv[k])
-                    .delete();
+            for (let k in systemKeys.sync.data.tv) {
+                await knex('sync').where('sync_process', systemKeys.sync.data.tv[k]).delete();
             }
 
             //delete cache data

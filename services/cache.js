@@ -5,7 +5,7 @@ const standardKeys = {
     activity_types: 'activity_types',
     activity_type_default: 'activity_type:default',
     countries: 'countries',
-    me_sections: 'sections:me'
+    me_sections: 'sections:me',
 };
 
 const sectionKeys = {
@@ -19,7 +19,7 @@ const sectionKeys = {
     religions: 'sections:religions',
     smoking: 'sections:smoking',
     instruments: 'sections:instruments',
-    instruments_common: 'sections:instruments:common'
+    instruments_common: 'sections:instruments:common',
 };
 
 const mediaKeys = {
@@ -30,14 +30,14 @@ const mediaKeys = {
     music_artists: 'sections:music:artists',
     tv_shows: 'sections:tv_shows',
     tv_genres: 'sections:tv_genres',
-    tv_popular: 'sections:tv:popular'
+    tv_popular: 'sections:tv:popular',
 };
 
 const sportsKeys = {
     sports: 'sections:sports',
     sports_countries: 'sections:sports:countries',
     sports_leagues: 'sections:sports:leagues',
-    sports_teams: 'sections:sports:teams'
+    sports_teams: 'sections:sports:teams',
 };
 
 const keyFunctions = {
@@ -88,7 +88,8 @@ const keyFunctions = {
 
     sports_country_order: (code) => `sports:countries:top:${code}`,
     sports_country_top_leagues: (code) => `sports:countries:top:leagues:${code}`,
-    sports_country_top_teams: (sportToken, code) => `sports:countries:top:teams:${code}:${sportToken}`,
+    sports_country_top_teams: (sportToken, code) =>
+        `sports:countries:top:teams:${code}:${sportToken}`,
     sports_leagues_prefix: (prefix) => `sports:leagues:prefix:${prefix}`,
     sports_teams_prefix: (prefix) => `sports:teams:prefix:${prefix}`,
 
@@ -98,7 +99,7 @@ const keyFunctions = {
     tv_network_shows: (network) => `tv:network:${network}:shows`,
     tv_network_top_shows: (network) => `tv:network:${network}:top`,
     tv_genre_shows: (token) => `tv:genre:${token}:shows`,
-    tv_genre_top_shows: (token) => `tv:genre:${token}:top`
+    tv_genre_top_shows: (token) => `tv:genre:${token}:top`,
 };
 
 module.exports = {
@@ -109,7 +110,7 @@ module.exports = {
         ...sectionKeys,
         ...mediaKeys,
         ...sportsKeys,
-        ...keyFunctions
+        ...keyFunctions,
     },
     init: function () {
         return new Promise(async (resolve, reject) => {

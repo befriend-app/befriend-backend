@@ -40,7 +40,7 @@ module.exports = {
                     name: 'persons',
                     cols: {
                         id: 'gender_id',
-                        person_id: 'id'
+                        person_id: 'id',
                     },
                 },
             },
@@ -81,8 +81,7 @@ module.exports = {
         type: {
             name: 'buttons',
             multi: true,
-            exclusive: {
-            },
+            exclusive: {},
         },
         tables: {
             life_stages: {
@@ -476,16 +475,16 @@ module.exports = {
         tabs: [
             {
                 name: 'Teams',
-                key: 'teams'
+                key: 'teams',
             },
             {
                 name: 'Leagues',
-                key: 'leagues'
+                key: 'leagues',
             },
             {
                 name: 'Play',
-                key: 'play'
-            }
+                key: 'play',
+            },
         ],
         tables: {
             teams: {
@@ -495,9 +494,9 @@ module.exports = {
                     cols: {
                         id: 'team_id',
                         token: 'team_token',
-                        secondary: 'level'
-                    }
-                }
+                        secondary: 'level',
+                    },
+                },
             },
             leagues: {
                 isFavorable: true,
@@ -506,9 +505,9 @@ module.exports = {
                     cols: {
                         id: 'league_id',
                         token: 'league_token',
-                        secondary: 'level'
-                    }
-                }
+                        secondary: 'level',
+                    },
+                },
             },
             play: {
                 isFavorable: true,
@@ -517,48 +516,48 @@ module.exports = {
                     cols: {
                         id: 'sport_id',
                         token: 'sport_token',
-                        secondary: 'level'
-                    }
-                }
-            }
+                        secondary: 'level',
+                    },
+                },
+            },
         },
         categories: {
             endpoint: `/sports/top/teams`,
             options: null,
             fn: 'getSportCategories',
-            defaultCountry: 'US'
+            defaultCountry: 'US',
         },
         autoComplete: {
             minChars: 2,
             endpoint: '/autocomplete/sports',
             placeholders: {
-                main: 'Search teams or leagues'
-            }
+                main: 'Search teams or leagues',
+            },
         },
         cacheKeys: {
             play: {
-                byHash: cacheService.keys.sports
+                byHash: cacheService.keys.sports,
             },
             teams: {
-                byHash: cacheService.keys.sports_teams
+                byHash: cacheService.keys.sports_teams,
             },
             leagues: {
-                byHash: cacheService.keys.sports_leagues
-            }
+                byHash: cacheService.keys.sports_leagues,
+            },
         },
         secondary: {
             play: {
                 options: ['Beginner', 'Intermediate', 'Advanced', 'Expert'],
-                unselectedStr: 'Skill Level'
+                unselectedStr: 'Skill Level',
             },
             teams: {
                 options: ['Casual', 'Regular', 'Avid', 'Superfan'],
-                unselectedStr: 'Fan Level'
+                unselectedStr: 'Fan Level',
             },
             leagues: {
                 options: ['Casual', 'Regular', 'Avid', 'Superfan'],
-                unselectedStr: 'Fan Level'
-            }
+                unselectedStr: 'Fan Level',
+            },
         },
         functions: {
             data: 'getSports',
@@ -566,78 +565,78 @@ module.exports = {
         styles: {
             rowCols: {
                 default: 'cols-2',
-                my: 'cols-1'
-            }
-        }
+                my: 'cols-1',
+            },
+        },
     },
     tv_shows: {
         myStr: 'My TV',
         tabs: [
             {
                 name: 'Shows',
-                key: 'shows'
+                key: 'shows',
             },
             {
                 name: 'Genres',
-                key: 'genres'
-            }
+                key: 'genres',
+            },
         ],
         tables: {
             shows: {
                 isFavorable: true,
                 data: {
-                    name: 'tv_shows'
+                    name: 'tv_shows',
                 },
                 user: {
                     name: 'persons_tv_shows',
                     cols: {
                         id: 'show_id',
-                        token: 'show_token'
-                    }
-                }
+                        token: 'show_token',
+                    },
+                },
             },
             genres: {
                 isFavorable: true,
                 data: {
-                    name: 'tv_genres'
+                    name: 'tv_genres',
                 },
                 user: {
                     name: 'persons_tv_genres',
                     cols: {
                         id: 'genre_id',
-                        token: 'genre_token'
-                    }
-                }
-            }
+                        token: 'genre_token',
+                    },
+                },
+            },
         },
         categories: {
             endpoint: '/tv/category/top',
             options: null,
-            fn: 'getTvCategories'
+            fn: 'getTvCategories',
         },
         autoComplete: {
             minChars: 2,
             endpoint: '/autocomplete/tv',
             placeholders: {
-                main: 'Search TV shows'
-            }
+                main: 'Search TV shows',
+            },
         },
         cacheKeys: {
             shows: {
-                byHash: cacheService.keys.tv_shows
+                byHash: cacheService.keys.tv_shows,
             },
             genres: {
-                byHash: cacheService.keys.tv_genres
-            }
+                byHash: cacheService.keys.tv_genres,
+            },
         },
         functions: {
-            data: 'getTvShows'
+            data: 'getTvShows',
         },
         styles: {
             rowCols: {
                 default: 'cols-1',
-                my: 'cols-1'
-            }
-        }
+                my: 'cols-1',
+            },
+        },
     },
 };

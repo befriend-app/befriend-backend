@@ -22,8 +22,7 @@ function getCountries() {
 
         try {
             let conn = await dbService.conn();
-            let dbCountries = await conn('open_countries')
-                .orderBy('country_name', 'asc');
+            let dbCountries = await conn('open_countries').orderBy('country_name', 'asc');
 
             countries.list = dbCountries;
 
@@ -44,25 +43,25 @@ function getCountries() {
 function getCountryByCode(country_code) {
     return new Promise(async (resolve, reject) => {
         try {
-            if(!country_code) {
-                return reject("no country code");
+            if (!country_code) {
+                return reject('no country code');
             }
 
             let countries = await getCountries();
 
             let country = countries?.byCode?.[country_code.toLowerCase()];
 
-            if(country) {
+            if (country) {
                 return resolve({
                     id: country.id,
                     name: country.country_name,
                     code: country.country_code,
-                    emoji: country.emoji
+                    emoji: country.emoji,
                 });
             }
 
             resolve();
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return reject(e);
         }

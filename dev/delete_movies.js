@@ -34,17 +34,21 @@ function main(is_me) {
                 connection: connection,
             });
 
-            let tables = ['persons_movies', 'persons_movie_genres', 'movies_genres', 'movies', 'movie_genres'];
+            let tables = [
+                'persons_movies',
+                'persons_movie_genres',
+                'movies_genres',
+                'movies',
+                'movie_genres',
+            ];
 
             for (let table of tables) {
                 await knex(table).delete();
             }
 
             //delete sync
-            for(let k in systemKeys.sync.data.movies) {
-                await knex('sync')
-                    .where('sync_process', systemKeys.sync.data.movies[k])
-                    .delete();
+            for (let k in systemKeys.sync.data.movies) {
+                await knex('sync').where('sync_process', systemKeys.sync.data.movies[k]).delete();
             }
 
             let movie_keys = await cacheService.getKeysWithPrefix(`movie`);

@@ -56,7 +56,8 @@ function main(is_me) {
                 'persons_tv_genres',
                 'persons_tv_shows',
                 'persons_sections',
-                'me_sections'];
+                'me_sections',
+            ];
 
             for (let table of tables) {
                 await knex(table).delete();

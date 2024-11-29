@@ -12,14 +12,14 @@ const TOP_TEAMS_COUNT = 100;
 const WEIGHTS = {
     COUNTRY_MATCH: 0.4,
     POPULARITY: 0.3,
-    NAME_MATCH: 0.3
+    NAME_MATCH: 0.3,
 };
 
 function getTopTeamsBySport(sport_token, country_code) {
     return new Promise(async (resolve, reject) => {
         try {
             //todo cache results
-            if(!country_code) {
+            if (!country_code) {
                 country_code = sectionsData.sports.categories.defaultCountry;
             }
 
@@ -38,8 +38,8 @@ function getTopTeamsBySport(sport_token, country_code) {
 
             const teams = await pipeline.execAsPipeline();
             let results = teams
-                .map(team => team ? JSON.parse(team) : null)
-                .filter(team => team !== null);
+                .map((team) => (team ? JSON.parse(team) : null))
+                .filter((team) => team !== null);
 
             results.sort((a, b) => {
                 return a.name.localeCompare(b.name);
@@ -70,9 +70,11 @@ function calculateRelevanceScore(result, searchTerm, userCountryCode) {
         nameScore = 0.6;
     }
 
-    return (countryScore * WEIGHTS.COUNTRY_MATCH) +
-        (popularityScore * WEIGHTS.POPULARITY) +
-        (nameScore * WEIGHTS.NAME_MATCH);
+    return (
+        countryScore * WEIGHTS.COUNTRY_MATCH +
+        popularityScore * WEIGHTS.POPULARITY +
+        nameScore * WEIGHTS.NAME_MATCH
+    );
 }
 
 function sportsAutoComplete(search_term, context = null, country_code = null) {
@@ -92,13 +94,18 @@ function sportsAutoComplete(search_term, context = null, country_code = null) {
             pipeline.get(cacheService.keys.sports_country_top_leagues(country_code));
             pipeline.hGetAll(cacheService.keys.sports_country_order(country_code));
 
-            const [allSports, teamPrefixTokens, leaguePrefixTokens, rawTopLeagues, countryOrdering] =
-                await pipeline.execAsPipeline();
+            const [
+                allSports,
+                teamPrefixTokens,
+                leaguePrefixTokens,
+                rawTopLeagues,
+                countryOrdering,
+            ] = await pipeline.execAsPipeline();
 
-            for(let k in allSports) {
+            for (let k in allSports) {
                 try {
                     allSports[k] = JSON.parse(allSports[k]);
-                } catch(e) {}
+                } catch (e) {}
             }
 
             if (!teamPrefixTokens?.length && !leaguePrefixTokens?.length) return resolve([]);
@@ -107,71 +114,78 @@ function sportsAutoComplete(search_term, context = null, country_code = null) {
 
             // Get leagues
             const leaguesPipeline = cacheService.startPipeline();
-            for(let token of leaguePrefixTokens) {
+            for (let token of leaguePrefixTokens) {
                 leaguesPipeline.hGet(cacheService.keys.sports_leagues, token);
             }
 
             const leaguesData = await leaguesPipeline.execAsPipeline();
             const leagues = leaguesData
-                .map(l => l ? JSON.parse(l) : null)
-                .filter(l => l && (
-                    l.name.toLowerCase().includes(searchTermLower) ||
-                    (l.short_name && l.short_name.toLowerCase().includes(searchTermLower))
-                ))
-                .map(league => ({
+                .map((l) => (l ? JSON.parse(l) : null))
+                .filter(
+                    (l) =>
+                        l &&
+                        (l.name.toLowerCase().includes(searchTermLower) ||
+                            (l.short_name && l.short_name.toLowerCase().includes(searchTermLower))),
+                )
+                .map((league) => ({
                     ...league,
                     type: 'league',
-                    isContextSport: context?.token === league.sport_token
+                    isContextSport: context?.token === league.sport_token,
                 }));
 
             // Get teams
             const teamsPipeline = cacheService.startPipeline();
-            for(let token of teamPrefixTokens) {
+            for (let token of teamPrefixTokens) {
                 teamsPipeline.hGet(cacheService.keys.sports_teams, token);
             }
 
             const teamsData = await teamsPipeline.execAsPipeline();
             let teams = teamsData
-                .map(t => t ? JSON.parse(t) : null)
-                .filter(t => t && t.name.toLowerCase().includes(searchTermLower))
-                .map(team => ({
+                .map((t) => (t ? JSON.parse(t) : null))
+                .filter((t) => t && t.name.toLowerCase().includes(searchTermLower))
+                .map((team) => ({
                     ...team,
                     type: 'team',
                     isCountryTeam: team.country?.code === country_code,
-                    isInTopLeague: Object.keys(team.leagues || {}).some(lt => topLeagues.includes(lt)),
-                    topLeaguePosition: Object.keys(team.leagues || {}).findIndex(lt => topLeagues.includes(lt)),
+                    isInTopLeague: Object.keys(team.leagues || {}).some((lt) =>
+                        topLeagues.includes(lt),
+                    ),
+                    topLeaguePosition: Object.keys(team.leagues || {}).findIndex((lt) =>
+                        topLeagues.includes(lt),
+                    ),
                     isContextSport: context?.token === team.sport_token,
-                    sportPosition: countryOrdering?.[team.sport_token] ? parseInt(countryOrdering?.[team.sport_token]) : 999999
+                    sportPosition: countryOrdering?.[team.sport_token]
+                        ? parseInt(countryOrdering?.[team.sport_token])
+                        : 999999,
                 }));
 
             let sortedTeams = [
-                ...teams.filter(t => t.isContextSport && t.isCountryTeam).sort(sortByPriority),
-                ...teams.filter(t => t.isContextSport && !t.isCountryTeam).sort(sortByPriority),
-                ...teams.filter(t => !t.isContextSport && t.isCountryTeam).sort(sortByPriority),
-                ...teams.filter(t => !t.isContextSport && !t.isCountryTeam).sort(sortByPriority)
+                ...teams.filter((t) => t.isContextSport && t.isCountryTeam).sort(sortByPriority),
+                ...teams.filter((t) => t.isContextSport && !t.isCountryTeam).sort(sortByPriority),
+                ...teams.filter((t) => !t.isContextSport && t.isCountryTeam).sort(sortByPriority),
+                ...teams.filter((t) => !t.isContextSport && !t.isCountryTeam).sort(sortByPriority),
             ];
 
-            sortedTeams.map(item => {
+            sortedTeams.map((item) => {
                 item.table_key = 'teams';
                 item.meta = item.country?.name || '';
                 item.label = allSports?.[item.sport_token]?.name || '';
-            })
+            });
 
-            let sortedLeagues = leagues
-                .sort((a, b) => {
-                    if (a.isContextSport !== b.isContextSport) {
-                        return a.isContextSport ? -1 : 1;
-                    }
-                    return a.name.localeCompare(b.name);
-                });
+            let sortedLeagues = leagues.sort((a, b) => {
+                if (a.isContextSport !== b.isContextSport) {
+                    return a.isContextSport ? -1 : 1;
+                }
+                return a.name.localeCompare(b.name);
+            });
 
-            sortedLeagues.map(item => {
+            sortedLeagues.map((item) => {
                 const primaryCountry = item.countries?.[0];
 
                 item.table_key = 'leagues';
                 item.meta = primaryCountry ? `League: ${primaryCountry.name}` : 'League';
                 item.label = allSports?.[item.sport_token]?.name || '';
-            })
+            });
 
             const results = [...sortedTeams, ...sortedLeagues].slice(0, RESULTS_LIMIT);
             resolve(results);

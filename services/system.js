@@ -77,7 +77,7 @@ module.exports = {
                 tv: {
                     shows: 'sync_tv_shows',
                     genres: 'sync_tv_shows_genres',
-                }
+                },
             },
             network: {
                 persons: 'sync_persons',

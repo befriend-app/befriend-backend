@@ -1,20 +1,19 @@
-exports.up = async function(knex) {
+exports.up = async function (knex) {
     await Promise.all([
-            knex.schema.dropTableIfExists('persons_sports_teams'),
-            knex.schema.dropTableIfExists('persons_sports_leagues'),
-            knex.schema.dropTableIfExists('persons_sports_play'),
-            knex.schema.dropTableIfExists('persons_sports_watch'),
-            knex.schema.dropTableIfExists('sports_teams_leagues'),
-            knex.schema.dropTableIfExists('sports_teams'),
-            knex.schema.dropTableIfExists('sports_leagues_countries'),
-            knex.schema.dropTableIfExists('sports_leagues'),
-            knex.schema.dropTableIfExists('sports_countries'),
-            knex.schema.dropTableIfExists('sports')
-        ]
-    );
+        knex.schema.dropTableIfExists('persons_sports_teams'),
+        knex.schema.dropTableIfExists('persons_sports_leagues'),
+        knex.schema.dropTableIfExists('persons_sports_play'),
+        knex.schema.dropTableIfExists('persons_sports_watch'),
+        knex.schema.dropTableIfExists('sports_teams_leagues'),
+        knex.schema.dropTableIfExists('sports_teams'),
+        knex.schema.dropTableIfExists('sports_leagues_countries'),
+        knex.schema.dropTableIfExists('sports_leagues'),
+        knex.schema.dropTableIfExists('sports_countries'),
+        knex.schema.dropTableIfExists('sports'),
+    ]);
 
     return Promise.all([
-        knex.schema.createTable('sports', function(table) {
+        knex.schema.createTable('sports', function (table) {
             table.increments('id').primary();
             table.string('token', 32).notNullable().unique();
             table.string('name', 255).notNullable();
@@ -28,7 +27,7 @@ exports.up = async function(knex) {
             table.index('token');
         }),
 
-        knex.schema.createTable('sports_countries', function(table) {
+        knex.schema.createTable('sports_countries', function (table) {
             table.increments('id').primary();
             table.integer('sport_id').unsigned().notNullable();
             table.integer('country_id').unsigned().notNullable();
@@ -44,7 +43,7 @@ exports.up = async function(knex) {
             table.index(['country_id', 'position']);
         }),
 
-        knex.schema.createTable('sports_leagues', function(table) {
+        knex.schema.createTable('sports_leagues', function (table) {
             table.increments('id').primary();
             table.string('external_id', 60).nullable();
             table.string('token', 32).notNullable().unique();
@@ -63,7 +62,7 @@ exports.up = async function(knex) {
             table.index('external_id');
         }),
 
-        knex.schema.createTable('sports_leagues_countries', function(table) {
+        knex.schema.createTable('sports_leagues_countries', function (table) {
             table.increments('id').primary();
             table.integer('country_id').unsigned().notNullable();
             table.integer('league_id').unsigned().notNullable();
@@ -78,7 +77,7 @@ exports.up = async function(knex) {
             table.unique(['country_id', 'league_id']);
         }),
 
-        knex.schema.createTable('sports_teams', function(table) {
+        knex.schema.createTable('sports_teams', function (table) {
             table.increments('id').primary();
             table.string('external_id', 60).nullable();
             table.string('token', 60).notNullable().unique();
@@ -100,7 +99,7 @@ exports.up = async function(knex) {
         }),
 
         // Junction table for teams and leagues
-        knex.schema.createTable('sports_teams_leagues', function(table) {
+        knex.schema.createTable('sports_teams_leagues', function (table) {
             table.increments('id').primary();
             table.integer('team_id').unsigned().notNullable();
             table.integer('league_id').unsigned().notNullable();
@@ -117,7 +116,7 @@ exports.up = async function(knex) {
             table.index(['league_id', 'season']);
         }),
 
-        knex.schema.createTable('persons_sports_watch', function(table) {
+        knex.schema.createTable('persons_sports_watch', function (table) {
             table.bigIncrements('id').primary();
             table.bigInteger('person_id').unsigned().notNullable();
             table.integer('sport_id').unsigned().notNullable();
@@ -135,7 +134,7 @@ exports.up = async function(knex) {
             table.unique(['person_id', 'sport_id']);
         }),
 
-        knex.schema.createTable('persons_sports_play', function(table) {
+        knex.schema.createTable('persons_sports_play', function (table) {
             table.bigIncrements('id').primary();
             table.bigInteger('person_id').unsigned().notNullable();
             table.integer('sport_id').unsigned().notNullable();
@@ -153,7 +152,7 @@ exports.up = async function(knex) {
             table.unique(['person_id', 'sport_id']);
         }),
 
-        knex.schema.createTable('persons_sports_teams', function(table) {
+        knex.schema.createTable('persons_sports_teams', function (table) {
             table.bigIncrements('id').primary();
             table.bigInteger('person_id').unsigned().notNullable();
             table.integer('team_id').unsigned().notNullable();
@@ -171,7 +170,7 @@ exports.up = async function(knex) {
             table.unique(['person_id', 'team_id']);
         }),
 
-        knex.schema.createTable('persons_sports_leagues', function(table) {
+        knex.schema.createTable('persons_sports_leagues', function (table) {
             table.bigIncrements('id').primary();
             table.bigInteger('person_id').unsigned().notNullable();
             table.integer('league_id').unsigned().notNullable();
@@ -191,7 +190,7 @@ exports.up = async function(knex) {
     ]);
 };
 
-exports.down = function(knex) {
+exports.down = function (knex) {
     return Promise.all([
         knex.schema.dropTableIfExists('persons_sports_teams'),
         knex.schema.dropTableIfExists('persons_sports_leagues'),
@@ -202,6 +201,6 @@ exports.down = function(knex) {
         knex.schema.dropTableIfExists('sports_leagues_countries'),
         knex.schema.dropTableIfExists('sports_leagues'),
         knex.schema.dropTableIfExists('sports_countries'),
-        knex.schema.dropTableIfExists('sports')
+        knex.schema.dropTableIfExists('sports'),
     ]);
 };

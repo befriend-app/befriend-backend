@@ -68,8 +68,8 @@ module.exports = {
             try {
                 let person = await module.exports.getPerson(person_token);
 
-                if(!person) {
-                    return reject("No person found");
+                if (!person) {
+                    return reject('No person found');
                 }
 
                 //use cached data
@@ -79,9 +79,7 @@ module.exports = {
 
                 data.updated = timeNow();
 
-                await conn('persons')
-                    .where('id', person.id)
-                    .update(data);
+                await conn('persons').where('id', person.id).update(data);
 
                 Object.assign(person, data);
 

@@ -24,14 +24,18 @@ function main() {
             let genderData = response.data;
 
             for (let item of genderData.items) {
-                let existingItem = await conn(table_name).where('gender_token', item.gender_token).first();
+                let existingItem = await conn(table_name)
+                    .where('gender_token', item.gender_token)
+                    .first();
 
                 if (existingItem) {
                     if (item.updated > existingItem.updated) {
                         item.updated = timeNow();
 
                         // Update existing item
-                        await conn(table_name).where('gender_token', item.gender_token).update(item);
+                        await conn(table_name)
+                            .where('gender_token', item.gender_token)
+                            .update(item);
                         updated++;
                     }
                 } else {

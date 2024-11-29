@@ -36,7 +36,7 @@ function indexTvShows() {
                     'popularity',
                     'vote_count',
                     'vote_average',
-                    'networks'
+                    'networks',
                 );
 
             // Create data structures
@@ -52,12 +52,10 @@ function indexTvShows() {
                 // Calculate show score
                 const score = calculateShowScore(show);
 
-                if(show.networks) {
+                if (show.networks) {
                     try {
                         show.networks = JSON.parse(show.networks);
-                    } catch(e) {
-
-                    }
+                    } catch (e) {}
                 }
 
                 // Store full show data
@@ -76,7 +74,7 @@ function indexTvShows() {
                     vote_count: show.vote_count,
                     vote_average: show.vote_average,
                     score: score,
-                    genres: {}
+                    genres: {},
                 };
 
                 showsDict[show.id] = showData;
@@ -109,7 +107,7 @@ function indexTvShows() {
                     const networksLower = networksList.join(' ').toLowerCase();
 
                     for (const [networkKey, networkVariants] of Object.entries(networks)) {
-                        if (networkVariants.some(variant => networksLower.includes(variant))) {
+                        if (networkVariants.some((variant) => networksLower.includes(variant))) {
                             if (!networkGroups[networkKey]) {
                                 networkGroups[networkKey] = new Set();
                             }
@@ -154,7 +152,7 @@ function indexTvShows() {
                 if (showsDict[sg.show_id]) {
                     showsDict[sg.show_id].genres[sg.token] = {
                         token: sg.token,
-                        name: sg.name
+                        name: sg.name,
                     };
                 }
             }
@@ -164,7 +162,7 @@ function indexTvShows() {
             const topPopular = popularShows
                 .sort((a, b) => b.score - a.score)
                 .slice(0, topShowsCount)
-                .map(s => s.token);
+                .map((s) => s.token);
 
             pipeline.del(cacheService.keys.tv_popular);
             pipeline.sAdd(cacheService.keys.tv_popular, topPopular);
@@ -176,13 +174,16 @@ function indexTvShows() {
 
                 // Store all shows for this decade
                 pipeline.del(showsKey);
-                pipeline.sAdd(showsKey, Array.from(shows).map(s => s.token));
+                pipeline.sAdd(
+                    showsKey,
+                    Array.from(shows).map((s) => s.token),
+                );
 
                 // Store top shows for this decade
                 const topShows = Array.from(shows)
                     .sort((a, b) => b.score - a.score)
                     .slice(0, topShowsCount)
-                    .map(s => s.token);
+                    .map((s) => s.token);
 
                 pipeline.del(topKey);
                 pipeline.sAdd(topKey, topShows);
@@ -195,13 +196,16 @@ function indexTvShows() {
 
                 // Store all shows for this network
                 pipeline.del(showsKey);
-                pipeline.sAdd(showsKey, Array.from(shows).map(s => s.token));
+                pipeline.sAdd(
+                    showsKey,
+                    Array.from(shows).map((s) => s.token),
+                );
 
                 // Store top shows for this network
                 const topShows = Array.from(shows)
                     .sort((a, b) => b.score - a.score)
                     .slice(0, topShowsCount)
-                    .map(s => s.token);
+                    .map((s) => s.token);
 
                 pipeline.del(topKey);
                 pipeline.sAdd(topKey, topShows);
@@ -223,7 +227,7 @@ function indexTvShows() {
                 with_genres: showGenres.length,
                 prefixes: Object.keys(prefixGroups).length,
                 decades: Object.keys(decadeGroups).length,
-                networks: Object.keys(networkGroups).length
+                networks: Object.keys(networkGroups).length,
             });
         } catch (e) {
             console.error('Error in indexTvShows:', e);
@@ -254,7 +258,7 @@ function indexTvGenres() {
                     id: genre.id,
                     token: genre.token,
                     name: genre.name,
-                    tmdb_id: genre.tmdb_id
+                    tmdb_id: genre.tmdb_id,
                 });
                 return acc;
             }, {});
@@ -274,7 +278,7 @@ function indexTvGenres() {
                     's.vote_count',
                     's.vote_average',
                     's.networks',
-                    'sg.genre_id'
+                    'sg.genre_id',
                 );
 
             // Organize by genre
@@ -293,14 +297,14 @@ function indexTvGenres() {
 
                 const showScore = calculateShowScore({
                     vote_count: sg.vote_count,
-                    vote_average: sg.vote_average
+                    vote_average: sg.vote_average,
                 });
 
                 genreShows[genre.token].add(sg.show_token);
 
                 genreTopShows[genre.token].push({
                     show_token: sg.show_token,
-                    score: showScore
+                    score: showScore,
                 });
             }
 
@@ -324,7 +328,7 @@ function indexTvGenres() {
                 const topShows = genreTopShows[genreToken]
                     .sort((a, b) => b.score - a.score)
                     .slice(0, topShowsCount)
-                    .map(s => s.show_token);
+                    .map((s) => s.show_token);
 
                 if (topShows.length > 0) {
                     pipeline.sAdd(topKey, topShows);
@@ -336,7 +340,8 @@ function indexTvGenres() {
             console.log({
                 genres_processed: genres.length,
                 shows_genres_processed: shows_genres.length,
-                genres_with_shows: Object.keys(genreShows).filter(k => genreShows[k].size > 0).length
+                genres_with_shows: Object.keys(genreShows).filter((k) => genreShows[k].size > 0)
+                    .length,
             });
         } catch (e) {
             console.error('Error in indexTvGenres:', e);
@@ -348,7 +353,7 @@ function indexTvGenres() {
 }
 
 module.exports = {
-    main: async function() {
+    main: async function () {
         return new Promise(async (resolve, reject) => {
             try {
                 console.log('Indexing TV show data');
@@ -369,11 +374,11 @@ module.exports = {
                 reject(e);
             }
         });
-    }
+    },
 };
 
 if (require.main === module) {
-    (async function() {
+    (async function () {
         try {
             await module.exports.main();
             process.exit();

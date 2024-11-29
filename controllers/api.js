@@ -1,12 +1,14 @@
 const axios = require('axios');
 const tldts = require('tldts');
+const bcrypt = require('bcryptjs');
 
 const activitiesService = require('../services/activities');
 const cacheService = require('../services/cache');
 
 const dbService = require('../services/db');
 const networkService = require('../services/network');
-const bcrypt = require('bcryptjs');
+const moviesService = require('../services/movies');
+const tvService = require('../services/tv');
 
 const {
     isProdApp,
@@ -28,7 +30,6 @@ const { cityAutoComplete } = require('../services/locations');
 const { schoolAutoComplete } = require('../services/schools');
 const { hGetAll } = require('../services/cache');
 const { getTopArtistsForGenre, musicAutoComplete } = require('../services/music');
-const moviesService = require('../services/movies');
 const { getTopTeamsBySport, sportsAutoComplete } = require('../services/sports');
 
 module.exports = {
@@ -1684,7 +1685,7 @@ module.exports = {
             try {
                 let person = await getPerson(req.query.person_token);
 
-                if(!person) {
+                if (!person) {
                     res.json('Person not found', 400);
                     return resolve();
                 }
@@ -1767,6 +1768,47 @@ module.exports = {
             } catch (e) {
                 console.error('Error getting top movies by genre:', e);
                 res.json({ error: 'Error getting movies' }, 400);
+            }
+
+            resolve();
+        });
+    },
+    getTopShowsByCategory: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const { category_token } = req.query;
+
+                if (!category_token) {
+                    return res.json({ items: [] }, 200);
+                }
+
+                // Get top shows based on category
+                const items = await tvService.getTopShowsByCategory(category_token, true);
+
+                // Format response
+                const formattedItems = items.map((show) => ({
+                    token: show.token,
+                    name: show.name,
+                    poster: show.poster,
+                    first_air_date: show.first_air_date,
+                    year_from: show.year_from,
+                    year_to: show.year_to,
+                    label: show.label,
+                    meta: show.meta,
+                    popularity: show.popularity,
+                    vote_count: show.vote_count,
+                    vote_average: show.vote_average,
+                }));
+
+                res.json(
+                    {
+                        items: formattedItems,
+                    },
+                    200,
+                );
+            } catch (e) {
+                console.error('Error getting top TV shows by category:', e);
+                res.json({ error: 'Error getting TV shows' }, 400);
             }
 
             resolve();

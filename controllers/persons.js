@@ -1,7 +1,7 @@
 const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 
-const { timeNow, generateToken, latLonLookup} = require('../services/shared');
+const { timeNow, generateToken, latLonLookup } = require('../services/shared');
 
 const { getPerson, updatePerson } = require('../services/persons');
 const {
@@ -10,7 +10,14 @@ const {
     deleteSection,
     addSectionItem,
     updateSectionItem,
-    selectSectionOptionItem, updateSectionPositions, getModes, getGenders, putMode, putPartner, addKid, updateKid,
+    selectSectionOptionItem,
+    updateSectionPositions,
+    getModes,
+    getGenders,
+    putMode,
+    putPartner,
+    addKid,
+    updateKid,
     removeKid,
 } = require('../services/me');
 
@@ -27,19 +34,22 @@ module.exports = {
                 let me = await getPerson(person_token);
 
                 //set country
-                if(me.country_code) {
+                if (me.country_code) {
                     me.country = await getCountryByCode(me.country_code);
                 } else {
-                    if(req.query.location?.lat && req.query.location?.lon) {
+                    if (req.query.location?.lat && req.query.location?.lon) {
                         try {
-                            let country = await latLonLookup(req.query.location?.lat, req.query.location?.lon);
+                            let country = await latLonLookup(
+                                req.query.location?.lat,
+                                req.query.location?.lon,
+                            );
 
                             await updatePerson(person_token, {
                                 country_code: country.code,
                             });
 
                             me.country = country;
-                        } catch(e) {
+                        } catch (e) {
                             console.error(e);
                         }
                     }
@@ -48,7 +58,7 @@ module.exports = {
                 let genders = await getGenders(true);
 
                 let modes = await getModes(me);
-                
+
                 let sections = await getSections(me);
 
                 res.json({
@@ -68,10 +78,7 @@ module.exports = {
     putMeMode: function (req, res) {
         return new Promise(async (resolve, reject) => {
             try {
-                let data = await putMode(
-                    req.body.person_token,
-                    req.body.mode,
-                );
+                let data = await putMode(req.body.person_token, req.body.mode);
 
                 res.json(data, 200);
 
@@ -85,37 +92,37 @@ module.exports = {
     putCountry: function (req, res) {
         return new Promise(async (resolve, reject) => {
             try {
-                let {lat, lon, person_token} = req.body;
+                let { lat, lon, person_token } = req.body;
 
-                if(!lat || !lon || !person_token) {
-                    res.json("required params missing", 400);
+                if (!lat || !lon || !person_token) {
+                    res.json('required params missing', 400);
 
                     return resolve();
                 }
 
                 let person = await getPerson(person_token);
 
-                if(!person) {
-                    res.json("person not found", 400);
+                if (!person) {
+                    res.json('person not found', 400);
 
                     return resolve();
                 }
 
                 let country = await latLonLookup(lat, lon);
 
-                if(country?.code) {
+                if (country?.code) {
                     try {
                         await updatePerson(person_token, {
-                            country_code: country.code
+                            country_code: country.code,
                         });
 
                         res.json(country, 201);
-                    } catch(e) {
+                    } catch (e) {
                         console.error(e);
-                        res.json("error updating person", 400);
+                        res.json('error updating person', 400);
                     }
                 } else {
-                    res.json("Country not found", 400);
+                    res.json('Country not found', 400);
                 }
 
                 resolve();
@@ -128,13 +135,9 @@ module.exports = {
     putMePartner: function (req, res) {
         return new Promise(async (resolve, reject) => {
             try {
-                await putPartner(
-                    req.body.person_token,
-                    req.body.gender,
-                    req.body.isSelect
-                );
+                await putPartner(req.body.person_token, req.body.gender, req.body.isSelect);
 
-                res.json("partner updated", 200);
+                res.json('partner updated', 200);
 
                 resolve();
             } catch (e) {
@@ -146,9 +149,7 @@ module.exports = {
     postMeKids: function (req, res) {
         return new Promise(async (resolve, reject) => {
             try {
-                let kid = await addKid(
-                    req.body.person_token,
-                );
+                let kid = await addKid(req.body.person_token);
 
                 res.json(kid, 201);
 
@@ -168,11 +169,11 @@ module.exports = {
                     req.body.age_token,
                     req.body.gender_token,
                     req.body.is_select,
-                    req.body.is_active
+                    req.body.is_active,
                 );
 
                 res.json({
-                    success: true
+                    success: true,
                 });
 
                 resolve();
@@ -185,13 +186,10 @@ module.exports = {
     removeMeKids: function (req, res) {
         return new Promise(async (resolve, reject) => {
             try {
-                await removeKid(
-                    req.body.person_token,
-                    req.body.kid_token,
-                );
+                await removeKid(req.body.person_token, req.body.kid_token);
 
                 res.json({
-                    success: true
+                    success: true,
                 });
 
                 resolve();
@@ -204,10 +202,7 @@ module.exports = {
     addMeSection: function (req, res) {
         return new Promise(async (resolve, reject) => {
             try {
-                let data = await addSection(
-                    req.body.person_token,
-                    req.body.key,
-                );
+                let data = await addSection(req.body.person_token, req.body.key);
 
                 res.json(data, 201);
 
