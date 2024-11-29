@@ -16,10 +16,16 @@ exports.up = function(knex) {
             table.string('tmdb_poster_path').nullable();
             table.string('token', 255).notNullable();
             table.string('name').notNullable();
+            table.string('networks').nullable();
             table.string('original_language').nullable();
+            table.string('origin_country').nullable();
             table.date('first_air_date').notNullable();
+
             table.string('year_from').nullable();
             table.string('year_to').nullable();
+            table.integer('season_count').nullable();
+            table.integer('episode_count').nullable();
+            table.boolean('is_ended').nullable();
             table.float('popularity', 10, 4).nullable();
             table.float('vote_average', 8, 4).nullable();
             table.integer('vote_count').defaultTo(0);
