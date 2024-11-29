@@ -10,6 +10,11 @@ async function deletePreviousCustomKeys() {
     try {
         let keys = await getKeysWithPrefix('movies:');
 
+        keys
+            .push(cacheService.keys.movies)
+            .push(cacheService.keys.movie_genres)
+            .push(cacheService.keys.movies_new);
+
         await deleteKeys(keys);
     } catch (e) {
         console.error(e);

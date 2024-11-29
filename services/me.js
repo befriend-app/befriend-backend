@@ -2461,7 +2461,7 @@ function getTvCategories() {
 function getTvShows() {
     return new Promise(async (resolve, reject) => {
         try {
-            const section = sectionsData.tv;
+            const section = sectionsData.tv_shows;
             const categoryData = await getTvCategories();
 
             const data = {
