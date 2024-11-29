@@ -207,10 +207,22 @@ router.get('/sports/top/teams', function (req, res, next) {
     });
 });
 
-router.get('/movies/top/genre', function (req, res, next) {
+router.get('/movies/category/top', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
-            await apiController.getTopMoviesByGenre(req, res);
+            await apiController.getTopMoviesByCategory(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
+router.get('/tv/category/top', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await apiController.getTopShowsByCategory(req, res);
         } catch (err) {
             console.log(err);
         }

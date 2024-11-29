@@ -1726,7 +1726,7 @@ module.exports = {
             }
         });
     },
-    getTopMoviesByGenre: function (req, res) {
+    getTopMoviesByCategory: function (req, res) {
         return new Promise(async (resolve, reject) => {
             try {
                 const { category_token } = req.query;

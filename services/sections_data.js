@@ -316,7 +316,7 @@ module.exports = {
             },
         },
         categories: {
-            endpoint: `/movies/top/genre`,
+            endpoint: `/movies/category/top`,
             options: null,
             fn: 'getMovieCategories',
         },
@@ -566,6 +566,76 @@ module.exports = {
         styles: {
             rowCols: {
                 default: 'cols-2',
+                my: 'cols-1'
+            }
+        }
+    },
+    tv_shows: {
+        myStr: 'My TV',
+        tabs: [
+            {
+                name: 'Shows',
+                key: 'shows'
+            },
+            {
+                name: 'Genres',
+                key: 'genres'
+            }
+        ],
+        tables: {
+            shows: {
+                isFavorable: true,
+                data: {
+                    name: 'tv_shows'
+                },
+                user: {
+                    name: 'persons_tv_shows',
+                    cols: {
+                        id: 'show_id',
+                        token: 'show_token'
+                    }
+                }
+            },
+            genres: {
+                isFavorable: true,
+                data: {
+                    name: 'tv_genres'
+                },
+                user: {
+                    name: 'persons_tv_genres',
+                    cols: {
+                        id: 'genre_id',
+                        token: 'genre_token'
+                    }
+                }
+            }
+        },
+        categories: {
+            endpoint: '/tv/category/top',
+            options: null,
+            fn: 'getTvCategories'
+        },
+        autoComplete: {
+            minChars: 2,
+            endpoint: '/autocomplete/tv',
+            placeholders: {
+                main: 'Search TV shows'
+            }
+        },
+        cacheKeys: {
+            shows: {
+                byHash: cacheService.keys.tv_shows
+            },
+            genres: {
+                byHash: cacheService.keys.tv_genres
+            }
+        },
+        functions: {
+            data: 'getTvShows'
+        },
+        styles: {
+            rowCols: {
+                default: 'cols-1',
                 my: 'cols-1'
             }
         }

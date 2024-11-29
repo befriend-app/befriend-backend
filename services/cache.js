@@ -29,6 +29,8 @@ module.exports = {
         sports_countries: `sections:sports:countries`,
         sports_leagues: `sections:sports:leagues`,
         sports_teams: `sections:sports:teams`,
+        tv_shows: 'sections:tv_shows',
+        tv_genres: 'sections:tv_genres',
         activity: function (activity_token) {
             return `activities:${activity_token}`;
         },
@@ -93,16 +95,16 @@ module.exports = {
             return `cities:country:${country_code}:${prefix}`;
         },
         person_sections: function (person_token) {
-            return `persons:sections:${person_token}`;
+            return `persons:me:sections:${person_token}`;
         },
         persons_section_data: function (person_token, data_name) {
-            return `persons:sections:data:${data_name}:${person_token}`;
+            return `persons:me:sections:data:${data_name}:${person_token}`;
         },
         persons_partner: function (person_token) {
-            return `persons:partner:${person_token}`;
+            return `persons:me:partner:${person_token}`;
         },
         persons_kids: function (person_token) {
-            return `persons:kids:${person_token}`;
+            return `persons:me:kids:${person_token}`;
         },
         instrument: function (token) {
             return `instruments:${token}`;

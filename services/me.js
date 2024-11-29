@@ -2323,6 +2323,171 @@ function getSportCategories(country_code) {
     });
 }
 
+function getTvCategories() {
+    return new Promise(async (resolve, reject) => {
+        try {
+            //todo cache
+            let allGenres = await hGetAllObj(cacheService.keys.tv_genres);
+
+            // Main categories
+            let mainCategories = [
+                {
+                    table_key: 'genres',
+                    name: 'Genres'
+                },
+                {
+                    table_key: 'shows',
+                    name: 'Most Popular',
+                    token: 'popular'
+                }
+            ];
+
+            // Networks
+            const networkCategories = [
+                {
+                    table_key: 'shows',
+                    heading: 'Streaming',
+                    name: 'Netflix',
+                    token: 'netflix'
+                },
+                {
+                    table_key: 'shows',
+                    name: 'Disney+',
+                    token: 'disney'
+                },
+                {
+                    table_key: 'shows',
+                    name: 'HBO',
+                    token: 'hbo'
+                },
+                {
+                    table_key: 'shows',
+                    name: 'Amazon Prime',
+                    token: 'amazon'
+                },
+                {
+                    table_key: 'shows',
+                    name: 'Apple TV+',
+                    token: 'apple'
+                },
+                {
+                    table_key: 'shows',
+                    heading: 'Networks',
+                    name: 'ABC',
+                    token: 'abc'
+                },
+                {
+                    table_key: 'shows',
+                    name: 'NBC',
+                    token: 'nbc'
+                },
+                {
+                    table_key: 'shows',
+                    name: 'CBS',
+                    token: 'cbs'
+                },
+                {
+                    table_key: 'shows',
+                    name: 'FOX',
+                    token: 'fox'
+                },
+                {
+                    table_key: 'shows',
+                    name: 'The CW',
+                    token: 'cw'
+                }
+            ];
+
+            // Process genres
+            let genreCategories = [];
+            let genreItems = [];
+
+            for (let k in allGenres) {
+                let genre = allGenres[k];
+
+                if (!genre.deleted) {
+                    genreCategories.push({
+                        table_key: 'shows',
+                        heading: 'Genres',
+                        name: genre.name,
+                        token: k
+                    });
+
+                    genreItems.push({
+                        token: k,
+                        name: genre.name,
+                        category: 'genres'
+                    });
+                }
+            }
+
+            genreCategories.sort((a, b) => a.name.localeCompare(b.name));
+
+            // Build decade categories
+            let decadeCategories = [];
+            let currentYear = new Date().getFullYear();
+            let currentDecade = Math.floor(currentYear / 10) * 10;
+
+            for (let decade = currentDecade; decade >= 1950; decade -= 10) {
+                decadeCategories.push({
+                    table_key: 'shows',
+                    heading: 'Decades',
+                    name: `${decade}s`,
+                    token: `${decade}s`
+                });
+            }
+
+            // Combine all categories in order
+            const categories = [
+                ...mainCategories,
+                ...networkCategories,
+                ...genreCategories,
+                ...decadeCategories
+            ];
+
+            genreItems.sort((a, b) => a.name.localeCompare(b.name));
+
+            resolve({
+                options: categories,
+                items: genreItems
+            });
+        } catch (e) {
+            console.error(e);
+            return reject(e);
+        }
+    });
+}
+
+function getTvShows() {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const section = sectionsData.tv;
+            const categoryData = await getTvCategories();
+
+            const data = {
+                myStr: section.myStr,
+                tabs: section.tabs,
+                options: categoryData.items,
+                autoComplete: section.autoComplete,
+                categories: {
+                    endpoint: section.categories.endpoint,
+                    options: categoryData.options,
+                },
+                styles: section.styles,
+                tables: Object.keys(section.tables).map(key => ({
+                    name: key,
+                    isFavorable: section.tables[key].isFavorable,
+                }))
+            };
+
+            resolve(data);
+        } catch (e) {
+            console.error(e);
+            return reject(e);
+        }
+    });
+}
+
 function selectSectionOptionItem(person_token, section_key, table_key, item_token, is_select) {
     return new Promise(async (resolve, reject) => {
         try {
@@ -2667,5 +2832,7 @@ module.exports = {
     getSmoking,
     getSports,
     getSportCategories,
+    getTvCategories,
+    getTvShows,
     updateSectionPositions,
 };
