@@ -74,6 +74,10 @@ module.exports = {
                     artists_genres: 'sync_music_artists_genres',
                 },
                 schools: 'sync_schools',
+                tv: {
+                    shows: 'sync_tv_shows',
+                    genres: 'sync_tv_shows_genres',
+                }
             },
             network: {
                 persons: 'sync_persons',
