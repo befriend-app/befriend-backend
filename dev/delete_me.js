@@ -34,13 +34,35 @@ function main(is_me) {
                 connection: connection,
             });
 
-            let tables = ['persons_sections', 'me_sections'];
+            let tables = [
+                'persons_drinking',
+                'persons_instruments',
+                'persons_kids',
+                'persons_languages',
+                'persons_life_stages',
+                'persons_movie_genres',
+                'persons_movies',
+                'persons_music_artists',
+                'persons_music_genres',
+                'persons_partner',
+                'persons_politics',
+                'persons_relationship_status',
+                'persons_religions',
+                'persons_schools',
+                'persons_smoking',
+                'persons_sports_play',
+                'persons_sports_teams',
+                'persons_sports_watch',
+                'persons_tv_genres',
+                'persons_tv_shows',
+                'persons_sections',
+                'me_sections'];
 
             for (let table of tables) {
                 await knex(table).delete();
             }
 
-            let keys = await cacheService.getKeysWithPrefix(`${cacheService.keys.person_sections('')}`);
+            let keys = await cacheService.getKeysWithPrefix(`persons:me`);
 
             keys.push(cacheService.keys.me_sections);
 
