@@ -249,6 +249,7 @@ function syncTvShowsGenres() {
     console.log('Sync TV shows-genres');
 
     const main_table = 'tv_shows_genres';
+
     let added = 0;
     let updated = 0;
     let batch_insert = [];
