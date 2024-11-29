@@ -122,6 +122,7 @@ function getTopShowsByCategory(category_token, topOnly = true) {
             const shows = await pipeline.execAsPipeline();
 
             // Process and format show data
+            const currentYear = new Date().getFullYear();
             const results = shows
                 .map((show) => {
                     if (!show) return null;
@@ -132,6 +133,13 @@ function getTopShowsByCategory(category_token, topOnly = true) {
                         vote_count: showData.vote_count,
                         vote_average: showData.vote_average,
                     });
+
+                    // Calculate recency value (higher for newer shows)
+                    const recencyYear = !showData.is_ended ? currentYear : showData.year_to || showData.year_from;
+                    let recencyScore = (recencyYear - 2000) / (currentYear - 2000); // Normalize to 0-1
+                    recencyScore = Math.max(recencyScore, 0);
+
+                    const combinedScore = (score * 0.4) + (recencyScore * 0.6);
 
                     return {
                         token: showData.token,
@@ -147,7 +155,7 @@ function getTopShowsByCategory(category_token, topOnly = true) {
                         popularity: showData.popularity,
                         vote_count: showData.vote_count,
                         vote_average: showData.vote_average,
-                        score: score,
+                        score: combinedScore,
                     };
                 })
                 .filter((show) => show !== null)
