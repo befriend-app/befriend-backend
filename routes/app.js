@@ -291,4 +291,16 @@ router.get('/autocomplete/sports', function (req, res, next) {
     });
 });
 
+router.get('/autocomplete/tv', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await apiController.autoCompleteTv(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
 module.exports = router;

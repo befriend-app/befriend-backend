@@ -1755,7 +1755,7 @@ module.exports = {
                     name: movie.name,
                     poster: movie.poster,
                     release_date: movie.release_date,
-                    label: movie.release_date?.substring(0, 4),
+                    meta: movie.release_date?.substring(0, 4),
                     popularity: movie.popularity,
                 }));
 
@@ -1865,4 +1865,29 @@ module.exports = {
             }
         });
     },
+    autoCompleteTv: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            let search = req.query.search;
+            let category = req.query.category;
+
+            if (!search) {
+                res.json('Invalid search', 400);
+                return resolve();
+            }
+
+            try {
+                let items = await tvService.tvShowsAutoComplete(search, category);
+
+                res.json({
+                    items: items,
+                });
+            } catch (e) {
+                console.error(e);
+
+                res.json('Autocomplete error', 400);
+                return resolve();
+            }
+        });
+    },
+
 };

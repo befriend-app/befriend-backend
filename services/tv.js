@@ -150,7 +150,7 @@ function getTopShowsByCategory(category_token, topOnly = true) {
                         year_to: showData.year_to,
                         is_ended: showData.is_ended,
                         label: formatShowLabel(showData),
-                        meta: 'Test meta',
+                        // meta: formatShowLabel(showData),
                         table_key: 'shows',
                         popularity: showData.popularity,
                         vote_count: showData.vote_count,
@@ -181,7 +181,7 @@ function tvShowsAutoComplete(search_term, context = null) {
 
             // Get show tokens matching prefix
             const showTokens = await cacheService.getSetMembers(
-                cacheService.keys.tv_prefix(prefix),
+                cacheService.keys.tv_prefix(prefix)
             );
             if (!showTokens?.length) return resolve([]);
 
@@ -192,29 +192,69 @@ function tvShowsAutoComplete(search_term, context = null) {
             }
 
             const showsData = await pipeline.execAsPipeline();
-            const shows = showsData
-                .map((s) => (s ? JSON.parse(s) : null))
-                .filter((s) => s && s.name.toLowerCase().includes(searchTermLower))
-                .map((show) => ({
-                    token: show.token,
-                    name: show.name,
-                    poster: show.poster,
-                    first_air_date: show.first_air_date,
-                    year_from: show.year_from,
-                    year_to: show.year_to,
-                    is_ended: show.is_ended,
-                    networks: show.networks,
-                    vote_count: show.vote_count,
-                    vote_average: show.vote_average,
-                    table_key: 'shows',
-                    meta: show.networks || '',
-                    label: show.first_air_date?.substring(0, 4) || '',
-                    score: calculateShowScore(show, search_term),
-                }))
-                .sort((a, b) => b.score - a.score)
-                .slice(0, RESULTS_LIMIT);
+            const processedShows = showsData
+                .map(s => s ? JSON.parse(s) : null)
+                .filter(s => s && s.name.toLowerCase().includes(searchTermLower))
+                .map(show => {
+                    // Calculate base score
+                    const score = calculateShowScore({
+                        vote_count: show.vote_count,
+                        vote_average: show.vote_average,
+                    });
 
-            resolve(shows);
+                    let isContextMatch = false;
+                    if (context?.token) {
+                        if (context.token === 'popular') {
+                            isContextMatch = true; // Will sort by score
+                        } else if (context.token.match(/^\d{4}s$/)) {
+                            const contextDecade = parseInt(context.token);
+                            const decades = new Set();
+
+                            // Add year_from decade
+                            if (show.year_from) {
+                                decades.add(Math.floor(parseInt(show.year_from) / 10) * 10);
+                            }
+
+                            // Add year_to decade if different
+                            if (show.year_to) {
+                                decades.add(Math.floor(parseInt(show.year_to) / 10) * 10);
+                            }
+
+                            isContextMatch = decades.has(contextDecade);
+                        } else if (context.token.startsWith('genre_')) {
+                            const genreToken = context.token.replace('genre_', '');
+                            isContextMatch = show.genres?.[genreToken] !== undefined;
+                        } else {
+                            isContextMatch = show.networks?.includes(context.token);
+                        }
+                    }
+
+                    // Add context boost of 4 to score if matching
+                    const finalScore = score + (isContextMatch ? 4 : 0);
+
+                    return {
+                        token: show.token,
+                        name: show.name,
+                        poster: show.poster,
+                        first_air_date: show.first_air_date,
+                        year_from: show.year_from,
+                        year_to: show.year_to,
+                        is_ended: show.is_ended,
+                        networks: show.networks,
+                        vote_count: show.vote_count,
+                        vote_average: show.vote_average,
+                        table_key: 'shows',
+                        label: show.networks?.slice(0, 3)?.join(', '),
+                        meta: formatShowLabel(show),
+                        score: finalScore,
+                        isContextMatch
+                    };
+                });
+
+            // For all contexts, sort by score (which now includes context boost)
+            processedShows.sort((a, b) => b.score - a.score);
+
+            resolve(processedShows.slice(0, RESULTS_LIMIT));
         } catch (e) {
             console.error('Error in tvShowsAutoComplete:', e);
             reject(e);

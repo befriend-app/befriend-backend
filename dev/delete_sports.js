@@ -63,10 +63,7 @@ async function deleteRedis() {
 
     let keys = await getKeysWithPrefix('sports:');
 
-    keys.push(cacheService.keys.sports)
-        .push(cacheService.keys.sports_countries)
-        .push(cacheService.keys.sports_leagues)
-        .push(cacheService.keys.sports_teams);
+    keys.push(cacheService.keys.sports, cacheService.keys.sports_countries, cacheService.keys.sports_leagues, cacheService.keys.sports_teams);
 
     console.log({
         keys: keys.length,
