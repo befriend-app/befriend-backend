@@ -6,7 +6,7 @@ loadScriptEnv();
 
 function main(is_me) {
     return new Promise(async (resolve, reject) => {
-        console.log('Delete: movies');
+        console.log('Delete: tv');
 
         if (isProdApp()) {
             console.error('App env: [prod]', 'exiting');
@@ -34,15 +34,15 @@ function main(is_me) {
                 connection: connection,
             });
 
-            let tables = ['persons_movies', 'persons_movie_genres', 'movies_genres', 'movies', 'movie_genres'];
+            let tables = ['persons_tv_shows', 'persons_tv_genres', 'tv_shows_genres', 'tv_shows', 'tv_genres'];
 
             for (let table of tables) {
                 await knex(table).delete();
             }
 
-            let movie_keys = await cacheService.getKeysWithPrefix(`movie`);
+            let tv_keys = await cacheService.getKeysWithPrefix(`tv:`);
 
-            await cacheService.deleteKeys(movie_keys);
+            await cacheService.deleteKeys(tv_keys);
         }
 
         if (is_me) {
