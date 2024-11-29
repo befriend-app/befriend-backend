@@ -1,168 +1,115 @@
 const redis = require('redis');
 
+const standardKeys = {
+    ws: 'ws:messages',
+    activity_types: 'activity_types',
+    activity_type_default: 'activity_type:default',
+    countries: 'countries',
+    me_sections: 'sections:me'
+};
+
+const sectionKeys = {
+    drinking: 'sections:drinking',
+    genders: 'sections:genders',
+    kids_ages: 'sections:kids_ages',
+    languages: 'sections:languages',
+    life_stages: 'sections:life_stages',
+    politics: 'sections:politics',
+    relationship_status: 'sections:relationship_status',
+    religions: 'sections:religions',
+    smoking: 'sections:smoking',
+    instruments: 'sections:instruments',
+    instruments_common: 'sections:instruments:common'
+};
+
+const mediaKeys = {
+    movies: 'sections:movies',
+    movie_genres: 'sections:movie:genres',
+    movies_new: 'sections:movies:new',
+    music_genres: 'sections:music:genres',
+    music_artists: 'sections:music:artists',
+    tv_shows: 'sections:tv_shows',
+    tv_genres: 'sections:tv_genres',
+    tv_popular: 'sections:tv:popular'
+};
+
+const sportsKeys = {
+    sports: 'sections:sports',
+    sports_countries: 'sections:sports:countries',
+    sports_leagues: 'sections:sports:leagues',
+    sports_teams: 'sections:sports:teams'
+};
+
+const keyFunctions = {
+    session: (session) => `session:api:${session}`,
+    exchange_keys: (token) => `networks:keys:exchange:${token}`,
+
+    activity: (token) => `activities:${token}`,
+    activity_type: (token) => `activity_types:${token}`,
+    activity_type_venue_categories: (token) => `activity_types:venue_categories:${token}`,
+
+    place_fsq: (fsqId) => `places:fsq:${fsqId}`,
+    city: (id) => `cities:${id}`,
+    cities_country: (code) => `cities:countries:${code}`,
+    cities_prefix: (prefix) => `cities:prefix:${prefix}`,
+    state: (id) => `states:${id}`,
+    country: (id) => `countries:${id}`,
+    city_country_prefix: (countryCode, prefix) => `cities:country:${countryCode}:${prefix}`,
+
+    address_geo: (addressId) => `address:geo:${addressId}`,
+    travel_times: (token) => `activities:travel:${token}`,
+
+    person: (tokenOrEmail = '') => `persons:${tokenOrEmail.toLowerCase()}`,
+    person_login_tokens: (token = '') => `persons:${token.toLowerCase()}:login_tokens`,
+    person_devices: (token) => `persons:devices:${token}`,
+    person_sections: (token) => `persons:me:sections:${token}`,
+    persons_section_data: (token, dataName) => `persons:me:sections:data:${dataName}:${token}`,
+    persons_partner: (token) => `persons:me:partner:${token}`,
+    persons_kids: (token) => `persons:me:kids:${token}`,
+
+    instrument: (token) => `instruments:${token}`,
+    instruments_prefix: (prefix) => `instruments:prefix:${prefix}`,
+
+    movies_prefix: (prefix) => `movies:prefix:${prefix}`,
+    movie_genres_prefix: (prefix) => `movie:genres:prefix:${prefix}`,
+    movie_genre_movies: (token) => `movie:genres:movies:${token}`,
+    movie_genre_top_movies: (token) => `movie:genres:top:movies:${token}`,
+    movies_decade: (decade) => `movies:decade:${decade}`,
+
+    music_genres_prefix: (prefix) => `music:genres:prefix:${prefix}`,
+    music_artists_prefix: (prefix) => `music:artists:prefix:${prefix}`,
+    music_genre_artists: (token) => `music:genres:artists:${token}`,
+    music_genre_top_artists: (token) => `music:genres:top:artists:${token}`,
+
+    schools_country: (code) => `schools:country:${code}`,
+    schools_country_prefix: (code, prefix) => `schools:prefix:${code}:${prefix}`,
+
+    languages_country: (code) => `languages:country:${code}`,
+
+    sports_country_order: (code) => `sports:countries:top:${code}`,
+    sports_country_top_leagues: (code) => `sports:countries:top:leagues:${code}`,
+    sports_country_top_teams: (sportToken, code) => `sports:countries:top:teams:${code}:${sportToken}`,
+    sports_leagues_prefix: (prefix) => `sports:leagues:prefix:${prefix}`,
+    sports_teams_prefix: (prefix) => `sports:teams:prefix:${prefix}`,
+
+    tv_prefix: (prefix) => `tv:shows:prefix:${prefix}`,
+    tv_decade_shows: (decade) => `tv:decade:${decade}:shows`,
+    tv_decade_top: (decade) => `tv:decade:${decade}:top`,
+    tv_network_shows: (network) => `tv:network:${network}:shows`,
+    tv_network_top: (network) => `tv:network:${network}:top`,
+    tv_genre_shows: (token) => `tv:genre:${token}:shows`,
+    tv_genre_top: (token) => `tv:genre:${token}:top`
+};
+
 module.exports = {
     conn: null,
     publisher: null,
     keys: {
-        ws: 'ws:messages',
-        activity_types: `activity_types`,
-        activity_type_default: `activity_type:default`,
-        countries: `countries`,
-        me_sections: `sections:me`,
-        drinking: 'sections:drinking',
-        genders: 'sections:genders',
-        kids_ages: 'sections:kids_ages',
-        languages: 'sections:languages',
-        life_stages: `sections:life_stages`,
-        politics: 'sections:politics',
-        relationship_status: 'sections:relationship_status',
-        religions: 'sections:religions',
-        smoking: 'sections:smoking',
-        instruments: `sections:instruments`,
-        instruments_common: `sections:instruments:common`,
-        movies: `sections:movies`,
-        movie_genres: `sections:movie:genres`,
-        movies_new: 'sections:movies:new',
-        music_genres: `sections:music:genres`,
-        music_artists: `sections:music:artists`,
-        sports: 'sections:sports',
-        sports_countries: `sections:sports:countries`,
-        sports_leagues: `sections:sports:leagues`,
-        sports_teams: `sections:sports:teams`,
-        tv_shows: 'sections:tv_shows',
-        tv_genres: 'sections:tv_genres',
-        activity: function (activity_token) {
-            return `activities:${activity_token}`;
-        },
-        activity_type: function (token) {
-            return `activity_types:${token}`;
-        },
-        activity_type_venue_categories: function (token) {
-            return `activity_types:venue_categories:${token}`;
-        },
-        place_fsq: function (fsq_id) {
-            return `places:fsq:${fsq_id}`;
-        },
-        city: function (id) {
-            return `cities:${id}`;
-        },
-        cities_country: function (code) {
-            return `cities:countries:${code}`;
-        },
-        cities_prefix: function (prefix) {
-            return `cities:prefix:${prefix}`;
-        },
-        state: function (id) {
-            return `states:${id}`;
-        },
-        country: function (id) {
-            return `countries:${id}`;
-        },
-        session: function (session) {
-            return `session:api:${session}`;
-        },
-        exchange_keys: function (token) {
-            return `networks:keys:exchange:${token}`;
-        },
-        address_geo: function (address_id) {
-            return `address:geo:${address_id}`;
-        },
-        travel_times: function (token) {
-            return `activities:travel:${token}`;
-        },
-        person: function (person_token_or_email) {
-            if (!person_token_or_email) {
-                person_token_or_email = '';
-            }
-
-            person_token_or_email = person_token_or_email.toLowerCase();
-
-            return `persons:${person_token_or_email}`;
-        },
-        person_login_tokens: function (person_token) {
-            if (!person_token) {
-                person_token = '';
-            }
-
-            person_token = person_token.toLowerCase();
-
-            return `persons:${person_token}:login_tokens`;
-        },
-        person_devices: function (person_token) {
-            return `persons:devices:${person_token}`;
-        },
-        city_country_prefix: function (country_code, prefix) {
-            return `cities:country:${country_code}:${prefix}`;
-        },
-        person_sections: function (person_token) {
-            return `persons:me:sections:${person_token}`;
-        },
-        persons_section_data: function (person_token, data_name) {
-            return `persons:me:sections:data:${data_name}:${person_token}`;
-        },
-        persons_partner: function (person_token) {
-            return `persons:me:partner:${person_token}`;
-        },
-        persons_kids: function (person_token) {
-            return `persons:me:kids:${person_token}`;
-        },
-        instrument: function (token) {
-            return `instruments:${token}`;
-        },
-        instruments_prefix: function (prefix) {
-            return `instruments:prefix:${prefix}`;
-        },
-        movies_prefix: function (prefix) {
-            return `movies:prefix:${prefix}`;
-        },
-        movie_genres_prefix: function (prefix) {
-            return `movie:genres:prefix:${prefix}`;
-        },
-        movie_genre_movies: function (genre_token) {
-            return `movie:genres:movies:${genre_token}`;
-        },
-        movie_genre_top_movies: function (genre_token) {
-            return `movie:genres:top:movies:${genre_token}`;
-        },
-        movies_decade: function (decade) {
-            return `movies:decade:${decade}`;
-        },
-        music_genres_prefix: function (prefix) {
-            return `music:genres:prefix:${prefix}`;
-        },
-        music_artists_prefix: function (prefix) {
-            return `music:artists:prefix:${prefix}`;
-        },
-        music_genre_artists: function (genre_token) {
-            return `music:genres:artists:${genre_token}`;
-        },
-        music_genre_top_artists: function (genre_token) {
-            return `music:genres:top:artists:${genre_token}`;
-        },
-        schools_country: function (code) {
-            return `schools:country:${code}`;
-        },
-        schools_country_prefix: function (code, prefix) {
-            return `schools:prefix:${code}:${prefix}`;
-        },
-        languages_country: function (country_code) {
-            return `languages:country:${country_code}`;
-        },
-        sports_country_order: function (country_code) {
-            return `sports:countries:top:${country_code}`;
-        },
-        sports_country_top_leagues: function (country_code) {
-            return `sports:countries:top:leagues:${country_code}`;
-        },
-        sports_country_top_teams: function(sport_token, country_code) {
-            return `sports:countries:top:teams:${country_code}:${sport_token}`;
-        },
-        sports_leagues_prefix: function (prefix) {
-            return `sports:leagues:prefix:${prefix}`;
-        },
-        sports_teams_prefix: function (prefix) {
-            return `sports:teams:prefix:${prefix}`;
-        },
+        ...standardKeys,
+        ...sectionKeys,
+        ...mediaKeys,
+        ...sportsKeys,
+        ...keyFunctions
     },
     init: function () {
         return new Promise(async (resolve, reject) => {
