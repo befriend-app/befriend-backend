@@ -140,6 +140,8 @@ function syncMovies() {
                             tmdb_poster_path: item.tmdb_poster_path,
                             original_language: item.original_language,
                             release_date: item.release_date,
+                            vote_count: item.vote_count,
+                            vote_average: item.vote_average,
                             popularity: item.popularity,
                             created: timeNow(),
                             updated: timeNow(),

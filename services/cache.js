@@ -1,4 +1,5 @@
 const redis = require('redis');
+const { timeNow } = require('./shared');
 
 const standardKeys = {
     ws: 'ws:messages',
@@ -72,10 +73,11 @@ const keyFunctions = {
     instruments_prefix: (prefix) => `instruments:prefix:${prefix}`,
 
     movies_prefix: (prefix) => `movies:prefix:${prefix}`,
+    movies_prefix_top_1000: (prefix) => `movies:prefix:top:1000:${prefix}`,
     movies_genres_prefix: (prefix) => `movies:genres:prefix:${prefix}`,
     movies_genre_all: (token) => `movies:genres:all:${token}`,
     movies_genre_top: (token) => `movie:genres:top:movies:${token}`,
-    movies_decade: (decade) => `movies:decade:${decade}`,
+    movies_decade_all: (decade) => `movies:decade:${decade}`,
     movies_decade_top: (decade) => `movies:decade:${decade}:top`,
 
     music_genres_prefix: (prefix) => `music:genres:prefix:${prefix}`,
@@ -232,7 +234,8 @@ module.exports = {
                 let data = await module.exports.conn.get(key);
 
                 try {
-                    return resolve(JSON.parse(data));
+                    let parsed = JSON.parse(data)
+                    return resolve(parsed);
                 } catch (e) {
                     return resolve(null);
                 }

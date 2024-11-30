@@ -1726,6 +1726,11 @@ function getMovieCategories() {
                 },
                 {
                     table_key: 'movies',
+                    name: 'Popular',
+                    token: 'popular',
+                },
+                {
+                    table_key: 'movies',
                     name: 'New Releases',
                     token: 'new_releases',
                 },
@@ -1745,7 +1750,7 @@ function getMovieCategories() {
                         table_key: 'movies',
                         heading: 'Films',
                         name: genre.name,
-                        token: k,
+                        token: `genre_${k}`,
                     });
 
                     // Add to items list

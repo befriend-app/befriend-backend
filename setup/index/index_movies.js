@@ -1,4 +1,4 @@
-const { loadScriptEnv } = require('../../services/shared');
+const { loadScriptEnv, timeNow } = require('../../services/shared');
 const cacheService = require('../../services/cache');
 const dbService = require('../../services/db');
 const { calculateMovieScore, prefixLimit, topGenreCount } = require('../../services/movies');
@@ -27,6 +27,8 @@ function indexMovies() {
             let conn = await dbService.conn();
             let pipeline = cacheService.startPipeline();
 
+            console.log("Load movies");
+
             // Get all movies
             const movies = await conn('movies')
                 .whereNull('deleted')
@@ -50,14 +52,25 @@ function indexMovies() {
             let moviesDict = {};
 
             // Process each movie
-            for (const movie of movies) {
-                // Calculate movie score
-                const score = calculateMovieScore({
+            for (let i = 0; i < movies.length; i++) {
+                let movie = movies[i];
+
+                movie.score = calculateMovieScore({
                     vote_count: movie.vote_count,
                     vote_average: movie.vote_average
                 });
+            }
 
-                // Store full movie data
+            // Sort by score
+            console.log("Sort by score");
+            movies.sort((a, b) => b.score - a.score);
+
+            // Prepare data
+            console.log("Prepare data");
+
+            for(let j = 0; j < movies.length; j++) {
+                let movie = movies[j];
+
                 const movieData = {
                     id: movie.id,
                     token: movie.token,
@@ -68,51 +81,51 @@ function indexMovies() {
                     popularity: movie.popularity,
                     vote_count: movie.vote_count,
                     vote_average: movie.vote_average,
-                    score: score,
+                    score: movie.score,
                     genres: {}
                 };
 
-                moviesDict[movie.id] = movieData;
-                moviesAll[movie.token] = JSON.stringify(movieData);
-                popularMovies.push({ token: movie.token, score: score });
+                const movieJson = JSON.stringify(movieData);
 
-                // Handle decades
+                moviesDict[movie.id] = movieData;
+                moviesAll[movie.token] = movieJson;
+                popularMovies.push({ token: movie.token, score: movie.score });
+
                 if (movie.release_date) {
                     const year = new Date(movie.release_date).getFullYear();
                     const decade = Math.floor(year / 10) * 10;
                     if (!decadeGroups[decade]) {
-                        decadeGroups[decade] = new Set();
+                        decadeGroups[decade] = [];
                     }
-                    decadeGroups[decade].add({ token: movie.token, score: score });
+                    decadeGroups[decade].push({ token: movie.token, score: movie.score });
                 }
 
-                // Index prefixes
                 const nameLower = movie.name.toLowerCase();
                 const words = nameLower.split(/\s+/);
 
-                // Process full name prefixes
                 for (let i = 1; i <= Math.min(nameLower.length, prefixLimit); i++) {
                     const prefix = nameLower.slice(0, i);
                     if (!prefixGroups[prefix]) {
-                        prefixGroups[prefix] = new Set();
+                        prefixGroups[prefix] = [];
                     }
-                    prefixGroups[prefix].add(movie.token);
+                    prefixGroups[prefix].push(movie.token);
                 }
 
-                // Process word prefixes
                 for (const word of words) {
                     if (word.length < 2) continue;
                     for (let i = 1; i <= Math.min(word.length, prefixLimit); i++) {
                         const prefix = word.slice(0, i);
                         if (!prefixGroups[prefix]) {
-                            prefixGroups[prefix] = new Set();
+                            prefixGroups[prefix] = [];
                         }
-                        prefixGroups[prefix].add(movie.token);
+                        prefixGroups[prefix].push(movie.token);
                     }
                 }
             }
 
             // Add genres to movies
+            console.log("Add genre(s) to movies");
+
             const movieGenres = await conn('movies_genres AS mg')
                 .join('movie_genres AS g', 'g.id', 'mg.genre_id')
                 .whereNull('mg.deleted')
@@ -136,77 +149,99 @@ function indexMovies() {
                 }
             }
 
-            // Sort and store top items for each group
-            // Popular movies
-            // let currentPopularDate = new Date();
-            // const popularCutoff = new Date(currentPopularDate.setFullYear(currentPopularDate.getFullYear() - 3));
+            try {
+                // Create new pipeline for adding data
+                console.log("Add data to redis");
+                pipeline = cacheService.startPipeline();
 
-            const topPopular = popularMovies
-                // .filter(m => {
-                //     const movie = JSON.parse(moviesAll[m.token]);
-                //     return new Date(movie.release_date) >= popularCutoff;
-                // })
-                .sort((a, b) => b.score - a.score)
-                .slice(0, topGenreCount)
-                .map(m => m.token);
+                // Store movie data
+                pipeline.hSet(cacheService.keys.movies, moviesAll);
 
-            pipeline.del(cacheService.keys.movies_popular);
-            pipeline.sAdd(cacheService.keys.movies_popular, topPopular);
+                // Store prefix indexes
+                for (const [prefix, tokens] of Object.entries(prefixGroups)) {
+                    if (tokens.length) {
+                        //store prefix for all and top 1000
+                        let key_all = cacheService.keys.movies_prefix(prefix);
+                        pipeline.del(key_all);
+                        pipeline.sAdd(key_all, tokens);
 
-            // New releases
-            let currentDate = new Date();
-            const newReleasesCutoff = new Date(currentDate.setMonth(currentDate.getMonth() - 3));
-            const newReleases = popularMovies.filter(m => {
-                const movie = JSON.parse(moviesAll[m.token]);
-                return new Date(movie.release_date) >= newReleasesCutoff;
-            })
-            .sort((a, b) => b.score - a.score)
-            .slice(0, topGenreCount)
-            .map(m => m.token);
+                        let top_1000 = Array.from(new Set(tokens)).slice(0, 1000);
+                        let key_top_1000 = cacheService.keys.movies_prefix_top_1000(prefix);
 
-            pipeline.del(cacheService.keys.movies_new);
-            pipeline.sAdd(cacheService.keys.movies_new, newReleases);
+                        pipeline.del(key_top_1000);
+                        pipeline.sAdd(key_top_1000, top_1000);
+                    }
+                }
 
-            // Decade groups
-            for (const [decade, movies] of Object.entries(decadeGroups)) {
-                const moviesKey = cacheService.keys.movies_decade(decade + 's');
-                const topKey = cacheService.keys.movies_decade_top(decade + 's');
-
-                // Store all movies for this decade
-                pipeline.del(moviesKey);
-                pipeline.sAdd(
-                    moviesKey,
-                    Array.from(movies).map(m => m.token)
-                );
-
-                // Store top movies for this decade
-                const topMovies = Array.from(movies)
-                    .sort((a, b) => b.score - a.score)
+                // Store popular movies
+                const topPopular = popularMovies
                     .slice(0, topGenreCount)
                     .map(m => m.token);
 
-                pipeline.del(topKey);
-                pipeline.sAdd(topKey, topMovies);
+                if (topPopular.length) {
+                    let key = cacheService.keys.movies_popular;
+
+                    pipeline.del(key);
+                    pipeline.sAdd(key, topPopular);
+                }
+
+                // Store new releases
+                let currentDate = new Date();
+                const newReleasesCutoff = new Date(currentDate.setMonth(currentDate.getMonth() - 3));
+                const newReleases = popularMovies
+                    .filter(m => {
+                        const movie = JSON.parse(moviesAll[m.token]);
+                        return new Date(movie.release_date) >= newReleasesCutoff;
+                    })
+                    .slice(0, topGenreCount)
+                    .map(m => m.token);
+
+                if (newReleases.length) {
+                    let key = cacheService.keys.movies_new;
+
+                    pipeline.del(key);
+                    pipeline.sAdd(key, newReleases);
+                }
+
+                // Store decade groups
+                for (const [decade, movies] of Object.entries(decadeGroups)) {
+                    const moviesKey = cacheService.keys.movies_decade_all(decade + 's');
+                    const topKey = cacheService.keys.movies_decade_top(decade + 's');
+
+                    const allMovies = movies.map(m => m.token);
+                    const topMovies = movies
+                        .slice(0, topGenreCount)
+                        .map(m => m.token);
+
+                    if (allMovies.length) {
+                        pipeline.del(moviesKey);
+                        pipeline.sAdd(moviesKey, allMovies);
+                    }
+
+                    if (topMovies.length) {
+                        pipeline.del(topKey);
+                        pipeline.sAdd(topKey, topMovies);
+                    }
+                }
+
+                // Execute pipeline
+                console.log("Execute pipeline");
+                const results = await pipeline.execAsPipeline();
+
+                console.log({
+                    total_movies: movies.length,
+                    with_genres: movieGenres.length,
+                    prefixes: Object.keys(prefixGroups).length,
+                    decades: Object.keys(decadeGroups).length,
+                    new_releases: newReleases.length,
+                    pipeline_results: results.length
+                });
+
+            } catch (pipelineError) {
+                console.error('Pipeline execution error:', pipelineError);
+                throw pipelineError;
             }
 
-            // Store movie data and prefixes
-            pipeline.hSet(cacheService.keys.movies, moviesAll);
-
-            for (const [prefix, tokens] of Object.entries(prefixGroups)) {
-                const key = cacheService.keys.movies_prefix(prefix);
-                pipeline.del(key);
-                pipeline.sAdd(key, Array.from(tokens));
-            }
-
-            await pipeline.execAsPipeline();
-
-            console.log({
-                total_movies: movies.length,
-                with_genres: movieGenres.length,
-                prefixes: Object.keys(prefixGroups).length,
-                decades: Object.keys(decadeGroups).length,
-                new_releases: newReleases.length
-            });
         } catch (e) {
             console.error('Error in indexMovies:', e);
             return reject(e);

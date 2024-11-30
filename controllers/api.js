@@ -1736,18 +1736,8 @@ module.exports = {
                     return res.json({ items: [] }, 200);
                 }
 
-                let items;
-
-                if (category_token === 'new_releases') {
-                    // Get new releases
-                    items = await moviesService.getNewReleases();
-                } else if (category_token.match(/^\d{4}s$/)) {
-                    // If token is a decade (e.g., "2020s"), get movies from that decade
-                    items = await moviesService.getMoviesByDecade(parseInt(category_token));
-                } else {
-                    // Get top movies for genre
-                    items = await moviesService.getTopMoviesForGenre(category_token);
-                }
+                // Get top movies based on category
+                const items = await moviesService.getTopMoviesByCategory(category_token, true);
 
                 // Format response
                 const formattedItems = items.map((movie) => ({
@@ -1755,8 +1745,11 @@ module.exports = {
                     name: movie.name,
                     poster: movie.poster,
                     release_date: movie.release_date,
-                    meta: movie.release_date?.substring(0, 4),
+                    label: movie.label,
+                    meta: movie.meta,
                     popularity: movie.popularity,
+                    vote_count: movie.vote_count,
+                    vote_average: movie.vote_average,
                 }));
 
                 res.json(
@@ -1766,7 +1759,7 @@ module.exports = {
                     200,
                 );
             } catch (e) {
-                console.error('Error getting top movies by genre:', e);
+                console.error('Error getting top movies by category:', e);
                 res.json({ error: 'Error getting movies' }, 400);
             }
 
