@@ -26,6 +26,7 @@ const mediaKeys = {
     movies: 'sections:movies',
     movie_genres: 'sections:movie:genres',
     movies_new: 'sections:movies:new',
+    movies_popular: 'sections:movies:popular',
     music_genres: 'sections:music:genres',
     music_artists: 'sections:music:artists',
     tv_shows: 'sections:tv_shows',
@@ -71,10 +72,11 @@ const keyFunctions = {
     instruments_prefix: (prefix) => `instruments:prefix:${prefix}`,
 
     movies_prefix: (prefix) => `movies:prefix:${prefix}`,
-    movie_genres_prefix: (prefix) => `movie:genres:prefix:${prefix}`,
-    movie_genre_movies: (token) => `movie:genres:movies:${token}`,
-    movie_genre_top_movies: (token) => `movie:genres:top:movies:${token}`,
+    movies_genres_prefix: (prefix) => `movies:genres:prefix:${prefix}`,
+    movies_genre_all: (token) => `movies:genres:all:${token}`,
+    movies_genre_top: (token) => `movie:genres:top:movies:${token}`,
     movies_decade: (decade) => `movies:decade:${decade}`,
+    movies_decade_top: (decade) => `movies:decade:${decade}:top`,
 
     music_genres_prefix: (prefix) => `music:genres:prefix:${prefix}`,
     music_artists_prefix: (prefix) => `music:artists:prefix:${prefix}`,

@@ -1,7 +1,7 @@
 const cacheService = require('./cache');
 const dbService = require('./db');
 const { getObj, getSetMembers } = require('./cache');
-const { normalizeSearch, stringDistance, timeNow, mdp, mdpe } = require('./shared');
+const { normalizeSearch } = require('./shared');
 const sectionsData = require('./sections_data');
 
 const MAX_PREFIX_LENGTH = 5;
@@ -10,111 +10,112 @@ const TOP_GENRE_COUNT = 100;
 const INITIAL_LIMIT = 1000;
 const DECADE_PATTERN = /^\d{4}s$/;
 
-const COMMON_WORDS = [
-    'the',
-    'a',
-    'an',
-    'and',
-    'or',
-    'but',
-    'in',
-    'on',
-    'at',
-    'to',
-    'for',
-    'of',
-    'with',
-    'by',
-];
+// Scoring weights
+const MAX_VOTES = 10000;
+const WEIGHTS = {
+    VOTES: 0.6,
+    RATING: 0.2,
+    NAME_MATCH: 0.2,
+};
 
-function getTopMoviesForDecade(decade) {
+function normalizeVotes(voteCount) {
+    return Math.min(voteCount / MAX_VOTES, 1);
+}
+
+function calculateMovieScore(movie, searchTerm = null) {
+    const voteScore = normalizeVotes(movie.vote_count);
+    const ratingScore = movie.vote_average / 10;
+
+    // If no search term, just use vote and rating weights
+    if (!searchTerm) {
+        return voteScore * 0.75 + ratingScore * 0.25;
+    }
+
+    // Calculate name match score for search
+    let nameScore = 0;
+    const name = movie.name.toLowerCase();
+    const search = searchTerm.toLowerCase();
+
+    if (name === search) {
+        nameScore = 1;
+    } else if (name.startsWith(search)) {
+        nameScore = 0.8;
+    } else if (name.includes(search)) {
+        nameScore = 0.6;
+    }
+
+    return (
+        voteScore * WEIGHTS.VOTES +
+        ratingScore * WEIGHTS.RATING +
+        nameScore * WEIGHTS.NAME_MATCH
+    );
+}
+
+function getTopMoviesForCategory(category_token) {
     return new Promise(async (resolve, reject) => {
         try {
-            const movieTokens = await cacheService.getSetMembers(
-                cacheService.keys.movies_decade(decade),
-            );
+            let cacheKey;
 
-            if (!movieTokens?.length) {
-                return reject('No movies found for decade');
+            // Determine which cache key to use based on category type
+            if (category_token === 'new_releases') {
+                cacheKey = cacheService.keys.movies_new;
+            } else if (category_token === 'popular') {
+                cacheKey = cacheService.keys.movies_popular;
+            } else if (category_token.match(/^\d{4}s$/)) {
+                cacheKey = cacheService.keys.movies_decade(category_token);
+            } else {
+                cacheKey = cacheService.keys.movie_genre_top_movies(category_token);
             }
 
-            let pipeline = cacheService.startPipeline();
+            // Get movie tokens from cache
+            const movieTokens = category_token.startsWith('genre_')
+                ? await getObj(cacheKey)
+                : await getSetMembers(cacheKey);
 
+            if (!movieTokens?.length) {
+                return resolve([]);
+            }
+
+            // Get full movie data for each token
+            const pipeline = cacheService.startPipeline();
             for (const token of movieTokens) {
                 pipeline.hGet(cacheService.keys.movies, token);
             }
 
             const movies = await pipeline.execAsPipeline();
-            const parsed = movies
-                .filter(Boolean)
-                .map((m) => JSON.parse(m))
-                .sort((a, b) => b.popularity - a.popularity);
 
-            resolve(parsed);
+            // Process and format movie data
+            const results = movies
+                .map(movie => {
+                    if (!movie) return null;
+                    const movieData = JSON.parse(movie);
+
+                    // Calculate movie score
+                    const score = calculateMovieScore({
+                        vote_count: movieData.vote_count,
+                        vote_average: movieData.vote_average,
+                    });
+
+                    return {
+                        token: movieData.token,
+                        name: movieData.name,
+                        poster: movieData.poster,
+                        release_date: movieData.release_date,
+                        popularity: movieData.popularity,
+                        vote_count: movieData.vote_count,
+                        vote_average: movieData.vote_average,
+                        genres: movieData.genres,
+                        score: score,
+                        meta: movieData.release_date?.substring(0, 4)
+                    };
+                })
+                .filter(movie => movie !== null)
+                .sort((a, b) => b.score - a.score);
+
+            resolve(results);
         } catch (e) {
-            console.error(e);
-            return reject(e);
-        }
-    });
-}
-
-function getTopMoviesForGenre(genre_token) {
-    return new Promise(async (resolve, reject) => {
-        try {
-            const movieTokens = await getObj(cacheService.keys.movie_genre_top_movies(genre_token));
-
-            if (!movieTokens?.length) {
-                return reject('No movies found for genre');
-            }
-
-            let pipeline = cacheService.startPipeline();
-
-            for (const token of movieTokens) {
-                pipeline.hGet(cacheService.keys.movies, token);
-            }
-
-            const movies = await pipeline.execAsPipeline();
-            const parsed = movies.filter(Boolean).map((m) => JSON.parse(m));
-
-            resolve(parsed);
-        } catch (e) {
-            console.error(e);
-            return reject(e);
-        }
-    });
-}
-
-function moviesAutoComplete(search_term, category) {
-    return new Promise(async (resolve, reject) => {
-        const minLength = sectionsData.movies.autoComplete.minChars;
-        search_term = normalizeSearch(search_term);
-
-        if (search_term.length < minLength) {
-            return resolve([]);
-        }
-
-        try {
-            // If we have a category, we should always do a full search
-            // to ensure we don't miss category-relevant results
-
-            if (category?.token) {
-                const results = await searchMovies(search_term, category);
-                return resolve(results.slice(0, RESULTS_LIMIT));
-            }
-
-            // Two-pass search
-            const results = await searchMovies(search_term, category, INITIAL_LIMIT);
-
-            // If we have enough results after filtering, return them
-            if (results.length >= RESULTS_LIMIT) {
-                return resolve(results.slice(0, RESULTS_LIMIT));
-            }
-
-            const fullResults = await searchMovies(search_term, category);
-            return resolve(fullResults.slice(0, RESULTS_LIMIT));
-        } catch (e) {
-            console.error(e);
-            return reject(e);
+            console.error('Error in getTopMoviesForCategory:', e);
+            reject(e);
         }
     });
 }
@@ -272,53 +273,88 @@ function searchMovies(search_term, category, limit = null) {
     });
 }
 
-function getNewReleases(limit = 100) {
+function moviesAutoComplete(search_term, category = null) {
     return new Promise(async (resolve, reject) => {
         try {
-            let cache_key = cacheService.keys.movies_new;
+            search_term = normalizeSearch(search_term);
+            if (search_term.length < 2) return resolve([]);
 
-            // Try to get from cache first
-            let cached_data = await cacheService.getObj(cache_key);
+            const prefix = search_term.substring(0, MAX_PREFIX_LENGTH);
+            const searchTermLower = search_term.toLowerCase();
 
-            //todo remove
-            if (false && cached_data?.length) {
-                return resolve(cached_data);
+            // Get movie tokens matching prefix
+            const movieTokens = await getSetMembers(
+                cacheService.keys.movies_prefix(prefix)
+            );
+            if (!movieTokens?.length) return resolve([]);
+
+            // Get full movie data
+            const pipeline = cacheService.startPipeline();
+            for (const token of movieTokens) {
+                pipeline.hGet(cacheService.keys.movies, token);
             }
 
-            // If not in cache, get from DB
-            const conn = await dbService.conn();
+            const moviesData = await pipeline.execAsPipeline();
+            const processedMovies = moviesData
+                .map(m => m ? JSON.parse(m) : null)
+                .filter(m => m && m.name.toLowerCase().includes(searchTermLower))
+                .map(movie => {
+                    // Calculate base score
+                    const score = calculateMovieScore({
+                        vote_count: movie.vote_count,
+                        vote_average: movie.vote_average,
+                    }, searchTermLower);
 
-            // Get movies released in the last 90 days
-            const cutoffDate = new Date();
-            cutoffDate.setDate(cutoffDate.getDate() - 90);
+                    let isContextMatch = false;
+                    if (category?.token) {
+                        if (category.token === 'new_releases') {
+                            const movieYear = new Date(movie.release_date).getFullYear();
+                            const currentYear = new Date().getFullYear();
+                            isContextMatch = movieYear >= currentYear - 1;
+                        } else if (category.token === 'popular') {
+                            isContextMatch = true; // Will sort by score
+                        } else if (category.token.match(/^\d{4}s$/)) {
+                            const movieYear = new Date(movie.release_date).getFullYear();
+                            const decadeStart = parseInt(category.token);
+                            isContextMatch = movieYear >= decadeStart && movieYear < decadeStart + 10;
+                        } else if (category.token.startsWith('genre_')) {
+                            const genreToken = category.token.replace('genre_', '');
+                            isContextMatch = movie.genres?.[genreToken] !== undefined;
+                        }
+                    }
 
-            const movies = await conn('movies')
-                .whereNull('deleted')
-                .where('release_date', '>=', cutoffDate.toISOString().split('T')[0])
-                .orderBy('popularity', 'desc')
-                .limit(limit)
-                .select('token');
+                    // Add category match boost to score
+                    const finalScore = score + (isContextMatch ? 4 : 0);
 
-            if (!movies.length) {
-                return resolve([]);
-            }
+                    return {
+                        token: movie.token,
+                        name: movie.name,
+                        poster: movie.poster,
+                        release_date: movie.release_date,
+                        genres: movie.genres,
+                        vote_count: movie.vote_count,
+                        vote_average: movie.vote_average,
+                        meta: movie.release_date?.substring(0, 4),
+                        score: finalScore,
+                        isContextMatch
+                    };
+                });
 
-            // Get full movie data from Redis
-            let pipeline = cacheService.startPipeline();
+            // Sort by score (which includes context boost)
+            processedMovies.sort((a, b) => b.score - a.score);
 
-            for (const movie of movies) {
-                pipeline.hGet(cacheService.keys.movies, movie.token);
-            }
+            resolve(processedMovies.slice(0, RESULTS_LIMIT));
+        } catch (e) {
+            console.error('Error in moviesAutoComplete:', e);
+            reject(e);
+        }
+    });
+}
 
-            const results = await pipeline.execAsPipeline();
-            const parsed = results.filter(Boolean).map((m) => JSON.parse(m));
-
-            // Save to cache with 30-day expiry
-            const CACHE_DAYS = 30;
-            const SECONDS_PER_DAY = 86400;
-            await cacheService.setCache(cache_key, parsed, CACHE_DAYS * SECONDS_PER_DAY);
-
-            resolve(parsed);
+function getNewReleases(limit = TOP_GENRE_COUNT) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            return getTopMoviesForCategory('new_releases');
         } catch (e) {
             console.error(e);
             return reject(e);
@@ -329,36 +365,35 @@ function getNewReleases(limit = 100) {
 function getMoviesByDecade(decade, page = 1, limit = 20) {
     return new Promise(async (resolve, reject) => {
         try {
-            const conn = await dbService.conn();
+            if (!DECADE_PATTERN.test(decade)) {
+                return reject('Invalid decade format');
+            }
 
-            // Calculate decade range
-            const startYear = parseInt(decade);
-            const endYear = startYear + 9;
+            const movieTokens = await getSetMembers(
+                cacheService.keys.movies_decade_all(decade)
+            );
 
-            const offset = (page - 1) * limit;
-
-            const movies = await conn('movies')
-                .whereNull('deleted')
-                .whereRaw('YEAR(release_date) BETWEEN ? AND ?', [startYear, endYear])
-                .orderBy('popularity', 'desc')
-                .offset(offset)
-                .limit(limit)
-                .select('token');
-
-            if (!movies.length) {
+            if (!movieTokens?.length) {
                 return resolve([]);
             }
 
-            let pipeline = cacheService.startPipeline();
+            // Calculate pagination
+            const start = (page - 1) * limit;
+            const end = start + limit;
+            const paginatedTokens = movieTokens.slice(start, end);
 
-            for (const movie of movies) {
-                pipeline.hGet(cacheService.keys.movies, movie.token);
+            const pipeline = cacheService.startPipeline();
+            for (const token of paginatedTokens) {
+                pipeline.hGet(cacheService.keys.movies, token);
             }
 
-            const results = await pipeline.execAsPipeline();
-            const parsed = results.filter(Boolean).map((m) => JSON.parse(m));
+            const movies = await pipeline.execAsPipeline();
+            const results = movies
+                .filter(Boolean)
+                .map(m => JSON.parse(m))
+                .sort((a, b) => calculateMovieScore(b) - calculateMovieScore(a));
 
-            resolve(parsed);
+            resolve(results);
         } catch (e) {
             console.error(e);
             return reject(e);
@@ -366,12 +401,15 @@ function getMoviesByDecade(decade, page = 1, limit = 20) {
     });
 }
 
+
 module.exports = {
     prefixLimit: MAX_PREFIX_LENGTH,
     topGenreCount: TOP_GENRE_COUNT,
-    getTopMoviesForGenre,
-    getTopMoviesForDecade,
+    calculateMovieScore,
+    getTopMoviesForCategory,
     moviesAutoComplete,
     getNewReleases,
     getMoviesByDecade,
 };
+
+
