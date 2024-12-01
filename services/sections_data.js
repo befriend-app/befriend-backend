@@ -639,4 +639,69 @@ module.exports = {
             },
         },
     },
+    work: {
+        myStr: 'My Work',
+        tabs: [
+            {
+                name: 'Industries',
+                key: 'industries'
+            },
+            {
+                name: 'Roles',
+                key: 'roles'
+            }
+        ],
+        tables: {
+            industries: {
+                type: {
+                    name: 'buttons',
+                    multi: true,
+                },
+                user: {
+                    name: 'persons_industries',
+                    cols: {
+                        id: 'industry_id',
+                        token: 'industry_token'
+                    }
+                }
+            },
+            roles: {
+                type: {
+                    name: 'buttons',
+                    multi: true,
+                },
+                user: {
+                    name: 'persons_roles',
+                    cols: {
+                        id: 'role_id',
+                        token: 'role_token'
+                    }
+                }
+            }
+        },
+        autoComplete: {
+            minChars: 1,
+            endpoint: '/autocomplete/work',
+            placeholders: {
+                main: 'Search industries and roles'
+            }
+        },
+        cacheKeys: {
+            industries: {
+                byHash: cacheService.keys.work_industries
+            },
+            roles: {
+                byHash: cacheService.keys.work_roles
+            }
+        },
+        functions: {
+            data: 'getWork',
+        },
+        styles: {
+            rowCols: {
+                default: 'cols-2',
+                my: 'cols-1'
+            }
+        }
+    },
 };

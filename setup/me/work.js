@@ -68,6 +68,17 @@ async function syncWorkIndustries() {
                 await dbService.batchUpdate(main_table, batch_update);
             }
 
+            let updated_industries = await conn(main_table)
+                .orderBy('name');
+
+            let industriesAll = {};
+
+            for(let industry of updated_industries) {
+                industriesAll[industry.token] = JSON.stringify(industry);
+            }
+
+            await cacheService.hSet(cacheService.keys.work_industries, industriesAll);
+
             console.log({
                 industries: {
                     added,
@@ -149,6 +160,17 @@ async function syncWorkRoles() {
                 await dbService.batchUpdate(main_table, batch_update);
             }
 
+            let updated_roles = await conn(main_table)
+                .orderBy(['category_name', 'name']);
+
+            let rolesAll = {};
+
+            for(let role of updated_roles) {
+                rolesAll[role.token] = JSON.stringify(role);
+            }
+
+            await cacheService.hSet(cacheService.keys.work_roles, rolesAll);
+
             console.log({
                 roles: {
                     added,
@@ -171,12 +193,6 @@ async function main() {
 
             await syncWorkIndustries();
             await syncWorkRoles();
-
-            // Clear caches
-            await cacheService.deleteKeys([
-                cacheService.keys.work_industries,
-                cacheService.keys.work_roles,
-            ]);
 
             resolve();
         } catch (e) {

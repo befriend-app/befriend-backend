@@ -323,6 +323,25 @@ module.exports = {
             }
         });
     },
+    hSet: function (key, data) {
+        return new Promise(async (resolve, reject) => {
+            if (!module.exports.conn) {
+                try {
+                    await module.exports.init();
+                } catch (e) {
+                    return reject(e);
+                }
+            }
+
+            try {
+                await module.exports.conn.hSet(key, data);
+
+                resolve();
+            } catch (e) {
+                return reject(e);
+            }
+        });
+    },
     setCache: function (key, data, cache_lifetime = null) {
         return new Promise(async (resolve, reject) => {
             //in case conn not initiated

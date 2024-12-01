@@ -971,6 +971,316 @@ function updateSectionItem(body) {
     });
 }
 
+
+function selectSectionOptionItem(person_token, section_key, table_key, item_token, is_select) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            if (
+                !person_token ||
+                !section_key ||
+                !table_key ||
+                !item_token ||
+                typeof is_select !== 'boolean'
+            ) {
+                return reject('Missing required fields');
+            }
+
+            const person = await getPerson(person_token);
+
+            if (!person) {
+                return reject('Person not found');
+            }
+
+            // Get section data to verify it's a button type section
+            const sectionData = sectionsData[section_key];
+
+            if (sectionData?.type?.name !== 'buttons') {
+                return reject('Invalid section type');
+            }
+
+            const userTableData = sectionData.tables[table_key]?.user;
+            if (!userTableData) {
+                return reject('Invalid table configuration');
+            }
+
+            let person_id_col = userTableData?.cols?.person_id || 'person_id';
+
+            //validate token
+            let options = await module.exports[sectionData.functions.data]({
+                options_only: true,
+            });
+
+            if (!options) {
+                return reject('Options not found');
+            }
+
+            let itemOption = options.find((option) => option.token === item_token);
+            if (!itemOption) {
+                return reject('Invalid item token');
+            }
+
+            const conn = await dbService.conn();
+            const now = timeNow();
+
+            if (
+                sectionData.type.single ||
+                (sectionData.type.exclusive && item_token === sectionData.type.exclusive.token)
+            ) {
+                let existing = await conn(userTableData.name)
+                    .where(person_id_col, person.id)
+                    .whereNull('deleted')
+                    .first();
+
+                let response_data = null;
+
+                if (existing) {
+                    if (!is_select) {
+                        // Deselect
+                        await conn(userTableData.name).where('id', existing.id).update({
+                            deleted: now,
+                            updated: now,
+                        });
+                    } else if (existing[userTableData.cols.id] !== itemOption.id) {
+                        // Change selection to new item
+                        await conn(userTableData.name)
+                            .where('id', existing.id)
+                            .update({
+                                [userTableData.cols.id]: itemOption.id,
+                                updated: now,
+                            });
+
+                        response_data = {
+                            id: existing.id,
+                            token: item_token,
+                            name: itemOption.name,
+                            created: existing.created,
+                            updated: now,
+                            deleted: null,
+                        };
+                    }
+                } else if (is_select) {
+                    // No existing selection, add new one
+                    const [id] = await conn(userTableData.name).insert({
+                        person_id: person.id,
+                        [userTableData.cols.id]: itemOption.id,
+                        created: now,
+                        updated: now,
+                    });
+
+                    response_data = {
+                        id,
+                        token: item_token,
+                        name: itemOption.name,
+                        created: now,
+                        updated: now,
+                    };
+                }
+
+                // If exclusive token is selected, delete all other selections
+                if (
+                    is_select &&
+                    sectionData.type.exclusive &&
+                    item_token === sectionData.type.exclusive.token &&
+                    response_data
+                ) {
+                    await conn(userTableData.name)
+                        .where(person_id_col, person.id)
+                        .whereNot('id', response_data.id)
+                        .update({
+                            deleted: now,
+                            updated: now,
+                        });
+                }
+
+                const cache_key = cacheService.keys.persons_section_data(
+                    person.person_token,
+                    section_key,
+                );
+
+                let cache_data = (await cacheService.getObj(cache_key)) || {};
+
+                // Clear old selections for single select
+                for (let token in cache_data) {
+                    delete cache_data[token];
+                }
+
+                // Add new selection if there is one
+                if (response_data) {
+                    cache_data[item_token] = response_data;
+                }
+
+                await cacheService.setCache(cache_key, cache_data);
+
+                return resolve(response_data);
+            } else {
+                // Handle multi-select case
+                let existing = await conn(userTableData.name)
+                    .where(person_id_col, person.id)
+                    .where(userTableData.cols.id, itemOption.id)
+                    .whereNull('deleted')
+                    .first();
+
+                // Handle deselection
+                if (existing && !is_select) {
+                    // Deselect
+                    await conn(userTableData.name).where('id', existing.id).update({
+                        deleted: now,
+                        updated: now,
+                    });
+
+                    // Update cache
+                    const cache_key = cacheService.keys.persons_section_data(
+                        person.person_token,
+                        section_key,
+                    );
+
+                    let cache_data = (await cacheService.getObj(cache_key)) || {};
+                    delete cache_data[item_token];
+                    await cacheService.setCache(cache_key, cache_data);
+
+                    return resolve(null);
+                }
+                // Handle selection
+                else if (!existing && is_select) {
+                    let response_data = null;
+                    const cache_key = cacheService.keys.persons_section_data(
+                        person.person_token,
+                        section_key,
+                    );
+                    let cache_data = (await cacheService.getObj(cache_key)) || {};
+
+                    // If selecting non-exclusive option, deselect exclusive if it exists
+                    if (
+                        sectionData.type.exclusive?.token &&
+                        item_token !== sectionData.type.exclusive.token
+                    ) {
+                        let exclusiveOption = options.find(
+                            (opt) => opt.token === sectionData.type.exclusive.token,
+                        );
+                        if (exclusiveOption) {
+                            await conn(userTableData.name)
+                                .where(person_id_col, person.id)
+                                .where(userTableData.cols.id, exclusiveOption.id)
+                                .whereNull('deleted')
+                                .update({
+                                    deleted: now,
+                                    updated: now,
+                                });
+
+                            delete cache_data[sectionData.type.exclusive.token];
+                        }
+                    }
+                    // If selecting exclusive option, deselect all others
+                    else if (
+                        sectionData.type.exclusive?.token &&
+                        item_token === sectionData.type.exclusive.token
+                    ) {
+                        await conn(userTableData.name)
+                            .where(person_id_col, person.id)
+                            .whereNull('deleted')
+                            .update({
+                                deleted: now,
+                                updated: now,
+                            });
+
+                        cache_data = {};
+                    }
+
+                    // Add new selection
+                    const [id] = await conn(userTableData.name).insert({
+                        person_id: person.id,
+                        [userTableData.cols.id]: itemOption.id,
+                        created: now,
+                        updated: now,
+                    });
+
+                    response_data = {
+                        id,
+                        token: item_token,
+                        name: itemOption.name,
+                        created: now,
+                        updated: now,
+                    };
+
+                    // Update cache
+                    cache_data[item_token] = response_data;
+                    await cacheService.setCache(cache_key, cache_data);
+
+                    return resolve(response_data);
+                }
+
+                // No action needed if trying to select already selected or deselect already deselected
+                return resolve(null);
+            }
+        } catch (e) {
+            console.error(e);
+            return reject(e);
+        }
+    });
+}
+
+function updateSectionPositions(person_token, positions) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            if (!person_token || !positions) {
+                return reject('Missing required fields');
+            }
+
+            if (typeof positions !== 'object' || !Object.keys(positions).length) {
+                return reject('Invalid positions');
+            }
+
+            const person = await getPerson(person_token);
+
+            if (!person) {
+                return reject('Person not found');
+            }
+
+            //person sections
+            let person_sections_cache_key = cacheService.keys.person_sections(person.person_token);
+
+            let person_sections = await cacheService.getObj(person_sections_cache_key);
+
+            let batch_update = [];
+
+            for (let key in positions) {
+                if (!(key in person_sections)) {
+                    continue;
+                }
+
+                let prevData = person_sections[key];
+
+                let data = positions[key];
+
+                if (data.position === prevData.position) {
+                    continue;
+                }
+
+                prevData.position = data.position;
+                prevData.updated = timeNow();
+
+                batch_update.push({
+                    id: prevData.id,
+                    position: data.position,
+                    updated: timeNow(),
+                });
+            }
+
+            if (!batch_update.length) {
+                return resolve();
+            }
+
+            await batchUpdate('persons_sections', batch_update);
+
+            await cacheService.setCache(person_sections_cache_key, person_sections);
+        } catch (e) {
+            console.error(e);
+        }
+
+        resolve();
+    });
+}
+
 function getPersonSectionItems(person, section_key) {
     return new Promise(async (resolve, reject) => {
         try {
@@ -2509,312 +2819,110 @@ function getTvShows() {
     });
 }
 
-function selectSectionOptionItem(person_token, section_key, table_key, item_token, is_select) {
+function getWork() {
     return new Promise(async (resolve, reject) => {
         try {
-            if (
-                !person_token ||
-                !section_key ||
-                !table_key ||
-                !item_token ||
-                typeof is_select !== 'boolean'
-            ) {
-                return reject('Missing required fields');
+            let section = sectionsData.work;
+
+            // Get all industries and roles from Redis
+            const [industries, roles] = await Promise.all([
+                cacheService.hGetAllObj(cacheService.keys.work_industries),
+                cacheService.hGetAllObj(cacheService.keys.work_roles)
+            ]);
+
+            // Organize roles by category
+            const roleCategories = {};
+            const roleItems = [];
+            for (const [token, roleData] of Object.entries(roles)) {
+                // Skip if not visible
+                if (!roleData.is_visible || roleData.deleted) continue;
+
+                // Add to items
+                roleItems.push({
+                    token: token,
+                    name: roleData.name,
+                    category: 'roles',
+                    category_token: roleData.category_token,
+                    table_key: 'roles'
+                });
+
+                // Group by category
+                if (!roleCategories[roleData.category_token]) {
+                    roleCategories[roleData.category_token] = {
+                        table_key: 'roles',
+                        heading: 'Roles',
+                        name: roleData.category_name,
+                        token: roleData.category_token
+                    };
+                }
             }
 
-            const person = await getPerson(person_token);
+            // Build industry items
+            const industryItems = [];
+            for (const [token, industryData] of Object.entries(industries)) {
+                // Skip if not visible
+                if (!industryData.is_visible || industryData.deleted) continue;
 
-            if (!person) {
-                return reject('Person not found');
+                industryItems.push({
+                    token: token,
+                    name: industryData.name,
+                    category: 'industries',
+                    table_key: 'industries',
+                });
             }
 
-            // Get section data to verify it's a button type section
-            const sectionData = sectionsData[section_key];
+            // Build category options
+            const sortedRoleCategories = Object.entries(roleCategories)
+                .sort(([,a], [,b]) => a.name.localeCompare(b.name))
+                .reduce((obj, [key, value]) => {
+                    obj[key] = value;
+                    return obj;
+                }, {});
 
-            if (sectionData?.type?.name !== 'buttons') {
-                return reject('Invalid section type');
-            }
+            const categoryOptions = [
+                {
+                    table_key: 'industries',
+                    name: 'Industries'
+                },
+                ...Object.values(sortedRoleCategories)
+            ];
 
-            const userTableData = sectionData.tables[table_key]?.user;
-            if (!userTableData) {
-                return reject('Invalid table configuration');
-            }
+            // Combine all items
+            const itemOptions = [
+                ...industryItems,
+                ...roleItems
+            ];
 
-            let person_id_col = userTableData?.cols?.person_id || 'person_id';
-
-            //validate token
-            let options = await module.exports[sectionData.functions.data]({
-                options_only: true,
+            itemOptions.sort((a, b) => {
+                if (a.category === b.category) {
+                    return a.name.localeCompare(b.name);
+                }
+                return 0;
             });
 
-            if (!options) {
-                return reject('Options not found');
-            }
-
-            let itemOption = options.find((option) => option.token === item_token);
-            if (!itemOption) {
-                return reject('Invalid item token');
-            }
-
-            const conn = await dbService.conn();
-            const now = timeNow();
-
-            if (
-                sectionData.type.single ||
-                (sectionData.type.exclusive && item_token === sectionData.type.exclusive.token)
-            ) {
-                let existing = await conn(userTableData.name)
-                    .where(person_id_col, person.id)
-                    .whereNull('deleted')
-                    .first();
-
-                let response_data = null;
-
-                if (existing) {
-                    if (!is_select) {
-                        // Deselect
-                        await conn(userTableData.name).where('id', existing.id).update({
-                            deleted: now,
-                            updated: now,
-                        });
-                    } else if (existing[userTableData.cols.id] !== itemOption.id) {
-                        // Change selection to new item
-                        await conn(userTableData.name)
-                            .where('id', existing.id)
-                            .update({
-                                [userTableData.cols.id]: itemOption.id,
-                                updated: now,
-                            });
-
-                        response_data = {
-                            id: existing.id,
-                            token: item_token,
-                            name: itemOption.name,
-                            created: existing.created,
-                            updated: now,
-                            deleted: null,
-                        };
-                    }
-                } else if (is_select) {
-                    // No existing selection, add new one
-                    const [id] = await conn(userTableData.name).insert({
-                        person_id: person.id,
-                        [userTableData.cols.id]: itemOption.id,
-                        created: now,
-                        updated: now,
+            let data = {
+                myStr: section.myStr,
+                tabs: section.tabs,
+                autoComplete: section.autoComplete,
+                options: itemOptions,
+                styles: section.styles,
+                categories: {
+                    options: categoryOptions
+                },
+                tables: Object.keys(section.tables).reduce((acc, key) => {
+                    acc.push({
+                        name: key,
+                        type: section.tables[key].type
                     });
+                    return acc;
+                }, [])
+            };
 
-                    response_data = {
-                        id,
-                        token: item_token,
-                        name: itemOption.name,
-                        created: now,
-                        updated: now,
-                    };
-                }
-
-                // If exclusive token is selected, delete all other selections
-                if (
-                    is_select &&
-                    sectionData.type.exclusive &&
-                    item_token === sectionData.type.exclusive.token &&
-                    response_data
-                ) {
-                    await conn(userTableData.name)
-                        .where(person_id_col, person.id)
-                        .whereNot('id', response_data.id)
-                        .update({
-                            deleted: now,
-                            updated: now,
-                        });
-                }
-
-                const cache_key = cacheService.keys.persons_section_data(
-                    person.person_token,
-                    section_key,
-                );
-
-                let cache_data = (await cacheService.getObj(cache_key)) || {};
-
-                // Clear old selections for single select
-                for (let token in cache_data) {
-                    delete cache_data[token];
-                }
-
-                // Add new selection if there is one
-                if (response_data) {
-                    cache_data[item_token] = response_data;
-                }
-
-                await cacheService.setCache(cache_key, cache_data);
-
-                return resolve(response_data);
-            } else {
-                // Handle multi-select case
-                let existing = await conn(userTableData.name)
-                    .where(person_id_col, person.id)
-                    .where(userTableData.cols.id, itemOption.id)
-                    .whereNull('deleted')
-                    .first();
-
-                // Handle deselection
-                if (existing && !is_select) {
-                    // Deselect
-                    await conn(userTableData.name).where('id', existing.id).update({
-                        deleted: now,
-                        updated: now,
-                    });
-
-                    // Update cache
-                    const cache_key = cacheService.keys.persons_section_data(
-                        person.person_token,
-                        section_key,
-                    );
-
-                    let cache_data = (await cacheService.getObj(cache_key)) || {};
-                    delete cache_data[item_token];
-                    await cacheService.setCache(cache_key, cache_data);
-
-                    return resolve(null);
-                }
-                // Handle selection
-                else if (!existing && is_select) {
-                    let response_data = null;
-                    const cache_key = cacheService.keys.persons_section_data(
-                        person.person_token,
-                        section_key,
-                    );
-                    let cache_data = (await cacheService.getObj(cache_key)) || {};
-
-                    // If selecting non-exclusive option, deselect exclusive if it exists
-                    if (
-                        sectionData.type.exclusive?.token &&
-                        item_token !== sectionData.type.exclusive.token
-                    ) {
-                        let exclusiveOption = options.find(
-                            (opt) => opt.token === sectionData.type.exclusive.token,
-                        );
-                        if (exclusiveOption) {
-                            await conn(userTableData.name)
-                                .where(person_id_col, person.id)
-                                .where(userTableData.cols.id, exclusiveOption.id)
-                                .whereNull('deleted')
-                                .update({
-                                    deleted: now,
-                                    updated: now,
-                                });
-
-                            delete cache_data[sectionData.type.exclusive.token];
-                        }
-                    }
-                    // If selecting exclusive option, deselect all others
-                    else if (
-                        sectionData.type.exclusive?.token &&
-                        item_token === sectionData.type.exclusive.token
-                    ) {
-                        await conn(userTableData.name)
-                            .where(person_id_col, person.id)
-                            .whereNull('deleted')
-                            .update({
-                                deleted: now,
-                                updated: now,
-                            });
-
-                        cache_data = {};
-                    }
-
-                    // Add new selection
-                    const [id] = await conn(userTableData.name).insert({
-                        person_id: person.id,
-                        [userTableData.cols.id]: itemOption.id,
-                        created: now,
-                        updated: now,
-                    });
-
-                    response_data = {
-                        id,
-                        token: item_token,
-                        name: itemOption.name,
-                        created: now,
-                        updated: now,
-                    };
-
-                    // Update cache
-                    cache_data[item_token] = response_data;
-                    await cacheService.setCache(cache_key, cache_data);
-
-                    return resolve(response_data);
-                }
-
-                // No action needed if trying to select already selected or deselect already deselected
-                return resolve(null);
-            }
+            resolve(data);
         } catch (e) {
             console.error(e);
             return reject(e);
         }
-    });
-}
-
-function updateSectionPositions(person_token, positions) {
-    return new Promise(async (resolve, reject) => {
-        try {
-            if (!person_token || !positions) {
-                return reject('Missing required fields');
-            }
-
-            if (typeof positions !== 'object' || !Object.keys(positions).length) {
-                return reject('Invalid positions');
-            }
-
-            const person = await getPerson(person_token);
-
-            if (!person) {
-                return reject('Person not found');
-            }
-
-            //person sections
-            let person_sections_cache_key = cacheService.keys.person_sections(person.person_token);
-
-            let person_sections = await cacheService.getObj(person_sections_cache_key);
-
-            let batch_update = [];
-
-            for (let key in positions) {
-                if (!(key in person_sections)) {
-                    continue;
-                }
-
-                let prevData = person_sections[key];
-
-                let data = positions[key];
-
-                if (data.position === prevData.position) {
-                    continue;
-                }
-
-                prevData.position = data.position;
-                prevData.updated = timeNow();
-
-                batch_update.push({
-                    id: prevData.id,
-                    position: data.position,
-                    updated: timeNow(),
-                });
-            }
-
-            if (!batch_update.length) {
-                return resolve();
-            }
-
-            await batchUpdate('persons_sections', batch_update);
-
-            await cacheService.setCache(person_sections_cache_key, person_sections);
-        } catch (e) {
-            console.error(e);
-        }
-
-        resolve();
     });
 }
 
@@ -2830,6 +2938,7 @@ module.exports = {
     deleteSection,
     addSectionItem,
     updateSectionItem,
+    updateSectionPositions,
     getPersonSectionItems,
     getAllSections,
     getSections,
@@ -2855,5 +2964,5 @@ module.exports = {
     getSportCategories,
     getTvCategories,
     getTvShows,
-    updateSectionPositions,
+    getWork,
 };
