@@ -22,7 +22,7 @@ exports.up = async function(knex) {
             table.increments('id').primary();
             table.string('token', 32).notNullable().unique();
             table.string('name', 255).notNullable();
-            table.boolean('is_active').notNullable().defaultTo(true);
+            table.boolean('is_visible').notNullable().defaultTo(true);
             table.integer('position').nullable();
             table.bigInteger('created').notNullable();
             table.bigInteger('updated').notNullable();
@@ -37,7 +37,7 @@ exports.up = async function(knex) {
             table.string('name', 255).notNullable();
             table.string('category_token', 32).notNullable();
             table.string('category_name', 255).notNullable();
-            table.boolean('is_active').notNullable().defaultTo(true);
+            table.boolean('is_visible').notNullable().defaultTo(true);
             table.integer('position').nullable();
             table.bigInteger('created').notNullable();
             table.bigInteger('updated').notNullable();
