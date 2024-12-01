@@ -1385,7 +1385,7 @@ module.exports = {
             resolve();
         });
     },
-    postAutoCompletePlaces: function (req, res) {
+    placesAutoComplete: function (req, res) {
         return new Promise(async (resolve, reject) => {
             try {
                 const { session_token, search, location, friends } = req.body;
@@ -1442,7 +1442,7 @@ module.exports = {
             resolve();
         });
     },
-    postAutoCompleteCities: function (req, res) {
+    citiesAutoComplete: function (req, res) {
         return new Promise(async (resolve, reject) => {
             try {
                 const { search, lat, lon } = req.body;
@@ -1580,7 +1580,7 @@ module.exports = {
             }
         });
     },
-    autoCompleteInstruments: function (req, res) {
+    instrumentsAutoComplete: function (req, res) {
         return new Promise(async (resolve, reject) => {
             let search = req.query.search;
 
@@ -1625,7 +1625,7 @@ module.exports = {
             }
         });
     },
-    autoCompleteMusic: function (req, res) {
+    musicAutoComplete: function (req, res) {
         return new Promise(async (resolve, reject) => {
             let search = req.query.search;
             let category = req.query.category;
@@ -1703,7 +1703,7 @@ module.exports = {
             }
         });
     },
-    autoCompleteMovies: function (req, res) {
+    moviesAutoComplete: function (req, res) {
         return new Promise(async (resolve, reject) => {
             let search = req.query.search;
             let category = req.query.category;
@@ -1807,7 +1807,7 @@ module.exports = {
             resolve();
         });
     },
-    autoCompleteSchools: function (req, res) {
+    schoolsAutoComplete: function (req, res) {
         return new Promise(async (resolve, reject) => {
             let countryId = req.query.filterId;
             let search = req.query.search;
@@ -1832,7 +1832,7 @@ module.exports = {
             }
         });
     },
-    autoCompleteSports: function (req, res) {
+    sportsAutoComplete: function (req, res) {
         return new Promise(async (resolve, reject) => {
             let search = req.query.search;
             let category = req.query.category;
@@ -1858,7 +1858,31 @@ module.exports = {
             }
         });
     },
-    autoCompleteTv: function (req, res) {
+    TVAutoComplete: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            let search = req.query.search;
+            let category = req.query.category;
+
+            if (!search) {
+                res.json('Invalid search', 400);
+                return resolve();
+            }
+
+            try {
+                let items = await tvService.tvShowsAutoComplete(search, category);
+
+                res.json({
+                    items: items,
+                });
+            } catch (e) {
+                console.error(e);
+
+                res.json('Autocomplete error', 400);
+                return resolve();
+            }
+        });
+    },
+    workAutoComplete: function (req, res) {
         return new Promise(async (resolve, reject) => {
             let search = req.query.search;
             let category = req.query.category;

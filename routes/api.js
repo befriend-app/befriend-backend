@@ -170,7 +170,7 @@ router.get('/mapbox/token', function (req, res, next) {
 router.post('/autocomplete/places', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
-            await apiController.postAutoCompletePlaces(req, res);
+            await apiController.placesAutoComplete(req, res);
         } catch (e) {
             console.error(e);
         }
@@ -182,7 +182,7 @@ router.post('/autocomplete/places', function (req, res, next) {
 router.post('/autocomplete/cities', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
-            await apiController.postAutoCompleteCities(req, res);
+            await apiController.citiesAutoComplete(req, res);
         } catch (e) {
             console.error(e);
         }

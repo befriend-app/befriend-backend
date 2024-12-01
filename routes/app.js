@@ -234,7 +234,7 @@ router.get('/tv/category/top', function (req, res, next) {
 router.get('/autocomplete/instruments', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
-            await apiController.autoCompleteInstruments(req, res);
+            await apiController.instrumentsAutoComplete(req, res);
         } catch (err) {
             console.log(err);
         }
@@ -246,7 +246,7 @@ router.get('/autocomplete/instruments', function (req, res, next) {
 router.get('/autocomplete/music', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
-            await apiController.autoCompleteMusic(req, res);
+            await apiController.musicAutoComplete(req, res);
         } catch (err) {
             console.log(err);
         }
@@ -258,7 +258,7 @@ router.get('/autocomplete/music', function (req, res, next) {
 router.get('/autocomplete/movies', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
-            await apiController.autoCompleteMovies(req, res);
+            await apiController.moviesAutoComplete(req, res);
         } catch (err) {
             console.log(err);
         }
@@ -270,7 +270,7 @@ router.get('/autocomplete/movies', function (req, res, next) {
 router.get('/autocomplete/schools', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
-            await apiController.autoCompleteSchools(req, res);
+            await apiController.schoolsAutoComplete(req, res);
         } catch (err) {
             console.log(err);
         }
@@ -282,7 +282,7 @@ router.get('/autocomplete/schools', function (req, res, next) {
 router.get('/autocomplete/sports', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
-            await apiController.autoCompleteSports(req, res);
+            await apiController.sportsAutoComplete(req, res);
         } catch (err) {
             console.log(err);
         }
@@ -294,7 +294,19 @@ router.get('/autocomplete/sports', function (req, res, next) {
 router.get('/autocomplete/tv', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
-            await apiController.autoCompleteTv(req, res);
+            await apiController.TVAutoComplete(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
+router.get('/autocomplete/work', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await apiController.workAutoComplete(req, res);
         } catch (err) {
             console.log(err);
         }
