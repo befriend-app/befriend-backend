@@ -10,6 +10,17 @@ const networkService = require('../services/network');
 const moviesService = require('../services/movies');
 const tvService = require('../services/tv');
 
+const sectionData = require('../services/sections_data');
+
+const { getNetwork, getNetworkSelf } = require('../services/network');
+const { encrypt } = require('../services/encryption');
+const { getPerson } = require('../services/persons');
+const { getCategoriesPlaces, placesAutoComplete, travelTimes } = require('../services/places');
+const { cityAutoComplete } = require('../services/locations');
+const { schoolAutoComplete } = require('../services/schools');
+const { getTopArtistsForGenre, musicAutoComplete } = require('../services/music');
+const { getTopTeamsBySport, sportsAutoComplete } = require('../services/sports');
+
 const {
     isProdApp,
     isIPAddress,
@@ -21,16 +32,6 @@ const {
     confirmDecryptedRegistrationNetworkToken,
     normalizeSearch,
 } = require('../services/shared');
-
-const { getNetwork, getNetworkSelf } = require('../services/network');
-const { encrypt } = require('../services/encryption');
-const { getPerson } = require('../services/persons');
-const { getCategoriesPlaces, placesAutoComplete, travelTimes } = require('../services/places');
-const { cityAutoComplete } = require('../services/locations');
-const { schoolAutoComplete } = require('../services/schools');
-const { hGetAll } = require('../services/cache');
-const { getTopArtistsForGenre, musicAutoComplete } = require('../services/music');
-const { getTopTeamsBySport, sportsAutoComplete } = require('../services/sports');
 
 module.exports = {
     getNetworks: function (req, res) {
@@ -1893,18 +1894,93 @@ module.exports = {
             }
 
             try {
-                let items = await tvService.tvShowsAutoComplete(search, category);
+                let section_data = sectionData.work;
+                let search_term = normalizeSearch(search);
 
+                if (search_term.length < section_data.autoComplete.minChars) {
+                    return resolve([]);
+                }
+
+                let results = {
+                    industries: [],
+                    roles: []
+                };
+
+                // Get industries and roles from cache
+                const [industries, roles] = await Promise.all([
+                    cacheService.hGetAllObj(cacheService.keys.work_industries),
+                    cacheService.hGetAllObj(cacheService.keys.work_roles)
+                ]);
+
+                // Function to calculate match score
+                function calculateMatchScore(name, searchTerm) {
+                    const nameLower = name.toLowerCase();
+                    if (nameLower === searchTerm) return 1;
+                    if (nameLower.startsWith(searchTerm)) return 0.8;
+                    if (nameLower.includes(searchTerm)) return 0.6;
+                    return 0;
+                }
+
+                // Process industries
+                for (const [token, industryData] of Object.entries(industries)) {
+                    // Skip if not visible or deleted
+                    if (!industryData.is_visible || industryData.deleted) continue;
+
+                    const score = calculateMatchScore(industryData.name, search_term);
+
+                    if (score > 0) {
+                        results.industries.push({
+                            token: token,
+                            name: industryData.name,
+                            table_key: 'industries',
+                            label: 'Industry',
+                            score: score
+                        });
+                    }
+                }
+
+                // Process roles
+                for (const [token, roleData] of Object.entries(roles)) {
+                    // Skip if not visible or deleted
+                    if (!roleData.is_visible || roleData.deleted) continue;
+
+                    const score = calculateMatchScore(roleData.name, search_term);
+
+                    if (score > 0) {
+                        results.roles.push({
+                            token: token,
+                            name: roleData.name,
+                            table_key: 'roles',
+                            label: 'Role',
+                            category_token: roleData.category_token,
+                            category_name: roleData.category_name,
+                            score: score
+                        });
+                    }
+                }
+
+                // Sort results by:
+                // 1. Score (higher first)
+                // 2. Name (alphabetically)
+                for(let k in results) {
+                    results[k].sort((a, b) => {
+                        if (b.score !== a.score) {
+                            return b.score - a.score;
+                        }
+                        return a.name.localeCompare(b.name);
+                    });
+                }
+
+                // Only take top results
                 res.json({
-                    items: items,
-                });
-            } catch (e) {
+                    items: results.industries.concat(results.roles),
+                })
+            } catch(e) {
                 console.error(e);
-
                 res.json('Autocomplete error', 400);
-                return resolve();
             }
+
+            resolve();
         });
     },
-
 };
