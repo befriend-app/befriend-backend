@@ -294,6 +294,18 @@ function dateTimeNow(date) {
     return date.toISOString().slice(0, 10) + ' ' + date.toISOString().substring(11, 19);
 }
 
+function deleteFile(file_path) {
+    return new Promise(async (resolve, reject) => {
+        fs.unlink(file_path, (err) => {
+            if (err) {
+                return reject(err);
+            } else {
+                resolve();
+            }
+        });
+    });
+}
+
 function downloadURL(url, output_path) {
     return new Promise(async (resolve, reject) => {
         try {
@@ -1235,6 +1247,7 @@ module.exports = {
     cloneObj: cloneObj,
     dataEndpoint: dataEndpoint,
     dateTimeNow: dateTimeNow,
+    deleteFile: deleteFile,
     downloadURL: downloadURL,
     encodePassword: encodePassword,
     formatNumberLength: formatNumberLength,

@@ -653,10 +653,6 @@ module.exports = {
         ],
         tables: {
             industries: {
-                type: {
-                    name: 'buttons',
-                    multi: true,
-                },
                 user: {
                     name: 'persons_industries',
                     cols: {
@@ -666,10 +662,6 @@ module.exports = {
                 }
             },
             roles: {
-                type: {
-                    name: 'buttons',
-                    multi: true,
-                },
                 user: {
                     name: 'persons_roles',
                     cols: {
@@ -683,7 +675,7 @@ module.exports = {
             minChars: 1,
             endpoint: '/autocomplete/work',
             placeholders: {
-                main: 'Search industries and roles'
+                main: 'Search industries or roles'
             }
         },
         cacheKeys: {
