@@ -12,6 +12,8 @@ const standardKeys = {
 const sectionKeys = {
     drinking: 'sections:drinking',
     genders: 'sections:genders',
+    instruments: 'sections:instruments',
+    instruments_common: 'sections:instruments:common',
     kids_ages: 'sections:kids_ages',
     languages: 'sections:languages',
     life_stages: 'sections:life_stages',
@@ -19,8 +21,8 @@ const sectionKeys = {
     relationship_status: 'sections:relationship_status',
     religions: 'sections:religions',
     smoking: 'sections:smoking',
-    instruments: 'sections:instruments',
-    instruments_common: 'sections:instruments:common',
+    work_industries: 'sections:work:industries',
+    work_roles: 'sections:work:roles',
 };
 
 const mediaKeys = {

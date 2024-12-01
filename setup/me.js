@@ -15,8 +15,9 @@ function main() {
             await require('./me/relationship_status').main();
             await require('./me/religions').main();
             await require('./me/smoking').main();
+            await require('./me/work').main();
 
-            //large
+            //extended
             await require('./me/movies').main();
             await require('./me/music').main();
             await require('./me/schools').main();
