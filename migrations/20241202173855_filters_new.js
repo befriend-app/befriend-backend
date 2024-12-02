@@ -117,6 +117,8 @@ exports.up = async function(knex) {
             table.boolean('is_home_city').notNullable().defaultTo(false).comment('Person who lives in London, visiting Chicago, could filter for other persons who live in London that are currently in Chicago.');
             table.boolean('is_home_country').notNullable().defaultTo(false);
             table.boolean('is_custom').notNullable().defaultTo(false).comment('Persons could create custom filters, be approved by our system automatically, then show up on other persons apps.');
+
+            sharedCols.timestamps(table);
         });
 
     await knex.schema.createTable('persons_filters', table => {
