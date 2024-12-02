@@ -31,6 +31,11 @@ let max_request_count = 1000;
     let conn = await dbService.conn();
     let self_network = await getNetworkSelf();
 
+    if(!self_network) {
+        console.error("Network not setup: run setup.js then start server.js");
+        process.exit(1);
+    }
+
     let current_count = 0;
 
     let genders = await conn('genders');
