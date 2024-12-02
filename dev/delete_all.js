@@ -13,15 +13,13 @@ function main(is_me) {
 
         let scripts = [
             'delete_me_all',
-            'delete_activity_venues',
+            'delete_activity_types',
             'delete_persons',
             'delete_open_locations',
             'delete_places',
         ];
 
         for (let script of scripts) {
-            console.log(`Deleting: ${script}`);
-
             let fn = `./${script}`;
 
             await require(fn).main();

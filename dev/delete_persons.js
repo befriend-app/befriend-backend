@@ -1,5 +1,6 @@
 const { loadScriptEnv, isProdApp } = require('../services/shared');
 const { keys: systemKeys } = require('../services/system');
+const { getKeysWithPrefix, deleteKeys } = require('../services/cache');
 
 loadScriptEnv();
 
@@ -71,9 +72,9 @@ function main(is_me) {
             }
         }
 
-        if (is_me) {
-            process.exit();
-        }
+        let keys = await getKeysWithPrefix(`persons:`);
+
+        await deleteKeys(keys);
 
         resolve();
     });

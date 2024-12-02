@@ -54,6 +54,15 @@ function main(is_me) {
             let movie_keys = await cacheService.getKeysWithPrefix(`movie`);
 
             await cacheService.deleteKeys(movie_keys);
+
+            let movie_section_keys = [
+                cacheService.keys.movies,
+                cacheService.keys.movie_genres,
+                cacheService.keys.movies_new,
+                cacheService.keys.movies_popular
+            ];
+
+            await cacheService.deleteKeys(movie_section_keys);
         }
 
         resolve();

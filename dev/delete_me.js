@@ -68,6 +68,10 @@ function main(is_me) {
             keys.push(cacheService.keys.me_sections);
 
             await cacheService.deleteKeys(keys);
+
+            await cacheService.deleteKeys(Object.values(cacheService.keys.sectionKeys))
+
+            await cacheService.deleteKeys(await (cacheService.getKeysWithPrefix(cacheService.keys.languages_country(''))));
         }
 
         if (is_me) {

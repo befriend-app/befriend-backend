@@ -5,8 +5,10 @@ const cacheService = require('../services/cache');
 
 loadScriptEnv();
 
-function main(is_me) {
+function main() {
     return new Promise(async (resolve, reject) => {
+        console.log("Delete: activity types");
+
         if (isProdApp()) {
             console.error('App env: [prod]', 'exiting');
             return resolve();
@@ -75,15 +77,7 @@ function main(is_me) {
         //delete cache
         await cacheService.deleteKeys(cacheService.keys.activity_types);
 
-        if (is_me) {
-            // try {
-            //     await require('../data/add_activity_types_venues').main();
-            // } catch (e) {
-            //     console.error(e);
-            // }
-
-            process.exit();
-        }
+        await cacheService.deleteKeys(await (cacheService.getKeysWithPrefix(cacheService.keys.activity_type(''))));
 
         resolve();
     });

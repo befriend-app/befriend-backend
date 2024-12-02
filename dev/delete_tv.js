@@ -56,6 +56,14 @@ function main(is_me) {
             let tv_keys = await cacheService.getKeysWithPrefix(`tv:`);
 
             await cacheService.deleteKeys(tv_keys);
+
+            let tv_section_keys = [
+                cacheService.keys.tv_shows,
+                cacheService.keys.tv_genres,
+                cacheService.keys.tv_popular,
+            ];
+
+            await cacheService.deleteKeys(tv_section_keys);
         }
 
         resolve();

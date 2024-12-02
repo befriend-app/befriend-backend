@@ -69,6 +69,13 @@ async function deleteRedis() {
     });
 
     await cacheService.deleteKeys(keys);
+
+    let music_section_keys = [
+        cacheService.keys.music_artists,
+        cacheService.keys.music_genres,
+    ];
+
+    await cacheService.deleteKeys(music_section_keys);
 }
 
 function main(is_me) {
