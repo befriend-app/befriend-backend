@@ -117,6 +117,9 @@ module.exports = {
         ...mediaKeys,
         ...sportsKeys,
         ...keyFunctions,
+        sectionKeys,
+        mediaKeys,
+        sportsKeys
     },
     init: function () {
         return new Promise(async (resolve, reject) => {

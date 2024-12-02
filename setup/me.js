@@ -5,7 +5,6 @@ function main() {
 
             await require('./me/sections').main();
 
-            //standard
             await require('./me/drinking').main();
             await require('./me/instruments').main();
             await require('./me/kids_ages').main();
@@ -17,7 +16,6 @@ function main() {
             await require('./me/smoking').main();
             await require('./me/work').main();
 
-            //extended
             await require('./me/movies').main();
             await require('./me/music').main();
             await require('./me/schools').main();
