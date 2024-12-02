@@ -178,7 +178,7 @@ module.exports = {
 
                 const result = await module.exports.conn.scan(cursor, {
                     MATCH: `${prefix}*`,
-                    COUNT: 1000,
+                    COUNT: 100000,
                 });
 
                 allKeys = allKeys.concat(result.keys);
