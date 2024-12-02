@@ -6,7 +6,7 @@ exports.up = function (knex) {
     return knex.schema.createTable('sync', (table) => {
         table.bigIncrements('id').unsigned().primary();
         table.string('sync_process', 255).notNullable();
-        table.bigInteger('network_id').unsigned().notNullable();
+        table.integer('network_id').unsigned().notNullable();
         table.bigInteger('last_updated').nullable();
 
         table.bigInteger('created').notNullable();

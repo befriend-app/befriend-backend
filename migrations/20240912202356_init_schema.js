@@ -6,7 +6,7 @@ exports.up = async function (knex) {
     //create database if not exists
     return knex.schema
         .createTable('networks', (table) => {
-            table.bigIncrements('id').unsigned().primary();
+            table.increments('id').unsigned().primary();
             table.string('network_token', 255).notNullable();
             table.string('network_name', 255).notNullable();
             table.string('network_logo', 255).nullable();
@@ -22,8 +22,8 @@ exports.up = async function (knex) {
             table.index('network_token', 'networks_network_token_index');
         })
         .createTable('networks_secret_keys', (table) => {
-            table.bigIncrements('id').unsigned().primary();
-            table.bigInteger('network_id').unsigned().notNullable();
+            table.increments('id').unsigned().primary();
+            table.integer('network_id').unsigned().notNullable();
             table.string('secret_key', 255).notNullable();
             table.boolean('is_active').notNullable().defaultTo(0);
 
@@ -106,7 +106,7 @@ exports.up = async function (knex) {
                 .notNullable()
                 .comment('Unique identifier system wide');
             table
-                .bigInteger('network_id')
+                .integer('network_id')
                 .unsigned()
                 .notNullable()
                 .comment('Network person signed up on originally');
@@ -434,7 +434,7 @@ exports.up = async function (knex) {
         .createTable('persons_networks', (table) => {
             table.bigIncrements('id').unsigned().primary();
             table.bigInteger('person_id').unsigned().notNullable();
-            table.bigInteger('network_id').unsigned().notNullable();
+            table.integer('network_id').unsigned().notNullable();
 
             table.integer('created').notNullable();
             table.integer('updated').notNullable();

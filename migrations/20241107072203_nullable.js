@@ -4,7 +4,7 @@
  */
 exports.up = async function (knex) {
     return knex.schema.alterTable('sync', (table) => {
-        table.bigInteger('network_id').unsigned().nullable().alter();
+        table.integer('network_id').unsigned().nullable().alter();
     });
 };
 

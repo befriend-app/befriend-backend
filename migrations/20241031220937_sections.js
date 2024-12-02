@@ -51,7 +51,7 @@ exports.up = function (knex) {
             .createTable('persons_movies', (table) => {
                 table.bigIncrements('id').primary();
 
-                table.integer('person_id').unsigned().notNullable();
+                table.bigInteger('person_id').unsigned().notNullable();
                 table.integer('movie_id').unsigned().notNullable();
                 table.string('movie_token', 32).notNullable();
 

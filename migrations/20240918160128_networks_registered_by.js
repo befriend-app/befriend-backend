@@ -4,7 +4,7 @@
  */
 exports.up = function (knex) {
     return knex.schema.alterTable('networks', (table) => {
-        table.bigInteger('registration_network_id').unsigned().nullable().after('id');
+        table.integer('registration_network_id').unsigned().nullable().after('id');
 
         table.foreign('registration_network_id').references('id').inTable('networks');
     });
