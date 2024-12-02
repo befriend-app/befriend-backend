@@ -10,6 +10,9 @@ loadScriptEnv();
 
         await require('./setup/genders').main();
         await require('./setup/activity-types').main();
+
+        await require('./setup/filters').main();
+
         await require('./setup/locations').main();
         await require('./setup/me').main();
 
