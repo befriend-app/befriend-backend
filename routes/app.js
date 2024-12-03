@@ -42,6 +42,42 @@ router.put('/filters/send-receive', function (req, res, next) {
     });
 });
 
+router.put('/filters/reviews', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await filtersController.putReviewRating(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
+router.put('/filters/age', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await filtersController.putAge(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
+router.put('/filters/gender', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await filtersController.putGender(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
 router.put('/me/mode', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {

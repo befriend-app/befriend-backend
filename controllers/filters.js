@@ -626,11 +626,332 @@ function putSendReceive(req, res) {
     });
 }
 
+function putReviewRating(req, res) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const { person_token, filter_token, rating } = req.body;
+
+            // Validate inputs
+            if (!filter_token || typeof rating !== 'number' || rating < 0 || rating > 5) {
+                res.json({
+                    message: 'Valid filter token and rating (0-5) required'
+                }, 400);
+                return resolve();
+            }
+
+            // Get filter and mapping data
+            let filters = await getFilters();
+            let filter = filters.byToken[filter_token];
+            let mapping = filterMappings[filter_token];
+
+            if (!filter || !mapping) {
+                res.json({
+                    message: 'Invalid filter'
+                }, 400);
+                return resolve();
+            }
+
+            // Get person
+            let person = await getPerson(person_token);
+            if (!person) {
+                res.json({
+                    message: 'Person not found'
+                }, 400);
+                return resolve();
+            }
+
+            let conn = await dbService.conn();
+            let person_filter_cache_key = cacheService.keys.person_filters(person_token);
+            let person_filters = await getPersonFilters(person);
+            let now = timeNow();
+
+            // Get or create filter entry
+            let existingFilter = person_filters[filter_token];
+
+            if (existingFilter) {
+                // Update existing filter
+                await conn('persons_filters')
+                    .where('id', existingFilter.id)
+                    .update({
+                        filter_value: rating.toFixed(1),
+                        updated: now
+                    });
+
+                existingFilter.filter_value = rating.toFixed(1);
+                existingFilter.updated = now;
+            } else {
+                // Create new filter entry
+                const filterEntry = createFilterEntry(filter.id, {
+                    person_id: person.id,
+                    filter_value: rating.toFixed(1)
+                });
+
+                const [id] = await conn('persons_filters')
+                    .insert(filterEntry);
+
+                person_filters[filter_token] = {
+                    ...filterEntry,
+                    id
+                };
+            }
+
+            await cacheService.setCache(person_filter_cache_key, person_filters);
+
+            res.json({
+                success: true
+            });
+        } catch (e) {
+            console.error(e);
+            res.json({
+                message: 'Error updating review rating'
+            }, 400);
+        }
+
+        resolve();
+    });
+}
+
+function putAge(req, res) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const { person_token, min_age, max_age } = req.body;
+
+            // Validate inputs
+            if (typeof min_age !== 'number' || typeof max_age !== 'number' ||
+                min_age < 18 || max_age > 130 || min_age > max_age) {
+                res.json({
+                    message: 'Valid age range required (18-130)'
+                }, 400);
+                return resolve();
+            }
+
+            // Get filter data
+            let filters = await getFilters();
+            let filter = filters.byToken['ages'];
+
+            if (!filter) {
+                res.json({
+                    message: 'Age filter not found'
+                }, 400);
+                return resolve();
+            }
+
+            // Get person
+            let person = await getPerson(person_token);
+            if (!person) {
+                res.json({
+                    message: 'Person not found'
+                }, 400);
+                return resolve();
+            }
+
+            let conn = await dbService.conn();
+            let person_filter_cache_key = cacheService.keys.person_filters(person_token);
+            let person_filters = await getPersonFilters(person);
+            let now = timeNow();
+
+            // Get or create filter entry
+            let existingFilter = person_filters['ages'];
+
+            if (existingFilter) {
+                // Update existing filter
+                await conn('persons_filters')
+                    .where('id', existingFilter.id)
+                    .update({
+                        filter_value_min: min_age.toString(),
+                        filter_value_max: max_age.toString(),
+                        updated: now
+                    });
+
+                existingFilter.filter_value_min = min_age.toString();
+                existingFilter.filter_value_max = max_age.toString();
+                existingFilter.updated = now;
+            } else {
+                // Create new filter entry
+                const filterEntry = createFilterEntry(filter.id, {
+                    person_id: person.id,
+                    filter_value_min: min_age.toString(),
+                    filter_value_max: max_age.toString()
+                });
+
+                const [id] = await conn('persons_filters')
+                    .insert(filterEntry);
+
+                person_filters['ages'] = {
+                    ...filterEntry,
+                    id
+                };
+            }
+
+            await cacheService.setCache(person_filter_cache_key, person_filters);
+
+            res.json({
+                success: true
+            });
+        } catch (e) {
+            console.error(e);
+            res.json({
+                message: 'Error updating age range'
+            }, 400);
+        }
+
+        resolve();
+    });
+}
+
+function putGender(req, res) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const { person_token, gender_token, active } = req.body;
+
+            // Validate inputs
+            if (!gender_token || typeof active !== 'boolean') {
+                res.json({
+                    message: 'Gender token and active state required',
+                }, 400);
+                return resolve();
+            }
+
+            // Get filter data
+            let filters = await getFilters();
+            let filter = filters.byToken['genders'];
+
+            if (!filter) {
+                res.json({
+                    message: 'Gender filter not found'
+                }, 400);
+                return resolve();
+            }
+
+            // Get person
+            let person = await getPerson(person_token);
+            if (!person) {
+                res.json({
+                    message: 'Person not found'
+                }, 400);
+                return resolve();
+            }
+
+            let conn = await dbService.conn();
+            let person_filter_cache_key = cacheService.keys.person_filters(person_token);
+            let person_filters = await getPersonFilters(person);
+
+            // Handle 'any' gender selection
+            if (gender_token === 'any' && active) {
+                // Clear all existing gender selections
+                if (person_filters['genders']) {
+                    await conn('persons_filters')
+                        .where('filter_id', filter.id)
+                        .where('person_id', person.id)
+                        .delete();
+
+                    delete person_filters['genders'];
+                }
+
+                const filterEntry = createFilterEntry(filter.id, {
+                    person_id: person.id
+                });
+
+                const [id] = await conn('persons_filters')
+                    .insert(filterEntry);
+
+                person_filters['genders'] = {
+                    [id]: {
+                        ...filterEntry,
+                        id
+                    }
+                };
+            }
+            // Handle specific gender selection
+            else {
+                // Find matching gender from data
+                let gender = befriend.me.data.genders?.find(g => g.token === gender_token);
+
+                if (!gender && gender_token !== 'any') {
+                    res.json({
+                        message: 'Invalid gender token'
+                    }, 400);
+                    return resolve();
+                }
+
+                // Remove 'any' selection if it exists
+                if (person_filters['genders']) {
+                    const anyFilter = Object.values(person_filters['genders'])
+                        .find(f => f.secondary_level === 'any');
+
+                    if (anyFilter) {
+                        await conn('persons_filters')
+                            .where('id', anyFilter.id)
+                            .delete();
+
+                        delete person_filters['genders'];
+                    }
+                }
+
+                if (active) {
+                    // Add new gender selection
+                    const filterEntry = createFilterEntry(filter.id, {
+                        person_id: person.id,
+                        [filterMappings.genders.column]: gender.id,
+                    });
+
+                    const [id] = await conn('persons_filters')
+                        .insert(filterEntry);
+
+                    if (!person_filters['genders']) {
+                        person_filters['genders'] = {};
+                    }
+
+                    person_filters['genders'][id] = {
+                        ...filterEntry,
+                        id
+                    };
+                } else {
+                    // Remove gender selection
+                    if (person_filters['genders']) {
+                        const existingFilter = Object.values(person_filters['genders'])
+                            .find(f => f[filterMappings.genders.column] === gender.id);
+
+                        if (existingFilter) {
+                            await conn('persons_filters')
+                                .where('id', existingFilter.id)
+                                .delete();
+
+                            delete person_filters['genders'][existingFilter.id];
+
+                            if (Object.keys(person_filters['genders']).length === 0) {
+                                delete person_filters['genders'];
+                            }
+                        }
+                    }
+                }
+            }
+
+            await cacheService.setCache(person_filter_cache_key, person_filters);
+
+            res.json({
+                success: true
+            });
+
+        } catch (e) {
+            console.error(e);
+            res.json({
+                message: 'Error updating gender filter'
+            }, 400);
+        }
+
+        resolve();
+    });
+}
+
 module.exports = {
     filterMappings,
     filters: null,
     getFilters,
     getPersonFilters,
     putActive,
-    putSendReceive
+    putSendReceive,
+    putReviewRating,
+    putAge,
+    putGender
 };

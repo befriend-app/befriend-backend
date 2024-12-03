@@ -51,6 +51,7 @@ function main() {
             return reject();
         }
 
+        await deleteKeys(cacheService.keys.genders);
         console.log('genders added', {
             added,
             updated,
