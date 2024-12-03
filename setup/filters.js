@@ -48,12 +48,17 @@ function main() {
                     sort_position: 15,
                     is_distance: true,
                 },
-
                 {
                     filter_token: 'reviews_safety',
                     filter_name: 'Safety',
                     sort_position: 21,
                     is_review_safe: true,
+                },
+                {
+                    filter_token: 'reviews_trust',
+                    filter_name: 'Trust',
+                    sort_position: 21,
+                    is_review_trust: true,
                 },
                 {
                     filter_token: 'reviews_timeliness',
@@ -73,7 +78,12 @@ function main() {
                     sort_position: 24,
                     is_review_fun: true,
                 },
-
+                {
+                    filter_token: 'reviews_unrated',
+                    filter_name: 'Unrated',
+                    sort_position: 26,
+                    is_review_unrated: true,
+                },
                 {
                     filter_token: 'verification_linkedin',
                     filter_name: 'LinkedIn',
@@ -110,7 +120,12 @@ function main() {
                     sort_position: 46,
                     is_verification_mailer: true,
                 },
-
+                {
+                    filter_token: 'age',
+                    filter_name: 'Age',
+                    sort_position: 47,
+                    is_age: true,
+                },
                 {
                     filter_token: 'gender',
                     filter_name: 'Gender',

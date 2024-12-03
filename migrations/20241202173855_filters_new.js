@@ -72,9 +72,11 @@ exports.up = async function(knex) {
 
             //reviews
             table.boolean('is_review_safe').notNullable().defaultTo(false);
+            table.boolean('is_review_trust').notNullable().defaultTo(false);
             table.boolean('is_review_timeliness').notNullable().defaultTo(false);
             table.boolean('is_review_friendliness').notNullable().defaultTo(false);
             table.boolean('is_review_fun').notNullable().defaultTo(false);
+            table.boolean('is_review_unrated').notNullable().defaultTo(false);
 
             //verifications
             table.boolean('is_verification_linkedin').notNullable().defaultTo(false);
@@ -85,6 +87,7 @@ exports.up = async function(knex) {
             table.boolean('is_verification_mailer').notNullable().defaultTo(false);
 
             //sections
+            table.boolean('is_age').notNullable().defaultTo(false);
             table.boolean('is_gender').notNullable().defaultTo(false);
             table.boolean('is_life_stage').notNullable().defaultTo(false);
             table.boolean('is_relationship').notNullable().defaultTo(false);
