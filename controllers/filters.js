@@ -495,10 +495,142 @@ function putActive(req, res) {
     });
 }
 
+function putSendReceive(req, res) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let { person_token, filter_token, type, enabled } = req.body;
+
+            // Validate required fields
+            if (!filter_token || !type || typeof enabled !== 'boolean') {
+                res.json({
+                    message: 'Filter token, type and enabled state required',
+                }, 400);
+                return resolve();
+            }
+
+            // Validate type
+            if (!['send', 'receive'].includes(type)) {
+                res.json({
+                    message: 'Invalid type - must be send or receive',
+                }, 400);
+                return resolve();
+            }
+
+            // Get filter and mapping data
+            let filters = await getFilters();
+            let filter = filters.byToken[filter_token];
+            let mapping = filterMappings[filter_token];
+
+            if (!filter || !mapping) {
+                res.json({
+                    message: 'Invalid filter',
+                }, 400);
+                return resolve();
+            }
+
+            // Get person
+            let person = await getPerson(person_token);
+            if (!person) {
+                res.json({
+                    message: 'Person not found'
+                }, 400);
+                return resolve();
+            }
+
+            let conn = await dbService.conn();
+            let person_filter_cache_key = cacheService.keys.person_filters(person_token);
+            let person_filters = await getPersonFilters(person);
+            let now = timeNow();
+
+            let existingFilter = person_filters[filter_token];
+            if (mapping.multi && existingFilter) {
+                existingFilter = Object.values(existingFilter)[0];
+            }
+
+            if (existingFilter && Object.keys(existingFilter).length) {
+                // Update existing filter
+                let updateData = {
+                    updated: now
+                };
+
+                if (type === 'send') {
+                    updateData.is_send = enabled;
+                } else {
+                    updateData.is_receive = enabled;
+                }
+
+                await conn('persons_filters')
+                    .where('id', existingFilter.id)
+                    .update(updateData);
+
+                // Update cache
+                if (mapping.multi) {
+                    if (type === 'send') {
+                        person_filters[filter_token][existingFilter.id].is_send = enabled;
+                    } else {
+                        person_filters[filter_token][existingFilter.id].is_receive = enabled;
+                    }
+                    person_filters[filter_token][existingFilter.id].updated = now;
+                } else {
+                    if (type === 'send') {
+                        person_filters[filter_token].is_send = enabled;
+                    } else {
+                        person_filters[filter_token].is_receive = enabled;
+                    }
+                    person_filters[filter_token].updated = now;
+                }
+            } else {
+                // Create new filter entry
+                const filterEntry = createFilterEntry(filter.id, {
+                    person_id: person.id,
+                    is_send: type === 'send' ? enabled : true,
+                    is_receive: type === 'receive' ? enabled : true
+                });
+
+                const [id] = await conn('persons_filters')
+                    .insert(filterEntry);
+
+                // Initialize in cache
+                if (!person_filters[filter_token] && mapping.multi) {
+                    person_filters[filter_token] = {};
+                }
+
+                // Store in cache based on single/multi setting
+                if (mapping.multi) {
+                    person_filters[filter_token][id] = {
+                        ...filterEntry,
+                        id
+                    };
+                } else {
+                    person_filters[filter_token] = {
+                        ...filterEntry,
+                        id
+                    };
+                }
+            }
+
+            await cacheService.setCache(person_filter_cache_key, person_filters);
+
+            res.json({
+                success: true
+            });
+
+        } catch (e) {
+            console.error(e);
+            res.json({
+                message: 'Error updating filter send/receive state'
+            }, 400);
+        }
+
+        resolve();
+    });
+}
+
 module.exports = {
     filterMappings,
     filters: null,
     getFilters,
     getPersonFilters,
-    putActive
+    putActive,
+    putSendReceive
 };
