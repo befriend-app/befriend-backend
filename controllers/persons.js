@@ -4,6 +4,7 @@ const dbService = require('../services/db');
 const { timeNow, generateToken, latLonLookup } = require('../services/shared');
 
 const { getPerson, updatePerson } = require('../services/persons');
+
 const {
     getSections,
     addSection,
@@ -24,6 +25,7 @@ const {
 const { findMatches, notifyMatches, prepareActivity } = require('../services/activities');
 
 const { getCountryByCode } = require('../services/locations');
+const { getPersonFilters } = require('./filters');
 
 module.exports = {
     getMe: function (req, res) {
@@ -32,6 +34,7 @@ module.exports = {
 
             try {
                 let me = await getPerson(person_token);
+                let filters = await getPersonFilters(me);
 
                 //set country
                 if (me.country_code) {
@@ -63,6 +66,7 @@ module.exports = {
 
                 res.json({
                     me,
+                    filters,
                     genders,
                     modes,
                     sections,

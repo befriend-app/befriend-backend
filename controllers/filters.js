@@ -499,5 +499,6 @@ module.exports = {
     filterMappings,
     filters: null,
     getFilters,
+    getPersonFilters,
     putActive
 };
