@@ -58,9 +58,9 @@ exports.up = async function(knex) {
     await knex.schema
         .createTable('filters', table => {
             table.increments('id').unsigned().primary();
-            table.string('filter_token').notNullable().comment('Unique system-wide');
-            table.string('filter_name').notNullable();
-            table.integer('sort_position').notNullable().defaultTo(0);
+            table.string('token').notNullable().comment('Unique system-wide');
+            table.string('name').notNullable();
+            table.integer('position').notNullable().defaultTo(0);
 
             table.boolean('is_network').notNullable().defaultTo(false);
             table.boolean('is_activity_type').notNullable().defaultTo(false);

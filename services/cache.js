@@ -6,6 +6,7 @@ const standardKeys = {
     activity_types: 'activity_types',
     activity_type_default: 'activity_type:default',
     countries: 'countries',
+    filters: 'filters',
     me_sections: 'sections:me',
 };
 
@@ -66,6 +67,7 @@ const keyFunctions = {
     person: (tokenOrEmail = '') => `persons:${tokenOrEmail.toLowerCase()}`,
     person_login_tokens: (token = '') => `persons:${token.toLowerCase()}:login_tokens`,
     person_devices: (token) => `persons:devices:${token}`,
+    person_filters: (token) => `persons:filters:${token}`,
     person_sections: (token) => `persons:me:sections:${token}`,
     persons_section_data: (token, dataName) => `persons:me:sections:data:${dataName}:${token}`,
     persons_partner: (token) => `persons:me:partner:${token}`,

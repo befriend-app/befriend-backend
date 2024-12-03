@@ -1,6 +1,7 @@
 let express = require('express');
 let router = express.Router();
 let apiController = require('../controllers/api');
+let filtersController = require('../controllers/filters');
 let personsController = require('../controllers/persons');
 
 router.use(require('../middleware/auth'));
@@ -9,6 +10,18 @@ router.get('/me', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await personsController.getMe(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
+router.put('/filters/active', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await filtersController.putActive(req, res);
         } catch (err) {
             console.log(err);
         }
