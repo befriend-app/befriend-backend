@@ -42,6 +42,7 @@ function main(is_me) {
                 'persons_login_tokens',
                 'persons_devices',
                 'persons_networks',
+                'persons_filters',
                 'persons',
             ];
 
