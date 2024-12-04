@@ -2,6 +2,7 @@ const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 const { getPerson } = require('../services/persons');
 const { timeNow } = require('../services/shared');
+const { getGenders } = require('../services/me');
 
 const filterMappings = {
     networks: {
@@ -787,7 +788,6 @@ function putGender(req, res) {
         try {
             const { person_token, gender_token, active } = req.body;
 
-            // Validate inputs
             if (!gender_token || typeof active !== 'boolean') {
                 res.json({
                     message: 'Gender token and active state required',
@@ -795,9 +795,9 @@ function putGender(req, res) {
                 return resolve();
             }
 
-            // Get filter data
+            let mapping = filterMappings.genders;
             let filters = await getFilters();
-            let filter = filters.byToken['genders'];
+            let filter = filters.byToken[mapping.token];
 
             if (!filter) {
                 res.json({
@@ -806,7 +806,6 @@ function putGender(req, res) {
                 return resolve();
             }
 
-            // Get person
             let person = await getPerson(person_token);
             if (!person) {
                 res.json({
@@ -815,98 +814,134 @@ function putGender(req, res) {
                 return resolve();
             }
 
+            let genders = await getGenders(true);
+            let anyOption = genders.find(item => item.token === 'any');
+
             let conn = await dbService.conn();
             let person_filter_cache_key = cacheService.keys.person_filters(person_token);
             let person_filters = await getPersonFilters(person);
+            let now = timeNow();
 
-            // Handle 'any' gender selection
-            if (gender_token === 'any' && active) {
-                // Clear all existing gender selections
-                if (person_filters['genders']) {
-                    await conn('persons_filters')
-                        .where('filter_id', filter.id)
-                        .where('person_id', person.id)
-                        .delete();
-
-                    delete person_filters['genders'];
-                }
-
-                const filterEntry = createFilterEntry(filter.id, {
+            // Initialize filter structure if it doesn't exist
+            if (!person_filters[filter.token]) {
+                const baseEntry = createFilterEntry(filter.id, {
                     person_id: person.id
                 });
 
+                // Create base filter entry in database
                 const [id] = await conn('persons_filters')
-                    .insert(filterEntry);
+                    .insert(baseEntry);
 
-                person_filters['genders'] = {
-                    [id]: {
-                        ...filterEntry,
-                        id
-                    }
+                person_filters[filter.token] = {
+                    ...baseEntry,
+                    id,
+                    items: {}
                 };
+            } else if (!person_filters[filter.token].items) {
+                person_filters[filter.token].items = {};
+            }
+
+            // Get existing 'any' selection if it exists
+            const existingAny = Object.values(person_filters[filter.token].items)
+                .find(item => item[mapping.column] === anyOption.id);
+
+            // Handle 'any' gender selection
+            if (gender_token === 'any' && active) {
+                // Mark all non-any items as negative
+                for (let id in person_filters[filter.token].items) {
+                    await conn('persons_filters')
+                        .where('id', id)
+                        .update({
+                            is_negative: true,
+                            updated: now
+                        });
+
+                    person_filters[filter.token].items[id].is_negative = true;
+                    person_filters[filter.token].items[id].updated = now;
+                }
+
+                // Create or update 'any' entry
+                if (existingAny) {
+                    await conn('persons_filters')
+                        .where('id', existingAny.id)
+                        .update({
+                            is_negative: false,
+                            updated: now
+                        });
+
+                    existingAny.is_negative = false;
+                    existingAny.updated = now;
+                } else {
+                    const anyEntry = createFilterEntry(filter.id, {
+                        person_id: person.id,
+                        [mapping.column]: anyOption.id,
+                        is_negative: false
+                    });
+
+                    const [id] = await conn('persons_filters')
+                        .insert(anyEntry);
+
+                    person_filters[filter.token].items[id] = {
+                        ...anyEntry,
+                        id
+                    };
+                }
             }
             // Handle specific gender selection
             else {
                 // Find matching gender from data
-                let gender = befriend.me.data.genders?.find(g => g.token === gender_token);
+                let gender = genders.find(g => g.token === gender_token);
 
-                if (!gender && gender_token !== 'any') {
+                if (!gender) {
                     res.json({
                         message: 'Invalid gender token'
                     }, 400);
                     return resolve();
                 }
 
-                // Remove 'any' selection if it exists
-                if (person_filters['genders']) {
-                    const anyFilter = Object.values(person_filters['genders'])
-                        .find(f => f.secondary_level === 'any');
+                // Mark 'any' selection as negative if it exists
+                if (existingAny) {
+                    await conn('persons_filters')
+                        .where('id', existingAny.id)
+                        .update({
+                            is_negative: true,
+                            updated: now
+                        });
 
-                    if (anyFilter) {
-                        await conn('persons_filters')
-                            .where('id', anyFilter.id)
-                            .delete();
-
-                        delete person_filters['genders'];
-                    }
+                    existingAny.is_negative = true;
+                    existingAny.updated = now;
                 }
 
-                if (active) {
-                    // Add new gender selection
+                // Check for existing selection
+                const existingItem = Object.values(person_filters[filter.token].items)
+                    .find(item => item[mapping.column] === gender.id);
+
+                if (existingItem) {
+                    // Update existing entry
+                    await conn('persons_filters')
+                        .where('id', existingItem.id)
+                        .update({
+                            is_negative: !active,
+                            updated: now
+                        });
+
+                    existingItem.is_negative = !active;
+                    existingItem.updated = now;
+                } else {
+                    // Create new gender selection
                     const filterEntry = createFilterEntry(filter.id, {
                         person_id: person.id,
-                        [filterMappings.genders.column]: gender.id,
+                        [mapping.column]: gender.id,
+                        is_negative: !active
                     });
 
                     const [id] = await conn('persons_filters')
                         .insert(filterEntry);
 
-                    if (!person_filters['genders']) {
-                        person_filters['genders'] = {};
-                    }
-
-                    person_filters['genders'][id] = {
+                    person_filters[filter.token].items[id] = {
                         ...filterEntry,
                         id
                     };
-                } else {
-                    // Remove gender selection
-                    if (person_filters['genders']) {
-                        const existingFilter = Object.values(person_filters['genders'])
-                            .find(f => f[filterMappings.genders.column] === gender.id);
-
-                        if (existingFilter) {
-                            await conn('persons_filters')
-                                .where('id', existingFilter.id)
-                                .delete();
-
-                            delete person_filters['genders'][existingFilter.id];
-
-                            if (Object.keys(person_filters['genders']).length === 0) {
-                                delete person_filters['genders'];
-                            }
-                        }
-                    }
                 }
             }
 
@@ -915,7 +950,6 @@ function putGender(req, res) {
             res.json({
                 success: true
             });
-
         } catch (e) {
             console.error(e);
             res.json({
