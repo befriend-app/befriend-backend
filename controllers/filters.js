@@ -313,7 +313,7 @@ function getPersonFilters(person) {
         try {
              let person_filters = await cacheService.getObj(cache_key);
 
-             if(0 && person_filters) {
+             if(person_filters) {
                  return resolve(person_filters);
              }
 
@@ -326,64 +326,93 @@ function getPersonFilters(person) {
 
              person_filters = {};
 
+            let groupedRows = {};
             for (let row of qry) {
                 let filter = filters.byId[row.filter_id];
-                if (!filter) {
-                    console.error("Filter not found");
-                    continue;
-                }
+                if (!filter) continue;
 
-                const mapping = filterMappings[filter.token];
-                if (!mapping) {
-                    console.error("Filter mapping not found");
-                    continue;
+                if (!groupedRows[filter.token]) {
+                    groupedRows[filter.token] = [];
                 }
+                groupedRows[filter.token].push(row);
+            }
 
-                // Initialize filter group if it doesn't exist
-                if (!person_filters[filter.token]) {
-                    person_filters[filter.token] = mapping.multi ? {} : null;
-                }
+            for (let filter_token in groupedRows) {
+                const rows = groupedRows[filter_token];
+                const mapping = filterMappings[filter_token];
+                if (!mapping) continue;
+
+                // Get first row for base properties
+                const baseRow = rows[0];
 
                 // Create base filter entry
-                let filterEntry = createFilterEntry(row.filter_id, {
-                    id: row.id,
-                    person_id: row.person_id,
-                    is_send: row.is_send,
-                    is_receive: row.is_receive,
-                    is_negative: row.is_negative,
-                    is_active: row.is_active,
-                    created: row.created,
-                    updated: row.updated
-                });
+                let filterEntry = {
+                    id: baseRow.id,
+                    filter_id: baseRow.filter_id,
+                    is_send: baseRow.is_send,
+                    is_receive: baseRow.is_receive,
+                    is_active: baseRow.is_active,
+                    created: baseRow.created,
+                    updated: baseRow.updated
+                };
 
-                // Add filter values if present
-                if(row.secondary_level !== null) {
-                    filterEntry.secondary_level = row.filter_value;
-                }
-                if (row.filter_value !== null) {
-                    filterEntry.filter_value = row.filter_value;
-                }
-                if (row.filter_value_min !== null) {
-                    filterEntry.filter_value_min = row.filter_value_min;
-                }
-                if (row.filter_value_max !== null) {
-                    filterEntry.filter_value_max = row.filter_value_max;
-                }
-
-                if (mapping.column && row[mapping.column]) {
-                    filterEntry[mapping.token] = row[mapping.column];
-                }
-
-                // Store based on single/multi setting
+                // Handle single vs multi filters differently
                 if (mapping.multi) {
-                    person_filters[filter.token][row.id] = filterEntry;
+                    // Initialize multi filter with base properties and empty items
+                    person_filters[filter_token] = {
+                        ...filterEntry,
+                        items: {}
+                    };
+
+                    // Process each row as an item
+                    for (let row of rows) {
+                        let itemEntry = {
+                            id: row.id,
+                            created: row.created,
+                            updated: row.updated
+                        };
+
+                        // Add column-specific values
+                        if (mapping.column && row[mapping.column]) {
+                            itemEntry[mapping.token] = row[mapping.column];
+                        }
+
+                        // Add any filter values
+                        if (row.filter_value !== null) {
+                            itemEntry.filter_value = row.filter_value;
+                        }
+                        if (row.filter_value_min !== null) {
+                            itemEntry.filter_value_min = row.filter_value_min;
+                        }
+                        if (row.filter_value_max !== null) {
+                            itemEntry.filter_value_max = row.filter_value_max;
+                        }
+                        if (row.secondary_level !== null) {
+                            itemEntry.secondary_level = row.secondary_level;
+                        }
+
+                        person_filters[filter_token].items[row.id] = itemEntry;
+                    }
                 } else {
-                    person_filters[filter.token] = filterEntry;
+                    if (baseRow.filter_value !== null) {
+                        filterEntry.filter_value = baseRow.filter_value;
+                    }
+                    if (baseRow.filter_value_min !== null) {
+                        filterEntry.filter_value_min = baseRow.filter_value_min;
+                    }
+                    if (baseRow.filter_value_max !== null) {
+                        filterEntry.filter_value_max = baseRow.filter_value_max;
+                    }
+                    if (baseRow.secondary_level !== null) {
+                        filterEntry.secondary_level = baseRow.secondary_level;
+                    }
+
+                    person_filters[filter_token] = filterEntry;
                 }
             }
 
+            //set cache if missed above
             await cacheService.setCache(cache_key, person_filters);
-
             resolve(person_filters);
         } catch(e) {
             console.error(e);
@@ -430,32 +459,25 @@ function putActive(req, res) {
 
             let person_filter_cache_key = cacheService.keys.person_filters(person_token);
             let person_filters = await getPersonFilters(person);
-
             let now = timeNow();
 
             let existingFilter = person_filters[filter_token];
 
-            if(mapping.multi && existingFilter) {
-                existingFilter = Object.values(existingFilter)[0];
-            }
-
-            if(existingFilter && Object.keys(existingFilter).length) {
+            if (existingFilter) {
+                // Update all filter entries for this filter
                 await conn('persons_filters')
-                    .where('id', existingFilter.id)
+                    .where('filter_id', filter.id)
+                    .where('person_id', person.id)
                     .update({
                         is_active: active,
                         updated: now
                     });
 
-                if (mapping.multi) {
-                    person_filters[filter_token][existingFilter.id].is_active = active;
-                    person_filters[filter_token][existingFilter.id].updated = now;
-                } else {
-                    person_filters[filter_token].is_active = active;
-                    person_filters[filter_token].updated = now;
-                }
+                // Update cache
+                existingFilter.is_active = active;
+                existingFilter.updated = now;
             } else {
-                // Create new filter
+                // Create new filter entry
                 const filterEntry = createFilterEntry(filter.id, {
                     person_id: person.id,
                     is_active: active
@@ -464,26 +486,19 @@ function putActive(req, res) {
                 const [id] = await conn('persons_filters')
                     .insert(filterEntry);
 
-                // Initialize in cache
-                if (!person_filters[filter_token] && mapping.multi) {
-                    person_filters[filter_token] = {};
-                }
-
-                // Store based on single/multi setting
-                if (mapping.multi) {
-                    person_filters[filter_token][id] = {
-                        ...filterEntry,
-                        id
-                    };
-                } else {
-                    person_filters[filter_token] = {
-                        ...filterEntry,
-                        id
-                    };
-                }
+                person_filters[filter_token] = mapping.multi ? {
+                    ...filterEntry,
+                    id,
+                    items: {}
+                } : {
+                    ...filterEntry,
+                    id
+                };
             }
 
             await cacheService.setCache(person_filter_cache_key, person_filters);
+
+            res.json("Updated");
         } catch(e) {
             console.error(e);
             res.json({
@@ -543,44 +558,21 @@ function putSendReceive(req, res) {
             let now = timeNow();
 
             let existingFilter = person_filters[filter_token];
-            if (mapping.multi && existingFilter) {
-                existingFilter = Object.values(existingFilter)[0];
-            }
 
-            if (existingFilter && Object.keys(existingFilter).length) {
-                // Update existing filter
+            if (existingFilter) {
                 let updateData = {
                     updated: now
                 };
-
-                if (type === 'send') {
-                    updateData.is_send = enabled;
-                } else {
-                    updateData.is_receive = enabled;
-                }
+                updateData[type === 'send' ? 'is_send' : 'is_receive'] = enabled;
 
                 await conn('persons_filters')
                     .where('id', existingFilter.id)
                     .update(updateData);
 
                 // Update cache
-                if (mapping.multi) {
-                    if (type === 'send') {
-                        person_filters[filter_token][existingFilter.id].is_send = enabled;
-                    } else {
-                        person_filters[filter_token][existingFilter.id].is_receive = enabled;
-                    }
-                    person_filters[filter_token][existingFilter.id].updated = now;
-                } else {
-                    if (type === 'send') {
-                        person_filters[filter_token].is_send = enabled;
-                    } else {
-                        person_filters[filter_token].is_receive = enabled;
-                    }
-                    person_filters[filter_token].updated = now;
-                }
+                existingFilter[type === 'send' ? 'is_send' : 'is_receive'] = enabled;
+                existingFilter.updated = now;
             } else {
-                // Create new filter entry
                 const filterEntry = createFilterEntry(filter.id, {
                     person_id: person.id,
                     is_send: type === 'send' ? enabled : true,
@@ -590,23 +582,14 @@ function putSendReceive(req, res) {
                 const [id] = await conn('persons_filters')
                     .insert(filterEntry);
 
-                // Initialize in cache
-                if (!person_filters[filter_token] && mapping.multi) {
-                    person_filters[filter_token] = {};
-                }
-
-                // Store in cache based on single/multi setting
-                if (mapping.multi) {
-                    person_filters[filter_token][id] = {
-                        ...filterEntry,
-                        id
-                    };
-                } else {
-                    person_filters[filter_token] = {
-                        ...filterEntry,
-                        id
-                    };
-                }
+                person_filters[filter_token] = mapping.multi ? {
+                    ...filterEntry,
+                    id,
+                    items: {}
+                } : {
+                    ...filterEntry,
+                    id
+                };
             }
 
             await cacheService.setCache(person_filter_cache_key, person_filters);
