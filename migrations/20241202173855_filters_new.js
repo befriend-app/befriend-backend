@@ -62,6 +62,9 @@ exports.up = async function(knex) {
             table.string('name').notNullable();
             table.integer('position').notNullable().defaultTo(0);
 
+            table.boolean('is_single').notNullable().defaultTo(false);
+            table.boolean('is_multi').notNullable().defaultTo(false);
+
             table.boolean('is_network').notNullable().defaultTo(false);
             table.boolean('is_activity_type').notNullable().defaultTo(false);
             table.boolean('is_mode').notNullable().defaultTo(false);

@@ -39,6 +39,11 @@ const filterMappings = {
         name: 'Distance',
         single: true
     },
+    reviews: {
+        token: 'reviews',
+        name: 'Reviews',
+        single: true
+    },
     reviews_safety: {
         token: 'reviews_safety',
         name: 'Safety',

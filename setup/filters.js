@@ -23,6 +23,17 @@ function main() {
                 delete filter.table;
                 delete filter.column;
 
+                if(filter.single) {
+                    filter.is_single = true;
+                }
+
+                if(filter.multi) {
+                    filter.is_multi = true;
+                }
+
+                delete filter.single;
+                delete filter.multi;
+
                 const exists = await conn('filters')
                     .where('token', filter.token)
                     .first();
