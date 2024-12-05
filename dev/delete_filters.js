@@ -5,7 +5,7 @@ const { keys: systemKeys } = require('../services/system');
 
 loadScriptEnv();
 
-function main(is_me) {
+function main() {
     return new Promise(async (resolve, reject) => {
         console.log('Delete: filters');
 

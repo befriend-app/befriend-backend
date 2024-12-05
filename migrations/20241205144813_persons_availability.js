@@ -1,8 +1,13 @@
-exports.up = function(knex) {
+exports.up = async function(knex) {
+    await knex.schema.dropTableIfExists('persons_availability');
+
     return knex.schema.createTable('persons_availability', table => {
         table.increments('id').primary();
         table.bigInteger('person_id').unsigned().notNullable().references('id').inTable('persons');
         table.integer('day_of_week').notNullable().comment('0-6 for Sunday-Saturday');
+        table.boolean('is_day').notNullable().defaultTo(false);
+        table.boolean('is_time').notNullable().defaultTo(false);
+
         table.time('start_time').notNullable();
         table.time('end_time').notNullable();
         table.boolean('is_overnight').notNullable().defaultTo(false);
@@ -21,5 +26,5 @@ exports.up = function(knex) {
  * @returns { Promise<void> }
  */
 exports.down = function(knex) {
-    knex.schema.dropTableIfExists('persons_availability');
+    return knex.schema.dropTableIfExists('persons_availability');
 };

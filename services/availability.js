@@ -30,10 +30,10 @@ function saveAvailabilityData(person, availabilityData) {
                     record => record.day_of_week === parseInt(dayOfWeek)
                 );
 
-                const shouldBeActive = !dayData.isDisabled;
+                const isActive = !dayData.isDisabled;
                 for (const existingRecord of dayRecords) {
                     if (existingRecord) {
-                        existingRecord.is_active = shouldBeActive;
+                        existingRecord.is_active = isActive;
                     }
                 }
 
@@ -54,7 +54,7 @@ function saveAvailabilityData(person, availabilityData) {
                                 end_time: existingRecord.end_time,
                                 is_overnight: existingRecord.is_overnight,
                                 is_any_time: existingRecord.is_any_time,
-                                is_active: shouldBeActive,
+                                is_active: isActive,
                                 updated: now
                             });
                             processedIds.add(existingRecord.id);
@@ -70,7 +70,7 @@ function saveAvailabilityData(person, availabilityData) {
                                 end_time: endTime,
                                 is_overnight: isOvernight,
                                 is_any_time: false,
-                                is_active: shouldBeActive,
+                                is_active: isActive,
                                 created: now,
                                 updated: now
                             });
@@ -88,7 +88,7 @@ function saveAvailabilityData(person, availabilityData) {
                             end_time: existingRecord.end_time,
                             is_overnight: existingRecord.is_overnight,
                             is_any_time: dayData.isAny || existingRecord.is_any_time,
-                            is_active: shouldBeActive,
+                            is_active: isActive,
                             updated: now
                         });
                         processedIds.add(existingRecord.id);
@@ -101,7 +101,7 @@ function saveAvailabilityData(person, availabilityData) {
                             end_time: dayData.lastTimes?.end || DEFAULT_END,
                             is_overnight: false,
                             is_any_time: dayData.isAny,
-                            is_active: shouldBeActive,
+                            is_active: isActive,
                             created: now,
                             updated: now
                         });
@@ -138,9 +138,6 @@ function saveAvailabilityData(person, availabilityData) {
             if (availabilityFilter) {
                 if (!person_filters['availability']) {
                     person_filters['availability'] = {
-                        filter_id: availabilityFilter.id,
-                        is_send: true,
-                        is_receive: true,
                         is_active: true,
                         created: now,
                         updated: now,
@@ -169,6 +166,7 @@ function saveAvailabilityData(person, availabilityData) {
 
             resolve({
                 success: true,
+                data: person_filters,
                 message: 'Availability updated successfully',
                 changed: recordsToUpdate.length > 0 || recordsToInsert.length > 0 || recordsToDelete.length > 0
             });

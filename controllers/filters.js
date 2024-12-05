@@ -473,7 +473,6 @@ function putAvailability(req, res) {
                 return resolve();
             }
 
-            // Get person
             const person = await getPerson(person_token);
             if (!person) {
                 res.json({
@@ -483,7 +482,6 @@ function putAvailability(req, res) {
                 return resolve();
             }
 
-            // Handle the availability update
             const result = await saveAvailabilityData(person, availability);
 
             res.json(result);
