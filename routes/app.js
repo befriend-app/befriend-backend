@@ -42,6 +42,18 @@ router.put('/filters/send-receive', function (req, res, next) {
     });
 });
 
+router.put('/filters/availability', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await filtersController.putAvailability(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
 router.put('/filters/reviews', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {

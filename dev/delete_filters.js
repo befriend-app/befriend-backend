@@ -37,6 +37,7 @@ function main(is_me) {
 
             let tables = [
                 'persons_filters',
+                'persons_availability',
                 'activities_filters'
             ];
 

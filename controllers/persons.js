@@ -25,7 +25,7 @@ const {
 const { findMatches, notifyMatches, prepareActivity } = require('../services/activities');
 
 const { getCountryByCode } = require('../services/locations');
-const { getPersonFilters } = require('./filters');
+const { getPersonFilters } = require('../services/filters');
 
 module.exports = {
     getMe: function (req, res) {
