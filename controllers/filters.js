@@ -848,13 +848,98 @@ function putGender(req, res) {
     });
 }
 
+function putDistance(req, res) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const { person_token, distance } = req.body;
+
+            // Validate inputs
+            if (typeof distance !== 'number' || distance < 1 || distance > 60) {
+                res.json({
+                    message: 'Valid distance required (1-60 miles)'
+                }, 400);
+                return resolve();
+            }
+
+            // Get filter data
+            let filters = await getFilters();
+            let filter = filters.byToken['distance'];
+
+            if (!filter) {
+                res.json({
+                    message: 'Distance filter not found'
+                }, 400);
+                return resolve();
+            }
+
+            // Get person
+            let person = await getPerson(person_token);
+            if (!person) {
+                res.json({
+                    message: 'Person not found'
+                }, 400);
+                return resolve();
+            }
+
+            let conn = await dbService.conn();
+            let person_filter_cache_key = cacheService.keys.person_filters(person_token);
+            let person_filters = await getPersonFilters(person);
+            let now = timeNow();
+
+            // Get or create filter entry
+            let existingFilter = person_filters['distance'];
+
+            if (existingFilter) {
+                // Update existing filter
+                await conn('persons_filters')
+                    .where('id', existingFilter.id)
+                    .update({
+                        filter_value: distance.toString(),
+                        updated: now
+                    });
+
+                existingFilter.filter_value = distance.toString();
+                existingFilter.updated = now;
+            } else {
+                // Create new filter entry
+                const filterEntry = createFilterEntry(filter.id, {
+                    person_id: person.id,
+                    filter_value: distance.toString()
+                });
+
+                const [id] = await conn('persons_filters')
+                    .insert(filterEntry);
+
+                person_filters['distance'] = {
+                    ...filterEntry,
+                    id
+                };
+            }
+
+            await cacheService.setCache(person_filter_cache_key, person_filters);
+
+            res.json({
+                success: true
+            });
+        } catch (e) {
+            console.error(e);
+            res.json({
+                message: 'Error updating distance'
+            }, 400);
+        }
+
+        resolve();
+    });
+}
+
 module.exports = {
-    filterMappings,
     filters: null,
+    filterMappings,
     putActive,
     putSendReceive,
     putAvailability,
     putReviewRating,
     putAge,
-    putGender
+    putGender,
+    putDistance,
 };

@@ -90,6 +90,19 @@ router.put('/filters/gender', function (req, res, next) {
     });
 });
 
+router.put('/filters/distance', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await filtersController.putDistance(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
+
 router.put('/me/mode', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
