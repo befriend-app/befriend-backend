@@ -145,14 +145,23 @@ function saveAvailabilityData(person, availabilityData) {
                     updated: now
                 }));
 
+            const frontendIds = [];
             const newRecordIds = new Map(); // Map frontend_ids to database ids
 
             if (recordsToInsert.length > 0) {
+                //store frontend id, remove from insert
+                for(let record of recordsToInsert) {
+                    frontendIds.push(record.frontend_id || null);
+                    delete record.frontend_id;
+                }
                 await dbService.batchInsert('persons_availability', recordsToInsert, true);
 
-                for(let record of recordsToInsert) {
-                    if (record.frontend_id) {
-                        newRecordIds.set(record.frontend_id, record.id);
+                for(let i = 0; i < recordsToInsert.length; i++) {
+                    let record = recordsToInsert[i];
+                    let frontend_id = frontendIds[i];
+
+                    if (frontend_id) {
+                        newRecordIds.set(frontend_id, record.id);
                     }
                 }
             }
@@ -199,7 +208,6 @@ function saveAvailabilityData(person, availabilityData) {
                 for (let record of recordsToInsert) {
                     updatedItems[record.id] = {
                         ...record,
-                        frontend_id: record.frontend_id || null
                     };
                 }
 
