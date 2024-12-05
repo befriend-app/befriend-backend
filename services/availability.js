@@ -47,7 +47,7 @@ function saveAvailabilityData(person, availabilityData) {
                 let dayRecord = dayRecords.find(r => r.is_day);
 
                 if (dayRecord) {
-                    const newDayData = {
+                    let newDayData = {
                         id: dayRecord.id,
                         person_id: person.id,
                         day_of_week: parseInt(dayOfWeek),
@@ -56,12 +56,24 @@ function saveAvailabilityData(person, availabilityData) {
                         start_time: DEFAULT_START,
                         end_time: DEFAULT_END,
                         is_overnight: false,
-                        is_any_time: dayData.isAny || dayRecord.is_any_time || dayRecord,
                         is_active: isActive,
                         updated: now
                     };
 
-                    // Only update if there are actual changes
+                    // Case 1: Explicitly set Any Time
+                    if (dayData.isAny) {
+                        newDayData.is_any_time = true;
+                    }
+                    // Case 2: Custom times being added
+                    else if (dayData.times && Object.keys(dayData.times).length > 0) {
+                        newDayData.is_any_time = false;
+                    }
+                    // Case 3: No times defined, preserve previous Any Time state
+                    else if (!dayData.times || Object.keys(dayData.times).length === 0) {
+                        newDayData.is_any_time = dayRecord.is_any_time;
+                    }
+
+                    // Only update if there are changes
                     if (hasRecordChanged(dayRecord, newDayData)) {
                         recordsToUpdate.push(newDayData);
                     } else {
@@ -77,7 +89,7 @@ function saveAvailabilityData(person, availabilityData) {
                         start_time: DEFAULT_START,
                         end_time: DEFAULT_END,
                         is_overnight: false,
-                        is_any_time: dayData.isAny,
+                        is_any_time: dayData.isAny || false,
                         is_active: isActive,
                         created: now,
                         updated: now
@@ -85,7 +97,7 @@ function saveAvailabilityData(person, availabilityData) {
                 }
 
                 // Handle time slots
-                if (dayData.times && typeof dayData.times === 'object' && Object.keys(dayData.times).length) {
+                if (!dayData.isAny && dayData.times && typeof dayData.times === 'object' && Object.keys(dayData.times).length) {
                     for (const [timeId, timeSlot] of Object.entries(dayData.times)) {
                         if (!timeSlot.start || !timeSlot.end) continue;
 
@@ -135,6 +147,7 @@ function saveAvailabilityData(person, availabilityData) {
             // Only delete records that aren't being kept and weren't processed
             const recordsToDelete = Object.values(existingRecords)
                 .filter(record =>
+                    !record.is_day && // Only include time records
                     !processedIds.has(record.id) &&
                     !recordsToKeep.has(record.id) &&
                     !record.deleted // Don't delete already deleted records
