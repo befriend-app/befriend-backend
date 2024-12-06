@@ -10,6 +10,10 @@ const standardKeys = {
     me_sections: 'sections:me',
 };
 
+const filterKeys = {
+    modes: 'modes',
+};
+
 const sectionKeys = {
     drinking: 'sections:drinking',
     genders: 'sections:genders',
@@ -115,6 +119,7 @@ module.exports = {
     publisher: null,
     keys: {
         ...standardKeys,
+        ...filterKeys,
         ...sectionKeys,
         ...mediaKeys,
         ...sportsKeys,
