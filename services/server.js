@@ -7,8 +7,8 @@ const express = require('express');
 const http = require('http');
 const logger = require('morgan');
 const sessionMid = require('../middleware/session');
+const webRouter = require('../routes/web');
 const apiRouter = require('../routes/api');
-const appRouter = require('../routes/app');
 const syncRouter = require('../routes/sync');
 
 const { timeNow } = require('./shared');
@@ -51,8 +51,8 @@ server.use(sessionMid.handle);
 
 server.use(express.static(joinPaths(getRepoRoot(), 'public')));
 
+server.use('/', webRouter);
 server.use('/', apiRouter);
-server.use('/', appRouter);
 server.use('/sync', syncRouter);
 
 server.use(function (req, res, next) {
