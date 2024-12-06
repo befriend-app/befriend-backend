@@ -54,6 +54,18 @@ router.put('/filters/availability', function (req, res, next) {
     });
 });
 
+router.put('/filters/modes', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await filtersController.putModes(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
 router.put('/filters/reviews', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
