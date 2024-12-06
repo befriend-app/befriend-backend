@@ -4,261 +4,29 @@ const { getPerson } = require('../services/persons');
 const { timeNow } = require('../services/shared');
 const { getGenders } = require('../services/me');
 const { saveAvailabilityData } = require('../services/availability');
-const { getFilters, getPersonFilters } = require('../services/filters');
-
-const filterMappings = {
-    networks: {
-        token: 'networks',
-        name: 'Networks',
-        column: 'network_id',
-        table: 'networks',
-        multi: true
-    },
-    activity_types: {
-        token: 'activity_types',
-        name: 'Activity Types',
-        column: 'activity_type_id',
-        table: 'activity_types',
-        multi: true
-    },
-    modes: {
-        token: 'modes',
-        name: 'Modes',
-        multi: true
-    },
-    availability: {
-        token: 'availability',
-        name: 'Availability',
-        table: 'persons_availability',
-        multi: true
-    },
-    distance: {
-        token: 'distance',
-        name: 'Distance',
-        single: true
-    },
-    reviews: {
-        token: 'reviews',
-        name: 'Reviews',
-        single: true
-    },
-    reviews_safety: {
-        token: 'reviews_safety',
-        name: 'Safety',
-        single: true
-    },
-    reviews_trust: {
-        token: 'reviews_trust',
-        name: 'Trust',
-        single: true
-    },
-    reviews_timeliness: {
-        token: 'reviews_timeliness',
-        name: 'Timeliness',
-        single: true
-    },
-    reviews_friendliness: {
-        token: 'reviews_friendliness',
-        name: 'Friendliness',
-        single: true
-    },
-    reviews_fun: {
-        token: 'reviews_fun',
-        name: 'Fun',
-        single: true
-    },
-    reviews_unrated: {
-        token: 'reviews_unrated',
-        name: 'Unrated',
-        single: true
-    },
-    verification_linkedin: {
-        token: 'verification_linkedin',
-        name: 'LinkedIn',
-        single: true
-    },
-    verification_dl: {
-        token: 'verification_dl',
-        name: "Driver's License",
-        single: true
-    },
-    verification_cc: {
-        token: 'verification_cc',
-        name: 'Credit Card',
-        single: true
-    },
-    verification_video: {
-        token: 'verification_video',
-        name: 'Video',
-        single: true
-    },
-    verification_in_person: {
-        token: 'verification_in_person',
-        name: 'In-Person',
-        single: true
-    },
-    verification_mailer: {
-        token: 'verification_mailer',
-        name: 'Mail',
-        single: true
-    },
-    ages: {
-        token: 'ages',
-        name: 'Age',
-        single: true
-    },
-    genders: {
-        token: 'genders',
-        name: 'Gender',
-        column: 'gender_id',
-        table: 'genders',
-        multi: true
-    },
-    life_stages: {
-        token: 'life_stages',
-        name: 'Life Stage',
-        column: 'life_stage_id',
-        table: 'life_stages',
-        multi: true
-    },
-    relationship: {
-        token: 'relationship',
-        name: 'Relationship Status',
-        column: 'relationship_status_id',
-        table: 'relationship_status',
-        multi: true
-    },
-    schools: {
-        token: 'schools',
-        name: 'Schools',
-        column: 'school_id',
-        table: 'schools',
-        multi: true
-    },
-    work_industries: {
-        token: 'work_industries',
-        name: 'Industry',
-        column: 'work_industry_id',
-        table: 'work_industries',
-        multi: true
-    },
-    work_roles: {
-        token: 'work_roles',
-        name: 'Role',
-        column: 'work_role_id',
-        table: 'work_roles',
-        multi: true
-    },
-    sports_play: {
-        token: 'sports_play',
-        name: 'Play',
-        column: 'sport_play_id',
-        table: 'sports',
-        multi: true
-    },
-    sports_league: {
-        token: 'sports_league',
-        name: 'Leagues',
-        column: 'sport_league_id',
-        table: 'sports_leagues',
-        multi: true
-    },
-    sport_team: {
-        token: 'sport_team',
-        name: 'Teams',
-        column: 'sport_team_id',
-        table: 'sports_teams',
-        multi: true
-    },
-    movie_genres: {
-        token: 'movie_genres',
-        name: 'Movie Genres',
-        column: 'movie_genre_id',
-        table: 'movie_genres',
-        multi: true
-    },
-    movies: {
-        token: 'movies',
-        name: 'Movies',
-        column: 'movie_id',
-        table: 'movies',
-        multi: true
-    },
-    tv_show_genres: {
-        token: 'tv_show_genres',
-        name: 'TV Show Genres',
-        column: 'tv_show_genre_id',
-        table: 'tv_genres',
-        multi: true
-    },
-    tv_shows: {
-        token: 'tv_shows',
-        name: 'TV Shows',
-        column: 'tv_show_id',
-        table: 'tv_shows',
-        multi: true
-    },
-    music_artists: {
-        token: 'music_artists',
-        name: 'Music Artists',
-        column: 'music_artist_id',
-        table: 'music_artists',
-        multi: true
-    },
-    music_genres: {
-        token: 'music_genres',
-        name: 'Music Genres',
-        column: 'music_genre_id',
-        table: 'music_genres',
-        multi: true
-    },
-    instruments: {
-        token: 'instruments',
-        name: 'Instruments',
-        column: 'instrument_id',
-        table: 'instruments',
-        multi: true
-    },
-    languages: {
-        token: 'languages',
-        name: 'Languages',
-        column: 'language_id',
-        table: 'languages',
-        multi: true
-    },
-    drinking: {
-        token: 'drinking',
-        name: 'Drinking',
-        column: 'drinking_id',
-        table: 'drinking',
-        single: true
-    },
-    smoking: {
-        token: 'smoking',
-        name: 'Smoking',
-        column: 'smoking_id',
-        table: 'smoking',
-        single: true
-    },
-    politics: {
-        token: 'politics',
-        name: 'Politics',
-        column: 'politics_id',
-        table: 'politics',
-        single: true
-    },
-    religion: {
-        token: 'religion',
-        name: 'Religion',
-        column: 'religion_id',
-        table: 'religions',
-        multi: true
-    }
-};
+const { filterMappings, getFilters, getPersonFilters, getModes } = require('../services/filters');
 
 function createFilterEntry(filter_id, props = {}) {
     const now = timeNow();
 
+    // If props contain a reference to an existing filter, inherit its states
+    const existingFilter = structuredClone(props.existingFilter);
+    if (existingFilter) {
+        delete props.existingFilter;
+
+        return {
+            filter_id,
+            is_send: existingFilter.is_send,
+            is_receive: existingFilter.is_receive,
+            is_active: existingFilter.is_active,
+            is_negative: false,
+            created: now,
+            updated: now,
+            ...props
+        };
+    }
+
+    // default
     return {
         filter_id,
         is_send: true,
@@ -316,8 +84,8 @@ function putActive(req, res) {
             if (existingFilter) {
                 // Update all filter entries for this filter
                 await conn('persons_filters')
-                    .where('filter_id', filter.id)
                     .where('person_id', person.id)
+                    .where('filter_id', filter.id)
                     .update({
                         is_active: active,
                         updated: now
@@ -326,6 +94,12 @@ function putActive(req, res) {
                 // Update cache
                 existingFilter.is_active = active;
                 existingFilter.updated = now;
+
+                if(existingFilter.items) {
+                    for(let k in existingFilter.items) {
+                        existingFilter.items[k].is_active = active;
+                    }
+                }
             } else {
                 // Create new filter entry
                 const filterEntry = createFilterEntry(filter.id, {
@@ -416,12 +190,19 @@ function putSendReceive(req, res) {
                 updateData[type === 'send' ? 'is_send' : 'is_receive'] = enabled;
 
                 await conn('persons_filters')
-                    .where('id', existingFilter.id)
+                    .where('person_id', person.id)
+                    .where('filter_id', filter.id)
                     .update(updateData);
 
                 // Update cache
                 existingFilter[type === 'send' ? 'is_send' : 'is_receive'] = enabled;
                 existingFilter.updated = now;
+
+                if(existingFilter.items) {
+                    for(let k in existingFilter.items) {
+                        existingFilter.items[k][type === 'send' ? 'is_send' : 'is_receive'] = enabled;
+                    }
+                }
             } else {
                 const filterEntry = createFilterEntry(filter.id, {
                     person_id: person.id,
@@ -489,6 +270,177 @@ function putAvailability(req, res) {
             console.error('Error in putAvailability:', error);
             res.json({
                 message: error.message || 'Error updating availability',
+                success: false
+            }, 400);
+        }
+
+        resolve();
+    });
+}
+
+function putModes(req, res) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const { person_token, mode_token, active } = req.body;
+
+            if (!mode_token || typeof active !== 'boolean') {
+                res.json({
+                    message: 'Mode token and active state required',
+                }, 400);
+                return resolve();
+            }
+
+            let mapping = filterMappings.modes;
+            let filters = await getFilters();
+            let filter = filters.byToken[mapping.token];
+
+            if (!filter) {
+                res.json({
+                    message: 'Modes filter not found'
+                }, 400);
+                return resolve();
+            }
+
+            const person = await getPerson(person_token);
+
+            if (!person) {
+                res.json({
+                    message: 'Person not found',
+                    success: false
+                }, 400);
+                return resolve();
+            }
+
+            let modes = await getModes();
+
+            const mode = modes?.byToken?.[mode_token];
+            const soloMode = modes?.byToken?.['solo'];
+
+            if (!mode) {
+                res.json({
+                    message: 'Invalid mode token'
+                }, 400);
+                return resolve();
+            }
+
+            let conn = await dbService.conn();
+            let now = timeNow();
+
+            let person_filter_cache_key = cacheService.keys.person_filters(person_token);
+            let person_filters = await getPersonFilters(person);
+
+            // Get or initialize existing filter
+            let existingFilter = person_filters[filter.token];
+
+            if (!existingFilter) {
+                const baseEntry = createFilterEntry(filter.id, {
+                    person_id: person.id
+                });
+
+                const [id] = await conn('persons_filters')
+                    .insert(baseEntry);
+
+                existingFilter = {
+                    ...baseEntry,
+                    id,
+                    items: {}
+                };
+                person_filters[filter.token] = existingFilter;
+            } else if (!existingFilter.items) {
+                existingFilter.items = {};
+            }
+
+            const filterItems = existingFilter.items;
+            const existingItem = Object.values(filterItems)
+                .find(item => item[mapping.column] === mode.id);
+            const existingSolo = Object.values(filterItems)
+                .find(item => item[mapping.column] === soloMode?.id);
+
+            // If selecting a non-solo mode and solo isn't present, add it first
+            if (active && mode_token !== 'solo' && !existingSolo && soloMode) {
+                let soloEntry = createFilterEntry(filter.id, {
+                    person_id: person.id,
+                    [mapping.column]: soloMode.id,
+                    is_negative: false,
+                    existingFilter
+                });
+
+                const [soloId] = await conn('persons_filters')
+                    .insert(soloEntry);
+
+                soloEntry.mode_token = 'solo';
+                filterItems[soloId] = {
+                    ...soloEntry,
+                    id: soloId
+                };
+            }
+
+            if (existingItem) {
+                if (active) {
+                    await conn('persons_filters')
+                        .where('id', existingItem.id)
+                        .update({
+                            is_negative: false,
+                            updated: now,
+                            deleted: null
+                        });
+
+                    // Update cache
+                    existingItem.is_negative = false;
+                    existingItem.updated = now;
+                    delete existingItem.deleted;
+                } else {
+                    // Ensure we have more than one active mode before allowing deactivation
+                    const activeItems = Object.values(filterItems)
+                        .filter(item => !item.is_negative && !item.deleted);
+
+                    if (activeItems.length <= 1) {
+                        res.json({
+                            message: 'Cannot deactivate last active mode'
+                        }, 400);
+                        return resolve();
+                    }
+
+                    await conn('persons_filters')
+                        .where('id', existingItem.id)
+                        .update({
+                            is_negative: true,
+                            updated: now
+                        });
+
+                    existingItem.is_negative = true;
+                    existingItem.updated = now;
+                }
+            } else if (active) {
+                // Create new mode selection with inherited states
+                let filterEntry = createFilterEntry(filter.id, {
+                    person_id: person.id,
+                    [mapping.column]: mode.id,
+                    is_negative: false,
+                    existingFilter // Pass parent filter to inherit states
+                });
+
+                const [id] = await conn('persons_filters')
+                    .insert(filterEntry);
+
+                filterEntry.mode_token = mode_token;
+                filterItems[id] = {
+                    ...filterEntry,
+                    id
+                };
+            }
+
+            // Update cache
+            await cacheService.setCache(person_filter_cache_key, person_filters);
+
+            res.json({
+                success: true
+            });
+        } catch (error) {
+            console.error('Modes error:', error);
+
+            res.json({
+                message: error.message || 'Error updating modes',
                 success: false
             }, 400);
         }
@@ -709,8 +661,10 @@ function putGender(req, res) {
             let person_filters = await getPersonFilters(person);
             let now = timeNow();
 
+            let existingFilter = person_filters[filter.token];
+
             // Initialize filter structure if it doesn't exist
-            if (!person_filters[filter.token]) {
+            if (!existingFilter) {
                 const baseEntry = createFilterEntry(filter.id, {
                     person_id: person.id
                 });
@@ -719,30 +673,33 @@ function putGender(req, res) {
                 const [id] = await conn('persons_filters')
                     .insert(baseEntry);
 
-                person_filters[filter.token] = {
+                existingFilter = {
                     ...baseEntry,
                     id,
                     items: {}
                 };
-            } else if (!person_filters[filter.token].items) {
-                person_filters[filter.token].items = {};
+                person_filters[filter.token] = existingFilter;
+            } else if (!existingFilter.items) {
+                existingFilter.items = {};
             }
 
+            const filterItems = existingFilter.items;
+
             // Get existing 'any' selection if it exists
-            const existingAny = Object.values(person_filters[filter.token].items)
+            const existingAny = Object.values(filterItems)
                 .find(item => item[mapping.column] === anyOption.id);
 
             // Handle 'any' gender selection
             if (gender_token === 'any' && active) {
                 // Mark all non-any items as negative
-                for (let id in person_filters[filter.token].items) {
-                    await conn('persons_filters')
-                        .where('id', id)
-                        .update({
-                            is_negative: true,
-                            updated: now
-                        });
+                await conn('persons_filters')
+                    .whereIn('id', Object.keys(person_filters[filter.token].items))
+                    .update({
+                        is_negative: true,
+                        updated: now
+                    });
 
+                for (let id in person_filters[filter.token].items) {
                     person_filters[filter.token].items[id].is_negative = true;
                     person_filters[filter.token].items[id].updated = now;
                 }
@@ -762,7 +719,8 @@ function putGender(req, res) {
                     const anyEntry = createFilterEntry(filter.id, {
                         person_id: person.id,
                         [mapping.column]: anyOption.id,
-                        is_negative: false
+                        is_negative: false,
+                        existingFilter
                     });
 
                     const [id] = await conn('persons_filters')
@@ -933,11 +891,10 @@ function putDistance(req, res) {
 }
 
 module.exports = {
-    filters: null,
-    filterMappings,
     putActive,
     putSendReceive,
     putAvailability,
+    putModes,
     putReviewRating,
     putAge,
     putGender,
