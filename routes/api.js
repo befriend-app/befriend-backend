@@ -1,271 +1,401 @@
 let express = require('express');
 let router = express.Router();
-
 let apiController = require('../controllers/api');
+let filtersController = require('../controllers/filters');
+let personsController = require('../controllers/persons');
 
-router.get('/', function (req, res, next) {
+router.use(require('../middleware/auth'));
+
+router.get('/me', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
-        res.json({
-            happiness: 'unlimited',
+        try {
+            await personsController.getMe(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
+router.put('/filters/active', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await filtersController.putActive(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
+router.put('/filters/send-receive', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await filtersController.putSendReceive(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
+router.put('/filters/availability', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await filtersController.putAvailability(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
+router.put('/filters/reviews', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await filtersController.putReviewRating(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
+router.put('/filters/age', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await filtersController.putAge(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
+router.put('/filters/gender', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await filtersController.putGender(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
+router.put('/filters/distance', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await filtersController.putDistance(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
+
+router.put('/me/mode', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await personsController.putMeMode(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
+router.put('/me/country', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await personsController.putCountry(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
+router.put('/me/mode/partner', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await personsController.putMePartner(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
+router.post('/me/mode/kids', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await personsController.postMeKids(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
+router.put('/me/mode/kids', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await personsController.putMeKids(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
+router.delete('/me/mode/kids', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await personsController.removeMeKids(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
+router.post('/me/sections', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await personsController.addMeSection(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
+router.put('/me/sections/positions', async (req, res) => {
+    try {
+        await personsController.updateMeSectionPositions(req, res);
+    } catch (e) {
+        console.error(e);
+        res.status(400).json({
+            error: 'Error updating section selection',
         });
-
-        resolve();
-    });
+    }
 });
 
-router.post('/login', function (req, res, next) {
-    return new Promise(async (resolve, reject) => {
-        //person login
-        try {
-            await apiController.doLogin(req, res);
-        } catch (e) {
-            console.error(e);
-        }
-
-        resolve();
-    });
-});
-
-router.get('/happy-connect', function (req, res, next) {
-    return new Promise(async (resolve, reject) => {
-        res.json({
-            happiness: 'unlimited',
+router.put('/me/sections/selection', async (req, res) => {
+    try {
+        await personsController.selectMeSectionOptionItem(req, res);
+    } catch (e) {
+        console.error(e);
+        res.status(400).json({
+            error: 'Error updating section selection',
         });
-
-        resolve();
-    });
+    }
 });
 
-router.get('/networks', function (req, res, next) {
+router.delete('/me/sections/:section_key', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
-            await apiController.getNetworks(req, res);
-        } catch (e) {
-            console.error(e);
+            await personsController.deleteMeSection(req, res);
+        } catch (err) {
+            console.log(err);
         }
 
         resolve();
     });
 });
 
-router.post('/network-add', function (req, res, next) {
+router.post('/me/sections/item', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
-            await apiController.addNetwork(req, res);
-        } catch (e) {
-            console.error(e);
+            await personsController.addMeSectionItem(req, res);
+        } catch (err) {
+            console.log(err);
         }
 
         resolve();
     });
 });
 
-router.post('/keys/home/from', function (req, res, next) {
+router.put('/me/sections/item', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
-            await apiController.exchangeKeysHomeFrom(req, res);
-        } catch (e) {
-            console.error(e);
+            await personsController.updateMeSectionItem(req, res);
+        } catch (err) {
+            console.log(err);
         }
 
         resolve();
     });
 });
 
-router.post('/keys/home/to', function (req, res, next) {
+router.post('/activities', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
-            await apiController.exchangeKeysHomeTo(req, res);
-        } catch (e) {
-            console.error(e);
+            await personsController.createActivity(req, res);
+        } catch (err) {
+            console.log(err);
         }
 
         resolve();
     });
 });
 
-router.post('/keys/home/save', function (req, res, next) {
+router.post('/devices', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
-            await apiController.exchangeKeysHomeSave(req, res);
-        } catch (e) {
-            console.error(e);
+            await personsController.addDevice(req, res);
+        } catch (err) {
+            console.log(err);
         }
 
         resolve();
     });
 });
 
-router.post('/keys/exchange/encrypt', function (req, res, next) {
+router.get('/music/top/artists/genre', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
-            await apiController.keysExchangeEncrypt(req, res);
-        } catch (e) {
-            console.error(e);
+            await apiController.getTopMusicArtistsByGenre(req, res);
+        } catch (err) {
+            console.log(err);
         }
 
         resolve();
     });
 });
 
-router.post('/keys/exchange/decrypt', function (req, res, next) {
+router.get('/sports/top/teams', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
-            await apiController.keysExchangeDecrypt(req, res);
-        } catch (e) {
-            console.error(e);
+            await apiController.getTopTeamsBySport(req, res);
+        } catch (err) {
+            console.log(err);
         }
 
         resolve();
     });
 });
 
-router.post('/keys/exchange/save', function (req, res, next) {
+router.get('/movies/category/top', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
-            await apiController.keysExchangeSave(req, res);
-        } catch (e) {
-            console.error(e);
+            await apiController.getTopMoviesByCategory(req, res);
+        } catch (err) {
+            console.log(err);
         }
 
         resolve();
     });
 });
 
-router.get('/activity_types', function (req, res, next) {
+router.get('/tv/category/top', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
-            await apiController.getActivityTypes(req, res);
-        } catch (e) {
-            console.error(e);
+            await apiController.getTopShowsByCategory(req, res);
+        } catch (err) {
+            console.log(err);
         }
 
         resolve();
     });
 });
 
-router.put('/activity_type/:activity_type_token/places', function (req, res, next) {
+router.get('/autocomplete/instruments', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
-            await apiController.getActivityTypePlaces(req, res);
-        } catch (e) {
-            console.error(e);
+            await apiController.instrumentsAutoComplete(req, res);
+        } catch (err) {
+            console.log(err);
         }
+
         resolve();
     });
 });
 
-router.get('/mapbox/token', function (req, res, next) {
+router.get('/autocomplete/music', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
-            await apiController.getMapboxToken(req, res);
-        } catch (e) {
-            console.error(e);
+            await apiController.musicAutoComplete(req, res);
+        } catch (err) {
+            console.log(err);
         }
 
         resolve();
     });
 });
 
-router.post('/autocomplete/places', function (req, res, next) {
+router.get('/autocomplete/movies', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
-            await apiController.placesAutoComplete(req, res);
-        } catch (e) {
-            console.error(e);
+            await apiController.moviesAutoComplete(req, res);
+        } catch (err) {
+            console.log(err);
         }
 
         resolve();
     });
 });
 
-router.post('/autocomplete/cities', function (req, res, next) {
+router.get('/autocomplete/schools', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
-            await apiController.citiesAutoComplete(req, res);
-        } catch (e) {
-            console.error(e);
+            await apiController.schoolsAutoComplete(req, res);
+        } catch (err) {
+            console.log(err);
         }
 
         resolve();
     });
 });
 
-router.post('/geocode', function (req, res, next) {
+router.get('/autocomplete/sports', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
-            await apiController.getGeoCode(req, res);
-        } catch (e) {
-            console.error(e);
+            await apiController.sportsAutoComplete(req, res);
+        } catch (err) {
+            console.log(err);
         }
 
         resolve();
     });
 });
 
-router.post('/travel-time', function (req, res, next) {
+router.get('/autocomplete/tv', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
-            await apiController.travelTimes(req, res);
-        } catch (e) {
-            console.error(e);
+            await apiController.TVAutoComplete(req, res);
+        } catch (err) {
+            console.log(err);
         }
 
         resolve();
     });
 });
 
-router.get('/review-venues', function (req, res, next) {
+router.get('/autocomplete/work', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
-        let conn = await require('../services/db').conn();
-
-        let qry = await conn('activity_type_venues AS atv')
-            .join('activity_types AS at', 'at.id', '=', 'atv.activity_type_id')
-            .join('venues_categories AS vc', 'vc.id', '=', 'atv.venue_category_id')
-            .orderBy('atv.sort_position');
-
-        let organized = {};
-
-        for (let item of qry) {
-            if (!(item.activity_type_id in organized)) {
-                organized[item.activity_type_id] = {
-                    id: item.activity_type_id,
-                    name: item.activity_name_full,
-                    venues: [],
-                };
-            }
-
-            organized[item.activity_type_id].venues.push(item);
+        try {
+            await apiController.workAutoComplete(req, res);
+        } catch (err) {
+            console.log(err);
         }
-
-        let html = `
-        <style>
-            .activities {
-                display: flex;
-                gap: 30px 30px;
-                flex-wrap: wrap;
-            }
-            
-            .name {
-                font-size: 20px;
-            }
-        </style>
-        
-        `;
-
-        for (let k in organized) {
-            let d = organized[k];
-
-            let venues_html = ``;
-
-            for (let v of d.venues) {
-                venues_html += `<div class="venue">${v.category_name} - ${v.venue_category_id}</div>`;
-            }
-
-            html += `<div class="activity"><div class="name">${d.name} - ${d.id}</div><div class="venues">${venues_html}</div></div>`;
-        }
-
-        res.send(`<div class="activities">${html}</div>`);
 
         resolve();
     });
