@@ -6,13 +6,14 @@ loadScriptEnv();
 
         let time_start = timeNow(true);
 
+        //setup db
         await require('./setup/migrate').main();
 
+        //load data
+        await require('./setup/modes').main();
         await require('./setup/genders').main();
         await require('./setup/activity-types').main();
-
         await require('./setup/filters').main();
-
         await require('./setup/locations').main();
         await require('./setup/me').main();
 
