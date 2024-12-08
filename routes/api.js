@@ -150,6 +150,18 @@ router.put('/filters/life-stages', function (req, res, next) {
     });
 });
 
+router.put('/filters/relationship', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await filtersController.putRelationship(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
 
 router.put('/me/mode', function (req, res, next) {
     return new Promise(async (resolve, reject) => {

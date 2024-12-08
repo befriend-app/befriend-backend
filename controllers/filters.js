@@ -7,6 +7,7 @@ const { saveAvailabilityData } = require('../services/availability');
 const { filterMappings, getFilters, getPersonFilters, getModes } = require('../services/filters');
 const { getActivityTypes, getActivityTypesMapping } = require('../services/activities');
 const { getLifeStages } = require('../services/life_stages');
+const { getRelationshipStatus } = require('../services/relationships');
 
 function createFilterEntry(filter_id, props = {}) {
     const now = timeNow();
@@ -45,10 +46,12 @@ function getFiltersOptions(req, res) {
     return new Promise(async (resolve, reject) => {
           try {
                let organized = {
-                   life_stages: null
+                   life_stages: null,
+                   relationship: null
                };
 
                organized.life_stages = await getLifeStages();
+               organized.relationship = await getRelationshipStatus();
 
                res.json(organized);
           } catch(e) {
@@ -1198,6 +1201,138 @@ function putLifeStages(req, res) {
     });
 }
 
+function putRelationship(req, res) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const { person_token, relationship_token, active } = req.body;
+
+            if (!relationship_token || typeof active !== 'boolean') {
+                res.json({
+                    message: 'Relationship token and active state required',
+                }, 400);
+                return resolve();
+            }
+
+            let mapping = filterMappings.relationship;
+            let filters = await getFilters();
+            let filter = filters.byToken[mapping.token];
+
+            if (!filter) {
+                res.json({
+                    message: 'Relationship status filter not found'
+                }, 400);
+                return resolve();
+            }
+
+            let person = await getPerson(person_token);
+            if (!person) {
+                res.json({
+                    message: 'Person not found'
+                }, 400);
+                return resolve();
+            }
+
+            let relationship_statuses = await getRelationshipStatus();
+
+            let relationship_status = relationship_statuses.find(item => item.token === relationship_token);
+
+            let conn = await dbService.conn();
+            let person_filter_cache_key = cacheService.keys.person_filters(person_token);
+            let person_filters = await getPersonFilters(person);
+            let now = timeNow();
+
+            let existingFilter = person_filters[filter.token];
+
+            // Initialize filter structure if it doesn't exist
+            if (!existingFilter) {
+                const baseEntry = createFilterEntry(filter.id, {
+                    person_id: person.id
+                });
+
+                existingFilter = {
+                    ...baseEntry,
+                    items: {}
+                };
+                person_filters[filter.token] = existingFilter;
+            } else if (!existingFilter.items) {
+                existingFilter.items = {};
+            }
+
+            // Handle 'any' selection - set all items to not negative
+            if (relationship_token === 'any' && active) {
+                if (Object.keys(existingFilter.items).length) {
+                    await conn('persons_filters')
+                        .where('person_id', person.id)
+                        .where('filter_id', filter.id)
+                        .update({
+                            is_negative: false,
+                            updated: now,
+                            deleted: now
+                        });
+
+                    // Update cache
+                    for (let id in existingFilter.items) {
+                        existingFilter.items[id].is_negative = false;
+                        existingFilter.items[id].updated = now;
+                        existingFilter.items[id].deleted = now;
+                    }
+                }
+            } else {
+                // Handle specific relationship status selection
+
+                // Find existing item for this relationship status
+                const existingItem = Object.values(existingFilter.items)
+                    .find(item => item[mapping.column] === relationship_status.id);
+
+                if (existingItem) {
+                    // Update existing item
+                    await conn('persons_filters')
+                        .where('person_id', person.id)
+                        .where('id', existingItem.id)
+                        .update({
+                            is_negative: !active,
+                            updated: now,
+                            deleted: null
+                        });
+
+                    existingItem.is_negative = !active;
+                    existingItem.updated = now;
+                    existingItem.deleted = null;
+                } else {
+                    // Create new relationship status selection
+                    const filterEntry = createFilterEntry(filter.id, {
+                        person_id: person.id,
+                        [mapping.column]: relationship_status.id,
+                        is_negative: !active
+                    });
+
+                    const [id] = await conn('persons_filters')
+                        .insert(filterEntry);
+
+                    existingFilter.items[id] = {
+                        ...filterEntry,
+                        id
+                    };
+                }
+            }
+
+            // Update cache
+            await cacheService.setCache(person_filter_cache_key, person_filters);
+
+            res.json({
+                success: true
+            });
+        } catch (e) {
+            console.error(e);
+            res.json({
+                message: 'Error updating relationship status filter'
+            }, 400);
+        }
+
+        resolve();
+    });
+}
+
 module.exports = {
     getFiltersOptions,
     putActive,
@@ -1209,5 +1344,6 @@ module.exports = {
     putGender,
     putDistance,
     putActivityTypes,
-    putLifeStages
+    putLifeStages,
+    putRelationship
 };

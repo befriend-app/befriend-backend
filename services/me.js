@@ -7,7 +7,7 @@ let sectionsData = require('./sections_data');
 const { batchUpdate } = require('./db');
 const { getCountries } = require('./locations');
 const lifeStagesService = require('../services/life_stages');
-
+const relationshipService = require('../services/relationships');
 
 const modes = ['solo', 'plus-one', 'plus-kids'];
 
@@ -2316,19 +2316,7 @@ function getRelationshipStatus(params = {}) {
         try {
             let { options_only } = params;
 
-            const cache_key = cacheService.keys.relationship_status;
-            let options = await cacheService.getObj(cache_key);
-
-            if (!options) {
-                let conn = await dbService.conn();
-
-                options = await conn('relationship_status')
-                    .where('is_visible', true)
-                    .orderBy('sort_position')
-                    .select('id', 'token', 'name');
-
-                await cacheService.setCache(cache_key, options);
-            }
+            let options = relationshipService.getRelationshipStatus();
 
             if (options_only) {
                 return resolve(options);
