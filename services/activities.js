@@ -5,6 +5,8 @@ const notificationService = require('../services/notifications');
 const { getOptionDateTime } = require('./shared');
 
 module.exports = {
+    types: null,
+    activityTypesMapping: null,
     maxPerHour: 2,
     durations: {
         min: 10,
@@ -45,6 +47,136 @@ module.exports = {
             450: { id: 450, value: '7.5', unit: 'hrs', in_mins: 450 },
             480: { id: 480, value: '8', unit: 'hrs', in_mins: 480 },
         },
+    },
+    getActivityTypes: function () {
+        function createActivityObject(activity) {
+            let data = {
+                name: activity.activity_name,
+                title: activity.activity_title,
+                notification: activity.notification_name,
+                duration: activity.default_duration_min,
+                token: activity.activity_type_token,
+                image: activity.activity_image,
+                emoji: activity.activity_emoji,
+                categories: [],
+                sub: {},
+            };
+
+            //include bool
+            for (let k in activity) {
+                if (k.startsWith('is_')) {
+                    if (activity[k]) {
+                        data[k] = activity[k];
+                    }
+                }
+            }
+
+            return data;
+        }
+
+        return new Promise(async (resolve, reject) => {
+            if(module.exports.types) {
+                return resolve(module.exports.types);
+            }
+
+            //use existing data in cache if exists
+            let cache_key = cacheService.keys.activity_types;
+            let data = await cacheService.getObj(cache_key);
+
+            if (data) {
+                module.exports.types = data;
+                return resolve(data);
+            }
+
+            let conn = await dbService.conn();
+
+            let data_organized = {};
+
+            //organize by activity types
+            let parent_activity_types = await conn('activity_types')
+                .whereNull('parent_activity_type_id')
+                .orderBy('sort_position');
+
+            //level 1
+            for (let at of parent_activity_types) {
+                data_organized[at.id] = createActivityObject(at);
+            }
+
+            //level 2
+            for (let parent_id in data_organized) {
+                let level_2_qry = await conn('activity_types').where(
+                    'parent_activity_type_id',
+                    parent_id,
+                );
+
+                for (let at of level_2_qry) {
+                    data_organized[parent_id].sub[at.id] = createActivityObject(at);
+                }
+            }
+
+            //level 3
+            for (let parent_id in data_organized) {
+                let level_2_dict = data_organized[parent_id].sub;
+
+                for (let level_2_id in level_2_dict) {
+                    let level_3_qry = await conn('activity_types').where(
+                        'parent_activity_type_id',
+                        level_2_id,
+                    );
+
+                    for (let at of level_3_qry) {
+                        data_organized[parent_id].sub[level_2_id].sub[at.id] =
+                            createActivityObject(at);
+                    }
+                }
+            }
+
+            await cacheService.setCache(cache_key, data_organized);
+
+            module.exports.types = data_organized;
+
+            return resolve(data_organized);
+        });
+    },
+    getActivityTypesMapping: function () {
+        return new Promise(async (resolve, reject) => {
+            try {
+                if(module.exports.activityTypesMapping) {
+                    return resolve(module.exports.activityTypesMapping);
+                }
+
+                let activityTypes = await module.exports.getActivityTypes();
+                let organized = {};
+
+                for(let id in activityTypes) {
+                    let level_1 = activityTypes[id];
+
+                    organized[level_1.token] = id;
+
+                    if(level_1.sub) {
+                        for(let id_2 in level_1.sub) {
+                            let level_2 = level_1.sub[id_2];
+
+                            organized[level_2.token] = id_2;
+
+                            if(level_2.sub) {
+                                for(let id_3 in level_2.sub) {
+                                    let level_3 = level_2.sub[id_3];
+
+                                    organized[level_3.token] = id_3;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                module.exports.activityTypesMapping = organized;
+                resolve(organized);
+            } catch(e) {
+                console.error(e);
+                return reject(e);
+            }
+        });
     },
     getActivityType: function (activity_type_token) {
         return new Promise(async (resolve, reject) => {

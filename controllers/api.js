@@ -32,6 +32,7 @@ const {
     confirmDecryptedRegistrationNetworkToken,
     normalizeSearch,
 } = require('../services/shared');
+const { getActivityTypes } = require('../services/activities');
 
 module.exports = {
     getNetworks: function (req, res) {
@@ -1127,129 +1128,22 @@ module.exports = {
     },
     getActivityTypes: function (req, res) {
         return new Promise(async (resolve, reject) => {
-            function getActivity(item) {
-                if (!item.parent_activity_type_id) {
-                    return data_organized[item.at_id];
-                }
-
-                for (let parent_id in data_organized) {
-                    const level_2_dict = data_organized[parent_id].sub;
-
-                    // Check level 2
-                    for (let level_2_id in level_2_dict) {
-                        if (parseInt(level_2_id) === item.at_id) {
-                            return level_2_dict[level_2_id];
-                        }
-
-                        // Check level 3
-                        const level_3_dict = level_2_dict[level_2_id].sub;
-
-                        for (let level_3_id in level_3_dict) {
-                            if (parseInt(level_3_id) === item.at_id) {
-                                return level_3_dict[level_3_id];
-                            }
-                        }
-                    }
-                }
-
-                return null; // If activity is not found
-            }
-
-            function createActivityObject(activity) {
-                let data = {
-                    name: activity.activity_name,
-                    title: activity.activity_title,
-                    notification: activity.notification_name,
-                    duration: activity.default_duration_min,
-                    token: activity.activity_type_token,
-                    image: activity.activity_image,
-                    emoji: activity.activity_emoji,
-                    categories: [],
-                    sub: {},
-                };
-
-                //include bool
-                for (let k in activity) {
-                    if (k.startsWith('is_')) {
-                        if (activity[k]) {
-                            data[k] = activity[k];
-                        }
-                    }
-                }
-
-                return data;
-            }
-
-            let cache_key = cacheService.keys.activity_types;
-            let data_organized = {};
-
             try {
-                //use existing data in cache if exists
-                let data = await cacheService.getObj(cache_key);
+                let data = await getActivityTypes();
 
-                if (data) {
-                    res.json(data);
-                    return resolve();
-                }
-
-                let conn = await dbService.conn();
-
-                //organize by activity types
-                let parent_activity_types = await conn('activity_types')
-                    .whereNull('parent_activity_type_id')
-                    .orderBy('sort_position');
-
-                //level 1
-                for (let at of parent_activity_types) {
-                    data_organized[at.id] = createActivityObject(at);
-                }
-
-                //level 2
-                for (let parent_id in data_organized) {
-                    let level_2_qry = await conn('activity_types').where(
-                        'parent_activity_type_id',
-                        parent_id,
-                    );
-
-                    for (let at of level_2_qry) {
-                        data_organized[parent_id].sub[at.id] = createActivityObject(at);
-                    }
-                }
-
-                //level 3
-                for (let parent_id in data_organized) {
-                    let level_2_dict = data_organized[parent_id].sub;
-
-                    for (let level_2_id in level_2_dict) {
-                        let level_3_qry = await conn('activity_types').where(
-                            'parent_activity_type_id',
-                            level_2_id,
-                        );
-
-                        for (let at of level_3_qry) {
-                            data_organized[parent_id].sub[level_2_id].sub[at.id] =
-                                createActivityObject(at);
-                        }
-                    }
-                }
-
-                await cacheService.setCache(cache_key, data_organized);
-
-                res.json(data_organized);
-
-                return resolve();
+                res.json(data);
             } catch (e) {
                 console.error(e);
 
                 res.json(
                     {
-                        message: 'Error getting activity venue data',
+                        message: 'Error getting activity types data',
                     },
                     400,
                 );
-
-                return resolve();
             }
+
+            return resolve();
         });
     },
     getActivityTypePlaces: function (req, res) {

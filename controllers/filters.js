@@ -5,6 +5,7 @@ const { timeNow } = require('../services/shared');
 const { getGenders } = require('../services/me');
 const { saveAvailabilityData } = require('../services/availability');
 const { filterMappings, getFilters, getPersonFilters, getModes } = require('../services/filters');
+const { getActivityTypes, getActivityTypesMapping } = require('../services/activities');
 
 function createFilterEntry(filter_id, props = {}) {
     const now = timeNow();
@@ -890,6 +891,162 @@ function putDistance(req, res) {
     });
 }
 
+function putActivityTypes(req, res) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const { activities, person_token, active } = req.body;
+
+            if (!activities || typeof activities !== 'object' || typeof active !== 'boolean') {
+                res.json({
+                    message: 'Invalid activities data'
+                }, 400);
+                return resolve();
+            }
+
+            const person = await getPerson(person_token);
+
+            if (!person) {
+                res.json({
+                    message: 'Person not found'
+                }, 400);
+                return resolve();
+            }
+
+            let conn = await dbService.conn();
+            let now = timeNow();
+
+            // Get filters data
+            let filters = await getFilters();
+            let filter = filters.byToken['activity_types'];
+
+            if (!filter) {
+                res.json({
+                    message: 'Activity types filter not found'
+                }, 400);
+                return resolve();
+            }
+
+            let activityTypes = await getActivityTypesMapping();
+            let person_filter_cache_key = cacheService.keys.person_filters(person.person_token);
+            let person_filters = await getPersonFilters(person);
+
+            // Get or initialize the filter entry
+            let existingFilter = person_filters['activity_types'];
+            if (!existingFilter) {
+                const baseEntry = createFilterEntry(filter.id, {
+                    person_id: person.id
+                });
+
+                existingFilter = {
+                    ...baseEntry,
+                    items: {}
+                };
+                person_filters['activity_types'] = existingFilter;
+            }
+
+            // Prepare batch operations
+            let batchInserts = [];
+            let batchUpdateIds = [];
+
+            // Process each activity
+            for (let [token, isActive] of Object.entries(activities)) {
+                if (token === 'all') continue; // Skip 'all' token as it's handled separately
+
+                const activityTypeId = activityTypes[token];
+                if (!activityTypeId) continue;
+
+                // Find existing item for this activity
+                const existingItem = Object.values(existingFilter.items)
+                    .find(item => item.activity_type_id === activityTypeId);
+
+                if (existingItem) {
+                    // Update existing item
+                    if (existingItem.is_negative === active) {
+                        batchUpdateIds.push(existingItem.id);
+
+                        existingFilter.items[existingItem.id].is_negative = !active;
+                        existingFilter.items[existingItem.id].updated = now;
+                    }
+                } else {
+                    if(active) {
+                        continue;
+                    }
+
+                    // Create new item if not active
+                    const newItem = {
+                        filter_id: filter.id,
+                        person_id: person.id,
+                        activity_type_id: activityTypeId,
+                        is_negative: true,
+                        created: now,
+                        updated: now
+                    };
+
+                    batchInserts.push(newItem);
+                }
+            }
+
+            // Handle 'all' token separately
+            if ('all' in activities) {
+                if (Object.keys(existingFilter.items).length) {
+                    await conn('persons_filters')
+                        .where('person_id', person.id)
+                        .where('filter_id', filter.id)
+                        .update({
+                            is_negative: false,
+                            updated: now
+                        });
+
+                    // Update cache directly for all items
+                    for (let id in existingFilter.items) {
+                        existingFilter.items[id].is_negative = false;
+                        existingFilter.items[id].updated = now;
+                    }
+                }
+            } else {
+                // Execute batch operations
+                if (batchInserts.length) {
+                    await dbService.batchInsert('persons_filters', batchInserts, true);
+
+                    // Update cache with new items
+                    for(let item of batchInserts) {
+                        existingFilter.items[item.id] = {
+                            ...item,
+                            id: item.id
+                        };
+                    }
+                }
+
+                if (batchUpdateIds.length) {
+                    await conn('persons_filters')
+                        .where('person_id', person.id)
+                        .whereIn('id', batchUpdateIds)
+                        .update({
+                            is_negative: !active,
+                            updated: now
+                        });
+                }
+            }
+
+            // Update cache
+            await cacheService.setCache(person_filter_cache_key, person_filters);
+
+            res.json({
+                success: true
+            });
+
+        } catch (error) {
+            console.error('Activity types error:', error);
+            res.json({
+                message: error.message || 'Error updating activity types',
+                success: false
+            }, 400);
+        }
+
+        resolve();
+    });
+}
+
 module.exports = {
     putActive,
     putSendReceive,
@@ -899,4 +1056,5 @@ module.exports = {
     putAge,
     putGender,
     putDistance,
+    putActivityTypes
 };
