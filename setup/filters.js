@@ -1,7 +1,7 @@
 const { timeNow, loadScriptEnv } = require('../services/shared');
 const dbService = require('../services/db');
 const { deleteKeys, keys } = require('../services/cache');
-const { filterMappings } = require('../controllers/filters');
+const { filterMappings } = require('../services/filters');
 
 loadScriptEnv();
 

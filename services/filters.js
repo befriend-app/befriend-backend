@@ -69,6 +69,11 @@ const filterMappings = {
         name: 'Unrated',
         single: true
     },
+    verifications: {
+        token: 'verifications',
+        name: 'Verifications',
+        single: true
+    },
     verification_linkedin: {
         token: 'verification_linkedin',
         name: 'LinkedIn',

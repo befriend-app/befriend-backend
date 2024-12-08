@@ -6,6 +6,7 @@ const { getGenders } = require('../services/me');
 const { saveAvailabilityData } = require('../services/availability');
 const { filterMappings, getFilters, getPersonFilters, getModes } = require('../services/filters');
 const { getActivityTypes, getActivityTypesMapping } = require('../services/activities');
+const { getLifeStages } = require('../services/life_stages');
 
 function createFilterEntry(filter_id, props = {}) {
     const now = timeNow();
@@ -38,6 +39,25 @@ function createFilterEntry(filter_id, props = {}) {
         updated: now,
         ...props
     };
+}
+
+function getFiltersOptions(req, res) {
+    return new Promise(async (resolve, reject) => {
+          try {
+               let organized = {
+                   life_stages: null
+               };
+
+               organized.life_stages = await getLifeStages();
+
+               res.json(organized);
+          } catch(e) {
+              console.error(e);
+              res.json("Error getting filter options", 400);
+          }
+
+          resolve();
+    });
 }
 
 function putActive(req, res) {
@@ -952,8 +972,10 @@ function putActivityTypes(req, res) {
             for (let [token, isActive] of Object.entries(activities)) {
                 if (token === 'all') continue; // Skip 'all' token as it's handled separately
 
-                const activityTypeId = activityTypes[token];
+                let activityTypeId = activityTypes[token];
                 if (!activityTypeId) continue;
+
+                activityTypeId = parseInt(activityTypeId);
 
                 // Find existing item for this activity
                 const existingItem = Object.values(existingFilter.items)
@@ -961,12 +983,9 @@ function putActivityTypes(req, res) {
 
                 if (existingItem) {
                     // Update existing item
-                    if (existingItem.is_negative === active) {
-                        batchUpdateIds.push(existingItem.id);
-
-                        existingFilter.items[existingItem.id].is_negative = !active;
-                        existingFilter.items[existingItem.id].updated = now;
-                    }
+                    batchUpdateIds.push(existingItem.id);
+                    existingFilter.items[existingItem.id].is_negative = !active;
+                    existingFilter.items[existingItem.id].updated = now;
                 } else {
                     if(active) {
                         continue;
@@ -1047,7 +1066,140 @@ function putActivityTypes(req, res) {
     });
 }
 
+function putLifeStages(req, res) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const { person_token, life_stage_token, active } = req.body;
+
+            if (!life_stage_token || typeof active !== 'boolean') {
+                res.json({
+                    message: 'Life stage token and active state required',
+                }, 400);
+                return resolve();
+            }
+
+            let mapping = filterMappings.life_stages;
+            let filters = await getFilters();
+            let filter = filters.byToken[mapping.token];
+
+            if (!filter) {
+                res.json({
+                    message: 'Life stages filter not found'
+                }, 400);
+                return resolve();
+            }
+
+            let person = await getPerson(person_token);
+            if (!person) {
+                res.json({
+                    message: 'Person not found'
+                }, 400);
+                return resolve();
+            }
+
+            let life_stages = await getLifeStages();
+
+            let life_stage = life_stages.find(item => item.token === life_stage_token);
+
+            let conn = await dbService.conn();
+            let person_filter_cache_key = cacheService.keys.person_filters(person_token);
+            let person_filters = await getPersonFilters(person);
+            let now = timeNow();
+
+            let existingFilter = person_filters[filter.token];
+
+            // Initialize filter structure if it doesn't exist
+            if (!existingFilter) {
+                const baseEntry = createFilterEntry(filter.id, {
+                    person_id: person.id
+                });
+
+                existingFilter = {
+                    ...baseEntry,
+                    items: {}
+                };
+                person_filters[filter.token] = existingFilter;
+            } else if (!existingFilter.items) {
+                existingFilter.items = {};
+            }
+
+            // Handle 'any' selection - set all items to not negative
+            if (life_stage_token === 'any' && active) {
+                if (Object.keys(existingFilter.items).length) {
+                    await conn('persons_filters')
+                        .where('person_id', person.id)
+                        .where('filter_id', filter.id)
+                        .update({
+                            is_negative: false,
+                            updated: now,
+                            deleted: now
+                        });
+
+                    // Update cache
+                    for (let id in existingFilter.items) {
+                        existingFilter.items[id].is_negative = false;
+                        existingFilter.items[id].updated = now;
+                        existingFilter.items[id].deleted = now;
+                    }
+                }
+            } else {
+                // Handle specific life stage selection
+
+                // Find existing item for this life stage
+                const existingItem = Object.values(existingFilter.items)
+                    .find(item => item[mapping.column] === life_stage.id);
+
+                if (existingItem) {
+                    // Update existing item
+                    await conn('persons_filters')
+                        .where('person_id', person.id)
+                        .where('id', existingItem.id)
+                        .update({
+                            is_negative: !active,
+                            updated: now,
+                            deleted: null
+                        });
+
+                    existingItem.is_negative = !active;
+                    existingItem.updated = now;
+                    existingItem.deleted = null;
+                } else {
+                    // Create new life stage selection
+                    const filterEntry = createFilterEntry(filter.id, {
+                        person_id: person.id,
+                        [mapping.column]: life_stage.id,
+                        is_negative: !active
+                    });
+
+                    const [id] = await conn('persons_filters')
+                        .insert(filterEntry);
+
+                    existingFilter.items[id] = {
+                        ...filterEntry,
+                        id
+                    };
+                }
+            }
+
+            // Update cache
+            await cacheService.setCache(person_filter_cache_key, person_filters);
+
+            res.json({
+                success: true
+            });
+        } catch (e) {
+            console.error(e);
+            res.json({
+                message: 'Error updating life stage filter'
+            }, 400);
+        }
+
+        resolve();
+    });
+}
+
 module.exports = {
+    getFiltersOptions,
     putActive,
     putSendReceive,
     putAvailability,
@@ -1056,5 +1208,6 @@ module.exports = {
     putAge,
     putGender,
     putDistance,
-    putActivityTypes
+    putActivityTypes,
+    putLifeStages
 };

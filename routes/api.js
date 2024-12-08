@@ -18,6 +18,18 @@ router.get('/me', function (req, res, next) {
     });
 });
 
+router.get('/filters', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await filtersController.getFiltersOptions(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
 router.put('/filters/active', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
@@ -118,6 +130,18 @@ router.put('/filters/activity-types', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await filtersController.putActivityTypes(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
+router.put('/filters/life-stages', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await filtersController.putLifeStages(req, res);
         } catch (err) {
             console.log(err);
         }

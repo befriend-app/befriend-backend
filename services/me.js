@@ -6,6 +6,8 @@ const { getPerson, updatePerson } = require('./persons');
 let sectionsData = require('./sections_data');
 const { batchUpdate } = require('./db');
 const { getCountries } = require('./locations');
+const lifeStagesService = require('../services/life_stages');
+
 
 const modes = ['solo', 'plus-one', 'plus-kids'];
 
@@ -239,14 +241,7 @@ function addKid(person_token) {
     });
 }
 
-function updateKid(
-    person_token,
-    kid_token,
-    age_token = null,
-    gender_token = null,
-    is_select = null,
-    is_active = null,
-) {
+function updateKid(person_token, kid_token, age_token = null, gender_token = null, is_select = null, is_active = null) {
     return new Promise(async (resolve, reject) => {
         try {
             let person = await getPerson(person_token);
@@ -970,7 +965,6 @@ function updateSectionItem(body) {
         }
     });
 }
-
 
 function selectSectionOptionItem(person_token, section_key, table_key, item_token, is_select) {
     return new Promise(async (resolve, reject) => {
@@ -2202,19 +2196,7 @@ function getLifeStages(params = {}) {
         try {
             let { options_only } = params;
 
-            const cache_key = cacheService.keys.life_stages;
-            let options = await cacheService.getObj(cache_key);
-
-            if (!options) {
-                let conn = await dbService.conn();
-
-                options = await conn('life_stages')
-                    .where('is_visible', true)
-                    .orderBy('sort_position')
-                    .select('id', 'token', 'name');
-
-                await cacheService.setCache(cache_key, options);
-            }
+            let options = await lifeStagesService.getLifeStages()
 
             if (options_only) {
                 return resolve(options);
