@@ -1,13 +1,22 @@
 const cacheService = require('../services/cache');
 const dbService = require('../services/db');
-const { timeNow, latLonLookup, isNumeric, generateToken } = require('./shared');
-const { setCache, getObj, execMulti, execPipeline, hGetAll, hGetAllObj } = require('./cache');
-const { getPerson, updatePerson } = require('./persons');
+const { isNumeric, timeNow, generateToken } = require('./shared');
+const { setCache, getObj, execPipeline, hGetAllObj } = require('./cache');
+
 let sectionsData = require('./sections_data');
+
+const { getPerson, updatePerson } = require('./persons');
 const { batchUpdate } = require('./db');
 const { getCountries } = require('./locations');
+const { getLanguagesCountry } = require('./languages');
+
 const lifeStagesService = require('../services/life_stages');
 const relationshipService = require('../services/relationships');
+const politicsService = require('../services/politics');
+const religionsService = require('../services/religion');
+const drinkingService = require('../services/drinking');
+const smokingService = require('../services/smoking');
+
 
 const modes = ['solo', 'plus-one', 'plus-kids'];
 
@@ -1660,19 +1669,7 @@ function getDrinking(params = {}) {
         try {
             let { options_only } = params;
 
-            const cache_key = cacheService.keys.drinking;
-            let options = await cacheService.getObj(cache_key);
-
-            if (!options) {
-                let conn = await dbService.conn();
-
-                options = await conn('drinking')
-                    .where('is_visible', true)
-                    .orderBy('sort_position')
-                    .select('id', 'token', 'name');
-
-                await cacheService.setCache(cache_key, options);
-            }
+            let options = await drinkingService.getDrinking();
 
             if (options_only) {
                 return resolve(options);
@@ -2086,87 +2083,7 @@ function getLanguages(params = {}) {
         try {
             let { options_only, country_code } = params;
 
-            const cache_key = cacheService.keys.languages_country(country_code);
-            let options = await cacheService.getObj(cache_key);
-
-            if (!options) {
-                const conn = await dbService.conn();
-
-                // Get all languages and build initial dictionary
-                let [languages, countries] = await Promise.all([
-                    conn('languages')
-                        .whereNull('deleted')
-                        .where('is_visible', true)
-                        .select('id', 'token', 'name'),
-                    conn('open_countries').where('country_code', country_code).select('id'),
-                ]);
-
-                // Build initial dictionary with all languages
-                let languagesDict = {};
-                for (let lang of languages) {
-                    languagesDict[lang.id] = {
-                        id: lang.id,
-                        token: lang.token,
-                        name: lang.name,
-                        source: 'other',
-                        sort_position: lang.name.toLowerCase(), // Use name for alphabetical fallback
-                    };
-                }
-
-                // Get and apply country-specific top languages if country exists
-                if (countries.length) {
-                    let topLanguages = await conn('top_languages_countries AS tlc')
-                        .join('languages AS l', 'l.id', 'tlc.language_id')
-                        .where('tlc.country_id', countries[0].id)
-                        .whereNull('tlc.deleted')
-                        .select('l.id', 'tlc.sort_position')
-                        .orderBy('tlc.sort_position', 'asc');
-
-                    for (let lang of topLanguages) {
-                        if (lang.id in languagesDict) {
-                            languagesDict[lang.id].source = 'top';
-                            languagesDict[lang.id].sort_position = lang.sort_position;
-                        }
-                    }
-                }
-
-                // After top languages
-                const commonTokens = ['english', 'spanish', 'french', 'german'];
-                let commonLangs = await conn('languages')
-                    .whereIn('token', commonTokens)
-                    .select('id', 'token');
-
-                let nextCommonPosition = 1000; // Arbitrary gap after top languages
-                for (let lang of commonLangs) {
-                    if (languagesDict[lang.id].source === 'other') {
-                        languagesDict[lang.id].source = 'common';
-                        languagesDict[lang.id].sort_position = nextCommonPosition++;
-                    }
-                }
-
-                // Convert to array and sort
-                options = Object.values(languagesDict)
-                    .sort((a, b) => {
-                        // First by source priority (top > common > other)
-                        const sourcePriority = { top: 0, common: 1, other: 2 };
-                        if (sourcePriority[a.source] !== sourcePriority[b.source]) {
-                            return sourcePriority[a.source] - sourcePriority[b.source];
-                        }
-
-                        // Within same source type, sort by position/name
-                        if (a.source === 'top') {
-                            return a.sort_position - b.sort_position;
-                        }
-                        if (a.source === 'common') {
-                            return a.sort_position - b.sort_position;
-                        }
-                        // Alphabetical for 'other'
-                        return a.sort_position.localeCompare(b.sort_position);
-                    })
-                    .map(({ id, token, name }) => ({ id, token, name }));
-
-                await cacheService.setCache(cache_key, options);
-            }
+            let options = await getLanguagesCountry(country_code);
 
             if (options_only) {
                 return resolve(options);
@@ -2230,17 +2147,7 @@ function getPolitics(params = {}) {
         try {
             let { options_only } = params;
 
-            const cache_key = cacheService.keys.politics;
-            let options = await cacheService.getObj(cache_key);
-
-            if (!options) {
-                let conn = await dbService.conn();
-                options = await conn('politics')
-                    .where('is_visible', true)
-                    .orderBy('sort_position')
-                    .select('id', 'token', 'name');
-                await cacheService.setCache(cache_key, options);
-            }
+            let options = await politicsService.getPolitics();
 
             if (options_only) {
                 return resolve(options);
@@ -2270,19 +2177,7 @@ function getReligions(params = {}) {
         try {
             let { options_only } = params;
 
-            const cache_key = cacheService.keys.religions;
-            let options = await cacheService.getObj(cache_key);
-
-            if (!options) {
-                let conn = await dbService.conn();
-
-                options = await conn('religions')
-                    .where('is_visible', true)
-                    .orderBy('sort_position')
-                    .select('id', 'token', 'name');
-
-                await cacheService.setCache(cache_key, options);
-            }
+            let options = await religionsService.getReligions();
 
             if (options_only) {
                 return resolve(options);
@@ -2350,21 +2245,9 @@ function getSmoking(params = {}) {
         try {
             let { options_only } = params;
 
-            const cache_key = cacheService.keys.smoking;
-            let options = await cacheService.getObj(cache_key);
+            let options = await smokingService.getSmoking();
 
-            if (!options) {
-                let conn = await dbService.conn();
-
-                options = await conn('smoking')
-                    .where('is_visible', true)
-                    .orderBy('sort_position')
-                    .select('id', 'token', 'name');
-
-                await cacheService.setCache(cache_key, options);
-            }
-
-            if (options_only) {
+                if (options_only) {
                 return resolve(options);
             }
 

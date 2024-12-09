@@ -141,7 +141,7 @@ router.put('/filters/activity-types', function (req, res, next) {
 router.put('/filters/life-stages', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
-            await filtersController.putLifeStages(req, res);
+            await filtersController.handleFilterUpdate(req, res, 'life_stages');
         } catch (err) {
             console.log(err);
         }
@@ -153,7 +153,67 @@ router.put('/filters/life-stages', function (req, res, next) {
 router.put('/filters/relationship', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
-            await filtersController.putRelationship(req, res);
+            await filtersController.handleFilterUpdate(req, res, 'relationship');
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
+router.put('/filters/languages', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await filtersController.handleFilterUpdate(req, res, 'languages');
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
+router.put('/filters/politics', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await filtersController.handleFilterUpdate(req, res, 'politics');
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
+router.put('/filters/religion', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await filtersController.handleFilterUpdate(req, res, 'religion');
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
+router.put('/filters/drinking', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await filtersController.handleFilterUpdate(req, res, 'drinking');
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
+router.put('/filters/smoking', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await filtersController.handleFilterUpdate(req, res, 'smoking');
         } catch (err) {
             console.log(err);
         }

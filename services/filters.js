@@ -233,21 +233,21 @@ const filterMappings = {
         name: 'Drinking',
         table: 'drinking',
         column: 'drinking_id',
-        single: true
+        multi: true
     },
     smoking: {
         token: 'smoking',
         name: 'Smoking',
         table: 'smoking',
         column: 'smoking_id',
-        single: true
+        multi: true
     },
     politics: {
         token: 'politics',
         name: 'Politics',
         table: 'politics',
         column: 'politics_id',
-        single: true
+        multi: true
     },
     religion: {
         token: 'religion',
