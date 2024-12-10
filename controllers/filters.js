@@ -2,7 +2,7 @@ const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 const { getPerson } = require('../services/persons');
 const { timeNow } = require('../services/shared');
-const { getGenders } = require('../services/me');
+const { getGenders, getInstruments, allInstruments } = require('../services/me');
 const { saveAvailabilityData } = require('../services/availability');
 const { filterMappings, getFilters, getPersonFilters, getModes } = require('../services/filters');
 const { getActivityTypes, getActivityTypesMapping } = require('../services/activities');
@@ -13,6 +13,8 @@ const { getPolitics } = require('../services/politics');
 const { getDrinking } = require('../services/drinking');
 const { getSmoking } = require('../services/smoking');
 const { getReligions } = require('../services/religion');
+
+let sectionsData = require('../services/sections_data');
 
 function createFilterEntry(filter_id, props = {}) {
     const now = timeNow();
@@ -51,6 +53,7 @@ function getFiltersOptions(req, res) {
     return new Promise(async (resolve, reject) => {
           try {
                let organized = {
+                   instruments: null,
                    life_stages: null,
                    relationship: null,
                    languages: null,
@@ -62,6 +65,7 @@ function getFiltersOptions(req, res) {
 
                let person = await getPerson(req.query.person_token);
 
+               organized.instruments = await getInstruments()
                organized.life_stages = await getLifeStages();
                organized.relationship = await getRelationshipStatus();
                organized.languages = await getLanguagesCountry(person?.country_code);
@@ -84,6 +88,10 @@ function handleFilterUpdate(req, res, filterType) {
     function getFilterTypeStr() {
         if(filterType.toLowerCase().startsWith('relationship')) {
             return 'relationship_status';
+        }
+
+        if(filterType.toLowerCase().startsWith('politics')) {
+            return filterType;
         }
 
         return filterType.endsWith('s') ? filterType.substring(0, filterType.length - 1) : filterType;
@@ -1238,6 +1246,222 @@ function putActivityTypes(req, res) {
     });
 }
 
+function putInstruments(req, res) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const { person_token, token, active, importance, is_delete, secondary } = req.body;
+
+            if (!token) {
+                res.json({
+                    message: 'Instrument token required',
+                }, 400);
+                return resolve();
+            }
+
+            if(typeof active !== 'undefined' && typeof active !== 'boolean') {
+                res.json({
+                    message: 'Invalid active value',
+                }, 400);
+                return resolve();
+            }
+
+            if(typeof importance !== 'undefined' && (importance < 0  || importance > 10)) {
+                res.json({
+                    message: 'Invalid importance value',
+                }, 400);
+                return resolve();
+            }
+
+            if(typeof is_delete !== 'undefined' && typeof is_delete !== 'boolean') {
+                res.json({
+                    message: 'Invalid delete value',
+                }, 400);
+                return resolve();
+            }
+
+            if(typeof secondary !== 'undefined' && !Array.isArray(secondary)) {
+                res.json({
+                    message: 'Invalid secondary data',
+                }, 400);
+                return resolve();
+            }
+
+            if(![token, active, importance, is_delete, secondary].some(item=> typeof item !== 'undefined')) {
+                res.json({
+                    message: 'At least one field required',
+                }, 400);
+                return resolve();
+            }
+
+            if(secondary) {
+                //check that all values are valid
+                let areValid = secondary.every(item => sectionsData.instruments.secondary.instruments.options.includes(item));
+
+                if(!secondary.includes('any') && !areValid) {
+                    res.json({
+                        message: 'Invalid secondary format',
+                    }, 400);
+                    return resolve();
+                }
+            }
+
+            let mapping = filterMappings.instruments;
+            let filters = await getFilters();
+            let filter = filters.byToken[mapping.token];
+
+            if (!filter) {
+                res.json({
+                    message: 'Instruments filter not found'
+                }, 400);
+                return resolve();
+            }
+
+            let person = await getPerson(person_token);
+            if (!person) {
+                res.json({
+                    message: 'Person not found'
+                }, 400);
+                return resolve();
+            }
+
+            let instruments = await allInstruments();
+            let option = instruments.byToken[token];
+
+            if(token !== 'any' && !option) {
+                res.json({
+                    message: 'Invalid token'
+                }, 400);
+
+                return resolve();
+            }
+
+            let conn = await dbService.conn();
+            let person_filter_cache_key = cacheService.keys.person_filters(person_token);
+            let person_filters = await getPersonFilters(person);
+            let now = timeNow();
+
+            let existingFilter = person_filters[filter.token];
+
+            // Initialize filter structure if it doesn't exist
+            if (!existingFilter) {
+                const baseEntry = createFilterEntry(filter.id, {
+                    person_id: person.id
+                });
+
+                existingFilter = {
+                    ...baseEntry,
+                    items: {}
+                };
+                person_filters[filter.token] = existingFilter;
+            } else if (!existingFilter.items) {
+                existingFilter.items = {};
+            }
+
+            if (token === 'any') {
+                // Handle 'any' selection - clear all existing filters
+                if(Object.keys(existingFilter.items).length)
+                    await conn('persons_filters')
+                        .where('person_id', person.id)
+                        .where('filter_id', filter.id)
+                        .update({
+                            is_active: false,
+                            updated: now,
+                        });
+
+                // Update cache
+                for (let id in existingFilter.items) {
+                    existingFilter.items[id].is_active = false;
+                    existingFilter.items[id].updated = now;
+                }
+            } else {
+                // Find existing item for option
+                const existingItem = Object.values(existingFilter.items)
+                    .find(item => item[mapping.column] === option.id);
+
+                if (existingItem) {
+                    if(typeof importance !== 'undefined') {
+                        await conn('persons_filters')
+                            .where('person_id', person.id)
+                            .where('id', existingItem.id)
+                            .update({
+                                importance: importance,
+                                updated: now,
+                            });
+
+                        existingItem.importance = importance;
+                    } else if(typeof secondary !== 'undefined') {
+                        await conn('persons_filters')
+                            .where('person_id', person.id)
+                            .where('id', existingItem.id)
+                            .update({
+                                filter_value: JSON.stringify(secondary),
+                                updated: now,
+                            });
+
+                        existingItem.secondary = secondary;
+                    } else if(typeof is_delete !== 'undefined') {
+                        await conn('persons_filters')
+                            .where('person_id', person.id)
+                            .where('id', existingItem.id)
+                            .update({
+                                updated: now,
+                                deleted: now
+                            });
+
+                        existingItem.deleted = now;
+                    } else {
+                        await conn('persons_filters')
+                            .where('person_id', person.id)
+                            .where('id', existingItem.id)
+                            .update({
+                                is_active: active,
+                                updated: now,
+                            });
+
+                        existingItem.is_active = active;
+                    }
+
+                    if(typeof is_delete === 'undefined') {
+                        existingItem.deleted = null;
+                    }
+                } else {
+                    // Create new relationship status selection
+                    let filterEntry = createFilterEntry(filter.id, {
+                        person_id: person.id,
+                        [mapping.column]: option.id,
+                        is_active: active,
+                    });
+
+                    const [id] = await conn('persons_filters')
+                        .insert(filterEntry);
+
+                    filterEntry.token = token;
+                    filterEntry.name = option.name;
+
+                    existingFilter.items[id] = {
+                        ...filterEntry,
+                        id
+                    };
+                }
+            }
+
+            await cacheService.setCache(person_filter_cache_key, person_filters);
+
+            res.json({
+                success: true
+            });
+        } catch (e) {
+            console.error(e);
+            res.json({
+                message: 'Error updating gender filter'
+            }, 400);
+        }
+
+        resolve();
+    });
+}
+
+
 module.exports = {
     getFiltersOptions,
     putActive,
@@ -1249,6 +1473,7 @@ module.exports = {
     putGender,
     putDistance,
     putActivityTypes,
+    putInstruments,
     handleFilterUpdate,
 };
 

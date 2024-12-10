@@ -138,6 +138,18 @@ router.put('/filters/activity-types', function (req, res, next) {
     });
 });
 
+router.put('/filters/instruments', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await filtersController.putInstruments(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
 router.put('/filters/life-stages', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {

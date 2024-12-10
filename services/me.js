@@ -1635,8 +1635,7 @@ function dataForSchema(table_name, cache_key, filter, sort_by, sort_direction) {
         try {
             let cached_obj = await cacheService.getObj(cache_key);
 
-            //todo remove
-            if (cached_obj && false) {
+            if (cached_obj) {
                 return resolve(cached_obj);
             }
 
@@ -1752,6 +1751,10 @@ function getGenders(params = {}) {
 function getInstruments() {
     return new Promise(async (resolve, reject) => {
         try {
+            if(module.exports.cache.instruments_common) {
+                return resolve(module.exports.cache.instruments_common);
+            }
+
             let options = await dataForSchema(
                 'instruments',
                 cacheService.keys.instruments_common,
@@ -1781,6 +1784,8 @@ function getInstruments() {
                 }, []),
             };
 
+            module.exports.cache['instruments_common'] = data;
+
             resolve(data);
         } catch (e) {
             console.error(e);
@@ -1791,20 +1796,24 @@ function getInstruments() {
 
 function allInstruments() {
     return new Promise(async (resolve, reject) => {
+        if(module.exports.cache.instruments) {
+            return resolve(module.exports.cache.instruments);
+        }
+
         let cache_key = cacheService.keys.instruments;
 
         try {
             let data = await cacheService.getObj(cache_key);
 
-            if (false && data) {
-                return resolve(data);
+            if(!data) {
+                let conn = await dbService.conn();
+
+                data = await conn('instruments').orderBy('popularity', 'desc');
+
+                await cacheService.setCache(cache_key, data);
             }
 
-            let conn = await dbService.conn();
-
-            data = await conn('instruments').orderBy('popularity', 'desc');
-
-            data = data.reduce(
+            let organized = data.reduce(
                 (acc, item) => {
                     acc.byId[item.id] = item;
                     acc.byToken[item.token] = item;
@@ -1813,9 +1822,9 @@ function allInstruments() {
                 { byId: {}, byToken: {} },
             );
 
-            await cacheService.setCache(cache_key, data);
+            module.exports.cache.instruments = organized;
 
-            resolve(data);
+            resolve(organized);
         } catch (e) {
             console.error(e);
         }
@@ -2722,6 +2731,7 @@ function getWork() {
 }
 
 module.exports = {
+    cache: {},
     sections: sectionsData,
     getModes,
     putMode,
