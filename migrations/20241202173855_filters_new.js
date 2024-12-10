@@ -31,6 +31,7 @@ const sharedCols = {
         table.boolean('is_send').notNullable().defaultTo(false);
         table.boolean('is_receive').notNullable().defaultTo(false);
         table.boolean('is_negative').notNullable().defaultTo(false);
+        table.integer('importance').nullable();
         table.string('secondary_level').nullable();
         table.boolean('is_active').notNullable().defaultTo(true);
     },
@@ -132,14 +133,14 @@ exports.up = async function(knex) {
         table.bigInteger('person_id').unsigned().notNullable().references('id').inTable('persons');
         table.integer('filter_id').unsigned().notNullable().references('id').inTable('filters');
 
+        for(let k in sharedCols) {
+            sharedCols[k](table);
+        }
+
         for(let k in filterTables) {
             let data = filterTables[k];
 
             table.integer(data.column).unsigned().nullable().references('id').inTable(data.table);
-        }
-
-        for(let k in sharedCols) {
-            sharedCols[k](table);
         }
     });
 
@@ -148,14 +149,14 @@ exports.up = async function(knex) {
         table.bigInteger('activity_id').unsigned().notNullable().references('id').inTable('activities');
         table.integer('filter_id').unsigned().notNullable().references('id').inTable('filters');
 
+        for(let k in sharedCols) {
+            sharedCols[k](table);
+        }
+
         for(let k in filterTables) {
             let data = filterTables[k];
 
             table.integer(data.column).unsigned().nullable().references('id').inTable(data.table);
-        }
-
-        for(let k in sharedCols) {
-            sharedCols[k](table);
         }
     });
 };
