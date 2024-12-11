@@ -17,8 +17,8 @@ const religionsService = require('../services/religion');
 const drinkingService = require('../services/drinking');
 const smokingService = require('../services/smoking');
 
-
 const modes = ['solo', 'plus-one', 'plus-kids'];
+
 
 function getModes(me) {
     return new Promise(async (resolve, reject) => {
@@ -2625,6 +2625,10 @@ function getTvShows() {
 
 function getWork() {
     return new Promise(async (resolve, reject) => {
+        if(module.exports.cache.work) {
+            return resolve(module.exports.cache.work);
+        }
+
         try {
             let section = sectionsData.work;
 
@@ -2663,6 +2667,7 @@ function getWork() {
 
             // Build industry items
             const industryItems = [];
+
             for (const [token, industryData] of Object.entries(industries)) {
                 // Skip if not visible
                 if (!industryData.is_visible || industryData.deleted) continue;
@@ -2721,6 +2726,8 @@ function getWork() {
                     return acc;
                 }, [])
             };
+
+            module.exports.cache.work = data;
 
             resolve(data);
         } catch (e) {

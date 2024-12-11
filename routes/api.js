@@ -42,6 +42,18 @@ router.put('/filters/active', function (req, res, next) {
     });
 });
 
+router.put('/filters/importance', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await filtersController.putImportance(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
 router.put('/filters/send-receive', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
@@ -142,6 +154,18 @@ router.put('/filters/instruments', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await filtersController.putInstruments(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
+router.put('/filters/work', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await filtersController.putWork(req, res);
         } catch (err) {
             console.log(err);
         }

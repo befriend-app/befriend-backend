@@ -137,6 +137,11 @@ const filterMappings = {
         column: 'school_id',
         multi: true
     },
+    work: {
+        token: 'work',
+        name: 'Work',
+        multi: true
+    },
     work_industries: {
         token: 'work_industries',
         name: 'Industry',

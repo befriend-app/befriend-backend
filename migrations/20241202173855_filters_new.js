@@ -6,7 +6,7 @@ const filterTables = {
     relationship_status: { column: 'relationship_status_id', table: 'relationship_status' },
     school: { column: 'school_id', table: 'schools' },
     work_industry: { column: 'work_industry_id', table: 'work_industries' },
-    work_role: { column: 'work_role_id', table: 'work_industries' },
+    work_role: { column: 'work_role_id', table: 'work_roles' },
     sport_play: { column: 'sport_play_id', table: 'sports' },
     sport_league: { column: 'sport_league_id', table: 'sports_leagues' },
     sport_team: { column: 'sport_team_id', table: 'sports_teams' },
@@ -40,12 +40,13 @@ const sharedCols = {
         table.string('filter_value_min').nullable();
         table.string('filter_value_max').nullable();
     },
-    timestamps: (table) => {
-        table.bigInteger('created').notNullable();
-        table.bigInteger('updated').notNullable();
-        table.bigInteger('deleted').nullable();
-    }
 };
+
+const timestampCols = (table) => {
+    table.bigInteger('created').notNullable();
+    table.bigInteger('updated').notNullable();
+    table.bigInteger('deleted').nullable();
+}
 
 /**
  * @param { import("knex").Knex } knex
@@ -125,7 +126,7 @@ exports.up = async function(knex) {
             table.boolean('is_home_country').notNullable().defaultTo(false);
             table.boolean('is_custom').notNullable().defaultTo(false).comment('Persons could create custom filters, be approved by our system automatically, then show up on other persons apps.');
 
-            sharedCols.timestamps(table);
+            timestampCols(table);
         });
 
     await knex.schema.createTable('persons_filters', table => {
@@ -142,6 +143,8 @@ exports.up = async function(knex) {
 
             table.integer(data.column).unsigned().nullable().references('id').inTable(data.table);
         }
+
+        timestampCols(table);
     });
 
     return knex.schema.createTable('activities_filters', table => {
@@ -158,6 +161,8 @@ exports.up = async function(knex) {
 
             table.integer(data.column).unsigned().nullable().references('id').inTable(data.table);
         }
+
+        timestampCols(table);
     });
 };
 
