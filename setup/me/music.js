@@ -65,6 +65,7 @@ function syncGenres() {
                     let update_obj = {
                         id: existing.id,
                         name: genre.name,
+                        position: genre.position,
                         is_active: genre.is_active,
                         is_featured: genre.is_featured,
                         updated: timeNow(),

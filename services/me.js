@@ -1924,6 +1924,7 @@ function getMusicCategories() {
                 if (genre.is_active) {
                     categoryGenres.push({
                         table_key: 'artists',
+                        category: 'artists',
                         heading: 'Artists',
                         name: genre.name,
                         position: genre.position,
@@ -1936,29 +1937,34 @@ function getMusicCategories() {
                 return a.position - b.position;
             });
 
+            // Categories array
             let categories = [
                 {
                     table_key: 'genres',
                     name: 'Genres',
+                    category: 'genres'
                 },
                 ...categoryGenres,
             ];
 
-            let genres = [...categoryGenres];
-
+            // Genre items
+            let genres = [];
             for (let k in allGenres) {
                 let genre = allGenres[k];
 
-                if (genre.is_featured) {
+                if (genre.is_active) {
                     genres.push({
                         name: genre.name,
-                        token: genre.token,
+                        token: genre.token || k,
+                        category: 'genres',
+                        table_key: 'genres',
+                        position: genre.position,
                     });
                 }
             }
 
-            genres.map((item) => {
-                item.category = 'genres';
+            genres.sort((a, b) => {
+                return a.position - b.position;
             });
 
             resolve({
