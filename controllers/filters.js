@@ -1458,6 +1458,7 @@ function putInstruments(req, res) {
                             .update({
                                 filter_value: JSON.stringify(secondary),
                                 updated: now,
+                                deleted: null
                             });
 
                         existingItem.secondary = secondary;
@@ -1478,6 +1479,7 @@ function putInstruments(req, res) {
                             .update({
                                 is_active: active,
                                 updated: now,
+                                deleted: null
                             });
 
                         existingItem.is_active = active;
@@ -1631,7 +1633,8 @@ function putWork(req, res) {
             }
 
             if (token === 'any') {
-                // Handle 'any' selection - clear all existing filters
+                // Handle 'any' selection - clear all existing filters for table key
+
                 if(Object.keys(existingFilter.items).length)
                     await conn('persons_filters')
                         .where('person_id', person.id)
@@ -1643,8 +1646,12 @@ function putWork(req, res) {
 
                 // Update cache
                 for (let id in existingFilter.items) {
-                    existingFilter.items[id].is_active = false;
-                    existingFilter.items[id].updated = now;
+                    let item = existingFilter.items[id];
+
+                    if(item.table_key === table_key) {
+                        item.is_active = false;
+                        item.updated = now;
+                    }
                 }
             } else {
                 // Find existing item for option
@@ -1671,6 +1678,7 @@ function putWork(req, res) {
                             .update({
                                 is_active: active,
                                 updated: now,
+                                deleted: null
                             });
 
                         existingItem.is_active = active;
