@@ -1944,13 +1944,20 @@ function putSports(req, res) {
         try {
             let id;
 
-            const { person_token, table_key, token, active, is_delete } = req.body;
+            const { person_token, table_key, token, active, is_delete, secondary } = req.body;
 
             let personFilterKey = 'sports';
 
             if (!token) {
                 res.json({
                     message: 'Token required',
+                }, 400);
+                return resolve();
+            }
+
+            if(typeof table_key !== 'string') {
+                res.json({
+                    message: 'Invalid table key',
                 }, 400);
                 return resolve();
             }
@@ -1969,14 +1976,14 @@ function putSports(req, res) {
                 return resolve();
             }
 
-            if(typeof table_key !== 'string') {
+            if(typeof secondary !== 'undefined' && !Array.isArray(secondary)) {
                 res.json({
-                    message: 'Invalid table key',
+                    message: 'Invalid secondary data',
                 }, 400);
                 return resolve();
             }
 
-            if(![active, is_delete].some(item=> typeof item !== 'undefined')) {
+            if(![active, is_delete, secondary].some(item=> typeof item !== 'undefined')) {
                 res.json({
                     message: 'At least one field required',
                 }, 400);
@@ -2081,7 +2088,18 @@ function putSports(req, res) {
                 if (existingItem) {
                     id = existingItem.id;
 
-                    if(typeof is_delete !== 'undefined') {
+                    if(typeof secondary !== 'undefined') {
+                        await conn('persons_filters')
+                            .where('person_id', person.id)
+                            .where('id', existingItem.id)
+                            .update({
+                                filter_value: JSON.stringify(secondary),
+                                updated: now,
+                                deleted: null
+                            });
+
+                        existingItem.secondary = secondary;
+                    } else if(typeof is_delete !== 'undefined') {
                         await conn('persons_filters')
                             .where('person_id', person.id)
                             .where('id', existingItem.id)
