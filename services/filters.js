@@ -205,6 +205,11 @@ const filterMappings = {
         column: 'tv_show_id',
         multi: true
     },
+    music: {
+        token: 'music',
+        name: 'Music',
+        multi: true
+    },
     music_artists: {
         token: 'music_artists',
         name: 'Music Artists',

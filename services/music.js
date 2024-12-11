@@ -39,7 +39,7 @@ function getTopArtistsForGenre(genre_token) {
     });
 }
 
-function musicAutoComplete(search_term, category, user_location) {
+function musicAutoComplete(search_term, category = {}, user_location) {
     return new Promise(async (resolve, reject) => {
         let minLength = sectionsData.music.autoComplete.minChars;
         let maxLength = MAX_PREFIX_LIMIT;

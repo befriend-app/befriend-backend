@@ -2,7 +2,7 @@ const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 const { getPerson } = require('../services/persons');
 const { timeNow } = require('../services/shared');
-const { getGenders, getInstruments, allInstruments, getWork } = require('../services/me');
+const { getGenders, getInstruments, allInstruments, getWork, getMusic } = require('../services/me');
 const { saveAvailabilityData } = require('../services/availability');
 const { filterMappings, getFilters, getPersonFilters, getModes } = require('../services/filters');
 const { getActivityTypesMapping } = require('../services/activities');
@@ -53,6 +53,7 @@ function getFiltersOptions(req, res) {
     return new Promise(async (resolve, reject) => {
           try {
                let organized = {
+                   music: null,
                    instruments: null,
                    work: null,
                    life_stages: null,
@@ -66,6 +67,7 @@ function getFiltersOptions(req, res) {
 
                let person = await getPerson(req.query.person_token);
 
+               organized.music = await getMusic(person?.country_code);
                organized.instruments = await getInstruments()
                organized.work = await getWork();
                organized.life_stages = await getLifeStages();
@@ -1537,7 +1539,7 @@ function putWork(req, res) {
 
             if (!token) {
                 res.json({
-                    message: 'Instrument token required',
+                    message: 'Token required',
                 }, 400);
                 return resolve();
             }
@@ -1726,6 +1728,205 @@ function putWork(req, res) {
     });
 }
 
+function putMusic(req, res) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let id;
+
+            const { person_token, table_key, token, active, is_delete } = req.body;
+
+            let personFilterKey = 'music';
+
+            if (!token) {
+                res.json({
+                    message: 'Token required',
+                }, 400);
+                return resolve();
+            }
+
+            if(typeof active !== 'undefined' && typeof active !== 'boolean') {
+                res.json({
+                    message: 'Invalid active value',
+                }, 400);
+                return resolve();
+            }
+
+            if(typeof is_delete !== 'undefined' && typeof is_delete !== 'boolean') {
+                res.json({
+                    message: 'Invalid delete value',
+                }, 400);
+                return resolve();
+            }
+
+            if(typeof table_key !== 'string') {
+                res.json({
+                    message: 'Invalid table key',
+                }, 400);
+                return resolve();
+            }
+
+            if(![active, is_delete].some(item=> typeof item !== 'undefined')) {
+                res.json({
+                    message: 'At least one field required',
+                }, 400);
+                return resolve();
+            }
+
+            //validate table key
+            let sectionData = sectionsData.music;
+            let mapping = filterMappings[`music_${table_key}`];
+            let filters = await getFilters();
+            let filter = filters.byToken[mapping.token];
+
+            if (!filter) {
+                res.json({
+                    message: 'Filter not found'
+                }, 400);
+                return resolve();
+            }
+
+            if(!sectionData.cacheKeys[table_key]) {
+                res.json({
+                    message: 'Cache key not found',
+                }, 400);
+                return resolve();
+            }
+
+            let person = await getPerson(person_token);
+            if (!person) {
+                res.json({
+                    message: 'Person not found'
+                }, 400);
+                return resolve();
+            }
+
+            let cache_key = sectionData.cacheKeys[table_key].byHash;
+            let option = await cacheService.hGetItem(cache_key, token);
+
+            if(token !== 'any' && !option) {
+                res.json({
+                    message: 'Invalid token'
+                }, 400);
+
+                return resolve();
+            }
+
+            let conn = await dbService.conn();
+            let person_filter_cache_key = cacheService.keys.person_filters(person_token);
+            let person_filters = await getPersonFilters(person);
+            let now = timeNow();
+
+            let existingFilter = person_filters[personFilterKey];
+
+            // Initialize filter structure if it doesn't exist
+            if (!existingFilter) {
+                const baseEntry = createFilterEntry(filter.id, {
+                    person_id: person.id
+                });
+
+                existingFilter = {
+                    ...baseEntry,
+                    items: {}
+                };
+                person_filters[personFilterKey] = existingFilter;
+            } else if (!existingFilter.items) {
+                existingFilter.items = {};
+            }
+
+            if (token === 'any') {
+                // Handle 'any' selection - clear all existing filters for table key
+
+                if(Object.keys(existingFilter.items).length)
+                    await conn('persons_filters')
+                        .where('person_id', person.id)
+                        .where('filter_id', filter.id)
+                        .update({
+                            is_active: false,
+                            updated: now,
+                        });
+
+                // Update cache
+                for (let id in existingFilter.items) {
+                    let item = existingFilter.items[id];
+
+                    if(item.table_key === table_key) {
+                        item.is_active = false;
+                        item.updated = now;
+                    }
+                }
+            } else {
+                // Find existing item for option
+                const existingItem = Object.values(existingFilter.items)
+                    .find(item => item[mapping.column] === option.id);
+
+                if (existingItem) {
+                    id = existingItem.id;
+
+                    if(typeof is_delete !== 'undefined') {
+                        await conn('persons_filters')
+                            .where('person_id', person.id)
+                            .where('id', existingItem.id)
+                            .update({
+                                updated: now,
+                                deleted: now
+                            });
+
+                        existingItem.deleted = now;
+                    } else {
+                        await conn('persons_filters')
+                            .where('person_id', person.id)
+                            .where('id', existingItem.id)
+                            .update({
+                                is_active: active,
+                                updated: now,
+                                deleted: null
+                            });
+
+                        existingItem.is_active = active;
+                    }
+
+                    if(typeof is_delete === 'undefined') {
+                        existingItem.deleted = null;
+                    }
+                } else {
+                    // Create new relationship status selection
+                    let filterEntry = createFilterEntry(filter.id, {
+                        person_id: person.id,
+                        [mapping.column]: option.id,
+                        is_active: active,
+                    });
+
+                    [id] = await conn('persons_filters')
+                        .insert(filterEntry);
+
+                    filterEntry.table_key = table_key;
+                    filterEntry.token = token;
+                    filterEntry.name = option.name;
+
+                    existingFilter.items[id] = {
+                        ...filterEntry,
+                        id
+                    };
+                }
+            }
+
+            await cacheService.setCache(person_filter_cache_key, person_filters);
+
+            res.json({
+                id: id,
+                success: true
+            });
+        } catch (e) {
+            console.error(e);
+            res.json({
+                message: 'Error updating gender filter'
+            }, 400);
+        }
+
+        resolve();
+    });
+}
+
 module.exports = {
     getFiltersOptions,
     putActive,
@@ -1739,6 +1940,7 @@ module.exports = {
     putDistance,
     putActivityTypes,
     putWork,
+    putMusic,
     putInstruments,
     handleFilterUpdate,
 };

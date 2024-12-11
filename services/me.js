@@ -660,6 +660,7 @@ function addSectionItem(person_token, section_key, table_key, item_token, hash_k
             }
 
             if (!section_option) {
+                //todo search other tables in section for item
                 return reject('Item not found');
             }
 
@@ -1834,6 +1835,10 @@ function allInstruments() {
 function getMusic(country_code) {
     return new Promise(async (resolve, reject) => {
         try {
+            if(module.exports.cache.music) {
+                return resolve(module.exports.cache.music);
+            }
+
             let section = sectionsData.music;
 
             //categories
@@ -1858,6 +1863,8 @@ function getMusic(country_code) {
                     return acc;
                 }, []),
             };
+
+            module.exports.cache.music = data;
 
             resolve(data);
         } catch (e) {

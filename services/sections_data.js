@@ -357,19 +357,6 @@ module.exports = {
             },
         ],
         tables: {
-            genres: {
-                isFavorable: true,
-                data: {
-                    name: 'music_genres',
-                },
-                user: {
-                    name: 'persons_music_genres',
-                    cols: {
-                        id: 'genre_id',
-                        token: 'genre_token',
-                    },
-                },
-            },
             artists: {
                 isFavorable: true,
                 data: {
@@ -380,6 +367,19 @@ module.exports = {
                     cols: {
                         id: 'artist_id',
                         token: 'artist_token',
+                    },
+                },
+            },
+            genres: {
+                isFavorable: true,
+                data: {
+                    name: 'music_genres',
+                },
+                user: {
+                    name: 'persons_music_genres',
+                    cols: {
+                        id: 'genre_id',
+                        token: 'genre_token',
                     },
                 },
             },

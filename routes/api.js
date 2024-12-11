@@ -150,6 +150,19 @@ router.put('/filters/activity-types', function (req, res, next) {
     });
 });
 
+router.put('/filters/music', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await filtersController.putMusic(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
+
 router.put('/filters/instruments', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
