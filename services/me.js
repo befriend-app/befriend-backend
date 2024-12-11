@@ -2301,6 +2301,12 @@ function getSports(params = {}) {
         try {
             let { country_code } = params;
 
+            if(module.exports.cache.sports) {
+                if(country_code && module.exports.cache.sports[country_code]) {
+                    return resolve(module.exports.cache.sports[country_code]);
+                }
+            }
+
             let section = sectionsData.sports;
 
             let categoryData = await getSportCategories(country_code);
@@ -2324,6 +2330,12 @@ function getSports(params = {}) {
                     return acc;
                 }, []),
             };
+
+            if(!module.exports.cache.sports) {
+                module.exports.cache.sports = {};
+            }
+
+            module.exports.cache.sports[country_code] = data;
 
             resolve(data);
         } catch (e) {

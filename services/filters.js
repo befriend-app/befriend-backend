@@ -156,6 +156,11 @@ const filterMappings = {
         column: 'work_role_id',
         multi: true
     },
+    sports: {
+        token: 'sports',
+        name: 'Sports',
+        multi: true
+    },
     sports_play: {
         token: 'sports_play',
         name: 'Play',
@@ -163,14 +168,14 @@ const filterMappings = {
         column: 'sport_play_id',
         multi: true
     },
-    sports_league: {
+    sports_leagues: {
         token: 'sports_league',
         name: 'Leagues',
         table: 'sports_leagues',
         column: 'sport_league_id',
         multi: true
     },
-    sport_team: {
+    sports_teams: {
         token: 'sport_team',
         name: 'Teams',
         table: 'sports_teams',
