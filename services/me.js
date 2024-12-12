@@ -1878,10 +1878,14 @@ function getSchools() {
     return new Promise(async (resolve, reject) => {
         //list of countries for autocomplete
         try {
+            if(module.exports.cache.schools) {
+                return resolve(module.exports.cache.schools);
+            }
+
             let section = sectionsData.schools;
 
             let data = {
-                myStr: section.myStr,
+                myStr: section.myStr || null,
                 autoComplete: section.autoComplete,
                 styles: section.styles,
                 tables: Object.keys(section.tables).reduce((acc, key) => {
@@ -1900,9 +1904,16 @@ function getSchools() {
                 if (country.country_name && !country.name) {
                     country.name = country.country_name;
                 }
+
+                if(country.country_code && !country.code) {
+                    country.code = country.country_code;
+                }
             });
 
             data.autoComplete.filter.list = countries || [];
+
+            module.exports.cache.schools = data;
+
             resolve(data);
         } catch (e) {
             console.error(e);

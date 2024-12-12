@@ -150,6 +150,18 @@ router.put('/filters/activity-types', function (req, res, next) {
     });
 });
 
+router.put('/filters/schools', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await filtersController.putSchools(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
 router.put('/filters/movies', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {

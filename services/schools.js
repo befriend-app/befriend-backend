@@ -97,8 +97,8 @@ function scoreSchools(schools, location) {
     }
 
     // Parse coordinates as floats
-    const lat = parseFloat(location.lat);
-    const lon = parseFloat(location.lon);
+    const lat = location ? parseFloat(location.lat) : null;
+    const lon = location ? parseFloat(location.lon) : null;
 
     if (isNaN(lat) || isNaN(lon)) {
         // If no valid coordinates, return results sorted by size/type

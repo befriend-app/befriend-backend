@@ -2,7 +2,7 @@ const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 const { getPerson } = require('../services/persons');
 const { timeNow } = require('../services/shared');
-const { getGenders, getInstruments, allInstruments, getWork, getMusic, getSports, getMovies, getTvShows } = require('../services/me');
+const { getGenders, getInstruments, allInstruments, getWork, getMusic, getSports, getMovies, getTvShows, getSchools } = require('../services/me');
 const { saveAvailabilityData } = require('../services/availability');
 const { filterMappings, getFilters, getPersonFilters, getModes } = require('../services/filters');
 const { getActivityTypesMapping } = require('../services/activities');
@@ -53,6 +53,7 @@ function getFiltersOptions(req, res) {
     return new Promise(async (resolve, reject) => {
           try {
                let organized = {
+                   schools: null,
                    movies: null,
                    tv_shows: null,
                    music: null,
@@ -70,6 +71,7 @@ function getFiltersOptions(req, res) {
 
                let person = await getPerson(req.query.person_token);
 
+               organized.schools = await getSchools();
                organized.movies = await getMovies();
                organized.tv_shows = await getTvShows();
                organized.music = await getMusic(person?.country_code);
@@ -1324,6 +1326,190 @@ function putActivityTypes(req, res) {
             res.json({
                 message: error.message || 'Error updating activity types',
                 success: false
+            }, 400);
+        }
+
+        resolve();
+    });
+}
+
+function putSchools(req, res) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let id;
+
+            const { person_token, hash_token, token, active, is_delete } = req.body;
+
+            if (typeof token !== 'string') {
+                res.json({
+                    message: 'Token required',
+                }, 400);
+                return resolve();
+            }
+
+            if (typeof hash_token !== 'string' && token !== 'any') {
+                res.json({
+                    message: 'Hash token required',
+                }, 400);
+                return resolve();
+            }
+
+            if(typeof active !== 'undefined' && typeof active !== 'boolean') {
+                res.json({
+                    message: 'Invalid active value',
+                }, 400);
+                return resolve();
+            }
+
+            if(typeof is_delete !== 'undefined' && typeof is_delete !== 'boolean') {
+                res.json({
+                    message: 'Invalid delete value',
+                }, 400);
+                return resolve();
+            }
+
+            if(![active, is_delete].some(item=> typeof item !== 'undefined')) {
+                res.json({
+                    message: 'At least one field required',
+                }, 400);
+                return resolve();
+            }
+
+            let sectionData = sectionsData.schools;
+            let mapping = filterMappings.schools;
+            let filters = await getFilters();
+            let filter = filters.byToken[mapping.token];
+
+            if (!filter) {
+                res.json({
+                    message: 'Filter not found'
+                }, 400);
+                return resolve();
+            }
+
+            let person = await getPerson(person_token);
+            if (!person) {
+                res.json({
+                    message: 'Person not found'
+                }, 400);
+                return resolve();
+            }
+
+            //find option
+            let cache_key = sectionData.cacheKeys.schools.byHashKey(hash_token);
+            let option = await cacheService.hGetItem(cache_key, token);
+
+            if(token !== 'any' && !option) {
+                res.json({
+                    message: 'Invalid token'
+                }, 400);
+
+                return resolve();
+            }
+
+            let conn = await dbService.conn();
+            let person_filter_cache_key = cacheService.keys.person_filters(person_token);
+            let person_filters = await getPersonFilters(person);
+            let now = timeNow();
+
+            let existingFilter = person_filters[filter.token];
+
+            // Initialize filter structure if it doesn't exist
+            if (!existingFilter) {
+                const baseEntry = createFilterEntry(filter.id, {
+                    person_id: person.id
+                });
+
+                existingFilter = {
+                    ...baseEntry,
+                    items: {}
+                };
+                person_filters[filter.token] = existingFilter;
+            } else if (!existingFilter.items) {
+                existingFilter.items = {};
+            }
+
+            if (token === 'any') {
+                // Handle 'any' selection - clear all existing filters
+                if(Object.keys(existingFilter.items).length)
+                    await conn('persons_filters')
+                        .where('person_id', person.id)
+                        .where('filter_id', filter.id)
+                        .update({
+                            is_active: false,
+                            updated: now,
+                        });
+
+                // Update cache
+                for (let id in existingFilter.items) {
+                    existingFilter.items[id].is_active = false;
+                    existingFilter.items[id].updated = now;
+                }
+            } else {
+                // Find existing item for option
+                const existingItem = Object.values(existingFilter.items)
+                    .find(item => item[mapping.column] === option.id);
+
+                if (existingItem) {
+                    id = existingItem.id;
+
+                   if(typeof is_delete !== 'undefined') {
+                        await conn('persons_filters')
+                            .where('person_id', person.id)
+                            .where('id', existingItem.id)
+                            .update({
+                                updated: now,
+                                deleted: now
+                            });
+
+                        existingItem.deleted = now;
+                    } else {
+                        await conn('persons_filters')
+                            .where('person_id', person.id)
+                            .where('id', existingItem.id)
+                            .update({
+                                is_active: active,
+                                updated: now,
+                                deleted: null
+                            });
+
+                        existingItem.is_active = active;
+                    }
+
+                    if(typeof is_delete === 'undefined') {
+                        existingItem.deleted = null;
+                    }
+                } else {
+                    // Create new relationship status selection
+                    let filterEntry = createFilterEntry(filter.id, {
+                        person_id: person.id,
+                        [mapping.column]: option.id,
+                        is_active: active,
+                    });
+
+                    [id] = await conn('persons_filters')
+                        .insert(filterEntry);
+
+                    filterEntry.token = token;
+                    filterEntry.name = option.name;
+
+                    existingFilter.items[id] = {
+                        ...filterEntry,
+                        id
+                    };
+                }
+            }
+
+            await cacheService.setCache(person_filter_cache_key, person_filters);
+
+            res.json({
+                id: id,
+                success: true
+            });
+        } catch (e) {
+            console.error(e);
+            res.json({
+                message: 'Error updating filter'
             }, 400);
         }
 
@@ -2606,6 +2792,7 @@ module.exports = {
     putGender,
     putDistance,
     putActivityTypes,
+    putSchools,
     putMovies,
     putTvShows,
     putWork,
