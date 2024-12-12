@@ -213,6 +213,7 @@ function searchMovies(search_term, category, limit = null) {
                     const finalScore = score + (isContextMatch ? 4 : 0);
 
                     return {
+                        table_key: 'movies',
                         token: movie.token,
                         name: movie.name,
                         poster: movie.poster,

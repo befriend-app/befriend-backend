@@ -2068,6 +2068,10 @@ function getMovieCategories() {
 function getMovies() {
     return new Promise(async (resolve, reject) => {
         try {
+            if(module.exports.cache.movies) {
+                return resolve(module.exports.cache.movies);
+            }
+
             let section = sectionsData.movies;
 
             // Get categories data
@@ -2091,6 +2095,8 @@ function getMovies() {
                     return acc;
                 }, []),
             };
+
+            module.exports.cache.movies = data;
 
             resolve(data);
         } catch (e) {
@@ -2621,6 +2627,10 @@ function getTvCategories() {
 function getTvShows() {
     return new Promise(async (resolve, reject) => {
         try {
+            if(module.exports.cache.tv_shows) {
+                return resolve(module.exports.cache.tv_shows);
+            }
+
             const section = sectionsData.tv_shows;
             const categoryData = await getTvCategories();
 
@@ -2639,6 +2649,8 @@ function getTvShows() {
                     isFavorable: section.tables[key].isFavorable,
                 })),
             };
+
+            module.exports.cache.tv_shows = data;
 
             resolve(data);
         } catch (e) {
