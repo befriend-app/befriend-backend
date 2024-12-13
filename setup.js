@@ -8,7 +8,7 @@ loadScriptEnv();
         //setup db
         await require('./setup/migrate').main();
 
-        //load data
+        //add/update data
         await require('./setup/modes').main();
         await require('./setup/genders').main();
         await require('./setup/activity-types').main();

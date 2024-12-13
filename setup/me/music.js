@@ -183,6 +183,7 @@ function syncArtists() {
                             token: item.token,
                             name: item.name,
                             sort_name: item.sort_name,
+                            spotify_id: item.spotify_id,
                             spotify_followers: item.spotify_followers,
                             spotify_popularity: item.spotify_popularity,
                             spotify_genres: item.spotify_genres,
