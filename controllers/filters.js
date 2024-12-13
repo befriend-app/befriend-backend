@@ -25,6 +25,7 @@ const { getSmoking } = require('../services/smoking');
 const { getReligions } = require('../services/religion');
 
 let sectionsData = require('../services/sections_data');
+const { getNetworksForFilters } = require('../services/network');
 
 function createFilterEntry(filter_id, props = {}) {
     const now = timeNow();
@@ -63,6 +64,7 @@ function getFiltersOptions(req, res) {
     return new Promise(async (resolve, reject) => {
         try {
             let organized = {
+                networks: null,
                 movies: null,
                 tv_shows: null,
                 sports: null,
@@ -80,6 +82,8 @@ function getFiltersOptions(req, res) {
             };
 
             let person = await getPerson(req.query.person_token);
+
+            organized.networks = await getNetworksForFilters();
 
             organized.movies = await getMovies();
             organized.tv_shows = await getTvShows();

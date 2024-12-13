@@ -1,4 +1,5 @@
 const axios = require('axios');
+const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 
 const {
@@ -381,6 +382,52 @@ module.exports = {
                 resolve(qry);
             } catch (e) {
                 reject(e);
+            }
+        });
+    },
+    getNetworksForFilters: function () {
+        return new Promise(async (resolve, reject) => {
+            let cache_key = cacheService.keys.networks_filters;
+
+            try {
+                let cache_data = await cacheService.getObj(cache_key);
+
+                if (cache_data) {
+                    return resolve(cache_data);
+                }
+
+                let conn = await dbService.conn();
+
+                let networks = await conn('networks AS n')
+                    .where('is_active', true)
+                    .where('is_blocked', false)
+                    // .where('created', '<', timeNow() - 60000)
+                    .orderBy('n.is_self', 'desc')
+                    .orderBy('n.is_befriend', 'desc')
+                    .orderBy('n.is_trusted', 'desc')
+                    .orderBy('n.priority', 'asc')
+                    .select(
+                        'n.network_token',
+                        'n.network_name',
+                        'n.network_logo',
+                        'n.base_domain',
+                        'n.api_domain',
+                        'n.priority',
+                        'n.is_self',
+                        'n.is_befriend',
+                        'n.is_trusted',
+                        'n.is_online',
+                        'n.last_online',
+                        'n.created',
+                        'n.updated',
+                    );
+
+                await cacheService.setCache(cache_key, networks);
+
+                resolve(networks);
+            } catch (e) {
+                console.error(e);
+                return reject(e);
             }
         });
     },

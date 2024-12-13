@@ -32,7 +32,9 @@ let max_request_count = 1000;
     let self_network = await getNetworkSelf();
 
     if (!self_network) {
-        console.error('Network not setup: run setup.js then start server.js');
+        console.error(
+            'Network not setup: 1) Setup system: `node setup.js` 2) Start server: `node server.js`',
+        );
         process.exit(1);
     }
 
@@ -102,17 +104,15 @@ let max_request_count = 1000;
                 batch_insert.push(person_insert);
             }
 
-            let ids_output = await batchInsert('persons', batch_insert);
+            await batchInsert('persons', batch_insert, true);
 
-            for (let ids of ids_output) {
-                for (let person_id = ids[0]; person_id < ids[1]; person_id++) {
-                    person_network_insert.push({
-                        person_id: person_id,
-                        network_id: self_network.id,
-                        created: timeNow(),
-                        updated: timeNow(),
-                    });
-                }
+            for (let person of batch_insert) {
+                person_network_insert.push({
+                    person_id: person.id,
+                    network_id: self_network.id,
+                    created: timeNow(),
+                    updated: timeNow(),
+                });
             }
 
             try {

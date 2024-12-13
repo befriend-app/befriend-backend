@@ -42,7 +42,7 @@ module.exports = {
                 let cache_key = cacheService.keys.networks;
                 let cache_data = await cacheService.getObj(cache_key);
 
-                if(cache_data) {
+                if (cache_data) {
                     return resolve(cache_data);
                 }
 
@@ -66,6 +66,7 @@ module.exports = {
                         'n.is_trusted',
                         'n.is_online',
                         'n.is_blocked',
+                        'n.is_active',
                         'n.last_online',
                         'n.created',
                         'n.updated',

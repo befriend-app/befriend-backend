@@ -1,8 +1,8 @@
 const redis = require('redis');
-const { timeNow } = require('./shared');
 
 const standardKeys = {
     networks: 'networks',
+    networks_filters: 'networks:filters',
     ws: 'ws:messages',
     activity_types: 'activity_types',
     activity_type_default: 'activity_type:default',
