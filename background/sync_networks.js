@@ -50,11 +50,11 @@ loadScriptEnv();
                     try {
                         let r = await axios.get(getURL(domain, `networks`));
 
-                        if (r.data && r.data.networks) {
+                        if (r.data?.networks) {
                             is_network_data_received = true;
 
                             for (let network of r.data.networks) {
-                                //do not do anything if network belongs to me
+                                //do not do anything if is my network
                                 if (my_network.network_token === network.network_token) {
                                     continue;
                                 }

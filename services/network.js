@@ -190,11 +190,11 @@ module.exports = {
                     }
 
                     if (!network_data.admin_name) {
-                        // missing.push('ADMIN_NAME');
+                        missing.push('ADMIN_NAME');
                     }
 
                     if (!network_data.admin_email) {
-                        // missing.push('ADMIN_EMAIL');
+                        missing.push('ADMIN_EMAIL');
                     }
 
                     if (network_data.network_name && network_data.network_name.startsWith('<')) {
