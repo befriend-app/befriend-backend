@@ -64,9 +64,9 @@ module.exports = {
                         'n.is_network_known',
                         'n.is_befriend',
                         'n.is_trusted',
-                        'n.is_online',
-                        'n.is_blocked',
                         'n.is_active',
+                        'n.is_blocked',
+                        'n.is_online',
                         'n.last_online',
                         'n.created',
                         'n.updated',
@@ -244,6 +244,7 @@ module.exports = {
                     is_befriend: false,
                     is_trusted: false,
                     is_blocked: false,
+                    is_active: false,
                     is_online: true,
                     last_online: timeNow(),
                     admin_name: data.admin_name || null,
@@ -252,6 +253,7 @@ module.exports = {
                     updated: timeNow(),
                 };
 
+                //add network with is_active=false
                 await conn('networks').insert(network_data);
 
                 //delete cache after adding
@@ -291,8 +293,6 @@ module.exports = {
                     },
                     400,
                 );
-
-                return resolve();
             }
 
             return resolve();

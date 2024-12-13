@@ -30,6 +30,7 @@ module.exports = {
         'is_self',
         'is_befriend',
         'is_trusted',
+        'is_active',
         'is_blocked',
         'is_online',
         'last_online',
@@ -101,9 +102,6 @@ module.exports = {
 
             resolve();
         });
-    },
-    loadNetworkToken: function () {
-        return new Promise(async (resolve, reject) => {});
     },
     init: function () {
         return new Promise(async (resolve, reject) => {
