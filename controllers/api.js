@@ -33,11 +33,19 @@ const {
     normalizeSearch,
 } = require('../services/shared');
 const { getActivityTypes } = require('../services/activities');
+const { deleteKeys } = require('../services/cache');
 
 module.exports = {
     getNetworks: function (req, res) {
         return new Promise(async (resolve, reject) => {
             try {
+                let cache_key = cacheService.keys.networks;
+                let cache_data = await cacheService.getObj(cache_key);
+
+                if(cache_data) {
+                    return resolve(cache_data);
+                }
+
                 let conn = await dbService.conn();
 
                 let networks = await conn('networks AS n')
@@ -63,6 +71,8 @@ module.exports = {
                         'n.updated',
                         'n2.network_token AS registration_network_token',
                     );
+
+                await cacheService.setCache(cache_key, cache_data);
 
                 res.json({
                     networks: networks,
@@ -242,6 +252,9 @@ module.exports = {
                 };
 
                 await conn('networks').insert(network_data);
+
+                //delete cache after adding
+                await deleteKeys(cacheService.keys.networks);
 
                 //continue key exchange process
                 let secret_key_me = generateToken(40);
