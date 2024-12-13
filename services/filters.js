@@ -434,16 +434,7 @@ function getModes() {
             return resolve(module.exports.modes);
         }
 
-        let cache_key = cacheService.keys.modes;
-
         try {
-            let cache_data = await cacheService.getObj(cache_key);
-
-            if (cache_data) {
-                module.exports.modes = cache_data;
-                return resolve(cache_data);
-            }
-
             let conn = await dbService.conn();
 
             let data = await conn('modes').whereNull('deleted');
@@ -456,8 +447,6 @@ function getModes() {
                 },
                 { byId: {}, byToken: {} },
             );
-
-            await cacheService.setCache(cache_key, organized);
 
             module.exports.modes = organized;
 
