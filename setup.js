@@ -3,7 +3,6 @@ loadScriptEnv();
 
 (async function () {
     try {
-
         let time_start = timeNow(true);
 
         //setup db
@@ -18,7 +17,7 @@ loadScriptEnv();
         await require('./setup/me').main();
 
         console.log({
-            setup_time: getTimeFromSeconds(timeNow(true) - time_start)
+            setup_time: getTimeFromSeconds(timeNow(true) - time_start),
         });
     } catch (e) {
         console.error(e);

@@ -23,32 +23,29 @@ function main() {
                     name: 'Solo',
                     sort_position: 1,
                     created: now,
-                    updated: now
+                    updated: now,
                 },
                 {
                     token: 'partner',
                     name: 'Partner',
                     sort_position: 2,
                     created: now,
-                    updated: now
+                    updated: now,
                 },
                 {
                     token: 'kids',
                     name: 'Kids',
                     sort_position: 3,
                     created: now,
-                    updated: now
-                }
+                    updated: now,
+                },
             ];
 
-            for(let mode of modes) {
-                let qry = await conn(table_name)
-                    .where('token', mode.token)
-                    .first();
+            for (let mode of modes) {
+                let qry = await conn(table_name).where('token', mode.token).first();
 
-                if(!qry) {
-                    await conn(table_name)
-                        .insert(mode)
+                if (!qry) {
+                    await conn(table_name).insert(mode);
                 }
             }
         } catch (e) {

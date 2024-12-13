@@ -126,7 +126,7 @@ module.exports = {
         ...keyFunctions,
         sectionKeys,
         mediaKeys,
-        sportsKeys
+        sportsKeys,
     },
     init: function () {
         return new Promise(async (resolve, reject) => {
@@ -246,7 +246,7 @@ module.exports = {
                 let data = await module.exports.conn.get(key);
 
                 try {
-                    let parsed = JSON.parse(data)
+                    let parsed = JSON.parse(data);
                     return resolve(parsed);
                 } catch (e) {
                     return resolve(null);

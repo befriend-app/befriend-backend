@@ -23,7 +23,7 @@ const filterTables = {
     politics: { column: 'politics_id', table: 'politics' },
     religion: { column: 'religion_id', table: 'religions' },
     book: { column: 'book_id', table: 'books' },
-    book_author: { column: 'book_author_id', table: 'authors' }
+    book_author: { column: 'book_author_id', table: 'authors' },
 };
 
 const sharedCols = {
@@ -46,99 +46,120 @@ const timestampCols = (table) => {
     table.bigInteger('created').notNullable();
     table.bigInteger('updated').notNullable();
     table.bigInteger('deleted').nullable();
-}
+};
 
 /**
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
-exports.up = async function(knex) {
+exports.up = async function (knex) {
     await knex.schema.dropTableIfExists('persons_filters');
     await knex.schema.dropTableIfExists('activities_filters');
     await knex.schema.dropTableIfExists('filters');
 
-    await knex.schema
-        .createTable('filters', table => {
-            table.increments('id').unsigned().primary();
-            table.string('token').notNullable().comment('Unique system-wide');
-            table.string('name').notNullable();
-            table.integer('position').notNullable().defaultTo(0);
+    await knex.schema.createTable('filters', (table) => {
+        table.increments('id').unsigned().primary();
+        table.string('token').notNullable().comment('Unique system-wide');
+        table.string('name').notNullable();
+        table.integer('position').notNullable().defaultTo(0);
 
-            table.boolean('is_single').notNullable().defaultTo(false);
-            table.boolean('is_multi').notNullable().defaultTo(false);
+        table.boolean('is_single').notNullable().defaultTo(false);
+        table.boolean('is_multi').notNullable().defaultTo(false);
 
-            table.boolean('is_network').notNullable().defaultTo(false);
-            table.boolean('is_activity_type').notNullable().defaultTo(false);
-            table.boolean('is_mode').notNullable().defaultTo(false);
-            table.boolean('is_day_of_week').notNullable().defaultTo(false);
-            table.boolean('is_time_of_day').notNullable().defaultTo(false);
+        table.boolean('is_network').notNullable().defaultTo(false);
+        table.boolean('is_activity_type').notNullable().defaultTo(false);
+        table.boolean('is_mode').notNullable().defaultTo(false);
+        table.boolean('is_day_of_week').notNullable().defaultTo(false);
+        table.boolean('is_time_of_day').notNullable().defaultTo(false);
 
-            table.boolean('is_distance').notNullable().defaultTo(false);
+        table.boolean('is_distance').notNullable().defaultTo(false);
 
-            //reviews
-            table.boolean('is_review_safe').notNullable().defaultTo(false);
-            table.boolean('is_review_trust').notNullable().defaultTo(false);
-            table.boolean('is_review_timeliness').notNullable().defaultTo(false);
-            table.boolean('is_review_friendliness').notNullable().defaultTo(false);
-            table.boolean('is_review_fun').notNullable().defaultTo(false);
-            table.boolean('is_review_unrated').notNullable().defaultTo(false);
+        //reviews
+        table.boolean('is_review_safe').notNullable().defaultTo(false);
+        table.boolean('is_review_trust').notNullable().defaultTo(false);
+        table.boolean('is_review_timeliness').notNullable().defaultTo(false);
+        table.boolean('is_review_friendliness').notNullable().defaultTo(false);
+        table.boolean('is_review_fun').notNullable().defaultTo(false);
+        table.boolean('is_review_unrated').notNullable().defaultTo(false);
 
-            //verifications
-            table.boolean('is_verification_linkedin').notNullable().defaultTo(false);
-            table.boolean('is_verification_dl').notNullable().defaultTo(false).comment(`Driver's license`);
-            table.boolean('is_verification_cc').notNullable().defaultTo(false).comment('Credit card');
-            table.boolean('is_verification_video').notNullable().defaultTo(false);
-            table.boolean('is_verification_in_person').notNullable().defaultTo(false);
-            table.boolean('is_verification_mailer').notNullable().defaultTo(false);
+        //verifications
+        table.boolean('is_verification_linkedin').notNullable().defaultTo(false);
+        table
+            .boolean('is_verification_dl')
+            .notNullable()
+            .defaultTo(false)
+            .comment(`Driver's license`);
+        table.boolean('is_verification_cc').notNullable().defaultTo(false).comment('Credit card');
+        table.boolean('is_verification_video').notNullable().defaultTo(false);
+        table.boolean('is_verification_in_person').notNullable().defaultTo(false);
+        table.boolean('is_verification_mailer').notNullable().defaultTo(false);
 
-            //sections
-            table.boolean('is_age').notNullable().defaultTo(false);
-            table.boolean('is_gender').notNullable().defaultTo(false);
-            table.boolean('is_life_stage').notNullable().defaultTo(false);
-            table.boolean('is_relationship').notNullable().defaultTo(false);
-            table.boolean('is_school').notNullable().defaultTo(false);
+        //sections
+        table.boolean('is_age').notNullable().defaultTo(false);
+        table.boolean('is_gender').notNullable().defaultTo(false);
+        table.boolean('is_life_stage').notNullable().defaultTo(false);
+        table.boolean('is_relationship').notNullable().defaultTo(false);
+        table.boolean('is_school').notNullable().defaultTo(false);
 
-            table.boolean('is_work_industry').notNullable().defaultTo(false);
-            table.boolean('is_work_role').notNullable().defaultTo(false);
+        table.boolean('is_work_industry').notNullable().defaultTo(false);
+        table.boolean('is_work_role').notNullable().defaultTo(false);
 
-            table.boolean('is_sport_play').notNullable().defaultTo(false);
-            table.boolean('is_sport_league').notNullable().defaultTo(false);
-            table.boolean('is_sport_team').notNullable().defaultTo(false);
-            table.boolean('is_movie_genre').notNullable().defaultTo(false);
-            table.boolean('is_movies').notNullable().defaultTo(false);
-            table.boolean('is_tv_show_genre').notNullable().defaultTo(false);
-            table.boolean('is_tv_shows').notNullable().defaultTo(false);
-            table.boolean('is_music_artist').notNullable().defaultTo(false);
-            table.boolean('is_music_genre').notNullable().defaultTo(false);
-            table.boolean('is_instruments').notNullable().defaultTo(false);
-            table.boolean('is_languages').notNullable().defaultTo(false);
-            table.boolean('is_drinking').notNullable().defaultTo(false);
-            table.boolean('is_smoking').notNullable().defaultTo(false);
-            table.boolean('is_politics').notNullable().defaultTo(false);
-            table.boolean('is_religion').notNullable().defaultTo(false);
-            table.boolean('is_book_author').notNullable().defaultTo(false);
-            table.boolean('is_book_title').notNullable().defaultTo(false);
+        table.boolean('is_sport_play').notNullable().defaultTo(false);
+        table.boolean('is_sport_league').notNullable().defaultTo(false);
+        table.boolean('is_sport_team').notNullable().defaultTo(false);
+        table.boolean('is_movie_genre').notNullable().defaultTo(false);
+        table.boolean('is_movies').notNullable().defaultTo(false);
+        table.boolean('is_tv_show_genre').notNullable().defaultTo(false);
+        table.boolean('is_tv_shows').notNullable().defaultTo(false);
+        table.boolean('is_music_artist').notNullable().defaultTo(false);
+        table.boolean('is_music_genre').notNullable().defaultTo(false);
+        table.boolean('is_instruments').notNullable().defaultTo(false);
+        table.boolean('is_languages').notNullable().defaultTo(false);
+        table.boolean('is_drinking').notNullable().defaultTo(false);
+        table.boolean('is_smoking').notNullable().defaultTo(false);
+        table.boolean('is_politics').notNullable().defaultTo(false);
+        table.boolean('is_religion').notNullable().defaultTo(false);
+        table.boolean('is_book_author').notNullable().defaultTo(false);
+        table.boolean('is_book_title').notNullable().defaultTo(false);
 
-            //other
-            table.boolean('is_birth_city').notNullable().defaultTo(false).comment(`Person born in Toronto could find other persons born in Toronto wherever they're located.`);
-            table.boolean('is_birth_country').notNullable().defaultTo(false);
-            table.boolean('is_home_city').notNullable().defaultTo(false).comment('Person who lives in London, visiting Chicago, could filter for other persons who live in London that are currently in Chicago.');
-            table.boolean('is_home_country').notNullable().defaultTo(false);
-            table.boolean('is_custom').notNullable().defaultTo(false).comment('Persons could create custom filters, be approved by our system automatically, then show up on other persons apps.');
+        //other
+        table
+            .boolean('is_birth_city')
+            .notNullable()
+            .defaultTo(false)
+            .comment(
+                `Person born in Toronto could find other persons born in Toronto wherever they're located.`,
+            );
+        table.boolean('is_birth_country').notNullable().defaultTo(false);
+        table
+            .boolean('is_home_city')
+            .notNullable()
+            .defaultTo(false)
+            .comment(
+                'Person who lives in London, visiting Chicago, could filter for other persons who live in London that are currently in Chicago.',
+            );
+        table.boolean('is_home_country').notNullable().defaultTo(false);
+        table
+            .boolean('is_custom')
+            .notNullable()
+            .defaultTo(false)
+            .comment(
+                'Persons could create custom filters, be approved by our system automatically, then show up on other persons apps.',
+            );
 
-            timestampCols(table);
-        });
+        timestampCols(table);
+    });
 
-    await knex.schema.createTable('persons_filters', table => {
+    await knex.schema.createTable('persons_filters', (table) => {
         table.increments('id').unsigned().primary();
         table.bigInteger('person_id').unsigned().notNullable().references('id').inTable('persons');
         table.integer('filter_id').unsigned().notNullable().references('id').inTable('filters');
 
-        for(let k in sharedCols) {
+        for (let k in sharedCols) {
             sharedCols[k](table);
         }
 
-        for(let k in filterTables) {
+        for (let k in filterTables) {
             let data = filterTables[k];
 
             table.integer(data.column).unsigned().nullable().references('id').inTable(data.table);
@@ -147,16 +168,21 @@ exports.up = async function(knex) {
         timestampCols(table);
     });
 
-    return knex.schema.createTable('activities_filters', table => {
+    return knex.schema.createTable('activities_filters', (table) => {
         table.increments('id').unsigned().primary();
-        table.bigInteger('activity_id').unsigned().notNullable().references('id').inTable('activities');
+        table
+            .bigInteger('activity_id')
+            .unsigned()
+            .notNullable()
+            .references('id')
+            .inTable('activities');
         table.integer('filter_id').unsigned().notNullable().references('id').inTable('filters');
 
-        for(let k in sharedCols) {
+        for (let k in sharedCols) {
             sharedCols[k](table);
         }
 
-        for(let k in filterTables) {
+        for (let k in filterTables) {
             let data = filterTables[k];
 
             table.integer(data.column).unsigned().nullable().references('id').inTable(data.table);
@@ -170,7 +196,7 @@ exports.up = async function(knex) {
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
-exports.down = async function(knex) {
+exports.down = async function (knex) {
     await knex.schema.dropTableIfExists('persons_filters');
     await knex.schema.dropTableIfExists('activities_filters');
     await knex.schema.dropTableIfExists('filters');

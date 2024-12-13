@@ -59,7 +59,7 @@ function main(is_me) {
                 cacheService.keys.movies,
                 cacheService.keys.movie_genres,
                 cacheService.keys.movies_new,
-                cacheService.keys.movies_popular
+                cacheService.keys.movies_popular,
             ];
 
             await cacheService.deleteKeys(movie_section_keys);

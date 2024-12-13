@@ -644,12 +644,12 @@ module.exports = {
         tabs: [
             {
                 name: 'Industries',
-                key: 'industries'
+                key: 'industries',
             },
             {
                 name: 'Roles',
-                key: 'roles'
-            }
+                key: 'roles',
+            },
         ],
         tables: {
             industries: {
@@ -657,34 +657,34 @@ module.exports = {
                     name: 'persons_industries',
                     cols: {
                         id: 'industry_id',
-                        token: 'industry_token'
-                    }
-                }
+                        token: 'industry_token',
+                    },
+                },
             },
             roles: {
                 user: {
                     name: 'persons_roles',
                     cols: {
                         id: 'role_id',
-                        token: 'role_token'
-                    }
-                }
-            }
+                        token: 'role_token',
+                    },
+                },
+            },
         },
         autoComplete: {
             minChars: 1,
             endpoint: '/autocomplete/work',
             placeholders: {
-                main: 'Search industries or roles'
-            }
+                main: 'Search industries or roles',
+            },
         },
         cacheKeys: {
             industries: {
-                byHash: cacheService.keys.work_industries
+                byHash: cacheService.keys.work_industries,
             },
             roles: {
-                byHash: cacheService.keys.work_roles
-            }
+                byHash: cacheService.keys.work_roles,
+            },
         },
         functions: {
             data: 'getWork',
@@ -692,8 +692,8 @@ module.exports = {
         styles: {
             rowCols: {
                 default: 'cols-2',
-                my: 'cols-1'
-            }
-        }
+                my: 'cols-1',
+            },
+        },
     },
 };

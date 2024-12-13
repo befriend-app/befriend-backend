@@ -1,5 +1,5 @@
-exports.up = async function(knex) {
-    await knex.schema.createTable('modes', table => {
+exports.up = async function (knex) {
+    await knex.schema.createTable('modes', (table) => {
         table.increments('id').primary();
         table.string('token').notNullable().unique();
         table.string('name').notNullable();
@@ -10,8 +10,14 @@ exports.up = async function(knex) {
         table.bigInteger('deleted').nullable();
     });
 
-    await knex.schema.alterTable('persons_filters', table => {
-        table.integer('mode_id').unsigned().nullable().after('network_id').references('id').inTable('modes');
+    await knex.schema.alterTable('persons_filters', (table) => {
+        table
+            .integer('mode_id')
+            .unsigned()
+            .nullable()
+            .after('network_id')
+            .references('id')
+            .inTable('modes');
     });
 };
 
@@ -19,8 +25,8 @@ exports.up = async function(knex) {
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
-exports.down = async function(knex) {
-    await knex.schema.alterTable('persons_filters', table => {
+exports.down = async function (knex) {
+    await knex.schema.alterTable('persons_filters', (table) => {
         table.dropForeign('mode_id');
         table.dropColumn('mode_id');
     });

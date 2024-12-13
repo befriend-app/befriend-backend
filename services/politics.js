@@ -3,10 +3,10 @@ const dbService = require('./db');
 
 module.exports = {
     data: null,
-    getPolitics: function() {
+    getPolitics: function () {
         return new Promise(async (resolve, reject) => {
             try {
-                if(module.exports.data) {
+                if (module.exports.data) {
                     return resolve(module.exports.data);
                 }
 
@@ -27,10 +27,10 @@ module.exports = {
                 module.exports.data = options;
 
                 return resolve(options);
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
                 return reject(e);
             }
         });
-    }
+    },
 };

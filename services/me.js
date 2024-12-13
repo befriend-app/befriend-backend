@@ -19,7 +19,6 @@ const smokingService = require('../services/smoking');
 
 const modes = ['solo', 'plus-one', 'plus-kids'];
 
-
 function getModes(me) {
     return new Promise(async (resolve, reject) => {
         let modes = {
@@ -250,7 +249,14 @@ function addKid(person_token) {
     });
 }
 
-function updateKid(person_token, kid_token, age_token = null, gender_token = null, is_select = null, is_active = null) {
+function updateKid(
+    person_token,
+    kid_token,
+    age_token = null,
+    gender_token = null,
+    is_select = null,
+    is_active = null,
+) {
     return new Promise(async (resolve, reject) => {
         try {
             let person = await getPerson(person_token);
@@ -980,7 +986,13 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
     return new Promise(async (resolve, reject) => {
         try {
             // Input validation
-            if (!person_token || !section_key || !table_key || !item_token || typeof is_select !== 'boolean') {
+            if (
+                !person_token ||
+                !section_key ||
+                !table_key ||
+                !item_token ||
+                typeof is_select !== 'boolean'
+            ) {
                 return reject('Missing required fields');
             }
 
@@ -1001,12 +1013,14 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
             }
 
             // Validate item token exists in options
-            const options = await module.exports[sectionData.functions.data]({ options_only: true });
+            const options = await module.exports[sectionData.functions.data]({
+                options_only: true,
+            });
             if (!options) {
                 return reject('Options not found');
             }
 
-            const itemOption = options.find(option => option.token === item_token);
+            const itemOption = options.find((option) => option.token === item_token);
             if (!itemOption) {
                 return reject('Invalid item token');
             }
@@ -1016,7 +1030,7 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
             const now = timeNow();
             const person_id_col = userTableData?.cols?.person_id || 'person_id';
             const cache_key = cacheService.keys.persons_section_data(person_token, section_key);
-            let cache_data = await cacheService.getObj(cache_key) || {};
+            let cache_data = (await cacheService.getObj(cache_key)) || {};
             let response_data = null;
 
             // Get existing selection
@@ -1026,14 +1040,17 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
                 .first();
 
             // Handle Single Select or Exclusive Options
-            if (sectionData.type.single || (sectionData.type.exclusive && item_token === sectionData.type.exclusive.token)) {
+            if (
+                sectionData.type.single ||
+                (sectionData.type.exclusive && item_token === sectionData.type.exclusive.token)
+            ) {
                 if (existing) {
                     // Update existing record
                     await conn(userTableData.name)
                         .where('id', existing.id)
                         .update({
                             deleted: is_select ? null : now,
-                            updated: now
+                            updated: now,
                         });
 
                     if (is_select) {
@@ -1043,7 +1060,7 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
                             name: itemOption.name,
                             created: existing.created,
                             updated: now,
-                            deleted: null
+                            deleted: null,
                         };
                     }
                 } else if (is_select) {
@@ -1052,7 +1069,7 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
                         person_id: person.id,
                         [userTableData.cols.id]: itemOption.id,
                         created: now,
-                        updated: now
+                        updated: now,
                     });
 
                     response_data = {
@@ -1060,7 +1077,7 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
                         token: item_token,
                         name: itemOption.name,
                         created: now,
-                        updated: now
+                        updated: now,
                     };
                 }
 
@@ -1071,7 +1088,7 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
                         .whereNot('id', response_data.id)
                         .update({
                             deleted: now,
-                            updated: now
+                            updated: now,
                         });
 
                     // Update cache for single select
@@ -1089,7 +1106,7 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
                         .where('id', existing.id)
                         .update({
                             deleted: is_select ? null : now,
-                            updated: now
+                            updated: now,
                         });
 
                     if (is_select) {
@@ -1098,7 +1115,7 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
                             token: item_token,
                             name: itemOption.name,
                             created: existing.created,
-                            updated: now
+                            updated: now,
                         };
                     }
                 } else if (is_select) {
@@ -1107,7 +1124,7 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
                         person_id: person.id,
                         [userTableData.cols.id]: itemOption.id,
                         created: now,
-                        updated: now
+                        updated: now,
                     });
 
                     response_data = {
@@ -1115,7 +1132,7 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
                         token: item_token,
                         name: itemOption.name,
                         created: now,
-                        updated: now
+                        updated: now,
                     };
                 }
 
@@ -1123,14 +1140,16 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
                 if (is_select && sectionData.type.exclusive) {
                     if (item_token !== sectionData.type.exclusive.token) {
                         // Deselect exclusive option if selecting something else
-                        const exclusiveOption = options.find(opt => opt.token === sectionData.type.exclusive.token);
+                        const exclusiveOption = options.find(
+                            (opt) => opt.token === sectionData.type.exclusive.token,
+                        );
                         if (exclusiveOption) {
                             await conn(userTableData.name)
                                 .where(person_id_col, person.id)
                                 .where(userTableData.cols.id, exclusiveOption.id)
                                 .update({
                                     deleted: now,
-                                    updated: now
+                                    updated: now,
                                 });
                             delete cache_data[sectionData.type.exclusive.token];
                         }
@@ -1141,7 +1160,7 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
                             .whereNot('id', response_data.id)
                             .update({
                                 deleted: now,
-                                updated: now
+                                updated: now,
                             });
                         cache_data = {};
                     }
@@ -1158,7 +1177,7 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
             // Update cache with final data
             await cacheService.setCache(cache_key, cache_data);
 
-            resolve(response_data)
+            resolve(response_data);
         } catch (e) {
             console.error(e);
             return reject(e);
@@ -1752,7 +1771,7 @@ function getGenders(params = {}) {
 function getInstruments() {
     return new Promise(async (resolve, reject) => {
         try {
-            if(module.exports.cache.instruments_common) {
+            if (module.exports.cache.instruments_common) {
                 return resolve(module.exports.cache.instruments_common);
             }
 
@@ -1797,7 +1816,7 @@ function getInstruments() {
 
 function allInstruments() {
     return new Promise(async (resolve, reject) => {
-        if(module.exports.cache.instruments) {
+        if (module.exports.cache.instruments) {
             return resolve(module.exports.cache.instruments);
         }
 
@@ -1806,7 +1825,7 @@ function allInstruments() {
         try {
             let data = await cacheService.getObj(cache_key);
 
-            if(!data) {
+            if (!data) {
                 let conn = await dbService.conn();
 
                 data = await conn('instruments').orderBy('popularity', 'desc');
@@ -1835,7 +1854,7 @@ function allInstruments() {
 function getMusic(country_code) {
     return new Promise(async (resolve, reject) => {
         try {
-            if(module.exports.cache.music) {
+            if (module.exports.cache.music) {
                 return resolve(module.exports.cache.music);
             }
 
@@ -1878,7 +1897,7 @@ function getSchools() {
     return new Promise(async (resolve, reject) => {
         //list of countries for autocomplete
         try {
-            if(module.exports.cache.schools) {
+            if (module.exports.cache.schools) {
                 return resolve(module.exports.cache.schools);
             }
 
@@ -1905,7 +1924,7 @@ function getSchools() {
                     country.name = country.country_name;
                 }
 
-                if(country.country_code && !country.code) {
+                if (country.country_code && !country.code) {
                     country.code = country.country_code;
                 }
             });
@@ -1953,7 +1972,7 @@ function getMusicCategories() {
                 {
                     table_key: 'genres',
                     name: 'Genres',
-                    category: 'genres'
+                    category: 'genres',
                 },
                 ...categoryGenres,
             ];
@@ -2079,7 +2098,7 @@ function getMovieCategories() {
 function getMovies() {
     return new Promise(async (resolve, reject) => {
         try {
-            if(module.exports.cache.movies) {
+            if (module.exports.cache.movies) {
                 return resolve(module.exports.cache.movies);
             }
 
@@ -2152,7 +2171,7 @@ function getLifeStages(params = {}) {
         try {
             let { options_only } = params;
 
-            let options = await lifeStagesService.getLifeStages()
+            let options = await lifeStagesService.getLifeStages();
 
             if (options_only) {
                 return resolve(options);
@@ -2286,7 +2305,7 @@ function getSmoking(params = {}) {
 
             let options = await smokingService.getSmoking();
 
-                if (options_only) {
+            if (options_only) {
                 return resolve(options);
             }
 
@@ -2318,8 +2337,8 @@ function getSports(params = {}) {
         try {
             let { country_code } = params;
 
-            if(module.exports.cache.sports) {
-                if(country_code && module.exports.cache.sports[country_code]) {
+            if (module.exports.cache.sports) {
+                if (country_code && module.exports.cache.sports[country_code]) {
                     return resolve(module.exports.cache.sports[country_code]);
                 }
             }
@@ -2348,7 +2367,7 @@ function getSports(params = {}) {
                 }, []),
             };
 
-            if(!module.exports.cache.sports) {
+            if (!module.exports.cache.sports) {
                 module.exports.cache.sports = {};
             }
 
@@ -2638,7 +2657,7 @@ function getTvCategories() {
 function getTvShows() {
     return new Promise(async (resolve, reject) => {
         try {
-            if(module.exports.cache.tv_shows) {
+            if (module.exports.cache.tv_shows) {
                 return resolve(module.exports.cache.tv_shows);
             }
 
@@ -2673,7 +2692,7 @@ function getTvShows() {
 
 function getWork() {
     return new Promise(async (resolve, reject) => {
-        if(module.exports.cache.work) {
+        if (module.exports.cache.work) {
             return resolve(module.exports.cache.work);
         }
 
@@ -2683,7 +2702,7 @@ function getWork() {
             // Get all industries and roles from Redis
             const [industries, roles] = await Promise.all([
                 cacheService.hGetAllObj(cacheService.keys.work_industries),
-                cacheService.hGetAllObj(cacheService.keys.work_roles)
+                cacheService.hGetAllObj(cacheService.keys.work_roles),
             ]);
 
             // Organize roles by category
@@ -2699,7 +2718,7 @@ function getWork() {
                     name: roleData.name,
                     category: 'roles',
                     category_token: roleData.category_token,
-                    table_key: 'roles'
+                    table_key: 'roles',
                 });
 
                 // Group by category
@@ -2708,7 +2727,7 @@ function getWork() {
                         table_key: 'roles',
                         heading: 'Roles',
                         name: roleData.category_name,
-                        token: roleData.category_token
+                        token: roleData.category_token,
                     };
                 }
             }
@@ -2730,7 +2749,7 @@ function getWork() {
 
             // Build category options
             const sortedRoleCategories = Object.entries(roleCategories)
-                .sort(([,a], [,b]) => a.name.localeCompare(b.name))
+                .sort(([, a], [, b]) => a.name.localeCompare(b.name))
                 .reduce((obj, [key, value]) => {
                     obj[key] = value;
                     return obj;
@@ -2739,16 +2758,13 @@ function getWork() {
             const categoryOptions = [
                 {
                     table_key: 'industries',
-                    name: 'Industries'
+                    name: 'Industries',
                 },
-                ...Object.values(sortedRoleCategories)
+                ...Object.values(sortedRoleCategories),
             ];
 
             // Combine all items
-            const itemOptions = [
-                ...industryItems,
-                ...roleItems
-            ];
+            const itemOptions = [...industryItems, ...roleItems];
 
             itemOptions.sort((a, b) => {
                 if (a.category === b.category) {
@@ -2764,15 +2780,15 @@ function getWork() {
                 options: itemOptions,
                 styles: section.styles,
                 categories: {
-                    options: categoryOptions
+                    options: categoryOptions,
                 },
                 tables: Object.keys(section.tables).reduce((acc, key) => {
                     acc.push({
                         name: key,
-                        type: section.tables[key].type
+                        type: section.tables[key].type,
                     });
                     return acc;
-                }, [])
+                }, []),
             };
 
             module.exports.cache.work = data;

@@ -31,8 +31,8 @@ let max_request_count = 1000;
     let conn = await dbService.conn();
     let self_network = await getNetworkSelf();
 
-    if(!self_network) {
-        console.error("Network not setup: run setup.js then start server.js");
+    if (!self_network) {
+        console.error('Network not setup: run setup.js then start server.js');
         process.exit(1);
     }
 

@@ -75,7 +75,7 @@ module.exports = {
         }
 
         return new Promise(async (resolve, reject) => {
-            if(module.exports.types) {
+            if (module.exports.types) {
                 return resolve(module.exports.types);
             }
 
@@ -141,26 +141,26 @@ module.exports = {
     getActivityTypesMapping: function () {
         return new Promise(async (resolve, reject) => {
             try {
-                if(module.exports.activityTypesMapping) {
+                if (module.exports.activityTypesMapping) {
                     return resolve(module.exports.activityTypesMapping);
                 }
 
                 let activityTypes = await module.exports.getActivityTypes();
                 let organized = {};
 
-                for(let id in activityTypes) {
+                for (let id in activityTypes) {
                     let level_1 = activityTypes[id];
 
                     organized[level_1.token] = id;
 
-                    if(level_1.sub) {
-                        for(let id_2 in level_1.sub) {
+                    if (level_1.sub) {
+                        for (let id_2 in level_1.sub) {
                             let level_2 = level_1.sub[id_2];
 
                             organized[level_2.token] = id_2;
 
-                            if(level_2.sub) {
-                                for(let id_3 in level_2.sub) {
+                            if (level_2.sub) {
+                                for (let id_3 in level_2.sub) {
                                     let level_3 = level_2.sub[id_3];
 
                                     organized[level_3.token] = id_3;
@@ -172,7 +172,7 @@ module.exports = {
 
                 module.exports.activityTypesMapping = organized;
                 resolve(organized);
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
                 return reject(e);
             }

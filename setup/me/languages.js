@@ -242,9 +242,7 @@ async function main() {
             await syncLanguagesCountries();
 
             // Clear caches
-            await cacheService.deleteKeys([
-                cacheService.keys.languages,
-            ]);
+            await cacheService.deleteKeys([cacheService.keys.languages]);
 
             await cacheService.deleteKeys(
                 await cacheService.getKeysWithPrefix(cacheService.keys.languages_country('')),

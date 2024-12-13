@@ -1797,13 +1797,13 @@ module.exports = {
 
                 let results = {
                     industries: [],
-                    roles: []
+                    roles: [],
                 };
 
                 // Get industries and roles from cache
                 const [industries, roles] = await Promise.all([
                     cacheService.hGetAllObj(cacheService.keys.work_industries),
-                    cacheService.hGetAllObj(cacheService.keys.work_roles)
+                    cacheService.hGetAllObj(cacheService.keys.work_roles),
                 ]);
 
                 // Function to calculate match score
@@ -1828,7 +1828,7 @@ module.exports = {
                             name: industryData.name,
                             table_key: 'industries',
                             label: 'Industry',
-                            score: score
+                            score: score,
                         });
                     }
                 }
@@ -1848,7 +1848,7 @@ module.exports = {
                             label: 'Role',
                             category_token: roleData.category_token,
                             category_name: roleData.category_name,
-                            score: score
+                            score: score,
                         });
                     }
                 }
@@ -1856,7 +1856,7 @@ module.exports = {
                 // Sort results by:
                 // 1. Score (higher first)
                 // 2. Name (alphabetically)
-                for(let k in results) {
+                for (let k in results) {
                     results[k].sort((a, b) => {
                         if (b.score !== a.score) {
                             return b.score - a.score;
@@ -1868,8 +1868,8 @@ module.exports = {
                 // Only take top results
                 res.json({
                     items: results.industries.concat(results.roles),
-                })
-            } catch(e) {
+                });
+            } catch (e) {
                 console.error(e);
                 res.json('Autocomplete error', 400);
             }

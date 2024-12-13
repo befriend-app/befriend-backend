@@ -135,11 +135,13 @@ function getTopShowsByCategory(category_token, topOnly = true) {
                     });
 
                     // Calculate recency value (higher for newer shows)
-                    const recencyYear = !showData.is_ended ? currentYear : showData.year_to || showData.year_from;
+                    const recencyYear = !showData.is_ended
+                        ? currentYear
+                        : showData.year_to || showData.year_from;
                     let recencyScore = (recencyYear - 2000) / (currentYear - 2000); // Normalize to 0-1
                     recencyScore = Math.max(recencyScore, 0);
 
-                    const combinedScore = (score * 0.4) + (recencyScore * 0.6);
+                    const combinedScore = score * 0.4 + recencyScore * 0.6;
 
                     return {
                         token: showData.token,
@@ -181,7 +183,7 @@ function tvShowsAutoComplete(search_term, context = null) {
 
             // Get show tokens matching prefix
             const showTokens = await cacheService.getSetMembers(
-                cacheService.keys.tv_prefix(prefix)
+                cacheService.keys.tv_prefix(prefix),
             );
             if (!showTokens?.length) return resolve([]);
 
@@ -193,9 +195,9 @@ function tvShowsAutoComplete(search_term, context = null) {
 
             const showsData = await pipeline.execAsPipeline();
             const processedShows = showsData
-                .map(s => s ? JSON.parse(s) : null)
-                .filter(s => s && s.name.toLowerCase().includes(searchTermLower))
-                .map(show => {
+                .map((s) => (s ? JSON.parse(s) : null))
+                .filter((s) => s && s.name.toLowerCase().includes(searchTermLower))
+                .map((show) => {
                     // Calculate base score
                     const score = calculateShowScore({
                         vote_count: show.vote_count,
@@ -247,7 +249,7 @@ function tvShowsAutoComplete(search_term, context = null) {
                         label: show.networks?.slice(0, 3)?.join(', '),
                         meta: formatShowLabel(show),
                         score: finalScore,
-                        isContextMatch
+                        isContextMatch,
                     };
                 });
 

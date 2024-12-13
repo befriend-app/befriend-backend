@@ -2,7 +2,17 @@ const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 const { getPerson } = require('../services/persons');
 const { timeNow } = require('../services/shared');
-const { getGenders, getInstruments, allInstruments, getWork, getMusic, getSports, getMovies, getTvShows, getSchools } = require('../services/me');
+const {
+    getGenders,
+    getInstruments,
+    allInstruments,
+    getWork,
+    getMusic,
+    getSports,
+    getMovies,
+    getTvShows,
+    getSchools,
+} = require('../services/me');
 const { saveAvailabilityData } = require('../services/availability');
 const { filterMappings, getFilters, getPersonFilters, getModes } = require('../services/filters');
 const { getActivityTypesMapping } = require('../services/activities');
@@ -32,7 +42,7 @@ function createFilterEntry(filter_id, props = {}) {
             is_negative: false,
             created: now,
             updated: now,
-            ...props
+            ...props,
         };
     }
 
@@ -45,70 +55,72 @@ function createFilterEntry(filter_id, props = {}) {
         is_active: true,
         created: now,
         updated: now,
-        ...props
+        ...props,
     };
 }
 
 function getFiltersOptions(req, res) {
     return new Promise(async (resolve, reject) => {
-          try {
-               let organized = {
-                   schools: null,
-                   movies: null,
-                   tv_shows: null,
-                   music: null,
-                   instruments: null,
-                   sports: null,
-                   work: null,
-                   life_stages: null,
-                   relationship: null,
-                   languages: null,
-                   politics: null,
-                   religion: null,
-                   drinking: null,
-                   smoking: null
-               };
+        try {
+            let organized = {
+                movies: null,
+                tv_shows: null,
+                sports: null,
+                music: null,
+                instruments: null,
+                schools: null,
+                work: null,
+                life_stages: null,
+                relationship: null,
+                languages: null,
+                politics: null,
+                religion: null,
+                drinking: null,
+                smoking: null,
+            };
 
-               let person = await getPerson(req.query.person_token);
+            let person = await getPerson(req.query.person_token);
 
-               organized.schools = await getSchools();
-               organized.movies = await getMovies();
-               organized.tv_shows = await getTvShows();
-               organized.music = await getMusic(person?.country_code);
-               organized.instruments = await getInstruments()
-               organized.sports = await getSports({
-                   country_code: person?.country_code
-               });
-               organized.work = await getWork();
-               organized.life_stages = await getLifeStages();
-               organized.relationship = await getRelationshipStatus();
-               organized.languages = await getLanguagesCountry(person?.country_code);
-               organized.politics = await getPolitics();
-               organized.religion = await getReligions();
-               organized.drinking = await getDrinking();
-               organized.smoking = await getSmoking();
+            organized.movies = await getMovies();
+            organized.tv_shows = await getTvShows();
+            organized.sports = await getSports({
+                country_code: person?.country_code,
+            });
+            organized.music = await getMusic(person?.country_code);
+            organized.instruments = await getInstruments();
+            organized.schools = await getSchools();
+            organized.work = await getWork();
+            organized.life_stages = await getLifeStages();
+            organized.relationship = await getRelationshipStatus();
+            organized.languages = await getLanguagesCountry(person?.country_code);
+            organized.politics = await getPolitics();
+            organized.religion = await getReligions();
+            organized.drinking = await getDrinking();
+            organized.smoking = await getSmoking();
 
-               res.json(organized);
-          } catch(e) {
-              console.error(e);
-              res.json("Error getting filter options", 400);
-          }
+            res.json(organized);
+        } catch (e) {
+            console.error(e);
+            res.json('Error getting filter options', 400);
+        }
 
-          resolve();
+        resolve();
     });
 }
 
 function handleFilterUpdate(req, res, filterType) {
     function getFilterTypeStr() {
-        if(filterType.toLowerCase().startsWith('relationship')) {
+        if (filterType.toLowerCase().startsWith('relationship')) {
             return 'relationship_status';
         }
 
-        if(filterType.toLowerCase().startsWith('politics')) {
+        if (filterType.toLowerCase().startsWith('politics')) {
             return filterType;
         }
 
-        return filterType.endsWith('s') ? filterType.substring(0, filterType.length - 1) : filterType;
+        return filterType.endsWith('s')
+            ? filterType.substring(0, filterType.length - 1)
+            : filterType;
     }
 
     let filterFunctionMap = {
@@ -132,18 +144,24 @@ function handleFilterUpdate(req, res, filterType) {
 
             // Input validation
             if (!token || typeof active !== 'boolean') {
-                res.json({
-                    message: `${filterType} token and active state required`
-                }, 400);
+                res.json(
+                    {
+                        message: `${filterType} token and active state required`,
+                    },
+                    400,
+                );
                 return resolve();
             }
 
             // Get person
             const person = await getPerson(person_token);
             if (!person) {
-                res.json({
-                    message: 'Person not found'
-                }, 400);
+                res.json(
+                    {
+                        message: 'Person not found',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
@@ -154,14 +172,17 @@ function handleFilterUpdate(req, res, filterType) {
             let function_call = filterFunctionMap[filterType];
 
             if (!mapping || !filter || !function_call) {
-                res.json({
-                    message: 'Invalid filter type'
-                }, 400);
+                res.json(
+                    {
+                        message: 'Invalid filter type',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
             let options = await function_call();
-            let option = options.find(item => item.token === token);
+            let option = options.find((item) => item.token === token);
 
             const conn = await dbService.conn();
             const cache_key = cacheService.keys.person_filters(person_token);
@@ -173,12 +194,12 @@ function handleFilterUpdate(req, res, filterType) {
             // Initialize filter structure if it doesn't exist
             if (!existingFilter) {
                 const baseEntry = createFilterEntry(filter.id, {
-                    person_id: person.id
+                    person_id: person.id,
                 });
 
                 existingFilter = {
                     ...baseEntry,
-                    items: {}
+                    items: {},
                 };
                 person_filters[filter.token] = existingFilter;
             } else if (!existingFilter.items) {
@@ -187,14 +208,14 @@ function handleFilterUpdate(req, res, filterType) {
 
             if (token === 'any') {
                 // Handle 'any' selection - clear all existing filters
-                if(Object.keys(existingFilter.items).length)
+                if (Object.keys(existingFilter.items).length)
                     await conn('persons_filters')
                         .where('person_id', person.id)
                         .where('filter_id', filter.id)
                         .update({
                             is_negative: false,
                             updated: now,
-                            deleted: true
+                            deleted: true,
                         });
 
                 // Update cache
@@ -207,8 +228,9 @@ function handleFilterUpdate(req, res, filterType) {
                 // Handle specific selection
 
                 // Find existing item for option
-                const existingItem = Object.values(existingFilter.items)
-                    .find(item => item[mapping.column] === option.id);
+                const existingItem = Object.values(existingFilter.items).find(
+                    (item) => item[mapping.column] === option.id,
+                );
 
                 if (existingItem) {
                     id = existingItem.id;
@@ -220,7 +242,7 @@ function handleFilterUpdate(req, res, filterType) {
                         .update({
                             is_negative: !active,
                             updated: now,
-                            deleted: null
+                            deleted: null,
                         });
 
                     existingItem.is_negative = !active;
@@ -231,17 +253,16 @@ function handleFilterUpdate(req, res, filterType) {
                     const filterEntry = createFilterEntry(filter.id, {
                         person_id: person.id,
                         [mapping.column]: option.id,
-                        is_negative: !active
+                        is_negative: !active,
                     });
 
-                    [id] = await conn('persons_filters')
-                        .insert(filterEntry);
+                    [id] = await conn('persons_filters').insert(filterEntry);
 
                     filterEntry.token = token;
 
                     existingFilter.items[id] = {
                         ...filterEntry,
-                        id
+                        id,
                     };
                 }
             }
@@ -250,13 +271,16 @@ function handleFilterUpdate(req, res, filterType) {
             await cacheService.setCache(cache_key, person_filters);
             res.json({
                 id,
-                success: true
+                success: true,
             });
         } catch (error) {
             console.error(`Error in ${filterType} filter update:`, error);
-            res.json({
-                message: error.message || `Error updating ${filterType} filter`
-            }, 500);
+            res.json(
+                {
+                    message: error.message || `Error updating ${filterType} filter`,
+                },
+                500,
+            );
         }
 
         resolve();
@@ -268,10 +292,13 @@ function putActive(req, res) {
         try {
             let { person_token, filter_token, active } = req.body;
 
-            if(typeof filter_token !== 'string' || typeof active !== 'boolean') {
-                res.json({
-                    message: 'Filter and state required',
-                }, 400);
+            if (typeof filter_token !== 'string' || typeof active !== 'boolean') {
+                res.json(
+                    {
+                        message: 'Filter and state required',
+                    },
+                    400,
+                );
 
                 return resolve();
             }
@@ -280,19 +307,25 @@ function putActive(req, res) {
             let filter = filters.byToken[filter_token];
             let mapping = filterMappings[filter_token];
 
-            if(!filter || !mapping) {
-                res.json({
-                    message: 'Invalid filter',
-                }, 400);
+            if (!filter || !mapping) {
+                res.json(
+                    {
+                        message: 'Invalid filter',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
             let person = await getPerson(person_token);
 
-            if(!person) {
-                res.json({
-                    message: 'Person not found'
-                }, 400);
+            if (!person) {
+                res.json(
+                    {
+                        message: 'Person not found',
+                    },
+                    400,
+                );
 
                 return resolve();
             }
@@ -312,15 +345,15 @@ function putActive(req, res) {
                     .where('filter_id', filter.id)
                     .update({
                         is_active: active,
-                        updated: now
+                        updated: now,
                     });
 
                 // Update cache
                 existingFilter.is_active = active;
                 existingFilter.updated = now;
 
-                if(existingFilter.items) {
-                    for(let k in existingFilter.items) {
+                if (existingFilter.items) {
+                    for (let k in existingFilter.items) {
                         existingFilter.items[k].is_active = active;
                     }
                 }
@@ -328,30 +361,34 @@ function putActive(req, res) {
                 // Create new filter entry
                 const filterEntry = createFilterEntry(filter.id, {
                     person_id: person.id,
-                    is_active: active
+                    is_active: active,
                 });
 
-                const [id] = await conn('persons_filters')
-                    .insert(filterEntry);
+                const [id] = await conn('persons_filters').insert(filterEntry);
 
-                person_filters[filter_token] = mapping.multi ? {
-                    ...filterEntry,
-                    id,
-                    items: {}
-                } : {
-                    ...filterEntry,
-                    id
-                };
+                person_filters[filter_token] = mapping.multi
+                    ? {
+                          ...filterEntry,
+                          id,
+                          items: {},
+                      }
+                    : {
+                          ...filterEntry,
+                          id,
+                      };
             }
 
             await cacheService.setCache(person_filter_cache_key, person_filters);
 
-            res.json("Updated");
-        } catch(e) {
+            res.json('Updated');
+        } catch (e) {
             console.error(e);
-            res.json({
-                message: 'Error updating filter'
-            }, 400);
+            res.json(
+                {
+                    message: 'Error updating filter',
+                },
+                400,
+            );
         }
 
         resolve();
@@ -363,23 +400,32 @@ function putImportance(req, res) {
         try {
             let { person_token, section, filter_item_id, importance } = req.body;
 
-            if(
+            if (
                 typeof filter_item_id !== 'number' ||
                 typeof section !== 'string' ||
-                typeof importance !== 'number' || importance < 0 || importance > 10) {
-                res.json({
-                    message: 'Filter and state required',
-                }, 400);
+                typeof importance !== 'number' ||
+                importance < 0 ||
+                importance > 10
+            ) {
+                res.json(
+                    {
+                        message: 'Filter and state required',
+                    },
+                    400,
+                );
 
                 return resolve();
             }
 
             let person = await getPerson(person_token);
 
-            if(!person) {
-                res.json({
-                    message: 'Person not found'
-                }, 400);
+            if (!person) {
+                res.json(
+                    {
+                        message: 'Person not found',
+                    },
+                    400,
+                );
 
                 return resolve();
             }
@@ -390,10 +436,13 @@ function putImportance(req, res) {
             let person_filters = await getPersonFilters(person);
             let now = timeNow();
 
-            if(!person_filters?.[section]?.items?.[filter_item_id]) {
-                res.json({
-                    message: 'Invalid filter item'
-                }, 400);
+            if (!person_filters?.[section]?.items?.[filter_item_id]) {
+                res.json(
+                    {
+                        message: 'Invalid filter item',
+                    },
+                    400,
+                );
 
                 return resolve();
             }
@@ -403,19 +452,22 @@ function putImportance(req, res) {
                 .where('id', filter_item_id)
                 .update({
                     importance: importance,
-                    updated: now
+                    updated: now,
                 });
 
             person_filters[section].items[filter_item_id].importance = importance;
 
             await cacheService.setCache(person_filter_cache_key, person_filters);
 
-            res.json("Updated");
-        } catch(e) {
+            res.json('Updated');
+        } catch (e) {
             console.error(e);
-            res.json({
-                message: 'Error updating filter'
-            }, 400);
+            res.json(
+                {
+                    message: 'Error updating filter',
+                },
+                400,
+            );
         }
 
         resolve();
@@ -429,17 +481,23 @@ function putSendReceive(req, res) {
 
             // Validate required fields
             if (!filter_token || !type || typeof enabled !== 'boolean') {
-                res.json({
-                    message: 'Filter token, type and enabled state required',
-                }, 400);
+                res.json(
+                    {
+                        message: 'Filter token, type and enabled state required',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
             // Validate type
             if (!['send', 'receive'].includes(type)) {
-                res.json({
-                    message: 'Invalid type - must be send or receive',
-                }, 400);
+                res.json(
+                    {
+                        message: 'Invalid type - must be send or receive',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
@@ -449,18 +507,24 @@ function putSendReceive(req, res) {
             let mapping = filterMappings[filter_token];
 
             if (!filter || !mapping) {
-                res.json({
-                    message: 'Invalid filter',
-                }, 400);
+                res.json(
+                    {
+                        message: 'Invalid filter',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
             // Get person
             let person = await getPerson(person_token);
             if (!person) {
-                res.json({
-                    message: 'Person not found'
-                }, 400);
+                res.json(
+                    {
+                        message: 'Person not found',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
@@ -473,7 +537,7 @@ function putSendReceive(req, res) {
 
             if (existingFilter) {
                 let updateData = {
-                    updated: now
+                    updated: now,
                 };
                 updateData[type === 'send' ? 'is_send' : 'is_receive'] = enabled;
 
@@ -486,42 +550,46 @@ function putSendReceive(req, res) {
                 existingFilter[type === 'send' ? 'is_send' : 'is_receive'] = enabled;
                 existingFilter.updated = now;
 
-                if(existingFilter.items) {
-                    for(let k in existingFilter.items) {
-                        existingFilter.items[k][type === 'send' ? 'is_send' : 'is_receive'] = enabled;
+                if (existingFilter.items) {
+                    for (let k in existingFilter.items) {
+                        existingFilter.items[k][type === 'send' ? 'is_send' : 'is_receive'] =
+                            enabled;
                     }
                 }
             } else {
                 const filterEntry = createFilterEntry(filter.id, {
                     person_id: person.id,
                     is_send: type === 'send' ? enabled : true,
-                    is_receive: type === 'receive' ? enabled : true
+                    is_receive: type === 'receive' ? enabled : true,
                 });
 
-                const [id] = await conn('persons_filters')
-                    .insert(filterEntry);
+                const [id] = await conn('persons_filters').insert(filterEntry);
 
-                person_filters[filter_token] = mapping.multi ? {
-                    ...filterEntry,
-                    id,
-                    items: {}
-                } : {
-                    ...filterEntry,
-                    id
-                };
+                person_filters[filter_token] = mapping.multi
+                    ? {
+                          ...filterEntry,
+                          id,
+                          items: {},
+                      }
+                    : {
+                          ...filterEntry,
+                          id,
+                      };
             }
 
             await cacheService.setCache(person_filter_cache_key, person_filters);
 
             res.json({
-                success: true
+                success: true,
             });
-
         } catch (e) {
             console.error(e);
-            res.json({
-                message: 'Error updating filter send/receive state'
-            }, 400);
+            res.json(
+                {
+                    message: 'Error updating filter send/receive state',
+                },
+                400,
+            );
         }
 
         resolve();
@@ -535,19 +603,25 @@ function putAvailability(req, res) {
 
             // Validate required fields
             if (!availability || typeof availability !== 'object') {
-                res.json({
-                    message: 'Invalid availability data',
-                    success: false
-                }, 400);
+                res.json(
+                    {
+                        message: 'Invalid availability data',
+                        success: false,
+                    },
+                    400,
+                );
                 return resolve();
             }
 
             const person = await getPerson(person_token);
             if (!person) {
-                res.json({
-                    message: 'Person not found',
-                    success: false
-                }, 400);
+                res.json(
+                    {
+                        message: 'Person not found',
+                        success: false,
+                    },
+                    400,
+                );
                 return resolve();
             }
 
@@ -556,10 +630,13 @@ function putAvailability(req, res) {
             res.json(result);
         } catch (error) {
             console.error('Error in putAvailability:', error);
-            res.json({
-                message: error.message || 'Error updating availability',
-                success: false
-            }, 400);
+            res.json(
+                {
+                    message: error.message || 'Error updating availability',
+                    success: false,
+                },
+                400,
+            );
         }
 
         resolve();
@@ -572,9 +649,12 @@ function putModes(req, res) {
             const { person_token, mode_token, active } = req.body;
 
             if (!mode_token || typeof active !== 'boolean') {
-                res.json({
-                    message: 'Mode token and active state required',
-                }, 400);
+                res.json(
+                    {
+                        message: 'Mode token and active state required',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
@@ -583,19 +663,25 @@ function putModes(req, res) {
             let filter = filters.byToken[mapping.token];
 
             if (!filter) {
-                res.json({
-                    message: 'Modes filter not found'
-                }, 400);
+                res.json(
+                    {
+                        message: 'Modes filter not found',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
             const person = await getPerson(person_token);
 
             if (!person) {
-                res.json({
-                    message: 'Person not found',
-                    success: false
-                }, 400);
+                res.json(
+                    {
+                        message: 'Person not found',
+                        success: false,
+                    },
+                    400,
+                );
                 return resolve();
             }
 
@@ -605,9 +691,12 @@ function putModes(req, res) {
             const soloMode = modes?.byToken?.['solo'];
 
             if (!mode) {
-                res.json({
-                    message: 'Invalid mode token'
-                }, 400);
+                res.json(
+                    {
+                        message: 'Invalid mode token',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
@@ -622,16 +711,15 @@ function putModes(req, res) {
 
             if (!existingFilter) {
                 const baseEntry = createFilterEntry(filter.id, {
-                    person_id: person.id
+                    person_id: person.id,
                 });
 
-                const [id] = await conn('persons_filters')
-                    .insert(baseEntry);
+                const [id] = await conn('persons_filters').insert(baseEntry);
 
                 existingFilter = {
                     ...baseEntry,
                     id,
-                    items: {}
+                    items: {},
                 };
                 person_filters[filter.token] = existingFilter;
             } else if (!existingFilter.items) {
@@ -639,10 +727,12 @@ function putModes(req, res) {
             }
 
             const filterItems = existingFilter.items;
-            const existingItem = Object.values(filterItems)
-                .find(item => item[mapping.column] === mode.id);
-            const existingSolo = Object.values(filterItems)
-                .find(item => item[mapping.column] === soloMode?.id);
+            const existingItem = Object.values(filterItems).find(
+                (item) => item[mapping.column] === mode.id,
+            );
+            const existingSolo = Object.values(filterItems).find(
+                (item) => item[mapping.column] === soloMode?.id,
+            );
 
             // If selecting a non-solo mode and solo isn't present, add it first
             if (active && mode_token !== 'solo' && !existingSolo && soloMode) {
@@ -650,28 +740,25 @@ function putModes(req, res) {
                     person_id: person.id,
                     [mapping.column]: soloMode.id,
                     is_negative: false,
-                    existingFilter
+                    existingFilter,
                 });
 
-                const [soloId] = await conn('persons_filters')
-                    .insert(soloEntry);
+                const [soloId] = await conn('persons_filters').insert(soloEntry);
 
                 soloEntry.mode_token = 'solo';
                 filterItems[soloId] = {
                     ...soloEntry,
-                    id: soloId
+                    id: soloId,
                 };
             }
 
             if (existingItem) {
                 if (active) {
-                    await conn('persons_filters')
-                        .where('id', existingItem.id)
-                        .update({
-                            is_negative: false,
-                            updated: now,
-                            deleted: null
-                        });
+                    await conn('persons_filters').where('id', existingItem.id).update({
+                        is_negative: false,
+                        updated: now,
+                        deleted: null,
+                    });
 
                     // Update cache
                     existingItem.is_negative = false;
@@ -679,22 +766,24 @@ function putModes(req, res) {
                     delete existingItem.deleted;
                 } else {
                     // Ensure we have more than one active mode before allowing deactivation
-                    const activeItems = Object.values(filterItems)
-                        .filter(item => !item.is_negative && !item.deleted);
+                    const activeItems = Object.values(filterItems).filter(
+                        (item) => !item.is_negative && !item.deleted,
+                    );
 
                     if (activeItems.length <= 1) {
-                        res.json({
-                            message: 'Cannot deactivate last active mode'
-                        }, 400);
+                        res.json(
+                            {
+                                message: 'Cannot deactivate last active mode',
+                            },
+                            400,
+                        );
                         return resolve();
                     }
 
-                    await conn('persons_filters')
-                        .where('id', existingItem.id)
-                        .update({
-                            is_negative: true,
-                            updated: now
-                        });
+                    await conn('persons_filters').where('id', existingItem.id).update({
+                        is_negative: true,
+                        updated: now,
+                    });
 
                     existingItem.is_negative = true;
                     existingItem.updated = now;
@@ -705,16 +794,15 @@ function putModes(req, res) {
                     person_id: person.id,
                     [mapping.column]: mode.id,
                     is_negative: false,
-                    existingFilter // Pass parent filter to inherit states
+                    existingFilter, // Pass parent filter to inherit states
                 });
 
-                const [id] = await conn('persons_filters')
-                    .insert(filterEntry);
+                const [id] = await conn('persons_filters').insert(filterEntry);
 
                 filterEntry.mode_token = mode_token;
                 filterItems[id] = {
                     ...filterEntry,
-                    id
+                    id,
                 };
             }
 
@@ -722,15 +810,18 @@ function putModes(req, res) {
             await cacheService.setCache(person_filter_cache_key, person_filters);
 
             res.json({
-                success: true
+                success: true,
             });
         } catch (error) {
             console.error('Modes error:', error);
 
-            res.json({
-                message: error.message || 'Error updating modes',
-                success: false
-            }, 400);
+            res.json(
+                {
+                    message: error.message || 'Error updating modes',
+                    success: false,
+                },
+                400,
+            );
         }
 
         resolve();
@@ -744,9 +835,12 @@ function putReviewRating(req, res) {
 
             // Validate inputs
             if (!filter_token || typeof rating !== 'number' || rating < 0 || rating > 5) {
-                res.json({
-                    message: 'Valid filter token and rating (0-5) required'
-                }, 400);
+                res.json(
+                    {
+                        message: 'Valid filter token and rating (0-5) required',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
@@ -756,18 +850,24 @@ function putReviewRating(req, res) {
             let mapping = filterMappings[filter_token];
 
             if (!filter || !mapping) {
-                res.json({
-                    message: 'Invalid filter'
-                }, 400);
+                res.json(
+                    {
+                        message: 'Invalid filter',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
             // Get person
             let person = await getPerson(person_token);
             if (!person) {
-                res.json({
-                    message: 'Person not found'
-                }, 400);
+                res.json(
+                    {
+                        message: 'Person not found',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
@@ -785,7 +885,7 @@ function putReviewRating(req, res) {
                     .where('id', existingFilter.id)
                     .update({
                         filter_value: rating.toFixed(1),
-                        updated: now
+                        updated: now,
                     });
 
                 existingFilter.filter_value = rating.toFixed(1);
@@ -794,28 +894,30 @@ function putReviewRating(req, res) {
                 // Create new filter entry
                 const filterEntry = createFilterEntry(filter.id, {
                     person_id: person.id,
-                    filter_value: rating.toFixed(1)
+                    filter_value: rating.toFixed(1),
                 });
 
-                const [id] = await conn('persons_filters')
-                    .insert(filterEntry);
+                const [id] = await conn('persons_filters').insert(filterEntry);
 
                 person_filters[filter_token] = {
                     ...filterEntry,
-                    id
+                    id,
                 };
             }
 
             await cacheService.setCache(person_filter_cache_key, person_filters);
 
             res.json({
-                success: true
+                success: true,
             });
         } catch (e) {
             console.error(e);
-            res.json({
-                message: 'Error updating review rating'
-            }, 400);
+            res.json(
+                {
+                    message: 'Error updating review rating',
+                },
+                400,
+            );
         }
 
         resolve();
@@ -828,11 +930,19 @@ function putAge(req, res) {
             const { person_token, min_age, max_age } = req.body;
 
             // Validate inputs
-            if (typeof min_age !== 'number' || typeof max_age !== 'number' ||
-                min_age < 18 || max_age > 130 || min_age > max_age) {
-                res.json({
-                    message: 'Valid age range required (18-130)'
-                }, 400);
+            if (
+                typeof min_age !== 'number' ||
+                typeof max_age !== 'number' ||
+                min_age < 18 ||
+                max_age > 130 ||
+                min_age > max_age
+            ) {
+                res.json(
+                    {
+                        message: 'Valid age range required (18-130)',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
@@ -841,18 +951,24 @@ function putAge(req, res) {
             let filter = filters.byToken['ages'];
 
             if (!filter) {
-                res.json({
-                    message: 'Age filter not found'
-                }, 400);
+                res.json(
+                    {
+                        message: 'Age filter not found',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
             // Get person
             let person = await getPerson(person_token);
             if (!person) {
-                res.json({
-                    message: 'Person not found'
-                }, 400);
+                res.json(
+                    {
+                        message: 'Person not found',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
@@ -866,13 +982,11 @@ function putAge(req, res) {
 
             if (existingFilter) {
                 // Update existing filter
-                await conn('persons_filters')
-                    .where('id', existingFilter.id)
-                    .update({
-                        filter_value_min: min_age.toString(),
-                        filter_value_max: max_age.toString(),
-                        updated: now
-                    });
+                await conn('persons_filters').where('id', existingFilter.id).update({
+                    filter_value_min: min_age.toString(),
+                    filter_value_max: max_age.toString(),
+                    updated: now,
+                });
 
                 existingFilter.filter_value_min = min_age.toString();
                 existingFilter.filter_value_max = max_age.toString();
@@ -882,28 +996,30 @@ function putAge(req, res) {
                 const filterEntry = createFilterEntry(filter.id, {
                     person_id: person.id,
                     filter_value_min: min_age.toString(),
-                    filter_value_max: max_age.toString()
+                    filter_value_max: max_age.toString(),
                 });
 
-                const [id] = await conn('persons_filters')
-                    .insert(filterEntry);
+                const [id] = await conn('persons_filters').insert(filterEntry);
 
                 person_filters['ages'] = {
                     ...filterEntry,
-                    id
+                    id,
                 };
             }
 
             await cacheService.setCache(person_filter_cache_key, person_filters);
 
             res.json({
-                success: true
+                success: true,
             });
         } catch (e) {
             console.error(e);
-            res.json({
-                message: 'Error updating age range'
-            }, 400);
+            res.json(
+                {
+                    message: 'Error updating age range',
+                },
+                400,
+            );
         }
 
         resolve();
@@ -916,9 +1032,12 @@ function putGender(req, res) {
             const { person_token, gender_token, active } = req.body;
 
             if (!gender_token || typeof active !== 'boolean') {
-                res.json({
-                    message: 'Gender token and active state required',
-                }, 400);
+                res.json(
+                    {
+                        message: 'Gender token and active state required',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
@@ -927,22 +1046,28 @@ function putGender(req, res) {
             let filter = filters.byToken[mapping.token];
 
             if (!filter) {
-                res.json({
-                    message: 'Gender filter not found'
-                }, 400);
+                res.json(
+                    {
+                        message: 'Gender filter not found',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
             let person = await getPerson(person_token);
             if (!person) {
-                res.json({
-                    message: 'Person not found'
-                }, 400);
+                res.json(
+                    {
+                        message: 'Person not found',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
             let genders = await getGenders(true);
-            let anyOption = genders.find(item => item.token === 'any');
+            let anyOption = genders.find((item) => item.token === 'any');
 
             let conn = await dbService.conn();
             let person_filter_cache_key = cacheService.keys.person_filters(person_token);
@@ -954,17 +1079,16 @@ function putGender(req, res) {
             // Initialize filter structure if it doesn't exist
             if (!existingFilter) {
                 const baseEntry = createFilterEntry(filter.id, {
-                    person_id: person.id
+                    person_id: person.id,
                 });
 
                 // Create base filter entry in database
-                const [id] = await conn('persons_filters')
-                    .insert(baseEntry);
+                const [id] = await conn('persons_filters').insert(baseEntry);
 
                 existingFilter = {
                     ...baseEntry,
                     id,
-                    items: {}
+                    items: {},
                 };
                 person_filters[filter.token] = existingFilter;
             } else if (!existingFilter.items) {
@@ -974,8 +1098,9 @@ function putGender(req, res) {
             const filterItems = existingFilter.items;
 
             // Get existing 'any' selection if it exists
-            const existingAny = Object.values(filterItems)
-                .find(item => item[mapping.column] === anyOption.id);
+            const existingAny = Object.values(filterItems).find(
+                (item) => item[mapping.column] === anyOption.id,
+            );
 
             // Handle 'any' gender selection
             if (gender_token === 'any' && active) {
@@ -984,7 +1109,7 @@ function putGender(req, res) {
                     .whereIn('id', Object.keys(person_filters[filter.token].items))
                     .update({
                         is_negative: true,
-                        updated: now
+                        updated: now,
                     });
 
                 for (let id in person_filters[filter.token].items) {
@@ -994,12 +1119,10 @@ function putGender(req, res) {
 
                 // Create or update 'any' entry
                 if (existingAny) {
-                    await conn('persons_filters')
-                        .where('id', existingAny.id)
-                        .update({
-                            is_negative: false,
-                            updated: now
-                        });
+                    await conn('persons_filters').where('id', existingAny.id).update({
+                        is_negative: false,
+                        updated: now,
+                    });
 
                     existingAny.is_negative = false;
                     existingAny.updated = now;
@@ -1008,55 +1131,54 @@ function putGender(req, res) {
                         person_id: person.id,
                         [mapping.column]: anyOption.id,
                         is_negative: false,
-                        existingFilter
+                        existingFilter,
                     });
 
-                    const [id] = await conn('persons_filters')
-                        .insert(anyEntry);
+                    const [id] = await conn('persons_filters').insert(anyEntry);
 
                     person_filters[filter.token].items[id] = {
                         ...anyEntry,
-                        id
+                        id,
                     };
                 }
             }
             // Handle specific gender selection
             else {
                 // Find matching gender from data
-                let gender = genders.find(g => g.token === gender_token);
+                let gender = genders.find((g) => g.token === gender_token);
 
                 if (!gender) {
-                    res.json({
-                        message: 'Invalid gender token'
-                    }, 400);
+                    res.json(
+                        {
+                            message: 'Invalid gender token',
+                        },
+                        400,
+                    );
                     return resolve();
                 }
 
                 // Mark 'any' selection as negative if it exists
                 if (existingAny) {
-                    await conn('persons_filters')
-                        .where('id', existingAny.id)
-                        .update({
-                            is_negative: true,
-                            updated: now
-                        });
+                    await conn('persons_filters').where('id', existingAny.id).update({
+                        is_negative: true,
+                        updated: now,
+                    });
 
                     existingAny.is_negative = true;
                     existingAny.updated = now;
                 }
 
                 // Check for existing selection
-                const existingItem = Object.values(person_filters[filter.token].items)
-                    .find(item => item[mapping.column] === gender.id);
+                const existingItem = Object.values(person_filters[filter.token].items).find(
+                    (item) => item[mapping.column] === gender.id,
+                );
 
                 if (existingItem) {
                     // Update existing entry
-                    await conn('persons_filters')
-                        .where('id', existingItem.id)
-                        .update({
-                            is_negative: !active,
-                            updated: now
-                        });
+                    await conn('persons_filters').where('id', existingItem.id).update({
+                        is_negative: !active,
+                        updated: now,
+                    });
 
                     existingItem.is_negative = !active;
                     existingItem.updated = now;
@@ -1065,15 +1187,14 @@ function putGender(req, res) {
                     const filterEntry = createFilterEntry(filter.id, {
                         person_id: person.id,
                         [mapping.column]: gender.id,
-                        is_negative: !active
+                        is_negative: !active,
                     });
 
-                    const [id] = await conn('persons_filters')
-                        .insert(filterEntry);
+                    const [id] = await conn('persons_filters').insert(filterEntry);
 
                     person_filters[filter.token].items[id] = {
                         ...filterEntry,
-                        id
+                        id,
                     };
                 }
             }
@@ -1081,13 +1202,16 @@ function putGender(req, res) {
             await cacheService.setCache(person_filter_cache_key, person_filters);
 
             res.json({
-                success: true
+                success: true,
             });
         } catch (e) {
             console.error(e);
-            res.json({
-                message: 'Error updating filter'
-            }, 400);
+            res.json(
+                {
+                    message: 'Error updating filter',
+                },
+                400,
+            );
         }
 
         resolve();
@@ -1101,9 +1225,12 @@ function putDistance(req, res) {
 
             // Validate inputs
             if (typeof distance !== 'number' || distance < 1 || distance > 60) {
-                res.json({
-                    message: 'Valid distance required (1-60 miles)'
-                }, 400);
+                res.json(
+                    {
+                        message: 'Valid distance required (1-60 miles)',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
@@ -1112,18 +1239,24 @@ function putDistance(req, res) {
             let filter = filters.byToken['distance'];
 
             if (!filter) {
-                res.json({
-                    message: 'Distance filter not found'
-                }, 400);
+                res.json(
+                    {
+                        message: 'Distance filter not found',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
             // Get person
             let person = await getPerson(person_token);
             if (!person) {
-                res.json({
-                    message: 'Person not found'
-                }, 400);
+                res.json(
+                    {
+                        message: 'Person not found',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
@@ -1137,12 +1270,10 @@ function putDistance(req, res) {
 
             if (existingFilter) {
                 // Update existing filter
-                await conn('persons_filters')
-                    .where('id', existingFilter.id)
-                    .update({
-                        filter_value: distance.toString(),
-                        updated: now
-                    });
+                await conn('persons_filters').where('id', existingFilter.id).update({
+                    filter_value: distance.toString(),
+                    updated: now,
+                });
 
                 existingFilter.filter_value = distance.toString();
                 existingFilter.updated = now;
@@ -1150,28 +1281,30 @@ function putDistance(req, res) {
                 // Create new filter entry
                 const filterEntry = createFilterEntry(filter.id, {
                     person_id: person.id,
-                    filter_value: distance.toString()
+                    filter_value: distance.toString(),
                 });
 
-                const [id] = await conn('persons_filters')
-                    .insert(filterEntry);
+                const [id] = await conn('persons_filters').insert(filterEntry);
 
                 person_filters['distance'] = {
                     ...filterEntry,
-                    id
+                    id,
                 };
             }
 
             await cacheService.setCache(person_filter_cache_key, person_filters);
 
             res.json({
-                success: true
+                success: true,
             });
         } catch (e) {
             console.error(e);
-            res.json({
-                message: 'Error updating distance'
-            }, 400);
+            res.json(
+                {
+                    message: 'Error updating distance',
+                },
+                400,
+            );
         }
 
         resolve();
@@ -1184,18 +1317,24 @@ function putActivityTypes(req, res) {
             const { activities, person_token, active } = req.body;
 
             if (!activities || typeof activities !== 'object' || typeof active !== 'boolean') {
-                res.json({
-                    message: 'Invalid activities data'
-                }, 400);
+                res.json(
+                    {
+                        message: 'Invalid activities data',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
             const person = await getPerson(person_token);
 
             if (!person) {
-                res.json({
-                    message: 'Person not found'
-                }, 400);
+                res.json(
+                    {
+                        message: 'Person not found',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
@@ -1207,9 +1346,12 @@ function putActivityTypes(req, res) {
             let filter = filters.byToken['activity_types'];
 
             if (!filter) {
-                res.json({
-                    message: 'Activity types filter not found'
-                }, 400);
+                res.json(
+                    {
+                        message: 'Activity types filter not found',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
@@ -1221,12 +1363,12 @@ function putActivityTypes(req, res) {
             let existingFilter = person_filters['activity_types'];
             if (!existingFilter) {
                 const baseEntry = createFilterEntry(filter.id, {
-                    person_id: person.id
+                    person_id: person.id,
                 });
 
                 existingFilter = {
                     ...baseEntry,
-                    items: {}
+                    items: {},
                 };
                 person_filters['activity_types'] = existingFilter;
             }
@@ -1245,8 +1387,9 @@ function putActivityTypes(req, res) {
                 activityTypeId = parseInt(activityTypeId);
 
                 // Find existing item for this activity
-                const existingItem = Object.values(existingFilter.items)
-                    .find(item => item.activity_type_id === activityTypeId);
+                const existingItem = Object.values(existingFilter.items).find(
+                    (item) => item.activity_type_id === activityTypeId,
+                );
 
                 if (existingItem) {
                     // Update existing item
@@ -1254,7 +1397,7 @@ function putActivityTypes(req, res) {
                     existingFilter.items[existingItem.id].is_negative = !active;
                     existingFilter.items[existingItem.id].updated = now;
                 } else {
-                    if(active) {
+                    if (active) {
                         continue;
                     }
 
@@ -1265,7 +1408,7 @@ function putActivityTypes(req, res) {
                         activity_type_id: activityTypeId,
                         is_negative: true,
                         created: now,
-                        updated: now
+                        updated: now,
                     };
 
                     batchInserts.push(newItem);
@@ -1280,7 +1423,7 @@ function putActivityTypes(req, res) {
                         .where('filter_id', filter.id)
                         .update({
                             is_negative: false,
-                            updated: now
+                            updated: now,
                         });
 
                     // Update cache directly for all items
@@ -1295,10 +1438,10 @@ function putActivityTypes(req, res) {
                     await dbService.batchInsert('persons_filters', batchInserts, true);
 
                     // Update cache with new items
-                    for(let item of batchInserts) {
+                    for (let item of batchInserts) {
                         existingFilter.items[item.id] = {
                             ...item,
-                            id: item.id
+                            id: item.id,
                         };
                     }
                 }
@@ -1309,7 +1452,7 @@ function putActivityTypes(req, res) {
                         .whereIn('id', batchUpdateIds)
                         .update({
                             is_negative: !active,
-                            updated: now
+                            updated: now,
                         });
                 }
             }
@@ -1318,15 +1461,17 @@ function putActivityTypes(req, res) {
             await cacheService.setCache(person_filter_cache_key, person_filters);
 
             res.json({
-                success: true
+                success: true,
             });
-
         } catch (error) {
             console.error('Activity types error:', error);
-            res.json({
-                message: error.message || 'Error updating activity types',
-                success: false
-            }, 400);
+            res.json(
+                {
+                    message: error.message || 'Error updating activity types',
+                    success: false,
+                },
+                400,
+            );
         }
 
         resolve();
@@ -1341,37 +1486,52 @@ function putSchools(req, res) {
             const { person_token, hash_token, token, active, is_delete } = req.body;
 
             if (typeof token !== 'string') {
-                res.json({
-                    message: 'Token required',
-                }, 400);
+                res.json(
+                    {
+                        message: 'Token required',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
             if (typeof hash_token !== 'string' && token !== 'any') {
-                res.json({
-                    message: 'Hash token required',
-                }, 400);
+                res.json(
+                    {
+                        message: 'Hash token required',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
-            if(typeof active !== 'undefined' && typeof active !== 'boolean') {
-                res.json({
-                    message: 'Invalid active value',
-                }, 400);
+            if (typeof active !== 'undefined' && typeof active !== 'boolean') {
+                res.json(
+                    {
+                        message: 'Invalid active value',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
-            if(typeof is_delete !== 'undefined' && typeof is_delete !== 'boolean') {
-                res.json({
-                    message: 'Invalid delete value',
-                }, 400);
+            if (typeof is_delete !== 'undefined' && typeof is_delete !== 'boolean') {
+                res.json(
+                    {
+                        message: 'Invalid delete value',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
-            if(![active, is_delete].some(item=> typeof item !== 'undefined')) {
-                res.json({
-                    message: 'At least one field required',
-                }, 400);
+            if (![active, is_delete].some((item) => typeof item !== 'undefined')) {
+                res.json(
+                    {
+                        message: 'At least one field required',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
@@ -1381,17 +1541,23 @@ function putSchools(req, res) {
             let filter = filters.byToken[mapping.token];
 
             if (!filter) {
-                res.json({
-                    message: 'Filter not found'
-                }, 400);
+                res.json(
+                    {
+                        message: 'Filter not found',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
             let person = await getPerson(person_token);
             if (!person) {
-                res.json({
-                    message: 'Person not found'
-                }, 400);
+                res.json(
+                    {
+                        message: 'Person not found',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
@@ -1399,10 +1565,13 @@ function putSchools(req, res) {
             let cache_key = sectionData.cacheKeys.schools.byHashKey(hash_token);
             let option = await cacheService.hGetItem(cache_key, token);
 
-            if(token !== 'any' && !option) {
-                res.json({
-                    message: 'Invalid token'
-                }, 400);
+            if (token !== 'any' && !option) {
+                res.json(
+                    {
+                        message: 'Invalid token',
+                    },
+                    400,
+                );
 
                 return resolve();
             }
@@ -1417,12 +1586,12 @@ function putSchools(req, res) {
             // Initialize filter structure if it doesn't exist
             if (!existingFilter) {
                 const baseEntry = createFilterEntry(filter.id, {
-                    person_id: person.id
+                    person_id: person.id,
                 });
 
                 existingFilter = {
                     ...baseEntry,
-                    items: {}
+                    items: {},
                 };
                 person_filters[filter.token] = existingFilter;
             } else if (!existingFilter.items) {
@@ -1431,7 +1600,7 @@ function putSchools(req, res) {
 
             if (token === 'any') {
                 // Handle 'any' selection - clear all existing filters
-                if(Object.keys(existingFilter.items).length)
+                if (Object.keys(existingFilter.items).length)
                     await conn('persons_filters')
                         .where('person_id', person.id)
                         .where('filter_id', filter.id)
@@ -1447,19 +1616,20 @@ function putSchools(req, res) {
                 }
             } else {
                 // Find existing item for option
-                const existingItem = Object.values(existingFilter.items)
-                    .find(item => item[mapping.column] === option.id);
+                const existingItem = Object.values(existingFilter.items).find(
+                    (item) => item[mapping.column] === option.id,
+                );
 
                 if (existingItem) {
                     id = existingItem.id;
 
-                   if(typeof is_delete !== 'undefined') {
+                    if (typeof is_delete !== 'undefined') {
                         await conn('persons_filters')
                             .where('person_id', person.id)
                             .where('id', existingItem.id)
                             .update({
                                 updated: now,
-                                deleted: now
+                                deleted: now,
                             });
 
                         existingItem.deleted = now;
@@ -1470,13 +1640,13 @@ function putSchools(req, res) {
                             .update({
                                 is_active: active,
                                 updated: now,
-                                deleted: null
+                                deleted: null,
                             });
 
                         existingItem.is_active = active;
                     }
 
-                    if(typeof is_delete === 'undefined') {
+                    if (typeof is_delete === 'undefined') {
                         existingItem.deleted = null;
                     }
                 } else {
@@ -1487,15 +1657,14 @@ function putSchools(req, res) {
                         is_active: active,
                     });
 
-                    [id] = await conn('persons_filters')
-                        .insert(filterEntry);
+                    [id] = await conn('persons_filters').insert(filterEntry);
 
                     filterEntry.token = token;
                     filterEntry.name = option.name;
 
                     existingFilter.items[id] = {
                         ...filterEntry,
-                        id
+                        id,
                     };
                 }
             }
@@ -1504,13 +1673,16 @@ function putSchools(req, res) {
 
             res.json({
                 id: id,
-                success: true
+                success: true,
             });
         } catch (e) {
             console.error(e);
-            res.json({
-                message: 'Error updating filter'
-            }, 400);
+            res.json(
+                {
+                    message: 'Error updating filter',
+                },
+                400,
+            );
         }
 
         resolve();
@@ -1527,37 +1699,52 @@ function putMovies(req, res) {
             let personFilterKey = 'movies';
 
             if (!token) {
-                res.json({
-                    message: 'Token required',
-                }, 400);
+                res.json(
+                    {
+                        message: 'Token required',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
-            if(typeof active !== 'undefined' && typeof active !== 'boolean') {
-                res.json({
-                    message: 'Invalid active value',
-                }, 400);
+            if (typeof active !== 'undefined' && typeof active !== 'boolean') {
+                res.json(
+                    {
+                        message: 'Invalid active value',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
-            if(typeof is_delete !== 'undefined' && typeof is_delete !== 'boolean') {
-                res.json({
-                    message: 'Invalid delete value',
-                }, 400);
+            if (typeof is_delete !== 'undefined' && typeof is_delete !== 'boolean') {
+                res.json(
+                    {
+                        message: 'Invalid delete value',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
-            if(typeof table_key !== 'string') {
-                res.json({
-                    message: 'Invalid table key',
-                }, 400);
+            if (typeof table_key !== 'string') {
+                res.json(
+                    {
+                        message: 'Invalid table key',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
-            if(![active, is_delete].some(item=> typeof item !== 'undefined')) {
-                res.json({
-                    message: 'At least one field required',
-                }, 400);
+            if (![active, is_delete].some((item) => typeof item !== 'undefined')) {
+                res.json(
+                    {
+                        message: 'At least one field required',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
@@ -1565,16 +1752,19 @@ function putMovies(req, res) {
             let sectionData = sectionsData.movies;
             let mapping = null;
 
-            if(table_key === 'genres') {
+            if (table_key === 'genres') {
                 mapping = filterMappings.movie_genres;
-            } else if(table_key === 'movies') {
+            } else if (table_key === 'movies') {
                 mapping = filterMappings.movies;
             }
 
             if (!mapping) {
-                res.json({
-                    message: 'Mapping not found'
-                }, 400);
+                res.json(
+                    {
+                        message: 'Mapping not found',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
@@ -1582,34 +1772,46 @@ function putMovies(req, res) {
             let filter = filters.byToken[mapping.token];
 
             if (!filter) {
-                res.json({
-                    message: 'Filter not found'
-                }, 400);
+                res.json(
+                    {
+                        message: 'Filter not found',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
-            if(!sectionData.cacheKeys[table_key]) {
-                res.json({
-                    message: 'Cache key not found',
-                }, 400);
+            if (!sectionData.cacheKeys[table_key]) {
+                res.json(
+                    {
+                        message: 'Cache key not found',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
             let person = await getPerson(person_token);
             if (!person) {
-                res.json({
-                    message: 'Person not found'
-                }, 400);
+                res.json(
+                    {
+                        message: 'Person not found',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
             let cache_key = sectionData.cacheKeys[table_key].byHash;
             let option = await cacheService.hGetItem(cache_key, token);
 
-            if(token !== 'any' && !option) {
-                res.json({
-                    message: 'Invalid token'
-                }, 400);
+            if (token !== 'any' && !option) {
+                res.json(
+                    {
+                        message: 'Invalid token',
+                    },
+                    400,
+                );
 
                 return resolve();
             }
@@ -1624,12 +1826,12 @@ function putMovies(req, res) {
             // Initialize filter structure if it doesn't exist
             if (!existingFilter) {
                 const baseEntry = createFilterEntry(filter.id, {
-                    person_id: person.id
+                    person_id: person.id,
                 });
 
                 existingFilter = {
                     ...baseEntry,
-                    items: {}
+                    items: {},
                 };
                 person_filters[personFilterKey] = existingFilter;
             } else if (!existingFilter.items) {
@@ -1639,7 +1841,7 @@ function putMovies(req, res) {
             if (token === 'any') {
                 // Handle 'any' selection - clear all existing filters for table key
 
-                if(Object.keys(existingFilter.items).length)
+                if (Object.keys(existingFilter.items).length)
                     await conn('persons_filters')
                         .where('person_id', person.id)
                         .where('filter_id', filter.id)
@@ -1652,26 +1854,27 @@ function putMovies(req, res) {
                 for (let id in existingFilter.items) {
                     let item = existingFilter.items[id];
 
-                    if(item.table_key === table_key) {
+                    if (item.table_key === table_key) {
                         item.is_active = false;
                         item.updated = now;
                     }
                 }
             } else {
                 // Find existing item for option
-                const existingItem = Object.values(existingFilter.items)
-                    .find(item => item[mapping.column] === option.id);
+                const existingItem = Object.values(existingFilter.items).find(
+                    (item) => item[mapping.column] === option.id,
+                );
 
                 if (existingItem) {
                     id = existingItem.id;
 
-                    if(typeof is_delete !== 'undefined') {
+                    if (typeof is_delete !== 'undefined') {
                         await conn('persons_filters')
                             .where('person_id', person.id)
                             .where('id', existingItem.id)
                             .update({
                                 updated: now,
-                                deleted: now
+                                deleted: now,
                             });
 
                         existingItem.deleted = now;
@@ -1682,13 +1885,13 @@ function putMovies(req, res) {
                             .update({
                                 is_active: active,
                                 updated: now,
-                                deleted: null
+                                deleted: null,
                             });
 
                         existingItem.is_active = active;
                     }
 
-                    if(typeof is_delete === 'undefined') {
+                    if (typeof is_delete === 'undefined') {
                         existingItem.deleted = null;
                     }
                 } else {
@@ -1699,8 +1902,7 @@ function putMovies(req, res) {
                         is_active: active,
                     });
 
-                    [id] = await conn('persons_filters')
-                        .insert(filterEntry);
+                    [id] = await conn('persons_filters').insert(filterEntry);
 
                     filterEntry.table_key = table_key;
                     filterEntry.token = token;
@@ -1708,7 +1910,7 @@ function putMovies(req, res) {
 
                     existingFilter.items[id] = {
                         ...filterEntry,
-                        id
+                        id,
                     };
                 }
             }
@@ -1717,13 +1919,16 @@ function putMovies(req, res) {
 
             res.json({
                 id: id,
-                success: true
+                success: true,
             });
         } catch (e) {
             console.error(e);
-            res.json({
-                message: 'Error updating filter'
-            }, 400);
+            res.json(
+                {
+                    message: 'Error updating filter',
+                },
+                400,
+            );
         }
 
         resolve();
@@ -1740,37 +1945,52 @@ function putTvShows(req, res) {
             let personFilterKey = 'tv_shows';
 
             if (!token) {
-                res.json({
-                    message: 'Token required',
-                }, 400);
+                res.json(
+                    {
+                        message: 'Token required',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
-            if(typeof active !== 'undefined' && typeof active !== 'boolean') {
-                res.json({
-                    message: 'Invalid active value',
-                }, 400);
+            if (typeof active !== 'undefined' && typeof active !== 'boolean') {
+                res.json(
+                    {
+                        message: 'Invalid active value',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
-            if(typeof is_delete !== 'undefined' && typeof is_delete !== 'boolean') {
-                res.json({
-                    message: 'Invalid delete value',
-                }, 400);
+            if (typeof is_delete !== 'undefined' && typeof is_delete !== 'boolean') {
+                res.json(
+                    {
+                        message: 'Invalid delete value',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
-            if(typeof table_key !== 'string') {
-                res.json({
-                    message: 'Invalid table key',
-                }, 400);
+            if (typeof table_key !== 'string') {
+                res.json(
+                    {
+                        message: 'Invalid table key',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
-            if(![active, is_delete].some(item=> typeof item !== 'undefined')) {
-                res.json({
-                    message: 'At least one field required',
-                }, 400);
+            if (![active, is_delete].some((item) => typeof item !== 'undefined')) {
+                res.json(
+                    {
+                        message: 'At least one field required',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
@@ -1778,16 +1998,19 @@ function putTvShows(req, res) {
             let sectionData = sectionsData.tv_shows;
             let mapping = null;
 
-            if(table_key === 'genres') {
+            if (table_key === 'genres') {
                 mapping = filterMappings.tv_show_genres;
-            } else if(table_key === 'shows') {
+            } else if (table_key === 'shows') {
                 mapping = filterMappings.tv_shows;
             }
 
             if (!mapping) {
-                res.json({
-                    message: 'Mapping not found'
-                }, 400);
+                res.json(
+                    {
+                        message: 'Mapping not found',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
@@ -1795,34 +2018,46 @@ function putTvShows(req, res) {
             let filter = filters.byToken[mapping.token];
 
             if (!filter) {
-                res.json({
-                    message: 'Filter not found'
-                }, 400);
+                res.json(
+                    {
+                        message: 'Filter not found',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
-            if(!sectionData.cacheKeys[table_key]) {
-                res.json({
-                    message: 'Cache key not found',
-                }, 400);
+            if (!sectionData.cacheKeys[table_key]) {
+                res.json(
+                    {
+                        message: 'Cache key not found',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
             let person = await getPerson(person_token);
             if (!person) {
-                res.json({
-                    message: 'Person not found'
-                }, 400);
+                res.json(
+                    {
+                        message: 'Person not found',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
             let cache_key = sectionData.cacheKeys[table_key].byHash;
             let option = await cacheService.hGetItem(cache_key, token);
 
-            if(token !== 'any' && !option) {
-                res.json({
-                    message: 'Invalid token'
-                }, 400);
+            if (token !== 'any' && !option) {
+                res.json(
+                    {
+                        message: 'Invalid token',
+                    },
+                    400,
+                );
 
                 return resolve();
             }
@@ -1837,12 +2072,12 @@ function putTvShows(req, res) {
             // Initialize filter structure if it doesn't exist
             if (!existingFilter) {
                 const baseEntry = createFilterEntry(filter.id, {
-                    person_id: person.id
+                    person_id: person.id,
                 });
 
                 existingFilter = {
                     ...baseEntry,
-                    items: {}
+                    items: {},
                 };
                 person_filters[personFilterKey] = existingFilter;
             } else if (!existingFilter.items) {
@@ -1852,7 +2087,7 @@ function putTvShows(req, res) {
             if (token === 'any') {
                 // Handle 'any' selection - clear all existing filters for table key
 
-                if(Object.keys(existingFilter.items).length)
+                if (Object.keys(existingFilter.items).length)
                     await conn('persons_filters')
                         .where('person_id', person.id)
                         .where('filter_id', filter.id)
@@ -1865,26 +2100,27 @@ function putTvShows(req, res) {
                 for (let id in existingFilter.items) {
                     let item = existingFilter.items[id];
 
-                    if(item.table_key === table_key) {
+                    if (item.table_key === table_key) {
                         item.is_active = false;
                         item.updated = now;
                     }
                 }
             } else {
                 // Find existing item for option
-                const existingItem = Object.values(existingFilter.items)
-                    .find(item => item[mapping.column] === option.id);
+                const existingItem = Object.values(existingFilter.items).find(
+                    (item) => item[mapping.column] === option.id,
+                );
 
                 if (existingItem) {
                     id = existingItem.id;
 
-                    if(typeof is_delete !== 'undefined') {
+                    if (typeof is_delete !== 'undefined') {
                         await conn('persons_filters')
                             .where('person_id', person.id)
                             .where('id', existingItem.id)
                             .update({
                                 updated: now,
-                                deleted: now
+                                deleted: now,
                             });
 
                         existingItem.deleted = now;
@@ -1895,13 +2131,13 @@ function putTvShows(req, res) {
                             .update({
                                 is_active: active,
                                 updated: now,
-                                deleted: null
+                                deleted: null,
                             });
 
                         existingItem.is_active = active;
                     }
 
-                    if(typeof is_delete === 'undefined') {
+                    if (typeof is_delete === 'undefined') {
                         existingItem.deleted = null;
                     }
                 } else {
@@ -1912,8 +2148,7 @@ function putTvShows(req, res) {
                         is_active: active,
                     });
 
-                    [id] = await conn('persons_filters')
-                        .insert(filterEntry);
+                    [id] = await conn('persons_filters').insert(filterEntry);
 
                     filterEntry.table_key = table_key;
                     filterEntry.token = token;
@@ -1921,7 +2156,7 @@ function putTvShows(req, res) {
 
                     existingFilter.items[id] = {
                         ...filterEntry,
-                        id
+                        id,
                     };
                 }
             }
@@ -1930,13 +2165,16 @@ function putTvShows(req, res) {
 
             res.json({
                 id: id,
-                success: true
+                success: true,
             });
         } catch (e) {
             console.error(e);
-            res.json({
-                message: 'Error updating filter'
-            }, 400);
+            res.json(
+                {
+                    message: 'Error updating filter',
+                },
+                400,
+            );
         }
 
         resolve();
@@ -1951,48 +2189,68 @@ function putInstruments(req, res) {
             const { person_token, token, active, is_delete, secondary } = req.body;
 
             if (!token) {
-                res.json({
-                    message: 'Instrument token required',
-                }, 400);
+                res.json(
+                    {
+                        message: 'Instrument token required',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
-            if(typeof active !== 'undefined' && typeof active !== 'boolean') {
-                res.json({
-                    message: 'Invalid active value',
-                }, 400);
+            if (typeof active !== 'undefined' && typeof active !== 'boolean') {
+                res.json(
+                    {
+                        message: 'Invalid active value',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
-            if(typeof is_delete !== 'undefined' && typeof is_delete !== 'boolean') {
-                res.json({
-                    message: 'Invalid delete value',
-                }, 400);
+            if (typeof is_delete !== 'undefined' && typeof is_delete !== 'boolean') {
+                res.json(
+                    {
+                        message: 'Invalid delete value',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
-            if(typeof secondary !== 'undefined' && !Array.isArray(secondary)) {
-                res.json({
-                    message: 'Invalid secondary data',
-                }, 400);
+            if (typeof secondary !== 'undefined' && !Array.isArray(secondary)) {
+                res.json(
+                    {
+                        message: 'Invalid secondary data',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
-            if(![active, is_delete, secondary].some(item=> typeof item !== 'undefined')) {
-                res.json({
-                    message: 'At least one field required',
-                }, 400);
+            if (![active, is_delete, secondary].some((item) => typeof item !== 'undefined')) {
+                res.json(
+                    {
+                        message: 'At least one field required',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
-            if(secondary) {
+            if (secondary) {
                 //check that all values are valid
-                let areValid = secondary.every(item => sectionsData.instruments.secondary.instruments.options.includes(item));
+                let areValid = secondary.every((item) =>
+                    sectionsData.instruments.secondary.instruments.options.includes(item),
+                );
 
-                if(!secondary.includes('any') && !areValid) {
-                    res.json({
-                        message: 'Invalid secondary format',
-                    }, 400);
+                if (!secondary.includes('any') && !areValid) {
+                    res.json(
+                        {
+                            message: 'Invalid secondary format',
+                        },
+                        400,
+                    );
                     return resolve();
                 }
             }
@@ -2002,27 +2260,36 @@ function putInstruments(req, res) {
             let filter = filters.byToken[mapping.token];
 
             if (!filter) {
-                res.json({
-                    message: 'Instruments filter not found'
-                }, 400);
+                res.json(
+                    {
+                        message: 'Instruments filter not found',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
             let person = await getPerson(person_token);
             if (!person) {
-                res.json({
-                    message: 'Person not found'
-                }, 400);
+                res.json(
+                    {
+                        message: 'Person not found',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
             let instruments = await allInstruments();
             let option = instruments.byToken[token];
 
-            if(token !== 'any' && !option) {
-                res.json({
-                    message: 'Invalid token'
-                }, 400);
+            if (token !== 'any' && !option) {
+                res.json(
+                    {
+                        message: 'Invalid token',
+                    },
+                    400,
+                );
 
                 return resolve();
             }
@@ -2037,12 +2304,12 @@ function putInstruments(req, res) {
             // Initialize filter structure if it doesn't exist
             if (!existingFilter) {
                 const baseEntry = createFilterEntry(filter.id, {
-                    person_id: person.id
+                    person_id: person.id,
                 });
 
                 existingFilter = {
                     ...baseEntry,
-                    items: {}
+                    items: {},
                 };
                 person_filters[filter.token] = existingFilter;
             } else if (!existingFilter.items) {
@@ -2051,7 +2318,7 @@ function putInstruments(req, res) {
 
             if (token === 'any') {
                 // Handle 'any' selection - clear all existing filters
-                if(Object.keys(existingFilter.items).length)
+                if (Object.keys(existingFilter.items).length)
                     await conn('persons_filters')
                         .where('person_id', person.id)
                         .where('filter_id', filter.id)
@@ -2067,30 +2334,31 @@ function putInstruments(req, res) {
                 }
             } else {
                 // Find existing item for option
-                const existingItem = Object.values(existingFilter.items)
-                    .find(item => item[mapping.column] === option.id);
+                const existingItem = Object.values(existingFilter.items).find(
+                    (item) => item[mapping.column] === option.id,
+                );
 
                 if (existingItem) {
                     id = existingItem.id;
 
-                    if(typeof secondary !== 'undefined') {
+                    if (typeof secondary !== 'undefined') {
                         await conn('persons_filters')
                             .where('person_id', person.id)
                             .where('id', existingItem.id)
                             .update({
                                 filter_value: JSON.stringify(secondary),
                                 updated: now,
-                                deleted: null
+                                deleted: null,
                             });
 
                         existingItem.secondary = secondary;
-                    } else if(typeof is_delete !== 'undefined') {
+                    } else if (typeof is_delete !== 'undefined') {
                         await conn('persons_filters')
                             .where('person_id', person.id)
                             .where('id', existingItem.id)
                             .update({
                                 updated: now,
-                                deleted: now
+                                deleted: now,
                             });
 
                         existingItem.deleted = now;
@@ -2101,13 +2369,13 @@ function putInstruments(req, res) {
                             .update({
                                 is_active: active,
                                 updated: now,
-                                deleted: null
+                                deleted: null,
                             });
 
                         existingItem.is_active = active;
                     }
 
-                    if(typeof is_delete === 'undefined') {
+                    if (typeof is_delete === 'undefined') {
                         existingItem.deleted = null;
                     }
                 } else {
@@ -2118,15 +2386,14 @@ function putInstruments(req, res) {
                         is_active: active,
                     });
 
-                    [id] = await conn('persons_filters')
-                        .insert(filterEntry);
+                    [id] = await conn('persons_filters').insert(filterEntry);
 
                     filterEntry.token = token;
                     filterEntry.name = option.name;
 
                     existingFilter.items[id] = {
                         ...filterEntry,
-                        id
+                        id,
                     };
                 }
             }
@@ -2135,13 +2402,16 @@ function putInstruments(req, res) {
 
             res.json({
                 id: id,
-                success: true
+                success: true,
             });
         } catch (e) {
             console.error(e);
-            res.json({
-                message: 'Error updating filter'
-            }, 400);
+            res.json(
+                {
+                    message: 'Error updating filter',
+                },
+                400,
+            );
         }
 
         resolve();
@@ -2158,37 +2428,52 @@ function putWork(req, res) {
             let personFilterKey = 'work';
 
             if (!token) {
-                res.json({
-                    message: 'Token required',
-                }, 400);
+                res.json(
+                    {
+                        message: 'Token required',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
-            if(typeof active !== 'undefined' && typeof active !== 'boolean') {
-                res.json({
-                    message: 'Invalid active value',
-                }, 400);
+            if (typeof active !== 'undefined' && typeof active !== 'boolean') {
+                res.json(
+                    {
+                        message: 'Invalid active value',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
-            if(typeof is_delete !== 'undefined' && typeof is_delete !== 'boolean') {
-                res.json({
-                    message: 'Invalid delete value',
-                }, 400);
+            if (typeof is_delete !== 'undefined' && typeof is_delete !== 'boolean') {
+                res.json(
+                    {
+                        message: 'Invalid delete value',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
-            if(typeof table_key !== 'string') {
-                res.json({
-                    message: 'Invalid table key',
-                }, 400);
+            if (typeof table_key !== 'string') {
+                res.json(
+                    {
+                        message: 'Invalid table key',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
-            if(![active, is_delete].some(item=> typeof item !== 'undefined')) {
-                res.json({
-                    message: 'At least one field required',
-                }, 400);
+            if (![active, is_delete].some((item) => typeof item !== 'undefined')) {
+                res.json(
+                    {
+                        message: 'At least one field required',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
@@ -2198,36 +2483,47 @@ function putWork(req, res) {
             let filters = await getFilters();
             let filter = filters.byToken[mapping.token];
 
-
             if (!filter) {
-                res.json({
-                    message: 'Filter not found'
-                }, 400);
+                res.json(
+                    {
+                        message: 'Filter not found',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
-            if(!sectionData.cacheKeys[table_key]) {
-                res.json({
-                    message: 'Cache key not found',
-                }, 400);
+            if (!sectionData.cacheKeys[table_key]) {
+                res.json(
+                    {
+                        message: 'Cache key not found',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
             let person = await getPerson(person_token);
             if (!person) {
-                res.json({
-                    message: 'Person not found'
-                }, 400);
+                res.json(
+                    {
+                        message: 'Person not found',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
             let cache_key = sectionData.cacheKeys[table_key].byHash;
             let option = await cacheService.hGetItem(cache_key, token);
 
-            if(token !== 'any' && !option) {
-                res.json({
-                    message: 'Invalid token'
-                }, 400);
+            if (token !== 'any' && !option) {
+                res.json(
+                    {
+                        message: 'Invalid token',
+                    },
+                    400,
+                );
 
                 return resolve();
             }
@@ -2242,12 +2538,12 @@ function putWork(req, res) {
             // Initialize filter structure if it doesn't exist
             if (!existingFilter) {
                 const baseEntry = createFilterEntry(filter.id, {
-                    person_id: person.id
+                    person_id: person.id,
                 });
 
                 existingFilter = {
                     ...baseEntry,
-                    items: {}
+                    items: {},
                 };
                 person_filters[personFilterKey] = existingFilter;
             } else if (!existingFilter.items) {
@@ -2257,7 +2553,7 @@ function putWork(req, res) {
             if (token === 'any') {
                 // Handle 'any' selection - clear all existing filters for table key
 
-                if(Object.keys(existingFilter.items).length)
+                if (Object.keys(existingFilter.items).length)
                     await conn('persons_filters')
                         .where('person_id', person.id)
                         .where('filter_id', filter.id)
@@ -2270,26 +2566,27 @@ function putWork(req, res) {
                 for (let id in existingFilter.items) {
                     let item = existingFilter.items[id];
 
-                    if(item.table_key === table_key) {
+                    if (item.table_key === table_key) {
                         item.is_active = false;
                         item.updated = now;
                     }
                 }
             } else {
                 // Find existing item for option
-                const existingItem = Object.values(existingFilter.items)
-                    .find(item => item[mapping.column] === option.id);
+                const existingItem = Object.values(existingFilter.items).find(
+                    (item) => item[mapping.column] === option.id,
+                );
 
                 if (existingItem) {
                     id = existingItem.id;
 
-                    if(typeof is_delete !== 'undefined') {
+                    if (typeof is_delete !== 'undefined') {
                         await conn('persons_filters')
                             .where('person_id', person.id)
                             .where('id', existingItem.id)
                             .update({
                                 updated: now,
-                                deleted: now
+                                deleted: now,
                             });
 
                         existingItem.deleted = now;
@@ -2300,13 +2597,13 @@ function putWork(req, res) {
                             .update({
                                 is_active: active,
                                 updated: now,
-                                deleted: null
+                                deleted: null,
                             });
 
                         existingItem.is_active = active;
                     }
 
-                    if(typeof is_delete === 'undefined') {
+                    if (typeof is_delete === 'undefined') {
                         existingItem.deleted = null;
                     }
                 } else {
@@ -2317,8 +2614,7 @@ function putWork(req, res) {
                         is_active: active,
                     });
 
-                    [id] = await conn('persons_filters')
-                        .insert(filterEntry);
+                    [id] = await conn('persons_filters').insert(filterEntry);
 
                     filterEntry.table_key = table_key;
                     filterEntry.token = token;
@@ -2326,7 +2622,7 @@ function putWork(req, res) {
 
                     existingFilter.items[id] = {
                         ...filterEntry,
-                        id
+                        id,
                     };
                 }
             }
@@ -2335,13 +2631,16 @@ function putWork(req, res) {
 
             res.json({
                 id: id,
-                success: true
+                success: true,
             });
         } catch (e) {
             console.error(e);
-            res.json({
-                message: 'Error updating filter'
-            }, 400);
+            res.json(
+                {
+                    message: 'Error updating filter',
+                },
+                400,
+            );
         }
 
         resolve();
@@ -2358,37 +2657,52 @@ function putMusic(req, res) {
             let personFilterKey = 'music';
 
             if (!token) {
-                res.json({
-                    message: 'Token required',
-                }, 400);
+                res.json(
+                    {
+                        message: 'Token required',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
-            if(typeof active !== 'undefined' && typeof active !== 'boolean') {
-                res.json({
-                    message: 'Invalid active value',
-                }, 400);
+            if (typeof active !== 'undefined' && typeof active !== 'boolean') {
+                res.json(
+                    {
+                        message: 'Invalid active value',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
-            if(typeof is_delete !== 'undefined' && typeof is_delete !== 'boolean') {
-                res.json({
-                    message: 'Invalid delete value',
-                }, 400);
+            if (typeof is_delete !== 'undefined' && typeof is_delete !== 'boolean') {
+                res.json(
+                    {
+                        message: 'Invalid delete value',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
-            if(typeof table_key !== 'string') {
-                res.json({
-                    message: 'Invalid table key',
-                }, 400);
+            if (typeof table_key !== 'string') {
+                res.json(
+                    {
+                        message: 'Invalid table key',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
-            if(![active, is_delete].some(item=> typeof item !== 'undefined')) {
-                res.json({
-                    message: 'At least one field required',
-                }, 400);
+            if (![active, is_delete].some((item) => typeof item !== 'undefined')) {
+                res.json(
+                    {
+                        message: 'At least one field required',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
@@ -2397,9 +2711,12 @@ function putMusic(req, res) {
             let mapping = filterMappings[`music_${table_key}`];
 
             if (!mapping) {
-                res.json({
-                    message: 'Mapping not found'
-                }, 400);
+                res.json(
+                    {
+                        message: 'Mapping not found',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
@@ -2407,34 +2724,46 @@ function putMusic(req, res) {
             let filter = filters.byToken[mapping.token];
 
             if (!filter) {
-                res.json({
-                    message: 'Filter not found'
-                }, 400);
+                res.json(
+                    {
+                        message: 'Filter not found',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
-            if(!sectionData.cacheKeys[table_key]) {
-                res.json({
-                    message: 'Cache key not found',
-                }, 400);
+            if (!sectionData.cacheKeys[table_key]) {
+                res.json(
+                    {
+                        message: 'Cache key not found',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
             let person = await getPerson(person_token);
             if (!person) {
-                res.json({
-                    message: 'Person not found'
-                }, 400);
+                res.json(
+                    {
+                        message: 'Person not found',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
             let cache_key = sectionData.cacheKeys[table_key].byHash;
             let option = await cacheService.hGetItem(cache_key, token);
 
-            if(token !== 'any' && !option) {
-                res.json({
-                    message: 'Invalid token'
-                }, 400);
+            if (token !== 'any' && !option) {
+                res.json(
+                    {
+                        message: 'Invalid token',
+                    },
+                    400,
+                );
 
                 return resolve();
             }
@@ -2449,12 +2778,12 @@ function putMusic(req, res) {
             // Initialize filter structure if it doesn't exist
             if (!existingFilter) {
                 const baseEntry = createFilterEntry(filter.id, {
-                    person_id: person.id
+                    person_id: person.id,
                 });
 
                 existingFilter = {
                     ...baseEntry,
-                    items: {}
+                    items: {},
                 };
                 person_filters[personFilterKey] = existingFilter;
             } else if (!existingFilter.items) {
@@ -2464,7 +2793,7 @@ function putMusic(req, res) {
             if (token === 'any') {
                 // Handle 'any' selection - clear all existing filters for table key
 
-                if(Object.keys(existingFilter.items).length)
+                if (Object.keys(existingFilter.items).length)
                     await conn('persons_filters')
                         .where('person_id', person.id)
                         .where('filter_id', filter.id)
@@ -2477,26 +2806,27 @@ function putMusic(req, res) {
                 for (let id in existingFilter.items) {
                     let item = existingFilter.items[id];
 
-                    if(item.table_key === table_key) {
+                    if (item.table_key === table_key) {
                         item.is_active = false;
                         item.updated = now;
                     }
                 }
             } else {
                 // Find existing item for option
-                const existingItem = Object.values(existingFilter.items)
-                    .find(item => item[mapping.column] === option.id);
+                const existingItem = Object.values(existingFilter.items).find(
+                    (item) => item[mapping.column] === option.id,
+                );
 
                 if (existingItem) {
                     id = existingItem.id;
 
-                    if(typeof is_delete !== 'undefined') {
+                    if (typeof is_delete !== 'undefined') {
                         await conn('persons_filters')
                             .where('person_id', person.id)
                             .where('id', existingItem.id)
                             .update({
                                 updated: now,
-                                deleted: now
+                                deleted: now,
                             });
 
                         existingItem.deleted = now;
@@ -2507,13 +2837,13 @@ function putMusic(req, res) {
                             .update({
                                 is_active: active,
                                 updated: now,
-                                deleted: null
+                                deleted: null,
                             });
 
                         existingItem.is_active = active;
                     }
 
-                    if(typeof is_delete === 'undefined') {
+                    if (typeof is_delete === 'undefined') {
                         existingItem.deleted = null;
                     }
                 } else {
@@ -2524,8 +2854,7 @@ function putMusic(req, res) {
                         is_active: active,
                     });
 
-                    [id] = await conn('persons_filters')
-                        .insert(filterEntry);
+                    [id] = await conn('persons_filters').insert(filterEntry);
 
                     filterEntry.table_key = table_key;
                     filterEntry.token = token;
@@ -2533,7 +2862,7 @@ function putMusic(req, res) {
 
                     existingFilter.items[id] = {
                         ...filterEntry,
-                        id
+                        id,
                     };
                 }
             }
@@ -2542,13 +2871,16 @@ function putMusic(req, res) {
 
             res.json({
                 id: id,
-                success: true
+                success: true,
             });
         } catch (e) {
             console.error(e);
-            res.json({
-                message: 'Error updating filter'
-            }, 400);
+            res.json(
+                {
+                    message: 'Error updating filter',
+                },
+                400,
+            );
         }
 
         resolve();
@@ -2565,44 +2897,62 @@ function putSports(req, res) {
             let personFilterKey = 'sports';
 
             if (!token) {
-                res.json({
-                    message: 'Token required',
-                }, 400);
+                res.json(
+                    {
+                        message: 'Token required',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
-            if(typeof table_key !== 'string') {
-                res.json({
-                    message: 'Invalid table key',
-                }, 400);
+            if (typeof table_key !== 'string') {
+                res.json(
+                    {
+                        message: 'Invalid table key',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
-            if(typeof active !== 'undefined' && typeof active !== 'boolean') {
-                res.json({
-                    message: 'Invalid active value',
-                }, 400);
+            if (typeof active !== 'undefined' && typeof active !== 'boolean') {
+                res.json(
+                    {
+                        message: 'Invalid active value',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
-            if(typeof is_delete !== 'undefined' && typeof is_delete !== 'boolean') {
-                res.json({
-                    message: 'Invalid delete value',
-                }, 400);
+            if (typeof is_delete !== 'undefined' && typeof is_delete !== 'boolean') {
+                res.json(
+                    {
+                        message: 'Invalid delete value',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
-            if(typeof secondary !== 'undefined' && !Array.isArray(secondary)) {
-                res.json({
-                    message: 'Invalid secondary data',
-                }, 400);
+            if (typeof secondary !== 'undefined' && !Array.isArray(secondary)) {
+                res.json(
+                    {
+                        message: 'Invalid secondary data',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
-            if(![active, is_delete, secondary].some(item=> typeof item !== 'undefined')) {
-                res.json({
-                    message: 'At least one field required',
-                }, 400);
+            if (![active, is_delete, secondary].some((item) => typeof item !== 'undefined')) {
+                res.json(
+                    {
+                        message: 'At least one field required',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
@@ -2611,9 +2961,12 @@ function putSports(req, res) {
             let mapping = filterMappings[`sports_${table_key}`];
 
             if (!mapping) {
-                res.json({
-                    message: 'Mapping not found'
-                }, 400);
+                res.json(
+                    {
+                        message: 'Mapping not found',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
@@ -2621,34 +2974,46 @@ function putSports(req, res) {
             let filter = filters.byToken[mapping.token];
 
             if (!filter) {
-                res.json({
-                    message: 'Filter not found'
-                }, 400);
+                res.json(
+                    {
+                        message: 'Filter not found',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
-            if(!sectionData.cacheKeys[table_key]) {
-                res.json({
-                    message: 'Cache key not found',
-                }, 400);
+            if (!sectionData.cacheKeys[table_key]) {
+                res.json(
+                    {
+                        message: 'Cache key not found',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
             let person = await getPerson(person_token);
             if (!person) {
-                res.json({
-                    message: 'Person not found'
-                }, 400);
+                res.json(
+                    {
+                        message: 'Person not found',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
             let cache_key = sectionData.cacheKeys[table_key].byHash;
             let option = await cacheService.hGetItem(cache_key, token);
 
-            if(token !== 'any' && !option) {
-                res.json({
-                    message: 'Invalid token'
-                }, 400);
+            if (token !== 'any' && !option) {
+                res.json(
+                    {
+                        message: 'Invalid token',
+                    },
+                    400,
+                );
 
                 return resolve();
             }
@@ -2663,12 +3028,12 @@ function putSports(req, res) {
             // Initialize filter structure if it doesn't exist
             if (!existingFilter) {
                 const baseEntry = createFilterEntry(filter.id, {
-                    person_id: person.id
+                    person_id: person.id,
                 });
 
                 existingFilter = {
                     ...baseEntry,
-                    items: {}
+                    items: {},
                 };
                 person_filters[personFilterKey] = existingFilter;
             } else if (!existingFilter.items) {
@@ -2678,7 +3043,7 @@ function putSports(req, res) {
             if (token === 'any') {
                 // Handle 'any' selection - clear all existing filters for table key
 
-                if(Object.keys(existingFilter.items).length)
+                if (Object.keys(existingFilter.items).length)
                     await conn('persons_filters')
                         .where('person_id', person.id)
                         .where('filter_id', filter.id)
@@ -2691,37 +3056,38 @@ function putSports(req, res) {
                 for (let id in existingFilter.items) {
                     let item = existingFilter.items[id];
 
-                    if(item.table_key === table_key) {
+                    if (item.table_key === table_key) {
                         item.is_active = false;
                         item.updated = now;
                     }
                 }
             } else {
                 // Find existing item for option
-                const existingItem = Object.values(existingFilter.items)
-                    .find(item => item[mapping.column] === option.id);
+                const existingItem = Object.values(existingFilter.items).find(
+                    (item) => item[mapping.column] === option.id,
+                );
 
                 if (existingItem) {
                     id = existingItem.id;
 
-                    if(typeof secondary !== 'undefined') {
+                    if (typeof secondary !== 'undefined') {
                         await conn('persons_filters')
                             .where('person_id', person.id)
                             .where('id', existingItem.id)
                             .update({
                                 filter_value: JSON.stringify(secondary),
                                 updated: now,
-                                deleted: null
+                                deleted: null,
                             });
 
                         existingItem.secondary = secondary;
-                    } else if(typeof is_delete !== 'undefined') {
+                    } else if (typeof is_delete !== 'undefined') {
                         await conn('persons_filters')
                             .where('person_id', person.id)
                             .where('id', existingItem.id)
                             .update({
                                 updated: now,
-                                deleted: now
+                                deleted: now,
                             });
 
                         existingItem.deleted = now;
@@ -2732,13 +3098,13 @@ function putSports(req, res) {
                             .update({
                                 is_active: active,
                                 updated: now,
-                                deleted: null
+                                deleted: null,
                             });
 
                         existingItem.is_active = active;
                     }
 
-                    if(typeof is_delete === 'undefined') {
+                    if (typeof is_delete === 'undefined') {
                         existingItem.deleted = null;
                     }
                 } else {
@@ -2749,8 +3115,7 @@ function putSports(req, res) {
                         is_active: active,
                     });
 
-                    [id] = await conn('persons_filters')
-                        .insert(filterEntry);
+                    [id] = await conn('persons_filters').insert(filterEntry);
 
                     filterEntry.table_key = table_key;
                     filterEntry.token = token;
@@ -2758,7 +3123,7 @@ function putSports(req, res) {
 
                     existingFilter.items[id] = {
                         ...filterEntry,
-                        id
+                        id,
                     };
                 }
             }
@@ -2767,13 +3132,16 @@ function putSports(req, res) {
 
             res.json({
                 id: id,
-                success: true
+                success: true,
             });
         } catch (e) {
             console.error(e);
-            res.json({
-                message: 'Error updating filter'
-            }, 400);
+            res.json(
+                {
+                    message: 'Error updating filter',
+                },
+                400,
+            );
         }
 
         resolve();
@@ -2801,4 +3169,3 @@ module.exports = {
     putSports,
     handleFilterUpdate,
 };
-

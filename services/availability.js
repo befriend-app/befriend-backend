@@ -7,13 +7,15 @@ const DEFAULT_START = '09:00:00';
 const DEFAULT_END = '21:00:00';
 
 function hasRecordChanged(existingRecord, newData) {
-    return existingRecord.is_active !== newData.is_active ||
+    return (
+        existingRecord.is_active !== newData.is_active ||
         existingRecord.is_any_time !== newData.is_any_time ||
         existingRecord.start_time !== newData.start_time ||
         existingRecord.end_time !== newData.end_time ||
         existingRecord.is_overnight !== newData.is_overnight ||
         existingRecord.is_day !== newData.is_day ||
-        existingRecord.is_time !== newData.is_time;
+        existingRecord.is_time !== newData.is_time
+    );
 }
 
 function saveAvailabilityData(person, availabilityData) {
@@ -38,13 +40,13 @@ function saveAvailabilityData(person, availabilityData) {
                 if (!dayData) continue;
 
                 const dayRecords = Object.values(existingRecords).filter(
-                    record => record.day_of_week === parseInt(dayOfWeek)
+                    (record) => record.day_of_week === parseInt(dayOfWeek),
                 );
 
                 const isActive = !dayData.isDisabled;
 
                 // Handle the day-level record
-                let dayRecord = dayRecords.find(r => r.is_day);
+                let dayRecord = dayRecords.find((r) => r.is_day);
 
                 if (dayRecord) {
                     let newDayData = {
@@ -57,7 +59,7 @@ function saveAvailabilityData(person, availabilityData) {
                         end_time: DEFAULT_END,
                         is_overnight: false,
                         is_active: isActive,
-                        updated: now
+                        updated: now,
                     };
 
                     // Case 1: Explicitly set Any Time
@@ -92,18 +94,23 @@ function saveAvailabilityData(person, availabilityData) {
                         is_any_time: dayData.isAny || false,
                         is_active: isActive,
                         created: now,
-                        updated: now
+                        updated: now,
                     });
                 }
 
                 // Handle time slots
-                if (!dayData.isAny && dayData.times && typeof dayData.times === 'object' && Object.keys(dayData.times).length) {
+                if (
+                    !dayData.isAny &&
+                    dayData.times &&
+                    typeof dayData.times === 'object' &&
+                    Object.keys(dayData.times).length
+                ) {
                     for (const [timeId, timeSlot] of Object.entries(dayData.times)) {
                         if (!timeSlot.start || !timeSlot.end) continue;
 
-                        let existingRecord = timeSlot.id ?
-                            existingRecords[timeSlot.id] :
-                            dayRecords.find(r => !processedIds.has(r.id) && r.is_time);
+                        let existingRecord = timeSlot.id
+                            ? existingRecords[timeSlot.id]
+                            : dayRecords.find((r) => !processedIds.has(r.id) && r.is_time);
 
                         const startTime = ensureTimeFormat(timeSlot.start);
                         const endTime = ensureTimeFormat(timeSlot.end);
@@ -119,7 +126,7 @@ function saveAvailabilityData(person, availabilityData) {
                             is_overnight: isOvernight,
                             is_any_time: false,
                             is_active: isActive,
-                            updated: now
+                            updated: now,
                         };
 
                         if (existingRecord) {
@@ -127,7 +134,7 @@ function saveAvailabilityData(person, availabilityData) {
                             if (hasRecordChanged(existingRecord, newTimeData)) {
                                 recordsToUpdate.push({
                                     ...newTimeData,
-                                    id: existingRecord.id
+                                    id: existingRecord.id,
                                 });
                             } else {
                                 recordsToKeep.add(existingRecord.id);
@@ -137,7 +144,7 @@ function saveAvailabilityData(person, availabilityData) {
                             recordsToInsert.push({
                                 ...newTimeData,
                                 frontend_id: timeId,
-                                created: now
+                                created: now,
                             });
                         }
                     }
@@ -146,16 +153,17 @@ function saveAvailabilityData(person, availabilityData) {
 
             // Only delete records that aren't being kept and weren't processed
             const recordsToDelete = Object.values(existingRecords)
-                .filter(record =>
-                    !record.is_day && // Only include time records
-                    !processedIds.has(record.id) &&
-                    !recordsToKeep.has(record.id) &&
-                    !record.deleted // Don't delete already deleted records
+                .filter(
+                    (record) =>
+                        !record.is_day && // Only include time records
+                        !processedIds.has(record.id) &&
+                        !recordsToKeep.has(record.id) &&
+                        !record.deleted, // Don't delete already deleted records
                 )
-                .map(record => ({
+                .map((record) => ({
                     id: record.id,
                     deleted: now,
-                    updated: now
+                    updated: now,
                 }));
 
             const frontendIds = [];
@@ -163,13 +171,13 @@ function saveAvailabilityData(person, availabilityData) {
 
             if (recordsToInsert.length > 0) {
                 //store frontend id, remove from insert
-                for(let record of recordsToInsert) {
+                for (let record of recordsToInsert) {
                     frontendIds.push(record.frontend_id || null);
                     delete record.frontend_id;
                 }
                 await dbService.batchInsert('persons_availability', recordsToInsert, true);
 
-                for(let i = 0; i < recordsToInsert.length; i++) {
+                for (let i = 0; i < recordsToInsert.length; i++) {
                     let record = recordsToInsert[i];
                     let frontend_id = frontendIds[i];
 
@@ -197,7 +205,7 @@ function saveAvailabilityData(person, availabilityData) {
                         is_active: true,
                         created: now,
                         updated: now,
-                        items: {}
+                        items: {},
                     };
                 }
 
@@ -213,7 +221,7 @@ function saveAvailabilityData(person, availabilityData) {
                 for (let record of recordsToUpdate) {
                     updatedItems[record.id] = {
                         ...record,
-                        created: existingRecords[record.id]?.created || now
+                        created: existingRecords[record.id]?.created || now,
                     };
                 }
 
@@ -227,7 +235,9 @@ function saveAvailabilityData(person, availabilityData) {
                 person_filters['availability'].items = updatedItems;
                 person_filters['availability'].updated = now;
 
-                const person_filter_cache_key = cacheService.keys.person_filters(person.person_token);
+                const person_filter_cache_key = cacheService.keys.person_filters(
+                    person.person_token,
+                );
                 await cacheService.setCache(person_filter_cache_key, person_filters);
             }
 
@@ -238,8 +248,11 @@ function saveAvailabilityData(person, availabilityData) {
                 success: true,
                 data: person_filters,
                 message: 'Availability updated successfully',
-                changed: recordsToUpdate.length > 0 || recordsToInsert.length > 0 || recordsToDelete.length > 0,
-                idMapping // Return the ID mappings to the frontend
+                changed:
+                    recordsToUpdate.length > 0 ||
+                    recordsToInsert.length > 0 ||
+                    recordsToDelete.length > 0,
+                idMapping, // Return the ID mappings to the frontend
             });
         } catch (e) {
             console.error('Error in saveAvailabilityData:', e);
@@ -271,24 +284,26 @@ function detectChanges(currentRecords, newRecords) {
     }
 
     // Sort both arrays for comparison
-    const sortedCurrent = [...currentRecords].sort((a, b) =>
-        a.day_of_week - b.day_of_week || a.start_time.localeCompare(b.start_time)
+    const sortedCurrent = [...currentRecords].sort(
+        (a, b) => a.day_of_week - b.day_of_week || a.start_time.localeCompare(b.start_time),
     );
-    const sortedNew = [...newRecords].sort((a, b) =>
-        a.day_of_week - b.day_of_week || a.start_time.localeCompare(b.start_time)
+    const sortedNew = [...newRecords].sort(
+        (a, b) => a.day_of_week - b.day_of_week || a.start_time.localeCompare(b.start_time),
     );
 
     // Compare each record
     return sortedCurrent.some((current, index) => {
         const next = sortedNew[index];
-        return current.day_of_week !== next.day_of_week ||
+        return (
+            current.day_of_week !== next.day_of_week ||
             current.start_time !== next.start_time ||
             current.end_time !== next.end_time ||
             current.is_any_time !== next.is_any_time ||
-            current.is_overnight !== next.is_overnight;
+            current.is_overnight !== next.is_overnight
+        );
     });
 }
 
 module.exports = {
-    saveAvailabilityData
+    saveAvailabilityData,
 };

@@ -4,10 +4,10 @@ const dbService = require('./db');
 module.exports = {
     data: {},
     languages: null,
-    getLanguages: function() {
+    getLanguages: function () {
         return new Promise(async (resolve, reject) => {
             try {
-                if(module.exports.data.languages) {
+                if (module.exports.data.languages) {
                     return resolve(module.exports.languages);
                 }
 
@@ -35,14 +35,14 @@ module.exports = {
             }
         });
     },
-    getLanguagesCountry: function(country_code) {
+    getLanguagesCountry: function (country_code) {
         return new Promise(async (resolve, reject) => {
-            if(!country_code) {
+            if (!country_code) {
                 country_code = process.env.DEFAULT_COUNTRY_CODE || 'US';
             }
 
             try {
-                if(module.exports.data[country_code]) {
+                if (module.exports.data[country_code]) {
                     return resolve(module.exports.data[country_code]);
                 }
 
@@ -136,5 +136,5 @@ module.exports = {
                 return reject(e);
             }
         });
-    }
+    },
 };

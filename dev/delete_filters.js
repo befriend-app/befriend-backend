@@ -35,11 +35,7 @@ function main() {
                 connection: connection,
             });
 
-            let tables = [
-                'persons_filters',
-                'persons_availability',
-                'activities_filters'
-            ];
+            let tables = ['persons_filters', 'persons_availability', 'activities_filters'];
 
             for (let table of tables) {
                 await knex(table).delete();

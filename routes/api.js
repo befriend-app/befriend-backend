@@ -210,7 +210,6 @@ router.put('/filters/sports', function (req, res, next) {
     });
 });
 
-
 router.put('/filters/instruments', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
@@ -318,7 +317,6 @@ router.put('/filters/smoking', function (req, res, next) {
         resolve();
     });
 });
-
 
 router.put('/me/mode', function (req, res, next) {
     return new Promise(async (resolve, reject) => {

@@ -9,7 +9,11 @@ loadScriptEnv();
 async function deletePreviousCustomKeys() {
     try {
         let keys = await getKeysWithPrefix('tv:');
-        keys.push(cacheService.keys.tv_shows, cacheService.keys.tv_genres, cacheService.keys.tv_popular);
+        keys.push(
+            cacheService.keys.tv_shows,
+            cacheService.keys.tv_genres,
+            cacheService.keys.tv_popular,
+        );
         await deleteKeys(keys);
     } catch (e) {
         console.error(e);

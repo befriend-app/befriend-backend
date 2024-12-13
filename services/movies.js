@@ -45,9 +45,7 @@ function calculateMovieScore(movie, searchTerm = null) {
     }
 
     return (
-        voteScore * WEIGHTS.VOTES +
-        ratingScore * WEIGHTS.RATING +
-        nameScore * WEIGHTS.NAME_MATCH
+        voteScore * WEIGHTS.VOTES + ratingScore * WEIGHTS.RATING + nameScore * WEIGHTS.NAME_MATCH
     );
 }
 
@@ -75,9 +73,10 @@ function getTopMoviesByCategory(category_token, topOnly = true) {
             }
 
             // Get movie tokens from cache
-            const movieTokens = category_token.startsWith('genre_') && topOnly
-                ? await getObj(cacheKey)
-                : await getSetMembers(cacheKey);
+            const movieTokens =
+                category_token.startsWith('genre_') && topOnly
+                    ? await getObj(cacheKey)
+                    : await getSetMembers(cacheKey);
 
             if (!movieTokens?.length) {
                 return resolve([]);
@@ -93,14 +92,14 @@ function getTopMoviesByCategory(category_token, topOnly = true) {
 
             // Process and format movie data
             const results = movies
-                .map(movie => {
+                .map((movie) => {
                     if (!movie) return null;
                     const movieData = JSON.parse(movie);
 
                     // Calculate movie score for sorting
                     const score = calculateMovieScore({
                         vote_count: movieData.vote_count,
-                        vote_average: movieData.vote_average
+                        vote_average: movieData.vote_average,
                     });
 
                     return {
@@ -112,10 +111,10 @@ function getTopMoviesByCategory(category_token, topOnly = true) {
                         popularity: movieData.popularity,
                         vote_count: movieData.vote_count,
                         vote_average: movieData.vote_average,
-                        score: score
+                        score: score,
                     };
                 })
-                .filter(movie => movie !== null)
+                .filter((movie) => movie !== null)
                 .sort((a, b) => b.score - a.score);
 
             resolve(results);
@@ -166,7 +165,7 @@ function searchMovies(search_term, category, limit = null) {
             // Get movie tokens matching prefix
             let movieTokens;
 
-            if(limit) {
+            if (limit) {
                 movieTokens = await getSetMembers(cacheService.keys.movies_prefix_top_1000(prefix));
             } else {
                 movieTokens = await getSetMembers(cacheService.keys.movies_prefix(prefix));
@@ -185,9 +184,9 @@ function searchMovies(search_term, category, limit = null) {
 
             const moviesData = await pipeline.execAsPipeline();
             const processedMovies = moviesData
-                .map(m => m ? JSON.parse(m) : null)
-                .filter(m => m && m.name.toLowerCase().includes(searchTermLower))
-                .map(movie => {
+                .map((m) => (m ? JSON.parse(m) : null))
+                .filter((m) => m && m.name.toLowerCase().includes(searchTermLower))
+                .map((movie) => {
                     // Calculate base score
                     const score = calculateMovieScore(movie, searchTermLower);
 
@@ -202,7 +201,8 @@ function searchMovies(search_term, category, limit = null) {
                         } else if (category.token.match(DECADE_PATTERN)) {
                             const movieYear = new Date(movie.release_date).getFullYear();
                             const decadeStart = parseInt(category.token);
-                            isContextMatch = movieYear >= decadeStart && movieYear < decadeStart + 10;
+                            isContextMatch =
+                                movieYear >= decadeStart && movieYear < decadeStart + 10;
                         } else if (category.token.startsWith('genre_')) {
                             const genreToken = category.token.replace('genre_', '');
                             isContextMatch = movie.genres?.[genreToken] !== undefined;
@@ -223,7 +223,7 @@ function searchMovies(search_term, category, limit = null) {
                         vote_average: movie.vote_average,
                         meta: movie.release_date?.substring(0, 4),
                         score: finalScore,
-                        isContextMatch
+                        isContextMatch,
                     };
                 });
 

@@ -7,7 +7,7 @@ loadScriptEnv();
 
 function main() {
     return new Promise(async (resolve, reject) => {
-        console.log("Delete: activity types");
+        console.log('Delete: activity types');
 
         if (isProdApp()) {
             console.error('App env: [prod]', 'exiting');
@@ -77,7 +77,9 @@ function main() {
         //delete cache
         await cacheService.deleteKeys(cacheService.keys.activity_types);
 
-        await cacheService.deleteKeys(await (cacheService.getKeysWithPrefix(cacheService.keys.activity_type(''))));
+        await cacheService.deleteKeys(
+            await cacheService.getKeysWithPrefix(cacheService.keys.activity_type('')),
+        );
 
         resolve();
     });

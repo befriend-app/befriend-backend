@@ -13,7 +13,7 @@ async function deletePreviousCustomKeys() {
             cacheService.keys.movies,
             cacheService.keys.movie_genres,
             cacheService.keys.movies_new,
-            cacheService.keys.movies_popular
+            cacheService.keys.movies_popular,
         );
         await deleteKeys(keys);
     } catch (e) {
@@ -27,7 +27,7 @@ function indexMovies() {
             let conn = await dbService.conn();
             let pipeline = cacheService.startPipeline();
 
-            console.log("Load movies");
+            console.log('Load movies');
 
             // Get all movies
             const movies = await conn('movies')
@@ -41,7 +41,7 @@ function indexMovies() {
                     'release_date',
                     'popularity',
                     'vote_count',
-                    'vote_average'
+                    'vote_average',
                 );
 
             // Create data structures
@@ -57,18 +57,18 @@ function indexMovies() {
 
                 movie.score = calculateMovieScore({
                     vote_count: movie.vote_count,
-                    vote_average: movie.vote_average
+                    vote_average: movie.vote_average,
                 });
             }
 
             // Sort by score
-            console.log("Sort by score");
+            console.log('Sort by score');
             movies.sort((a, b) => b.score - a.score);
 
             // Prepare data
-            console.log("Prepare data");
+            console.log('Prepare data');
 
-            for(let j = 0; j < movies.length; j++) {
+            for (let j = 0; j < movies.length; j++) {
                 let movie = movies[j];
 
                 const movieData = {
@@ -82,7 +82,7 @@ function indexMovies() {
                     vote_count: movie.vote_count,
                     vote_average: movie.vote_average,
                     score: movie.score,
-                    genres: {}
+                    genres: {},
                 };
 
                 const movieJson = JSON.stringify(movieData);
@@ -124,7 +124,7 @@ function indexMovies() {
             }
 
             // Add genres to movies
-            console.log("Add genre(s) to movies");
+            console.log('Add genre(s) to movies');
 
             const movieGenres = await conn('movies_genres AS mg')
                 .join('movie_genres AS g', 'g.id', 'mg.genre_id')
@@ -135,7 +135,7 @@ function indexMovies() {
                 if (moviesDict[mg.movie_id]) {
                     moviesDict[mg.movie_id].genres[mg.token] = {
                         token: mg.token,
-                        name: mg.name
+                        name: mg.name,
                     };
                 }
             }
@@ -151,7 +151,7 @@ function indexMovies() {
 
             try {
                 // Create new pipeline for adding data
-                console.log("Add data to redis");
+                console.log('Add data to redis');
                 pipeline = cacheService.startPipeline();
 
                 // Store movie data
@@ -174,9 +174,7 @@ function indexMovies() {
                 }
 
                 // Store popular movies
-                const topPopular = popularMovies
-                    .slice(0, topGenreCount)
-                    .map(m => m.token);
+                const topPopular = popularMovies.slice(0, topGenreCount).map((m) => m.token);
 
                 if (topPopular.length) {
                     let key = cacheService.keys.movies_popular;
@@ -187,14 +185,16 @@ function indexMovies() {
 
                 // Store new releases
                 let currentDate = new Date();
-                const newReleasesCutoff = new Date(currentDate.setMonth(currentDate.getMonth() - 3));
+                const newReleasesCutoff = new Date(
+                    currentDate.setMonth(currentDate.getMonth() - 3),
+                );
                 const newReleases = popularMovies
-                    .filter(m => {
+                    .filter((m) => {
                         const movie = JSON.parse(moviesAll[m.token]);
                         return new Date(movie.release_date) >= newReleasesCutoff;
                     })
                     .slice(0, topGenreCount)
-                    .map(m => m.token);
+                    .map((m) => m.token);
 
                 if (newReleases.length) {
                     let key = cacheService.keys.movies_new;
@@ -208,10 +208,8 @@ function indexMovies() {
                     const moviesKey = cacheService.keys.movies_decade_all(decade + 's');
                     const topKey = cacheService.keys.movies_decade_top(decade + 's');
 
-                    const allMovies = movies.map(m => m.token);
-                    const topMovies = movies
-                        .slice(0, topGenreCount)
-                        .map(m => m.token);
+                    const allMovies = movies.map((m) => m.token);
+                    const topMovies = movies.slice(0, topGenreCount).map((m) => m.token);
 
                     if (allMovies.length) {
                         pipeline.del(moviesKey);
@@ -225,7 +223,7 @@ function indexMovies() {
                 }
 
                 // Execute pipeline
-                console.log("Execute pipeline");
+                console.log('Execute pipeline');
                 const results = await pipeline.execAsPipeline();
 
                 console.log({
@@ -234,14 +232,12 @@ function indexMovies() {
                     prefixes: Object.keys(prefixGroups).length,
                     decades: Object.keys(decadeGroups).length,
                     new_releases: newReleases.length,
-                    pipeline_results: results.length
+                    pipeline_results: results.length,
                 });
-
             } catch (pipelineError) {
                 console.error('Pipeline execution error:', pipelineError);
                 throw pipelineError;
             }
-
         } catch (e) {
             console.error('Error in indexMovies:', e);
             return reject(e);
@@ -271,7 +267,7 @@ function indexMovieGenres() {
                     id: genre.id,
                     token: genre.token,
                     name: genre.name,
-                    tmdb_id: genre.tmdb_id
+                    tmdb_id: genre.tmdb_id,
                 });
                 return acc;
             }, {});
@@ -281,12 +277,7 @@ function indexMovieGenres() {
                 .join('movies AS m', 'm.id', '=', 'mg.movie_id')
                 .whereNull('mg.deleted')
                 .whereNull('m.deleted')
-                .select(
-                    'm.token AS movie_token',
-                    'm.vote_count',
-                    'm.vote_average',
-                    'mg.genre_id'
-                );
+                .select('m.token AS movie_token', 'm.vote_count', 'm.vote_average', 'mg.genre_id');
 
             // Organize by genre
             const genreMovies = {};
@@ -304,13 +295,13 @@ function indexMovieGenres() {
 
                 const movieScore = calculateMovieScore({
                     vote_count: mg.vote_count,
-                    vote_average: mg.vote_average
+                    vote_average: mg.vote_average,
                 });
 
                 genreMovies[genre.token].add(mg.movie_token);
                 genreTopMovies[genre.token].push({
                     movie_token: mg.movie_token,
-                    score: movieScore
+                    score: movieScore,
                 });
             }
 
@@ -332,7 +323,7 @@ function indexMovieGenres() {
                 const topMovies = genreTopMovies[genreToken]
                     .sort((a, b) => b.score - a.score)
                     .slice(0, topGenreCount)
-                    .map(m => m.movie_token);
+                    .map((m) => m.movie_token);
 
                 pipeline.del(topKey);
                 if (topMovies.length > 0) {
@@ -345,7 +336,8 @@ function indexMovieGenres() {
             console.log({
                 genres_processed: genres.length,
                 movies_genres_processed: movies_genres.length,
-                genres_with_movies: Object.keys(genreMovies).filter(k => genreMovies[k].size > 0).length
+                genres_with_movies: Object.keys(genreMovies).filter((k) => genreMovies[k].size > 0)
+                    .length,
             });
         } catch (e) {
             console.error('Error in indexMovieGenres:', e);
@@ -357,7 +349,7 @@ function indexMovieGenres() {
 }
 
 module.exports = {
-    main: async function() {
+    main: async function () {
         return new Promise(async (resolve, reject) => {
             try {
                 console.log('Indexing movie data');
@@ -378,11 +370,11 @@ module.exports = {
                 reject(e);
             }
         });
-    }
+    },
 };
 
 if (require.main === module) {
-    (async function() {
+    (async function () {
         try {
             await module.exports.main();
             process.exit();

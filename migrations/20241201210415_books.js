@@ -1,6 +1,6 @@
-exports.up = function(knex) {
+exports.up = function (knex) {
     return Promise.all([
-        knex.schema.createTable('books', function(table) {
+        knex.schema.createTable('books', function (table) {
             table.increments('id').primary();
             table.string('token', 32).notNullable().unique();
             table.string('ol_id', 32).notNullable().unique();
@@ -19,7 +19,7 @@ exports.up = function(knex) {
             table.index('ol_id');
         }),
 
-        knex.schema.createTable('authors', function(table) {
+        knex.schema.createTable('authors', function (table) {
             table.increments('id').primary();
             table.string('token', 32).notNullable().unique();
             table.string('ol_id', 32).notNullable().unique();
@@ -37,7 +37,7 @@ exports.up = function(knex) {
             table.index('ol_id');
         }),
 
-        knex.schema.createTable('book_genres', function(table) {
+        knex.schema.createTable('book_genres', function (table) {
             table.increments('id').primary();
             table.string('token', 32).notNullable().unique();
             table.string('name', 255).notNullable();
@@ -51,7 +51,7 @@ exports.up = function(knex) {
             table.index('token');
         }),
 
-        knex.schema.createTable('books_genres', function(table) {
+        knex.schema.createTable('books_genres', function (table) {
             table.increments('id').primary();
             table.integer('book_id').unsigned().notNullable();
             table.integer('genre_id').unsigned().notNullable();
@@ -66,7 +66,7 @@ exports.up = function(knex) {
             table.index(['genre_id']);
         }),
 
-        knex.schema.createTable('books_authors', function(table) {
+        knex.schema.createTable('books_authors', function (table) {
             table.increments('id').primary();
             table.integer('book_id').unsigned().notNullable();
             table.integer('author_id').unsigned().notNullable();
@@ -81,7 +81,7 @@ exports.up = function(knex) {
             table.index(['author_id']);
         }),
 
-        knex.schema.createTable('persons_books', function(table) {
+        knex.schema.createTable('persons_books', function (table) {
             table.bigIncrements('id').primary();
             table.bigInteger('person_id').unsigned().notNullable();
             table.integer('book_id').unsigned().notNullable();
@@ -98,7 +98,7 @@ exports.up = function(knex) {
             table.unique(['person_id', 'book_id']);
         }),
 
-        knex.schema.createTable('persons_authors', function(table) {
+        knex.schema.createTable('persons_authors', function (table) {
             table.bigIncrements('id').primary();
             table.bigInteger('person_id').unsigned().notNullable();
             table.integer('author_id').unsigned().notNullable();
@@ -115,7 +115,7 @@ exports.up = function(knex) {
             table.unique(['person_id', 'author_id']);
         }),
 
-        knex.schema.createTable('persons_book_genres', function(table) {
+        knex.schema.createTable('persons_book_genres', function (table) {
             table.bigIncrements('id').primary();
             table.bigInteger('person_id').unsigned().notNullable();
             table.integer('genre_id').unsigned().notNullable();
@@ -130,11 +130,11 @@ exports.up = function(knex) {
             table.foreign('genre_id').references('id').inTable('book_genres');
 
             table.unique(['person_id', 'genre_id']);
-        })
+        }),
     ]);
 };
 
-exports.down = function(knex) {
+exports.down = function (knex) {
     return Promise.all([
         knex.schema.dropTableIfExists('persons_book_genres'),
         knex.schema.dropTableIfExists('persons_authors'),
@@ -143,6 +143,6 @@ exports.down = function(knex) {
         knex.schema.dropTableIfExists('books_authors'),
         knex.schema.dropTableIfExists('book_genres'),
         knex.schema.dropTableIfExists('authors'),
-        knex.schema.dropTableIfExists('books')
+        knex.schema.dropTableIfExists('books'),
     ]);
 };
