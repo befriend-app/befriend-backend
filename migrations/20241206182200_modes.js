@@ -1,4 +1,6 @@
 exports.up = async function (knex) {
+    await knex.schema.dropTableIfExists('modes');
+
     await knex.schema.createTable('modes', (table) => {
         table.increments('id').primary();
         table.string('token').notNullable().unique();
@@ -15,7 +17,7 @@ exports.up = async function (knex) {
             .integer('mode_id')
             .unsigned()
             .nullable()
-            .after('network_id')
+            .after('filter_value_max')
             .references('id')
             .inTable('modes');
     });

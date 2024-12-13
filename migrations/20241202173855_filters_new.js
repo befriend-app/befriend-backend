@@ -1,5 +1,4 @@
 const filterTables = {
-    network: { column: 'network_id', table: 'networks' },
     activity_type: { column: 'activity_type_id', table: 'activity_types' },
     gender: { column: 'gender_id', table: 'genders' },
     life_stage: { column: 'life_stage_id', table: 'life_stages' },
