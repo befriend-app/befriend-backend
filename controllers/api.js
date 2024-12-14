@@ -51,7 +51,7 @@ module.exports = {
                 let networks = await conn('networks AS n')
                     .join('networks AS n2', 'n.registration_network_id', '=', 'n2.id')
                     // .where('created', '<', timeNow() - 60000)
-                    .orderBy('n.is_trusted', 'desc')
+                    .orderBy('n.is_verified', 'desc')
                     .orderBy('n.is_befriend', 'desc')
                     .orderBy('n.priority', 'asc')
                     .select(
@@ -64,7 +64,7 @@ module.exports = {
                         'n.priority',
                         'n.is_network_known',
                         'n.is_befriend',
-                        'n.is_trusted',
+                        'n.is_verified',
                         'n.is_active',
                         'n.is_blocked',
                         'n.is_online',
@@ -243,7 +243,7 @@ module.exports = {
                     is_network_known: true,
                     is_self: false,
                     is_befriend: false,
-                    is_trusted: false,
+                    is_verified: false,
                     is_blocked: false,
                     is_active: false,
                     is_online: true,
@@ -353,7 +353,7 @@ module.exports = {
                     is_network_known: befriend_network.is_network_known,
                     is_self: false,
                     is_befriend: befriend_network.is_befriend,
-                    is_trusted: befriend_network.is_trusted,
+                    is_verified: befriend_network.is_verified,
                     is_blocked: befriend_network.is_blocked,
                     is_online: befriend_network.is_online,
                     last_online: befriend_network.last_online,

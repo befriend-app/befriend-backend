@@ -3,6 +3,14 @@
  * @returns { Promise<void> }
  */
 exports.up = async function (knex) {
+    const hasColumn = await knex.schema.hasColumn('networks', 'is_trusted');
+
+    if (hasColumn) {
+        await knex.schema.alterTable('networks', (table) => {
+            table.renameColumn('is_trusted', 'is_verified');
+        });
+    }
+
     await knex.schema.alterTable('networks', (table) => {
         table.boolean('is_active').defaultTo(false).notNullable().after('is_online');
         table.bigInteger('persons_count').defaultTo(0).notNullable().after('keys_exchanged');

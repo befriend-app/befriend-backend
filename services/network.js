@@ -30,7 +30,7 @@ module.exports = {
         'is_network_known',
         'is_self',
         'is_befriend',
-        'is_trusted',
+        'is_verified',
         'is_active',
         'is_blocked',
         'is_online',
@@ -174,7 +174,7 @@ module.exports = {
                         api_domain: getCleanDomain(process.env.NETWORK_API_DOMAIN),
                         base_domain: getCleanDomain(process.env.NETWORK_API_DOMAIN, true),
                         is_self: true,
-                        is_trusted: true,
+                        is_verified: true,
                         is_online: true,
                         last_online: timeNow(),
                         is_active: true, //for self
@@ -393,7 +393,7 @@ module.exports = {
             try {
                 let cache_data = await cacheService.getObj(cache_key);
 
-                if (cache_data) {
+                if (false && cache_data) {
                     return resolve(cache_data);
                 }
 
@@ -405,7 +405,7 @@ module.exports = {
                     // .where('created', '<', timeNow() - 60000)
                     .orderBy('n.is_self', 'desc')
                     .orderBy('n.is_befriend', 'desc')
-                    .orderBy('n.is_trusted', 'desc')
+                    .orderBy('n.is_verified', 'desc')
                     .orderBy('n.priority', 'asc')
                     .select(
                         'n.network_token',
@@ -417,16 +417,29 @@ module.exports = {
                         'n.priority',
                         'n.is_self',
                         'n.is_befriend',
-                        'n.is_trusted',
+                        'n.is_verified',
                         'n.is_online',
                         'n.last_online',
                         'n.created',
                         'n.updated',
                     );
 
-                await cacheService.setCache(cache_key, networks);
+                //create separate counts for trusted networks and all networks
+                let counts = {
+                    all: 0,
+                    trusted: 0
+                };
 
-                resolve(networks);
+
+
+                let organized = {
+                    counts,
+                    networks
+                }
+
+                await cacheService.setCache(cache_key, organized);
+
+                resolve(organized);
             } catch (e) {
                 console.error(e);
                 return reject(e);
