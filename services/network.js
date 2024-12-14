@@ -22,6 +22,7 @@ module.exports = {
         'network_token',
         'network_name',
         'network_logo',
+        'app_icon',
         'base_domain',
         'api_domain',
         'priority',
@@ -171,6 +172,7 @@ module.exports = {
                         network_token: network_token,
                         network_name: process.env.NETWORK_NAME,
                         network_logo: process.env.NETWORK_LOGO || null,
+                        app_icon: process.env.NETWORK_APP_ICON || null,
                         api_domain: getCleanDomain(process.env.NETWORK_API_DOMAIN),
                         base_domain: getCleanDomain(process.env.NETWORK_API_DOMAIN, true),
                         is_self: true,
@@ -206,6 +208,10 @@ module.exports = {
 
                     if (network_data.network_logo && network_data.network_logo.startsWith('<')) {
                         invalid.push('NETWORK_LOGO');
+                    }
+
+                    if (network_data.app_icon && network_data.app_icon.startsWith('<')) {
+                        invalid.push('NETWORK_APP_ICON');
                     }
 
                     if (network_data.api_domain && network_data.api_domain.startsWith('<')) {
@@ -412,6 +418,7 @@ module.exports = {
                         'n.network_token',
                         'n.network_name',
                         'n.network_logo',
+                        'n.app_icon',
                         'n.base_domain',
                         'n.api_domain',
                         'n.persons_count',
