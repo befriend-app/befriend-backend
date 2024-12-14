@@ -13,6 +13,8 @@ const {
 } = require('../services/shared');
 
 const { batchInsert } = require('../services/db');
+const { deleteKeys } = require('../services/cache');
+const cacheService = require('../services/cache');
 
 loadScriptEnv();
 
@@ -25,6 +27,35 @@ if (args._ && args._.length) {
 }
 
 let max_request_count = 1000;
+
+function updatePersonsCount() {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let network_self = await getNetworkSelf();
+
+            let conn = await dbService.conn();
+
+            let networks_persons = await conn('persons_networks AS pn')
+                .join('persons AS p', 'p.id', '=', 'pn.person_id')
+                .where('pn.network_id', network_self.id)
+                .whereNull('pn.deleted')
+                .whereNull('p.deleted')
+                .select('pn.id', 'pn.network_id', 'pn.person_id');
+
+            await conn('networks')
+                .where('id', network_self.id)
+                .update({
+                    persons_count: networks_persons.length,
+                    updated: timeNow()
+                });
+
+            await deleteKeys([cacheService.keys.networks, cacheService.keys.networks_filters]);
+        } catch(e) {
+            console.error(e);
+        }
+    });
+}
+
 
 (async function () {
     let results;
@@ -121,6 +152,8 @@ let max_request_count = 1000;
                 console.error(e);
             }
         }
+
+        await updatePersonsCount();
     } catch (e) {
         console.error(e);
     }

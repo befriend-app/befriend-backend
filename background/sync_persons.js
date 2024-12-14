@@ -120,7 +120,7 @@ function updatePersonsCount() {
                  .join('persons AS p', 'p.id', '=', 'pn.person_id')
                  .where('pn.network_id', '<>', network_self.id)
                  .whereNull('pn.deleted')
-                 .whereNull('n.deleted')
+                 .whereNull('p.deleted')
                  .select('pn.id', 'pn.network_id', 'pn.person_id');
 
              let network_count = {};
@@ -142,7 +142,7 @@ function updatePersonsCount() {
                      });
              }
 
-             await deleteKeys(cacheService.keys.networks, cacheService.keys.networks_filters);
+            await deleteKeys([cacheService.keys.networks, cacheService.keys.networks_filters]);
         } catch(e) {
             console.error(e);
         }
