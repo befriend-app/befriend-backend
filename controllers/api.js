@@ -824,7 +824,7 @@ module.exports = {
         return new Promise(async (resolve, reject) => {
             //request received on to_network
 
-            let my_network, from_network;
+            let from_network;
 
             //request received from registering/befriend network
             let exchange_token = req.body.exchange_token_from;

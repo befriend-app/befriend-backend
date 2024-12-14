@@ -125,6 +125,7 @@ module.exports = {
             let network_token = process.env[env_network_key];
 
             if (!network_token) {
+                //add auto-generated network token to env
                 let env_path = joinPaths(getRepoRoot(), '.env');
                 let env_data;
 
@@ -175,6 +176,7 @@ module.exports = {
                         is_trusted: true,
                         is_online: true,
                         last_online: timeNow(),
+                        is_active: true, //for self
                         admin_name: process.env.ADMIN_NAME || null,
                         admin_email: process.env.ADMIN_EMAIL || null,
                         created: timeNow(),
