@@ -14,7 +14,7 @@ const {
 const { getNetworkSelf } = require('../services/network');
 const { setCache, deleteKeys } = require('../services/cache');
 const { encrypt } = require('../services/encryption');
-const { getGenderByToken } = require('../services/genders');
+const { getGendersLookup } = require('../services/genders');
 const { keys: systemKeys } = require('../services/system');
 
 const sync_name = systemKeys.sync.network.persons;
@@ -30,11 +30,17 @@ function processPersons(network_id, persons) {
         try {
             let conn = await dbService.conn();
 
+            let genders = await getGendersLookup();
+
             for (let person of persons) {
+                if(!person) {
+                    continue;
+                }
+
                 let gender_id = null;
 
-                if (person.gender) {
-                    let gender = await getGenderByToken(person.gender.gender_token);
+                if (person.gender?.gender_token) {
+                    let gender = genders.byToken[person.gender.gender_token];
 
                     if (gender) {
                         gender_id = gender.id;
@@ -48,14 +54,23 @@ function processPersons(network_id, persons) {
 
                 //add to persons and persons_networks
                 if (!person_check) {
+                    if(person.deleted) { //do not create new record for deleted person
+                        continue;
+                    }
+
                     let person_id = await conn('persons').insert({
                         person_token: person.person_token,
                         network_id: network_id,
-                        gender_id: gender_id,
+                        mode: person.mode,
+                        is_verified_in_person: person.is_verified_in_person,
+                        is_verified_linkedin: person.is_verified_linkedin,
                         is_online: person.is_online,
+                        gender_id: gender_id,
                         reviews_count: person.reviews_count,
                         reviews_rating: person.reviews_rating,
-                        birth_date: birthDatePure(person.birth_date),
+                        age: person.age,
+                        birth_date: birthDatePure(person.birth_date), //todo convert to age
+                        is_blocked: person.is_blocked,
                         created: timeNow(),
                         updated: timeNow(),
                     });
@@ -84,18 +99,24 @@ function processPersons(network_id, persons) {
                         });
                     }
 
-                    //update if updated changed
+                    //update if timestamp changed
                     //updated col is set by network where data is retrieved from
                     if (person.updated > person_check.updated) {
                         await conn('persons')
                             .where('person_id', person_check.id)
                             .update({
-                                gender_id: gender_id,
+                                mode: person.mode,
+                                is_verified_in_person: person.is_verified_in_person,
+                                is_verified_linkedin: person.is_verified_linkedin,
                                 is_online: person.is_online,
+                                gender_id: gender_id,
                                 reviews_count: person.reviews_count,
                                 reviews_rating: person.reviews_rating,
-                                birth_date: birthDatePure(person.birth_date),
+                                age: person.age,
+                                birth_date: birthDatePure(person.birth_date), //todo remove
+                                is_blocked: person.is_blocked,
                                 updated: person.updated,
+                                deleted: person.deleted || null
                             });
                     }
                 }
@@ -170,9 +191,9 @@ function updatePersonsCount() {
             //networks can be updated through the sync_networks background process
             networks = await conn('networks')
                 .where('is_self', false)
-                .where('is_blocked', false)
+                .where('keys_exchanged', true)
                 .where('is_online', true)
-                .where('keys_exchanged', true);
+                .where('is_blocked', false);
         } catch (e) {
             console.error(e);
         }
@@ -180,13 +201,16 @@ function updatePersonsCount() {
         if (networks) {
             for (let network of networks) {
                 try {
+                    //in case of error, do not save new last timestamp
+                    let skipSaveTimestamps = false;
+
                     //if error with one network, catch error and continue to next network
                     let timestamps = {
                         current: timeNow(),
                         last: null,
                     };
 
-                    //check for which data needed
+                    //request latest data only on subsequent syncs
                     let sync_qry = await conn('sync')
                         .where('network_id', network.id)
                         .where('sync_process', sync_name)
@@ -244,24 +268,27 @@ function updatePersonsCount() {
                             await processPersons(network.id, response.data.persons);
                         } catch (e) {
                             console.error(e);
+                            skipSaveTimestamps = true;
                             break;
                         }
                     }
 
-                    //update sync table
-                    if (sync_qry) {
-                        await conn('sync').where('id', sync_qry.id).update({
-                            last_updated: timestamps.current,
-                            updated: timeNow(),
-                        });
-                    } else {
-                        await conn('sync').insert({
-                            sync_process: sync_name,
-                            network_id: network.id,
-                            last_updated: timestamps.current,
-                            created: timeNow(),
-                            updated: timeNow(),
-                        });
+                    if(!skipSaveTimestamps) {
+                        //update sync table
+                        if (sync_qry) {
+                            await conn('sync').where('id', sync_qry.id).update({
+                                last_updated: timestamps.current,
+                                updated: timeNow(),
+                            });
+                        } else {
+                            await conn('sync').insert({
+                                sync_process: sync_name,
+                                network_id: network.id,
+                                last_updated: timestamps.current,
+                                created: timeNow(),
+                                updated: timeNow(),
+                            });
+                        }
                     }
                 } catch (e) {
                     console.error(e);
@@ -269,10 +296,10 @@ function updatePersonsCount() {
             }
         }
 
-        await timeoutAwait(runInterval);
-    }
+        if(network_self.is_befriend) {
+            await updatePersonsCount();
+        }
 
-    if(network_self.is_befriend) {
-        await updatePersonsCount();
+        await timeoutAwait(runInterval);
     }
 })();

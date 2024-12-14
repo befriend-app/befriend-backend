@@ -64,4 +64,22 @@ module.exports = {
             }
         });
     },
+    getGendersLookup: function () {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let genders = await module.exports.getAllGenders();
+
+                genders = genders.reduce((acc, gender) => {
+                    acc.byId[gender.id] = gender;
+                    acc.byToken[gender.token] = gender;
+                    return acc;
+                }, {byId: {}, byToken: {}});
+
+                resolve(genders);
+            } catch(e) {
+                console.error(e);
+                return reject();
+            }
+        });
+    }
 };

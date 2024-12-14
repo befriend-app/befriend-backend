@@ -393,7 +393,7 @@ module.exports = {
             try {
                 let cache_data = await cacheService.getObj(cache_key);
 
-                if (false && cache_data) {
+                if (cache_data) {
                     return resolve(cache_data);
                 }
 
@@ -408,6 +408,7 @@ module.exports = {
                     .orderBy('n.is_verified', 'desc')
                     .orderBy('n.priority', 'asc')
                     .select(
+                        'n.id',
                         'n.network_token',
                         'n.network_name',
                         'n.network_logo',
@@ -424,13 +425,50 @@ module.exports = {
                         'n.updated',
                     );
 
-                //create separate counts for trusted networks and all networks
+                let networks_lookup = networks.reduce((acc, network) => {
+                    acc.byId[network.id] = network;
+                    acc.byToken[network.network_token] = network;
+                    return acc;
+                }, {byId: {}, byToken: {}});
+
+                let networks_persons = await conn('persons_networks AS pn')
+                    .join('persons AS p', 'p.id', '=', 'pn.person_id')
+                    .whereNull('pn.deleted')
+                    .whereNull('p.deleted')
+                    .where('p.is_blocked', 0)
+                    .select('pn.id', 'pn.network_id', 'pn.person_id');
+
+                // Initialize dictionaries to store person IDs in buckets of 1 million
+                let bucketSize = 1000 * 1000;
+                let allPersonsBuckets = {};
+                let verifiedPersonsBuckets = {};
+
+                // Process all records and store in appropriate buckets
+                for (let person of networks_persons) {
+                    const bucketIndex = Math.floor(person.person_id / bucketSize);
+
+                    // Initialize bucket if it doesn't exist
+                    if (!allPersonsBuckets[bucketIndex]) {
+                        allPersonsBuckets[bucketIndex] = new Set();
+                    }
+
+                    allPersonsBuckets[bucketIndex].add(person.person_id);
+
+                    let network = networks_lookup.byId[person.network_id];
+
+                    if (network && network.is_verified) {
+                        if (!verifiedPersonsBuckets[bucketIndex]) {
+                            verifiedPersonsBuckets[bucketIndex] = new Set();
+                        }
+                        verifiedPersonsBuckets[bucketIndex].add(person.person_id);
+                    }
+                }
+
+                // Count unique persons across all buckets
                 let counts = {
-                    all: 0,
-                    trusted: 0
+                    all: Object.values(allPersonsBuckets).reduce((total, bucket) => total + bucket.size, 0),
+                    verified: Object.values(verifiedPersonsBuckets).reduce((total, bucket) => total + bucket.size, 0)
                 };
-
-
 
                 let organized = {
                     counts,

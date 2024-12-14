@@ -1,7 +1,7 @@
 const dbService = require('../services/db');
 const { getNetworkSelf } = require('../services/network');
 const { timeNow } = require('../services/shared');
-const { getGender } = require('../services/genders');
+const { getGendersLookup } = require('../services/genders');
 
 module.exports = {
     limit: 10000,
@@ -57,20 +57,25 @@ module.exports = {
                 last_person_token = req.body.last_person_token;
 
                 //results in reverse order
-
                 persons_qry = conn('persons_networks AS pn')
                     .join('persons AS p', 'p.id', '=', 'pn.person_id')
-                    .where('pn.network_id', my_network.id)
+                    .where('pn.network_id', my_network.id) //my network's persons
                     .orderBy('p.id', 'desc')
                     .limit(module.exports.limit)
                     .select(
                         'p.person_token',
-                        'gender_id',
-                        'is_online',
-                        'reviews_count',
-                        'reviews_rating',
-                        'birth_date',
+                        'p.mode',
+                        'p.is_verified_in_person',
+                        'p.is_verified_linkedin',
+                        'p.is_online',
+                        'p.gender_id', //converted to gender obj with token
+                        'p.reviews_count',
+                        'p.reviews_rating',
+                        'p.age',
+                        'p.birth_date', //todo convert to age
+                        'p.is_blocked',
                         'p.updated',
+                        'p.deleted'
                     );
 
                 if (prev_data_since) {
@@ -93,21 +98,21 @@ module.exports = {
 
                 persons = await persons_qry;
 
+                let genders = await getGendersLookup();
+
                 //organize data
-                await Promise.all(
-                    persons.map(async (person) => {
-                        let gender = await getGender(person.gender_id);
+                for(let person of persons) {
+                    let gender = genders.byId[person.gender_id];
 
-                        delete person.gender_id;
+                    delete person.gender_id;
 
-                        if (gender) {
-                            person.gender = gender;
-                            delete gender.id;
-                            delete gender.created;
-                            delete gender.updated;
-                        }
-                    }),
-                );
+                    if (gender) {
+                        person.gender = gender;
+                        delete gender.id;
+                        delete gender.created;
+                        delete gender.updated;
+                    }
+                }
 
                 //paginate if length of results equals query limit
                 if (persons.length === module.exports.limit) {

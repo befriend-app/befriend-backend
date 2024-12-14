@@ -20,7 +20,7 @@ module.exports = function (req, res, next) {
             }
 
             if (network.is_blocked) {
-                res.json('Cannot provide data to your network', 401);
+                res.json('Cannot provide data to this network', 401);
                 return resolve();
             }
 
