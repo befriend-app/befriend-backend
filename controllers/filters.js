@@ -1318,6 +1318,8 @@ function putDistance(req, res) {
 function putActivityTypes(req, res) {
     return new Promise(async (resolve, reject) => {
         try {
+            let filterKey = 'activity_types';
+
             const { activities, person_token, active } = req.body;
 
             if (!activities || typeof activities !== 'object' || typeof active !== 'boolean') {
@@ -1347,7 +1349,7 @@ function putActivityTypes(req, res) {
 
             // Get filters data
             let filters = await getFilters();
-            let filter = filters.byToken['activity_types'];
+            let filter = filters.byToken[filterKey];
 
             if (!filter) {
                 res.json(
@@ -1364,7 +1366,7 @@ function putActivityTypes(req, res) {
             let person_filters = await getPersonFilters(person);
 
             // Get or initialize the filter entry
-            let existingFilter = person_filters['activity_types'];
+            let existingFilter = person_filters[filterKey];
             if (!existingFilter) {
                 const baseEntry = createFilterEntry(filter.id, {
                     person_id: person.id,
@@ -1374,7 +1376,7 @@ function putActivityTypes(req, res) {
                     ...baseEntry,
                     items: {},
                 };
-                person_filters['activity_types'] = existingFilter;
+                person_filters[filterKey] = existingFilter;
             }
 
             // Prepare batch operations
@@ -1464,9 +1466,7 @@ function putActivityTypes(req, res) {
             // Update cache
             await cacheService.setCache(person_filter_cache_key, person_filters);
 
-            res.json({
-                success: true,
-            });
+            res.json(person_filters[filterKey]);
         } catch (error) {
             console.error('Activity types error:', error);
             res.json(
