@@ -33,7 +33,7 @@ let max_request_count = 1000;
 
     if (!self_network) {
         console.error(
-            'Network not setup: 1) Setup system: `node setup.js` 2) Start server: `node server.js`',
+            'Network not setup: 1) Setup system: node setup.js 2) Start server: node server.js',
         );
         process.exit(1);
     }

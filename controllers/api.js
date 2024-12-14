@@ -217,9 +217,9 @@ module.exports = {
 
             //ping network before adding to known
             try {
-                let happy_connect_url = getURL(data.api_domain, 'happy-connect');
+                let ping_url = getURL(data.api_domain, 'happy-connect');
 
-                let r = await axios.get(happy_connect_url);
+                let r = await axios.get(ping_url);
 
                 if (!('happiness' in r.data)) {
                     res.json(

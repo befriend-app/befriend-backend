@@ -9,16 +9,47 @@ const {
     loadScriptEnv,
     getURL,
     timeNow,
-    generateToken,
+    generateToken
 } = require('../services/shared');
 
 const { homeDomains, cols, getNetworkSelf } = require('../services/network');
+const {deleteKeys} = require("../services/cache");
 
 const runInterval = 3600 * 1000; //every hour
 
 loadScriptEnv();
 
 (async function () {
+    let my_network;
+
+    try {
+        my_network = await getNetworkSelf();
+
+        if(!my_network) {
+            throw new Error();
+        }
+    } catch(e) {
+        console.error("Error getting network for self", e);
+        await timeoutAwait(5000);
+        process.exit();
+    }
+
+    //self->server needs to be running
+    try {
+        let self_ping_url = getURL(my_network.api_domain, `happy-connect`);
+
+        let r = await axios.get(self_ping_url);
+
+        if (!('happiness' in r.data)) {
+            throw new Error();
+        }
+    } catch(e) {
+        console.error("Server not running, exiting");
+        console.error("Start server: `node server.js");
+        await timeoutAwait(5000);
+        process.exit();
+    }
+
     let home_domains = await homeDomains();
 
     while (true) {
@@ -27,9 +58,9 @@ loadScriptEnv();
         });
 
         try {
-            let conn = await dbService.conn();
+            let needsCacheReset = false;
 
-            let my_network = await getNetworkSelf();
+            let conn = await dbService.conn();
 
             let all_networks_qry = await conn('networks');
 
@@ -71,7 +102,9 @@ loadScriptEnv();
 
                                 //add network to db if not exists
                                 try {
-                                    if (!(network.network_token in all_networks_dict)) {
+                                    let existing_network = all_networks_dict[network.network_token];
+
+                                    if (!existing_network) {
                                         let network_insert = {};
 
                                         //prepare data insert based on networks table cols
@@ -90,12 +123,35 @@ loadScriptEnv();
 
                                         let id = await conn('networks').insert(network_insert);
 
+                                        needsCacheReset = true;
+
                                         network_insert.id = id[0];
 
                                         all_networks_dict[network.network_token] = network_insert;
                                     } else {
+                                        //set if keys already exchanged for existing network
                                         keys_exchanged =
                                             all_networks_dict[network.network_token].keys_exchanged;
+
+                                        //update if any new data
+                                        let network_update = {};
+
+                                        for(let col of cols) {
+                                            if(typeof network[col] !== 'undefined' &&
+                                                network[col] !== existing_network[col]) {
+                                                network_update[col] = network[col];
+                                            }
+                                        }
+
+                                        if(Object.keys(network_update).length) {
+                                            network_update.updated = timeNow();
+
+                                            await conn('networks')
+                                                .where('id', existing_network.id)
+                                                .update(network_update);
+
+                                            needsCacheReset = true;
+                                        }
                                     }
                                 } catch (e) {
                                     console.error(e);
@@ -161,6 +217,11 @@ loadScriptEnv();
                         console.error(e);
                     }
                 }
+            }
+
+            if(needsCacheReset) {
+                //delete networks cache data on add/update
+                await deleteKeys([cacheService.keys.networks, cacheService.keys.networks_filters]);
             }
         } catch (e) {
             console.error(e);
