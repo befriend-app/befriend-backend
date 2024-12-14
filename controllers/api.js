@@ -60,6 +60,7 @@ module.exports = {
                         'n.network_logo',
                         'n.base_domain',
                         'n.api_domain',
+                        'n.persons_count',
                         'n.priority',
                         'n.is_network_known',
                         'n.is_befriend',

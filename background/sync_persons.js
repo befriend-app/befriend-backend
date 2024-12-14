@@ -1,5 +1,6 @@
 const axios = require('axios');
 
+const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 
 const {
@@ -11,9 +12,9 @@ const {
     birthDatePure,
 } = require('../services/shared');
 const { getNetworkSelf } = require('../services/network');
-const { setCache } = require('../services/cache');
+const { setCache, deleteKeys } = require('../services/cache');
 const { encrypt } = require('../services/encryption');
-const { getGender, getGenderByToken } = require('../services/genders');
+const { getGenderByToken } = require('../services/genders');
 const { keys: systemKeys } = require('../services/system');
 
 const sync_name = systemKeys.sync.network.persons;
@@ -108,16 +109,62 @@ function processPersons(network_id, persons) {
     });
 }
 
+function updatePersonsCount() {
+    return new Promise(async (resolve, reject) => {
+        try {
+             let network_self = await getNetworkSelf();
+
+             let conn = await dbService.conn();
+
+             let networks_persons = await conn('persons_networks AS pn')
+                 .join('persons AS p', 'p.id', '=', 'pn.person_id')
+                 .where('pn.network_id', '<>', network_self.id)
+                 .whereNull('pn.deleted')
+                 .whereNull('n.deleted')
+                 .select('pn.id', 'pn.network_id', 'pn.person_id');
+
+             let network_count = {};
+
+             for(let item of networks_persons) {
+                 if(!(item.network_id in network_count)) {
+                     network_count[item.network_id] = 0;
+                 }
+
+                 network_count[item.network_id]++;
+             }
+
+             for(let network_id in network_count) {
+                 await conn('networks')
+                     .where('id', network_id)
+                     .update({
+                         persons_count: network_count[network_id],
+                         updated: timeNow()
+                     });
+             }
+
+             await deleteKeys(cacheService.keys.networks, cacheService.keys.networks_filters);
+        } catch(e) {
+            console.error(e);
+        }
+    });
+}
+
 (async function () {
     loadScriptEnv();
+    let network_self;
+
+    try {
+        network_self = await getNetworkSelf();
+    } catch(e) {
+        console.error(e);
+        process.exit(1);
+    }
 
     while (true) {
-        let conn, network_self, networks;
+        let conn, networks;
 
         try {
             conn = await dbService.conn();
-
-            network_self = await getNetworkSelf();
 
             //networks to sync data with
             //networks can be updated through the sync_networks background process
@@ -223,5 +270,9 @@ function processPersons(network_id, persons) {
         }
 
         await timeoutAwait(runInterval);
+    }
+
+    if(network_self.is_befriend) {
+        await updatePersonsCount();
     }
 })();
