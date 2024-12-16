@@ -2384,8 +2384,6 @@ function getSports(params = {}) {
 function getSportCategories(country_code) {
     return new Promise(async (resolve, reject) => {
         try {
-            //todo cache results
-
             let section = sectionsData.sports;
             let allSports = await cacheService.hGetAllObj(cacheService.keys.sports);
             country_code = country_code || section.categories.defaultCountry;
@@ -2404,6 +2402,17 @@ function getSportCategories(country_code) {
 
             for (let k in allSports) {
                 let sport = allSports[k];
+
+                //swap football/soccer for US/world
+                if(sport.token === 'spo_amfo') {
+                    if(country_code === 'US') {
+                        sport.name = 'Football';
+                    }
+                } else if(sport.token === 'spo_socc') {
+                    if(country_code !== 'US') {
+                        sport.name = 'Football';
+                    }
+                }
 
                 // Add to play sports if applicable
                 if (sport.is_active && sport.is_play) {

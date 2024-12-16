@@ -104,8 +104,22 @@ function sportsAutoComplete(search_term, context = null, country_code = null) {
 
             for (let k in allSports) {
                 try {
-                    allSports[k] = JSON.parse(allSports[k]);
-                } catch (e) {}
+                    let sport = JSON.parse(allSports[k]);
+
+                    if(sport.token === 'spo_amfo') {
+                        if(country_code === 'US') {
+                            sport.name = 'Football';
+                        }
+                    } else if(sport.token === 'spo_socc') {
+                        if(country_code !== 'US') {
+                            sport.name = 'Football';
+                        }
+                    }
+
+                    allSports[k] = sport;
+                } catch (e) {
+                    console.error(e);
+                }
             }
 
             if (!teamPrefixTokens?.length && !leaguePrefixTokens?.length) return resolve([]);
@@ -140,6 +154,7 @@ function sportsAutoComplete(search_term, context = null, country_code = null) {
             }
 
             const teamsData = await teamsPipeline.execAsPipeline();
+
             let teams = teamsData
                 .map((t) => (t ? JSON.parse(t) : null))
                 .filter((t) => t && t.name.toLowerCase().includes(searchTermLower))
