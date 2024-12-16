@@ -22,7 +22,7 @@ if (args._ && args._.length) {
 
 let conn, self_network, persons_dict;
 
-let parallelCount = 20;
+let parallelCount = 30;
 
 async function getPersonsLogins() {
     //todo remove
@@ -61,7 +61,6 @@ async function getPersonsLogins() {
     }
 
     console.log(timeNow() - t);
-    debugger;
 }
 
 (async function () {

@@ -1,4 +1,4 @@
-const { confirmDecryptedNetworkToken } = require('../services/shared');
+const { confirmDecryptedNetworkToken } = require('../services/encryption');
 const { getNetwork } = require('../services/network');
 
 module.exports = function (req, res, next) {

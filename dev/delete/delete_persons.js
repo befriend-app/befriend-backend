@@ -35,21 +35,22 @@ function main(is_me) {
             let bulk_delete_count = 50000;
 
             //delete activities
-            let activity_tables = [
+            let tables = [
                 'activities_persons',
                 'activities_filters',
                 'activities',
                 'persons_login_tokens',
                 'persons_devices',
+                'persons_filters_networks',
                 'persons_networks',
                 'persons_filters',
                 'persons',
             ];
 
-            for (let activity_table of activity_tables) {
+            for (let table of tables) {
                 while (true) {
                     try {
-                        var pn_qry = await knex(activity_table)
+                        var pn_qry = await knex(table)
                             .select('id')
                             .limit(bulk_delete_count);
                     } catch (e) {
@@ -61,7 +62,7 @@ function main(is_me) {
                     } else {
                         let ids = pn_qry.map((x) => x.id);
 
-                        await knex(activity_table).whereIn('id', ids).delete();
+                        await knex(table).whereIn('id', ids).delete();
                     }
                 }
             }

@@ -4,11 +4,6 @@ const fs = require('fs');
 const process = require('process');
 const tldts = require('tldts');
 
-const bcryptService = require('../services/bcrypt');
-const dbService = require('../services/db');
-
-const { decrypt } = require('../services/encryption');
-
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
 
@@ -216,72 +211,6 @@ function cloneObj(obj) {
     }
 }
 
-function confirmDecryptedNetworkToken(encrypted_message, network) {
-    return new Promise(async (resolve, reject) => {
-        try {
-            let conn = await dbService.conn();
-
-            //get secret key for encrypted message
-            let secret_key_qry = await conn('networks_secret_keys')
-                .where('network_id', network.id)
-                .where('is_active', true)
-                .first();
-
-            if (!secret_key_qry) {
-                return reject('Error validating network');
-            }
-
-            //ensure can decrypt message and it matches my network token
-            let decoded = await decrypt(secret_key_qry.secret_key_from, encrypted_message);
-
-            if (!decoded || decoded !== network.network_token) {
-                return reject('Invalid network_token');
-            }
-
-            resolve(true);
-        } catch (e) {
-            return reject('Error decrypting message');
-        }
-    });
-}
-
-function confirmDecryptedRegistrationNetworkToken(encrypted_message) {
-    return new Promise(async (resolve, reject) => {
-        try {
-            let networkService = require('../services/network');
-
-            let conn = await dbService.conn();
-
-            let my_network = await networkService.getNetworkSelf();
-
-            if (!my_network || !my_network.registration_network_id) {
-                return reject('Error finding my registration network');
-            }
-
-            //get secret key for the registration network
-            let secret_key_qry = await conn('networks_secret_keys')
-                .where('network_id', my_network.registration_network_id)
-                .where('is_active', true)
-                .first();
-
-            if (!secret_key_qry) {
-                return reject('Error finding keys');
-            }
-
-            //ensure can decrypt message and it matches my network token
-            let decoded = await decrypt(secret_key_qry.secret_key_from, encrypted_message);
-
-            if (!decoded || decoded !== networkService.token) {
-                return reject('Invalid keys exchange request');
-            }
-
-            resolve(true);
-        } catch (e) {
-            return reject('Error decrypting message');
-        }
-    });
-}
-
 function dataEndpoint(route) {
     return joinPaths(process.env.DATA_API_DOMAIN || data_api_url, route);
 }
@@ -328,19 +257,6 @@ function downloadURL(url, output_path) {
                 resolve();
             });
         } catch (e) {
-            console.error(e);
-            return reject(e);
-        }
-    });
-}
-
-function encodePassword(unencrypted_password) {
-    return new Promise(async (resolve, reject) => {
-        try {
-             let hash = await bcryptService.hash(unencrypted_password);
-
-             resolve(hash);
-        } catch(e) {
             console.error(e);
             return reject(e);
         }
@@ -1241,14 +1157,11 @@ function mdpe(key) {
 module.exports = {
     birthDatePure: birthDatePure,
     changeTimezone: changeTimezone,
-    confirmDecryptedNetworkToken: confirmDecryptedNetworkToken,
-    confirmDecryptedRegistrationNetworkToken: confirmDecryptedRegistrationNetworkToken,
     cloneObj: cloneObj,
     dataEndpoint: dataEndpoint,
     dateTimeNow: dateTimeNow,
     deleteFile: deleteFile,
     downloadURL: downloadURL,
-    encodePassword: encodePassword,
     formatNumberLength: formatNumberLength,
     generateToken: generateToken,
     getBicyclingTime: getBicyclingTime,

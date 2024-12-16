@@ -14,15 +14,6 @@ module.exports = {
         };
     },
     conn: function () {
-        async function initializePool(knex) {
-            const min = isNumeric(process.env.DB_POOL_MIN) ? parseInt(process.env.DB_POOL_MIN) : 2;
-            const initialConnections = [];
-            for(let i = 0; i < min; i++) {
-                initialConnections.push(knex.raw('SELECT 1'));
-            }
-            await Promise.all(initialConnections);
-        }
-
         return new Promise(async (resolve, reject) => {
             let knex;
 
@@ -52,16 +43,6 @@ module.exports = {
                 });
 
                 module.exports.dbConns[db_name] = knex;
-
-                await initializePool(knex);
-
-                knex.on('query', async function(data) {
-                    const stats = await module.exports.getPoolStats();
-                    // console.log({
-                    //     timestamp: new Date().toISOString(),
-                    //     poolStats: stats,
-                    // });
-                });
             }
 
             return resolve(knex);

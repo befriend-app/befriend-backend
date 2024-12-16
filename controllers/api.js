@@ -1,9 +1,9 @@
 const axios = require('axios');
 const tldts = require('tldts');
 const activitiesService = require('../services/activities');
-const bcryptService = require('../services/bcrypt');
 const cacheService = require('../services/cache');
 const dbService = require('../services/db');
+const encryptionService = require('../services/encryption');
 const networkService = require('../services/network');
 const moviesService = require('../services/movies');
 const tvService = require('../services/tv');
@@ -11,7 +11,6 @@ const tvService = require('../services/tv');
 const sectionData = require('../services/sections_data');
 
 const { getNetwork, getNetworkSelf } = require('../services/network');
-const { encrypt } = require('../services/encryption');
 const { getPerson } = require('../services/persons');
 const { getCategoriesPlaces, placesAutoComplete, travelTimes } = require('../services/places');
 const { cityAutoComplete } = require('../services/locations');
@@ -27,7 +26,6 @@ const {
     timeNow,
     generateToken,
     joinPaths,
-    confirmDecryptedRegistrationNetworkToken,
     normalizeSearch,
 } = require('../services/shared');
 const { getActivityTypes } = require('../services/activities');
@@ -753,11 +751,11 @@ module.exports = {
                     return resolve();
                 }
 
-                encrypted_network_tokens.from = await encrypt(
+                encrypted_network_tokens.from = await encryptionService.encrypt(
                     from_secret_key_qry.secret_key_to,
                     from_network_token,
                 );
-                encrypted_network_tokens.to = await encrypt(
+                encrypted_network_tokens.to = await encryptionService.encrypt(
                     to_secret_key_qry.secret_key_to,
                     to_network_token,
                 );
@@ -867,7 +865,7 @@ module.exports = {
             }
 
             try {
-                await confirmDecryptedRegistrationNetworkToken(encrypted.to);
+                await encryptionService.confirmDecryptedRegistrationNetworkToken(encrypted.to);
             } catch (e) {
                 res.json(
                     {
@@ -1034,7 +1032,7 @@ module.exports = {
 
             //confirm decrypted network token
             try {
-                await confirmDecryptedRegistrationNetworkToken(encrypted.from);
+                await encryptionService.confirmDecryptedRegistrationNetworkToken(encrypted.from);
             } catch (e) {
                 res.json(
                     {
@@ -1120,7 +1118,7 @@ module.exports = {
                 let tsbc = timeNow();
 
                 // check if password is correct
-                let validPassword = await bcryptService.compare(password, person.password);
+                let validPassword = await encryptionService.compare(password, person.password);
 
                 BE_TIMING.login.bcrypt += timeNow() - tsbc;
 

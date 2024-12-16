@@ -1,7 +1,7 @@
 const axios = require('axios');
 const yargs = require('yargs');
 const dbService = require('../../services/db');
-
+const encryptionService = require('../../services/encryption');
 const { getNetworkSelf } = require('../../services/network');
 
 const {
@@ -9,7 +9,6 @@ const {
     generateToken,
     timeNow,
     birthDatePure,
-    encodePassword,
 } = require('../../services/shared');
 
 const { batchInsert } = require('../../services/db');
@@ -90,7 +89,7 @@ function updatePersonsCount() {
 
         results = r.data.results;
 
-        let person_password = await encodePassword('password');
+        let person_password = await encryptionService.hash('password');
 
         while (current_count < num_persons) {
             current_count += max_request_count;
