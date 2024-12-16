@@ -131,7 +131,7 @@ module.exports = {
     relationships: {
         type: {
             name: 'buttons',
-            single: true,
+            multi: true,
         },
         tables: {
             relationship_status: {
