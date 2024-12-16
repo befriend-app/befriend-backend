@@ -1,10 +1,10 @@
 const axios = require('axios');
-const bcrypt = require('bcryptjs');
 const dayjs = require('dayjs');
 const fs = require('fs');
 const process = require('process');
 const tldts = require('tldts');
 
+const bcryptService = require('../services/bcrypt');
 const dbService = require('../services/db');
 
 const { decrypt } = require('../services/encryption');
@@ -336,15 +336,14 @@ function downloadURL(url, output_path) {
 
 function encodePassword(unencrypted_password) {
     return new Promise(async (resolve, reject) => {
-        bcrypt.genSalt(10, function (err, salt) {
-            bcrypt.hash(unencrypted_password, salt, function (err, hash) {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(hash);
-                }
-            });
-        });
+        try {
+             let hash = await bcryptService.hash(unencrypted_password);
+
+             resolve(hash);
+        } catch(e) {
+            console.error(e);
+            return reject(e);
+        }
     });
 }
 

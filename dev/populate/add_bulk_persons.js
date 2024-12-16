@@ -20,7 +20,7 @@ loadScriptEnv();
 
 let args = yargs.argv;
 
-let num_persons = 1000 * 1000;
+let num_persons = 1000;
 
 if (args._ && args._.length) {
     num_persons = args._[0];
@@ -37,7 +37,7 @@ function updatePersonsCount() {
 
             let persons = await conn('persons')
                 .where('network_id', network_self.id)
-                .whereNull('p.deleted')
+                .whereNull('deleted')
                 .select('id', 'network_id');
 
             await conn('networks')
@@ -80,6 +80,10 @@ function updatePersonsCount() {
     }
 
     try {
+        let prev_highest_id = (await conn('persons')
+            .orderBy('id', 'desc')
+            .first())?.id || null;
+
         let r = await axios.get(
             `https://randomuser.me/api/?results=${Math.min(num_persons, max_request_count)}`,
         );
@@ -118,7 +122,7 @@ function updatePersonsCount() {
                     first_name: person.name.first,
                     last_name: person.name.last,
                     gender_id: gender_id,
-                    email: `user-${i + 1}@befriend.app`,
+                    email: `user-${prev_highest_id? (prev_highest_id + i + 1) : i + 1}@befriend.app`,
                     password: person_password,
                     phone: person.phone,
                     is_online: true,
@@ -127,6 +131,7 @@ function updatePersonsCount() {
                     location_lat_1000: Math.floor(parseFloat(lat) * 1000),
                     location_lon: lon,
                     location_lon_1000: Math.floor(parseFloat(lon) * 1000),
+                    age: null, //todo
                     birth_date: birthDatePure(person.dob.date),
                     created: timeNow(),
                     updated: timeNow(),
