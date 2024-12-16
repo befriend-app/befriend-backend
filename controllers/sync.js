@@ -57,32 +57,31 @@ module.exports = {
                 last_person_token = req.body.last_person_token;
 
                 //results in reverse order
-                persons_qry = conn('persons_networks AS pn')
-                    .join('persons AS p', 'p.id', '=', 'pn.person_id')
-                    .where('pn.network_id', my_network.id) //my network's persons
-                    .orderBy('p.id', 'desc')
+                persons_qry = conn('persons')
+                    .where('network_id', my_network.id) //my network's persons
+                    .orderBy('id', 'desc')
                     .limit(module.exports.limit)
                     .select(
-                        'p.person_token',
-                        'p.mode',
-                        'p.is_verified_in_person',
-                        'p.is_verified_linkedin',
-                        'p.is_online',
-                        'p.gender_id', //converted to gender obj with token
-                        'p.reviews_count',
-                        'p.reviews_rating',
-                        'p.age',
-                        'p.birth_date', //todo convert to age
-                        'p.is_blocked',
-                        'p.updated',
-                        'p.deleted'
+                        'person_token',
+                        'mode',
+                        'is_verified_in_person',
+                        'is_verified_linkedin',
+                        'is_online',
+                        'gender_id', //converted to gender obj with token
+                        'reviews_count',
+                        'reviews_rating',
+                        'age',
+                        'birth_date', //todo convert to age
+                        'is_blocked',
+                        'updated',
+                        'deleted'
                     );
 
                 if (prev_data_since) {
-                    persons_qry = persons_qry.where('p.updated', '>', prev_data_since);
+                    persons_qry = persons_qry.where('updated', '>', prev_data_since);
                 } else if (data_since_timestamp) {
                     data_since_timestamp_w_extra = data_since_timestamp - add_data_since_ms;
-                    persons_qry = persons_qry.where('p.updated', '>', data_since_timestamp_w_extra);
+                    persons_qry = persons_qry.where('updated', '>', data_since_timestamp_w_extra);
                 }
 
                 if (last_person_token) {
@@ -92,7 +91,7 @@ module.exports = {
                         .first();
 
                     if (person_token_qry) {
-                        persons_qry = persons_qry.where('p.id', '<', person_token_qry.id);
+                        persons_qry = persons_qry.where('id', '<', person_token_qry.id);
                     }
                 }
 

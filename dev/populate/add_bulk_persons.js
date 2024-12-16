@@ -35,17 +35,15 @@ function updatePersonsCount() {
 
             let conn = await dbService.conn();
 
-            let networks_persons = await conn('persons_networks AS pn')
-                .join('persons AS p', 'p.id', '=', 'pn.person_id')
-                .where('pn.network_id', network_self.id)
-                .whereNull('pn.deleted')
+            let persons = await conn('persons')
+                .where('network_id', network_self.id)
                 .whereNull('p.deleted')
-                .select('pn.id', 'pn.network_id', 'pn.person_id');
+                .select('id', 'network_id');
 
             await conn('networks')
                 .where('id', network_self.id)
                 .update({
-                    persons_count: networks_persons.length,
+                    persons_count: persons.length,
                     updated: timeNow()
                 });
 

@@ -135,6 +135,10 @@ function updatePersonsCount() {
         try {
              let network_self = await getNetworkSelf();
 
+             if(!network_self.is_befriend) {
+                return resolve();
+             }
+
              let conn = await dbService.conn();
 
              let networks_persons = await conn('persons_networks AS pn')
@@ -296,9 +300,7 @@ function updatePersonsCount() {
             }
         }
 
-        if(network_self.is_befriend) {
-            await updatePersonsCount();
-        }
+        await updatePersonsCount();
 
         await timeoutAwait(runInterval);
     }

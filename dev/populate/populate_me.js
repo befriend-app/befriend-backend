@@ -20,8 +20,21 @@ if (args._ && args._.length) {
     num_persons = args._[0];
 }
 
+let conn, self_network, persons_dict;
+
+async function getPersonsLogins() {
+    let persons = await conn('persons')
+        .where('network_id', self_network.id);
+
+    let persons_logins = await conn('persons_login_tokens')
+        .whereIn('person_id', persons.map(item=>item.person_id));
+
+    debugger;
+}
+
 (async function () {
-    let self_network = await getNetworkSelf();
+    conn = await dbService.conn();
+    self_network = await getNetworkSelf();
 
     if (!self_network) {
         console.error(
@@ -29,6 +42,10 @@ if (args._ && args._.length) {
         );
         process.exit(1);
     }
+
+    await getPersonsLogins();
+
+
 
     process.exit();
 })();
