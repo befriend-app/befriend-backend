@@ -33,12 +33,12 @@ module.exports = {
                 //use cached data
                 let cache_key = cacheService.keys.person(person_token || email);
 
-                if(!('person' in BE_TIMING)) {
+                if (!('person' in BE_TIMING)) {
                     BE_TIMING.person = {
                         getObj: 0,
                         getDb: 0,
-                        setCache: 0
-                    }
+                        setCache: 0,
+                    };
                 }
 
                 let tsobj = timeNow();

@@ -69,17 +69,20 @@ module.exports = {
             try {
                 let genders = await module.exports.getAllGenders();
 
-                genders = genders.reduce((acc, gender) => {
-                    acc.byId[gender.id] = gender;
-                    acc.byToken[gender.token] = gender;
-                    return acc;
-                }, {byId: {}, byToken: {}});
+                genders = genders.reduce(
+                    (acc, gender) => {
+                        acc.byId[gender.id] = gender;
+                        acc.byToken[gender.token] = gender;
+                        return acc;
+                    },
+                    { byId: {}, byToken: {} },
+                );
 
                 resolve(genders);
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
                 return reject();
             }
         });
-    }
+    },
 };

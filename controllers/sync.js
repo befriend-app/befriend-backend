@@ -74,7 +74,7 @@ module.exports = {
                         'birth_date', //todo convert to age
                         'is_blocked',
                         'updated',
-                        'deleted'
+                        'deleted',
                     );
 
                 if (prev_data_since) {
@@ -100,7 +100,7 @@ module.exports = {
                 let genders = await getGendersLookup();
 
                 //organize data
-                for(let person of persons) {
+                for (let person of persons) {
                     let gender = genders.byId[person.gender_id];
 
                     delete person.gender_id;

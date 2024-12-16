@@ -835,19 +835,17 @@ function putModes(req, res) {
 function putNetworks(req, res) {
     return new Promise(async (resolve, reject) => {
         try {
-            const {
-                person_token,
-                network_token,
-                active,
-                is_any_network,
-                is_all_verified
-            } = req.body;
+            const { person_token, network_token, active, is_any_network, is_all_verified } =
+                req.body;
 
             // Validate required fields
             if (typeof network_token !== 'string' || typeof active !== 'boolean') {
-                res.json({
-                    message: 'Network token and active state required'
-                }, 400);
+                res.json(
+                    {
+                        message: 'Network token and active state required',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
@@ -857,18 +855,24 @@ function putNetworks(req, res) {
             let filter = filters.byToken[mapping.token];
 
             if (!filter) {
-                res.json({
-                    message: 'Networks filter not found'
-                }, 400);
+                res.json(
+                    {
+                        message: 'Networks filter not found',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
             // Get person
             let person = await getPerson(person_token);
             if (!person) {
-                res.json({
-                    message: 'Person not found'
-                }, 400);
+                res.json(
+                    {
+                        message: 'Person not found',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
@@ -876,9 +880,12 @@ function putNetworks(req, res) {
             let { networks } = await getNetworksForFilters();
 
             if (!networks?.length) {
-                res.json({
-                    message: 'No networks available'
-                }, 400);
+                res.json(
+                    {
+                        message: 'No networks available',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
@@ -898,7 +905,7 @@ function putNetworks(req, res) {
                 const [id] = await conn(mapping.filters_table).insert({
                     person_id: person.id,
                     created: now,
-                    updated: now
+                    updated: now,
                 });
 
                 existingFilter = {
@@ -913,9 +920,11 @@ function putNetworks(req, res) {
 
             // Handle special "any network" case
             if (typeof is_any_network === 'boolean') {
-                if(is_any_network !== existingFilter.is_any_network) {
+                if (is_any_network !== existingFilter.is_any_network) {
                     existingFilter.is_any_network = is_any_network;
-                    existingFilter.is_all_verified = is_any_network ? true : existingFilter.is_all_verified || false;
+                    existingFilter.is_all_verified = is_any_network
+                        ? true
+                        : existingFilter.is_all_verified || false;
 
                     await conn(mapping.filters_table)
                         .where('person_id', person.id)
@@ -923,14 +932,14 @@ function putNetworks(req, res) {
                         .update({
                             is_any_network: is_any_network,
                             is_all_verified: existingFilter.is_all_verified,
-                            updated: timeNow()
-                        })
+                            updated: timeNow(),
+                        });
                 }
             }
 
             // Handle "verified networks" case
             if (typeof is_all_verified === 'boolean') {
-                if(is_all_verified !== existingFilter.is_all_verified) {
+                if (is_all_verified !== existingFilter.is_all_verified) {
                     existingFilter.is_all_verified = is_all_verified || false;
 
                     await conn(mapping.filters_table)
@@ -938,32 +947,39 @@ function putNetworks(req, res) {
                         .where('id', existingFilter.id)
                         .update({
                             is_all_verified: existingFilter.is_all_verified,
-                            updated: timeNow()
-                        })
+                            updated: timeNow(),
+                        });
                 }
             }
 
             // Handle individual network selection
-            if (!(['any', 'any_verified'].includes(network_token))) {
-                const network = networks.find(n => n.network_token === network_token);
+            if (!['any', 'any_verified'].includes(network_token)) {
+                const network = networks.find((n) => n.network_token === network_token);
 
                 if (!network) {
-                    res.json({
-                        message: 'Invalid network token'
-                    }, 400);
+                    res.json(
+                        {
+                            message: 'Invalid network token',
+                        },
+                        400,
+                    );
                     return resolve();
                 }
 
                 // Prevent deselecting own network
                 if (network.is_self) {
-                    res.json({
-                        message: 'Cannot deselect own network'
-                    }, 400);
+                    res.json(
+                        {
+                            message: 'Cannot deselect own network',
+                        },
+                        400,
+                    );
                     return resolve();
                 }
 
-                const existingItem = Object.values(existingFilter.items)
-                    .find(item => item.network_token === network_token);
+                const existingItem = Object.values(existingFilter.items).find(
+                    (item) => item.network_token === network_token,
+                );
 
                 if (existingItem) {
                     // Update existing item
@@ -975,7 +991,7 @@ function putNetworks(req, res) {
                         .where('id', existingItem.id)
                         .update({
                             is_active: active,
-                            updated: now
+                            updated: now,
                         });
                 } else {
                     // Create new network selection
@@ -983,21 +999,20 @@ function putNetworks(req, res) {
                         person_id: person.id,
                         network_id: network.id,
                         network_token: network_token,
-                        is_active: active
+                        is_active: active,
                     });
 
-                    const [id] = await conn(mapping.filters_table)
-                        .insert({
-                            person_id: person.id,
-                            network_id: network.id,
-                            is_active: active,
-                            created: timeNow(),
-                            updated: timeNow()
-                        });
+                    const [id] = await conn(mapping.filters_table).insert({
+                        person_id: person.id,
+                        network_id: network.id,
+                        is_active: active,
+                        created: timeNow(),
+                        updated: timeNow(),
+                    });
 
                     existingFilter.items[id] = {
                         ...filterEntry,
-                        id
+                        id,
                     };
                 }
             }
@@ -1008,10 +1023,13 @@ function putNetworks(req, res) {
             res.json(person_filters[filter.token]);
         } catch (error) {
             console.error('Networks error:', error);
-            res.json({
-                message: error.message || 'Error updating networks',
-                success: false
-            }, 400);
+            res.json(
+                {
+                    message: error.message || 'Error updating networks',
+                    success: false,
+                },
+                400,
+            );
         }
 
         resolve();

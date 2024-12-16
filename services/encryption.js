@@ -7,53 +7,56 @@ const networkService = require('./network');
 
 // Worker thread code
 if (!isMainThread) {
-    parentPort.on('message', async ({ type, password, hash, rounds, key, message, encrypted_message }) => {
-        try {
-            let result;
-            let processedKey;
-            let iv;
-            let cipher;
-            let decipher;
-            let encrypted;
-            let ivHex;
-            let decrypted;
+    parentPort.on(
+        'message',
+        async ({ type, password, hash, rounds, key, message, encrypted_message }) => {
+            try {
+                let result;
+                let processedKey;
+                let iv;
+                let cipher;
+                let decipher;
+                let encrypted;
+                let ivHex;
+                let decrypted;
 
-            switch (type) {
-                case 'compare':
-                    result = await bcrypt.compare(password, hash);
-                    break;
-                case 'hash':
-                    result = await bcrypt.hash(password, rounds || 10);
-                    break;
-                case 'encrypt':
-                    processedKey = key.substring(0, 32);
-                    if (processedKey.length !== 32) {
-                        throw new Error('Key must be 32 characters');
-                    }
-                    iv = crypto.randomBytes(16);
-                    cipher = crypto.createCipheriv('aes-256-cbc', processedKey, iv);
-                    encrypted = cipher.update(message, 'utf8', 'hex');
-                    encrypted += cipher.final('hex');
-                    result = `${iv.toString('hex')}:${encrypted}`;
-                    break;
-                case 'decrypt':
-                    processedKey = key.substring(0, 32);
-                    if (processedKey.length !== 32) {
-                        throw new Error('Key must be 32 characters');
-                    }
-                    [ivHex, encrypted] = encrypted_message.split(':');
-                    iv = Buffer.from(ivHex, 'hex');
-                    decipher = crypto.createDecipheriv('aes-256-cbc', processedKey, iv);
-                    decrypted = decipher.update(encrypted, 'hex', 'utf8');
-                    decrypted += decipher.final('utf8');
-                    result = decrypted;
-                    break;
+                switch (type) {
+                    case 'compare':
+                        result = await bcrypt.compare(password, hash);
+                        break;
+                    case 'hash':
+                        result = await bcrypt.hash(password, rounds || 10);
+                        break;
+                    case 'encrypt':
+                        processedKey = key.substring(0, 32);
+                        if (processedKey.length !== 32) {
+                            throw new Error('Key must be 32 characters');
+                        }
+                        iv = crypto.randomBytes(16);
+                        cipher = crypto.createCipheriv('aes-256-cbc', processedKey, iv);
+                        encrypted = cipher.update(message, 'utf8', 'hex');
+                        encrypted += cipher.final('hex');
+                        result = `${iv.toString('hex')}:${encrypted}`;
+                        break;
+                    case 'decrypt':
+                        processedKey = key.substring(0, 32);
+                        if (processedKey.length !== 32) {
+                            throw new Error('Key must be 32 characters');
+                        }
+                        [ivHex, encrypted] = encrypted_message.split(':');
+                        iv = Buffer.from(ivHex, 'hex');
+                        decipher = crypto.createDecipheriv('aes-256-cbc', processedKey, iv);
+                        decrypted = decipher.update(encrypted, 'hex', 'utf8');
+                        decrypted += decipher.final('utf8');
+                        result = decrypted;
+                        break;
+                }
+                parentPort.postMessage({ success: true, result });
+            } catch (error) {
+                parentPort.postMessage({ success: false, error: error.message });
             }
-            parentPort.postMessage({ success: true, result });
-        } catch (error) {
-            parentPort.postMessage({ success: false, error: error.message });
-        }
-    });
+        },
+    );
 }
 // Main thread code
 else {
@@ -100,27 +103,31 @@ else {
 
     // Export all functionality
     module.exports = {
-        compare: (password, hash) => executeWorkerTask({
-            type: 'compare',
-            password,
-            hash
-        }),
-        hash: (password, rounds) => executeWorkerTask({
-            type: 'hash',
-            password,
-            rounds
-        }),
-        encrypt: (key, message) => executeWorkerTask({
-            type: 'encrypt',
-            key,
-            message
-        }),
-        decrypt: (key, encrypted_message) => executeWorkerTask({
-            type: 'decrypt',
-            key,
-            encrypted_message
-        }),
-        confirmDecryptedNetworkToken: function(encrypted_message, network) {
+        compare: (password, hash) =>
+            executeWorkerTask({
+                type: 'compare',
+                password,
+                hash,
+            }),
+        hash: (password, rounds) =>
+            executeWorkerTask({
+                type: 'hash',
+                password,
+                rounds,
+            }),
+        encrypt: (key, message) =>
+            executeWorkerTask({
+                type: 'encrypt',
+                key,
+                message,
+            }),
+        decrypt: (key, encrypted_message) =>
+            executeWorkerTask({
+                type: 'decrypt',
+                key,
+                encrypted_message,
+            }),
+        confirmDecryptedNetworkToken: function (encrypted_message, network) {
             return new Promise(async (resolve, reject) => {
                 try {
                     let conn = await dbService.conn();
@@ -136,7 +143,10 @@ else {
                     }
 
                     //ensure can decrypt message and it matches my network token
-                    let decoded = await module.exports.decrypt(secret_key_qry.secret_key_from, encrypted_message);
+                    let decoded = await module.exports.decrypt(
+                        secret_key_qry.secret_key_from,
+                        encrypted_message,
+                    );
 
                     if (!decoded || decoded !== network.network_token) {
                         return reject('Invalid network_token');
@@ -148,7 +158,7 @@ else {
                 }
             });
         },
-        confirmDecryptedRegistrationNetworkToken: function(encrypted_message) {
+        confirmDecryptedRegistrationNetworkToken: function (encrypted_message) {
             return new Promise(async (resolve, reject) => {
                 try {
                     let conn = await dbService.conn();
@@ -170,7 +180,10 @@ else {
                     }
 
                     //ensure we can decrypt message and it matches my network token
-                    let decoded = await module.exports.decrypt(secret_key_qry.secret_key_from, encrypted_message);
+                    let decoded = await module.exports.decrypt(
+                        secret_key_qry.secret_key_from,
+                        encrypted_message,
+                    );
 
                     if (!decoded || decoded !== networkService.token) {
                         return reject('Invalid keys exchange request');
@@ -183,10 +196,10 @@ else {
             });
         },
         destroy: () => {
-                for (const worker of workers) {
-                    worker.terminate();
-                }
-                workers.length = 0;
-            },
-        };
+            for (const worker of workers) {
+                worker.terminate();
+            }
+            workers.length = 0;
+        },
+    };
 }

@@ -2404,12 +2404,12 @@ function getSportCategories(country_code) {
                 let sport = allSports[k];
 
                 //swap football/soccer for US/world
-                if(sport.token === 'spo_amfo') {
-                    if(country_code === 'US') {
+                if (sport.token === 'spo_amfo') {
+                    if (country_code === 'US') {
                         sport.name = 'Football';
                     }
-                } else if(sport.token === 'spo_socc') {
-                    if(country_code !== 'US') {
+                } else if (sport.token === 'spo_socc') {
+                    if (country_code !== 'US') {
                         sport.name = 'Football';
                     }
                 }

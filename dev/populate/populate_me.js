@@ -6,9 +6,7 @@ const dbService = require('../../services/db');
 
 const { getNetworkSelf } = require('../../services/network');
 
-const {
-    loadScriptEnv, timeNow, joinPaths,
-} = require('../../services/shared');
+const { loadScriptEnv, timeNow, joinPaths } = require('../../services/shared');
 
 loadScriptEnv();
 
@@ -26,16 +24,15 @@ let parallelCount = 30;
 
 async function getPersonsLogins() {
     //todo remove
-    await conn('persons_login_tokens')
-        .delete();
+    await conn('persons_login_tokens').delete();
 
     let t = timeNow();
-    let persons = await conn('persons')
-        .where('network_id', self_network.id)
-        .limit(num_persons);
+    let persons = await conn('persons').where('network_id', self_network.id).limit(num_persons);
 
-    let persons_logins = await conn('persons_login_tokens')
-        .whereIn('person_id', persons.map(item=>item.id));
+    let persons_logins = await conn('persons_login_tokens').whereIn(
+        'person_id',
+        persons.map((item) => item.id),
+    );
 
     persons_dict = persons_logins.reduce((acc, item) => {
         acc[item.person_id] = item.login_token;
@@ -49,15 +46,17 @@ async function getPersonsLogins() {
     }
 
     for (let chunk of chunks) {
-        await Promise.all(chunk.map(async person => {
-            if (!persons_dict[person.id]) {
-                let r = await axios.post(joinPaths(process.env.APP_URL, 'login'), {
-                    email: person.email,
-                    password: 'password'
-                });
-                persons_dict[person.id] = r.data.login_token;
-            }
-        }));
+        await Promise.all(
+            chunk.map(async (person) => {
+                if (!persons_dict[person.id]) {
+                    let r = await axios.post(joinPaths(process.env.APP_URL, 'login'), {
+                        email: person.email,
+                        password: 'password',
+                    });
+                    persons_dict[person.id] = r.data.login_token;
+                }
+            }),
+        );
     }
 
     console.log(timeNow() - t);

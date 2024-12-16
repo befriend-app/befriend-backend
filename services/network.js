@@ -432,11 +432,14 @@ module.exports = {
                         'n.updated',
                     );
 
-                let networks_lookup = networks.reduce((acc, network) => {
-                    acc.byId[network.id] = network;
-                    acc.byToken[network.network_token] = network;
-                    return acc;
-                }, {byId: {}, byToken: {}});
+                let networks_lookup = networks.reduce(
+                    (acc, network) => {
+                        acc.byId[network.id] = network;
+                        acc.byToken[network.network_token] = network;
+                        return acc;
+                    },
+                    { byId: {}, byToken: {} },
+                );
 
                 let networks_persons = await conn('persons_networks AS pn')
                     .join('persons AS p', 'p.id', '=', 'pn.person_id')
@@ -473,14 +476,20 @@ module.exports = {
 
                 // Count unique persons across all buckets
                 let counts = {
-                    all: Object.values(allPersonsBuckets).reduce((total, bucket) => total + bucket.size, 0),
-                    verified: Object.values(verifiedPersonsBuckets).reduce((total, bucket) => total + bucket.size, 0)
+                    all: Object.values(allPersonsBuckets).reduce(
+                        (total, bucket) => total + bucket.size,
+                        0,
+                    ),
+                    verified: Object.values(verifiedPersonsBuckets).reduce(
+                        (total, bucket) => total + bucket.size,
+                        0,
+                    ),
                 };
 
                 let organized = {
                     counts,
-                    networks
-                }
+                    networks,
+                };
 
                 await cacheService.setCache(cache_key, organized);
 

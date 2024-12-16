@@ -33,7 +33,7 @@ function processPersons(network_id, persons) {
             let genders = await getGendersLookup();
 
             for (let person of persons) {
-                if(!person) {
+                if (!person) {
                     continue;
                 }
 
@@ -54,7 +54,8 @@ function processPersons(network_id, persons) {
 
                 //add to persons and persons_networks
                 if (!person_check) {
-                    if(person.deleted) { //do not create new record for deleted person
+                    if (person.deleted) {
+                        //do not create new record for deleted person
                         continue;
                     }
 
@@ -116,7 +117,7 @@ function processPersons(network_id, persons) {
                                 birth_date: birthDatePure(person.birth_date), //todo remove
                                 is_blocked: person.is_blocked,
                                 updated: person.updated,
-                                deleted: person.deleted || null
+                                deleted: person.deleted || null,
                             });
                     }
                 }
@@ -133,42 +134,40 @@ function processPersons(network_id, persons) {
 function updatePersonsCount() {
     return new Promise(async (resolve, reject) => {
         try {
-             let network_self = await getNetworkSelf();
+            let network_self = await getNetworkSelf();
 
-             if(!network_self.is_befriend) {
+            if (!network_self.is_befriend) {
                 return resolve();
-             }
+            }
 
-             let conn = await dbService.conn();
+            let conn = await dbService.conn();
 
-             let networks_persons = await conn('persons_networks AS pn')
-                 .join('persons AS p', 'p.id', '=', 'pn.person_id')
-                 .where('pn.network_id', '<>', network_self.id)
-                 .whereNull('pn.deleted')
-                 .whereNull('p.deleted')
-                 .select('pn.id', 'pn.network_id', 'pn.person_id');
+            let networks_persons = await conn('persons_networks AS pn')
+                .join('persons AS p', 'p.id', '=', 'pn.person_id')
+                .where('pn.network_id', '<>', network_self.id)
+                .whereNull('pn.deleted')
+                .whereNull('p.deleted')
+                .select('pn.id', 'pn.network_id', 'pn.person_id');
 
-             let network_count = {};
+            let network_count = {};
 
-             for(let item of networks_persons) {
-                 if(!(item.network_id in network_count)) {
-                     network_count[item.network_id] = 0;
-                 }
+            for (let item of networks_persons) {
+                if (!(item.network_id in network_count)) {
+                    network_count[item.network_id] = 0;
+                }
 
-                 network_count[item.network_id]++;
-             }
+                network_count[item.network_id]++;
+            }
 
-             for(let network_id in network_count) {
-                 await conn('networks')
-                     .where('id', network_id)
-                     .update({
-                         persons_count: network_count[network_id],
-                         updated: timeNow()
-                     });
-             }
+            for (let network_id in network_count) {
+                await conn('networks').where('id', network_id).update({
+                    persons_count: network_count[network_id],
+                    updated: timeNow(),
+                });
+            }
 
             await deleteKeys([cacheService.keys.networks, cacheService.keys.networks_filters]);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
     });
@@ -180,7 +179,7 @@ function updatePersonsCount() {
 
     try {
         network_self = await getNetworkSelf();
-    } catch(e) {
+    } catch (e) {
         console.error(e);
         process.exit(1);
     }
@@ -277,7 +276,7 @@ function updatePersonsCount() {
                         }
                     }
 
-                    if(!skipSaveTimestamps) {
+                    if (!skipSaveTimestamps) {
                         //update sync table
                         if (sync_qry) {
                             await conn('sync').where('id', sync_qry.id).update({

@@ -9,11 +9,11 @@ const {
     loadScriptEnv,
     getURL,
     timeNow,
-    generateToken
+    generateToken,
 } = require('../services/shared');
 
 const { homeDomains, cols, getNetworkSelf } = require('../services/network');
-const {deleteKeys} = require("../services/cache");
+const { deleteKeys } = require('../services/cache');
 
 const runInterval = 3600 * 1000; //every hour
 
@@ -25,11 +25,11 @@ loadScriptEnv();
     try {
         my_network = await getNetworkSelf();
 
-        if(!my_network) {
+        if (!my_network) {
             throw new Error();
         }
-    } catch(e) {
-        console.error("Error getting network for self", e);
+    } catch (e) {
+        console.error('Error getting network for self', e);
         await timeoutAwait(5000);
         process.exit();
     }
@@ -43,9 +43,9 @@ loadScriptEnv();
         if (!('happiness' in r.data)) {
             throw new Error();
         }
-    } catch(e) {
-        console.error("Server not running, exiting");
-        console.error("Start server: `node server.js");
+    } catch (e) {
+        console.error('Server not running, exiting');
+        console.error('Start server: `node server.js');
         await timeoutAwait(5000);
         process.exit();
     }
@@ -136,14 +136,16 @@ loadScriptEnv();
                                         //update if any new data
                                         let network_update = {};
 
-                                        for(let col of cols) {
-                                            if(typeof network[col] !== 'undefined' &&
-                                                network[col] !== existing_network[col]) {
+                                        for (let col of cols) {
+                                            if (
+                                                typeof network[col] !== 'undefined' &&
+                                                network[col] !== existing_network[col]
+                                            ) {
                                                 network_update[col] = network[col];
                                             }
                                         }
 
-                                        if(Object.keys(network_update).length) {
+                                        if (Object.keys(network_update).length) {
                                             network_update.updated = timeNow();
 
                                             await conn('networks')
@@ -219,7 +221,7 @@ loadScriptEnv();
                 }
             }
 
-            if(needsCacheReset) {
+            if (needsCacheReset) {
                 //delete networks cache data on add/update
                 await deleteKeys([cacheService.keys.networks, cacheService.keys.networks_filters]);
             }

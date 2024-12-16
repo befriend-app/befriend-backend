@@ -1093,7 +1093,7 @@ module.exports = {
     doLogin: function (req, res) {
         return new Promise(async (resolve, reject) => {
             try {
-                if(!('login' in BE_TIMING)) {
+                if (!('login' in BE_TIMING)) {
                     BE_TIMING.login = {
                         all: 0,
                         person: 0,
@@ -1101,8 +1101,8 @@ module.exports = {
                         generate: 0,
                         conn: 0,
                         insert: 0,
-                        addToSet: 0
-                    }
+                        addToSet: 0,
+                    };
                 }
 
                 let ts = timeNow();

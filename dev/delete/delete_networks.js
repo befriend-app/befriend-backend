@@ -3,7 +3,7 @@ const { keys, deleteKeys } = require('../../services/cache');
 
 loadScriptEnv();
 
-function main(is_me) {
+function main() {
     return new Promise(async (resolve, reject) => {
         console.log('Delete: networks');
 
@@ -41,17 +41,14 @@ function main(is_me) {
                 'networks',
             ];
 
-            await knex('networks')
-                .update({
-                    registration_network_id: null
-                });
+            await knex('networks').update({
+                registration_network_id: null,
+            });
 
             for (let table of tables) {
                 while (true) {
                     try {
-                        var pn_qry = await knex(table)
-                            .select('id')
-                            .limit(bulk_delete_count);
+                        var pn_qry = await knex(table).select('id').limit(bulk_delete_count);
                     } catch (e) {
                         break;
                     }
@@ -80,7 +77,7 @@ module.exports = {
 if (require.main === module) {
     (async function () {
         try {
-            await main(true);
+            await main();
             process.exit();
         } catch (e) {
             console.error(e);

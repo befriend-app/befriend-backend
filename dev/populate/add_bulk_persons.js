@@ -4,12 +4,7 @@ const dbService = require('../../services/db');
 const encryptionService = require('../../services/encryption');
 const { getNetworkSelf } = require('../../services/network');
 
-const {
-    loadScriptEnv,
-    generateToken,
-    timeNow,
-    birthDatePure,
-} = require('../../services/shared');
+const { loadScriptEnv, generateToken, timeNow, birthDatePure } = require('../../services/shared');
 
 const { batchInsert } = require('../../services/db');
 const { deleteKeys } = require('../../services/cache');
@@ -39,22 +34,19 @@ function updatePersonsCount() {
                 .whereNull('deleted')
                 .select('id', 'network_id');
 
-            await conn('networks')
-                .where('id', network_self.id)
-                .update({
-                    persons_count: persons.length,
-                    updated: timeNow()
-                });
+            await conn('networks').where('id', network_self.id).update({
+                persons_count: persons.length,
+                updated: timeNow(),
+            });
 
             await deleteKeys([cacheService.keys.networks, cacheService.keys.networks_filters]);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
 
         resolve();
     });
 }
-
 
 (async function () {
     let results;
@@ -79,9 +71,7 @@ function updatePersonsCount() {
     }
 
     try {
-        let prev_highest_id = (await conn('persons')
-            .orderBy('id', 'desc')
-            .first())?.id || null;
+        let prev_highest_id = (await conn('persons').orderBy('id', 'desc').first())?.id || null;
 
         let r = await axios.get(
             `https://randomuser.me/api/?results=${Math.min(num_persons, max_request_count)}`,
@@ -121,7 +111,7 @@ function updatePersonsCount() {
                     first_name: person.name.first,
                     last_name: person.name.last,
                     gender_id: gender_id,
-                    email: `user-${prev_highest_id? (prev_highest_id + i + 1) : i + 1}@befriend.app`,
+                    email: `user-${prev_highest_id ? prev_highest_id + i + 1 : i + 1}@befriend.app`,
                     password: person_password,
                     phone: person.phone,
                     is_online: true,

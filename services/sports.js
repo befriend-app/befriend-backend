@@ -106,12 +106,12 @@ function sportsAutoComplete(search_term, context = null, country_code = null) {
                 try {
                     let sport = JSON.parse(allSports[k]);
 
-                    if(sport.token === 'spo_amfo') {
-                        if(country_code === 'US') {
+                    if (sport.token === 'spo_amfo') {
+                        if (country_code === 'US') {
                             sport.name = 'Football';
                         }
-                    } else if(sport.token === 'spo_socc') {
-                        if(country_code !== 'US') {
+                    } else if (sport.token === 'spo_socc') {
+                        if (country_code !== 'US') {
                             sport.name = 'Football';
                         }
                     }

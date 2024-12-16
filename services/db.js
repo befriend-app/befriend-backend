@@ -3,7 +3,7 @@ module.exports = {
     max_placeholders: 65536,
     keys: {},
     dbConns: {},
-    getPoolStats: async function() {
+    getPoolStats: async function () {
         const conn = await this.conn();
         const pool = conn.client.pool;
 
@@ -37,9 +37,13 @@ module.exports = {
                     client: process.env.DB_CLIENT,
                     connection: connection,
                     pool: {
-                        min: isNumeric(process.env.DB_POOL_MIN) ? parseInt(process.env.DB_POOL_MIN) : 2,
-                        max: isNumeric(process.env.DB_POOL_MAX) ? parseInt(process.env.DB_POOL_MAX) : 20,
-                    }
+                        min: isNumeric(process.env.DB_POOL_MIN)
+                            ? parseInt(process.env.DB_POOL_MIN)
+                            : 2,
+                        max: isNumeric(process.env.DB_POOL_MAX)
+                            ? parseInt(process.env.DB_POOL_MAX)
+                            : 20,
+                    },
                 });
 
                 module.exports.dbConns[db_name] = knex;

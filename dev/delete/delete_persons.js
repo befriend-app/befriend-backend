@@ -50,9 +50,7 @@ function main(is_me) {
             for (let table of tables) {
                 while (true) {
                     try {
-                        var pn_qry = await knex(table)
-                            .select('id')
-                            .limit(bulk_delete_count);
+                        var pn_qry = await knex(table).select('id').limit(bulk_delete_count);
                     } catch (e) {
                         break;
                     }

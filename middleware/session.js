@@ -26,7 +26,7 @@ function isSessionExpired(session_check) {
 
 async function handleSession(req, res, next) {
     return new Promise(async (resolve, reject) => {
-        if(!('session' in BE_TIMING)) {
+        if (!('session' in BE_TIMING)) {
             BE_TIMING.session = 0;
         }
 
