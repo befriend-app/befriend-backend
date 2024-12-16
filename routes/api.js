@@ -90,6 +90,18 @@ router.put('/filters/modes', function (req, res, next) {
     });
 });
 
+router.put('/filters/networks', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await filtersController.putNetworks(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
 router.put('/filters/reviews', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {

@@ -7,6 +7,7 @@ const filterMappings = {
         name: 'Networks',
         table: 'networks',
         column: 'network_id',
+        filters_table: 'persons_filters_networks',
         multi: true,
     },
     activity_types: {

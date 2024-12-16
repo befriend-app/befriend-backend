@@ -832,6 +832,192 @@ function putModes(req, res) {
     });
 }
 
+function putNetworks(req, res) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const {
+                person_token,
+                network_token,
+                active,
+                is_any_network,
+                is_all_verified
+            } = req.body;
+
+            // Validate required fields
+            if (typeof network_token !== 'string' || typeof active !== 'boolean') {
+                res.json({
+                    message: 'Network token and active state required'
+                }, 400);
+                return resolve();
+            }
+
+            // Get filter and mapping data
+            let mapping = filterMappings.networks;
+            let filters = await getFilters();
+            let filter = filters.byToken[mapping.token];
+
+            if (!filter) {
+                res.json({
+                    message: 'Networks filter not found'
+                }, 400);
+                return resolve();
+            }
+
+            // Get person
+            let person = await getPerson(person_token);
+            if (!person) {
+                res.json({
+                    message: 'Person not found'
+                }, 400);
+                return resolve();
+            }
+
+            // Get networks data
+            let { networks } = await getNetworksForFilters();
+
+            if (!networks?.length) {
+                res.json({
+                    message: 'No networks available'
+                }, 400);
+                return resolve();
+            }
+
+            let conn = await dbService.conn();
+            let person_filter_cache_key = cacheService.keys.person_filters(person_token);
+            let person_filters = await getPersonFilters(person);
+            let now = timeNow();
+
+            // Get or initialize the filter entry
+            let existingFilter = person_filters[filter.token];
+
+            if (!existingFilter) {
+                const baseEntry = createFilterEntry(filter.id, {
+                    person_id: person.id,
+                });
+
+                const [id] = await conn(mapping.filters_table).insert({
+                    person_id: person.id,
+                    created: now,
+                    updated: now
+                });
+
+                existingFilter = {
+                    ...baseEntry,
+                    id,
+                    items: {},
+                };
+                person_filters[filter.token] = existingFilter;
+            } else if (!existingFilter.items) {
+                existingFilter.items = {};
+            }
+
+            // Handle special "any network" case
+            if (typeof is_any_network === 'boolean') {
+                if(is_any_network !== existingFilter.is_any_network) {
+                    existingFilter.is_any_network = is_any_network;
+                    existingFilter.is_all_verified = is_any_network ? true : existingFilter.is_all_verified || false;
+
+                    await conn(mapping.filters_table)
+                        .where('person_id', person.id)
+                        .where('id', existingFilter.id)
+                        .update({
+                            is_any_network: is_any_network,
+                            is_all_verified: existingFilter.is_all_verified,
+                            updated: timeNow()
+                        })
+                }
+            }
+
+            // Handle "verified networks" case
+            if (typeof is_all_verified === 'boolean') {
+                if(is_all_verified !== existingFilter.is_all_verified) {
+                    existingFilter.is_all_verified = is_all_verified || false;
+
+                    await conn(mapping.filters_table)
+                        .where('person_id', person.id)
+                        .where('id', existingFilter.id)
+                        .update({
+                            is_all_verified: existingFilter.is_all_verified,
+                            updated: timeNow()
+                        })
+                }
+            }
+
+            // Handle individual network selection
+            if (!(['any', 'any_verified'].includes(network_token))) {
+                const network = networks.find(n => n.network_token === network_token);
+
+                if (!network) {
+                    res.json({
+                        message: 'Invalid network token'
+                    }, 400);
+                    return resolve();
+                }
+
+                // Prevent deselecting own network
+                if (network.is_self) {
+                    res.json({
+                        message: 'Cannot deselect own network'
+                    }, 400);
+                    return resolve();
+                }
+
+                const existingItem = Object.values(existingFilter.items)
+                    .find(item => item.network_token === network_token);
+
+                if (existingItem) {
+                    // Update existing item
+                    existingItem.is_active = active;
+                    existingItem.updated = now;
+
+                    await conn(mapping.filters_table)
+                        .where('person_id', person.id)
+                        .where('id', existingItem.id)
+                        .update({
+                            is_active: active,
+                            updated: now
+                        });
+                } else {
+                    // Create new network selection
+                    let filterEntry = createFilterEntry(filter.id, {
+                        person_id: person.id,
+                        network_id: network.id,
+                        network_token: network_token,
+                        is_active: active
+                    });
+
+                    const [id] = await conn(mapping.filters_table)
+                        .insert({
+                            person_id: person.id,
+                            network_id: network.id,
+                            is_active: active,
+                            created: timeNow(),
+                            updated: timeNow()
+                        });
+
+                    existingFilter.items[id] = {
+                        ...filterEntry,
+                        id
+                    };
+                }
+            }
+
+            // Update cache
+            await cacheService.setCache(person_filter_cache_key, person_filters);
+
+            res.json(person_filters[filter.token]);
+        } catch (error) {
+            console.error('Networks error:', error);
+            res.json({
+                message: error.message || 'Error updating networks',
+                success: false
+            }, 400);
+        }
+
+        resolve();
+    });
+}
+
 function putReviewRating(req, res) {
     return new Promise(async (resolve, reject) => {
         try {
@@ -916,6 +1102,7 @@ function putReviewRating(req, res) {
             });
         } catch (e) {
             console.error(e);
+
             res.json(
                 {
                     message: 'Error updating review rating',
@@ -3159,6 +3346,7 @@ module.exports = {
     putSendReceive,
     putAvailability,
     putModes,
+    putNetworks,
     putReviewRating,
     putAge,
     putGender,

@@ -6,8 +6,9 @@ exports.up = async function (knex) {
         table.bigInteger('person_id').unsigned().notNullable().references('id').inTable('persons');
         table.integer('network_id').unsigned().nullable().references('id').inTable('networks');
 
-        table.boolean('is_all_trusted').notNullable().defaultTo(true);
+        table.boolean('is_all_verified').notNullable().defaultTo(true);
         table.boolean('is_any_network').notNullable().defaultTo(false);
+        table.boolean('is_active').nullable();
         table.bigInteger('created').notNullable();
         table.bigInteger('updated').notNullable();
         table.bigInteger('deleted').nullable();
