@@ -1,12 +1,13 @@
-const cacheService = require('../services/cache');
-const { loadScriptEnv, isProdApp } = require('../services/shared');
-const { keys: systemKeys } = require('../services/system');
+const cacheService = require('../../services/cache');
+const db = require('../../services/db');
+const { loadScriptEnv, isProdApp } = require('../../services/shared');
+const { keys: systemKeys } = require('../../services/system');
 
 loadScriptEnv();
 
-function main(is_me) {
+function main() {
     return new Promise(async (resolve, reject) => {
-        console.log('Delete: movies');
+        console.log('Delete: filters');
 
         if (isProdApp()) {
             console.error('App env: [prod]', 'exiting');
@@ -34,35 +35,16 @@ function main(is_me) {
                 connection: connection,
             });
 
-            let tables = [
-                'persons_movies',
-                'persons_movie_genres',
-                'movies_genres',
-                'movies',
-                'movie_genres',
-            ];
+            let tables = ['persons_filters', 'persons_availability', 'persons_filters_networks', 'activities_filters'];
 
             for (let table of tables) {
                 await knex(table).delete();
             }
 
-            //delete sync
-            for (let k in systemKeys.sync.data.movies) {
-                await knex('sync').where('sync_process', systemKeys.sync.data.movies[k]).delete();
-            }
+            //delete cache data
+            let keys = await cacheService.getKeysWithPrefix(`persons:filters`);
 
-            let movie_keys = await cacheService.getKeysWithPrefix(`movie`);
-
-            await cacheService.deleteKeys(movie_keys);
-
-            let movie_section_keys = [
-                cacheService.keys.movies,
-                cacheService.keys.movie_genres,
-                cacheService.keys.movies_new,
-                cacheService.keys.movies_popular,
-            ];
-
-            await cacheService.deleteKeys(movie_section_keys);
+            await cacheService.deleteKeys(keys);
         }
 
         resolve();

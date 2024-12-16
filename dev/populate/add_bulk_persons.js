@@ -1,8 +1,8 @@
 const axios = require('axios');
 const yargs = require('yargs');
-const dbService = require('../services/db');
+const dbService = require('../../services/db');
 
-const { getNetworkSelf } = require('../services/network');
+const { getNetworkSelf } = require('../../services/network');
 
 const {
     loadScriptEnv,
@@ -10,11 +10,11 @@ const {
     timeNow,
     birthDatePure,
     encodePassword,
-} = require('../services/shared');
+} = require('../../services/shared');
 
-const { batchInsert } = require('../services/db');
-const { deleteKeys } = require('../services/cache');
-const cacheService = require('../services/cache');
+const { batchInsert } = require('../../services/db');
+const { deleteKeys } = require('../../services/cache');
+const cacheService = require('../../services/cache');
 
 loadScriptEnv();
 
@@ -66,7 +66,7 @@ function updatePersonsCount() {
 
     if (!self_network) {
         console.error(
-            'Network not setup: 1) Setup system: node setup.js 2) Start server: node server.js',
+            'Network not setup: 1) Setup system: node setup 2) Start server: node server.js',
         );
         process.exit(1);
     }

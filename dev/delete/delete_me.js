@@ -1,6 +1,6 @@
-const cacheService = require('../services/cache');
-const db = require('../services/db');
-const { loadScriptEnv, isProdApp } = require('../services/shared');
+const cacheService = require('../../services/cache');
+const db = require('../../services/db');
+const { loadScriptEnv, isProdApp } = require('../../services/shared');
 
 loadScriptEnv();
 
@@ -77,7 +77,7 @@ function main(is_me) {
         }
 
         if (is_me) {
-            await require('../setup/me/sections').main();
+            await require('../../setup/me/sections').main();
         }
 
         resolve();

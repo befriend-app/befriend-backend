@@ -1,13 +1,12 @@
-const cacheService = require('../services/cache');
-const db = require('../services/db');
-const { loadScriptEnv, isProdApp } = require('../services/shared');
-const { keys: systemKeys } = require('../services/system');
+const cacheService = require('../../services/cache');
+const { loadScriptEnv, isProdApp } = require('../../services/shared');
+const { keys: systemKeys } = require('../../services/system');
 
 loadScriptEnv();
 
 function main(is_me) {
     return new Promise(async (resolve, reject) => {
-        console.log('Delete: tv');
+        console.log('Delete: movies');
 
         if (isProdApp()) {
             console.error('App env: [prod]', 'exiting');
@@ -36,11 +35,11 @@ function main(is_me) {
             });
 
             let tables = [
-                'persons_tv_shows',
-                'persons_tv_genres',
-                'tv_shows_genres',
-                'tv_shows',
-                'tv_genres',
+                'persons_movies',
+                'persons_movie_genres',
+                'movies_genres',
+                'movies',
+                'movie_genres',
             ];
 
             for (let table of tables) {
@@ -48,22 +47,22 @@ function main(is_me) {
             }
 
             //delete sync
-            for (let k in systemKeys.sync.data.tv) {
-                await knex('sync').where('sync_process', systemKeys.sync.data.tv[k]).delete();
+            for (let k in systemKeys.sync.data.movies) {
+                await knex('sync').where('sync_process', systemKeys.sync.data.movies[k]).delete();
             }
 
-            //delete cache data
-            let tv_keys = await cacheService.getKeysWithPrefix(`tv:`);
+            let movie_keys = await cacheService.getKeysWithPrefix(`movie`);
 
-            await cacheService.deleteKeys(tv_keys);
+            await cacheService.deleteKeys(movie_keys);
 
-            let tv_section_keys = [
-                cacheService.keys.tv_shows,
-                cacheService.keys.tv_genres,
-                cacheService.keys.tv_popular,
+            let movie_section_keys = [
+                cacheService.keys.movies,
+                cacheService.keys.movie_genres,
+                cacheService.keys.movies_new,
+                cacheService.keys.movies_popular,
             ];
 
-            await cacheService.deleteKeys(tv_section_keys);
+            await cacheService.deleteKeys(movie_section_keys);
         }
 
         resolve();

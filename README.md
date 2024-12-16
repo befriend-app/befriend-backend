@@ -14,7 +14,7 @@ https://drawsql.app/teams/befriend/diagrams/befriend-backend
 
 `cp .env.example .env`
 
-`node scripts/migrate.js`
+`node setup`
 
 `node server.js`
 

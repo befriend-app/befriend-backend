@@ -1,7 +1,7 @@
-const cacheService = require('../services/cache');
-const { loadScriptEnv, isProdApp } = require('../services/shared');
-const { keys: systemKeys } = require('../services/system');
-const { getKeys } = require('../services/cache');
+const cacheService = require('../../services/cache');
+const { loadScriptEnv, isProdApp } = require('../../services/shared');
+const { keys: systemKeys } = require('../../services/system');
+const { getKeys } = require('../../services/cache');
 
 loadScriptEnv();
 

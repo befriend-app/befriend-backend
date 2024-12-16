@@ -1,12 +1,13 @@
-const cacheService = require('../services/cache');
-const db = require('../services/db');
-const { loadScriptEnv, isProdApp } = require('../services/shared');
+const cacheService = require('../../services/cache');
+const db = require('../../services/db');
+const { loadScriptEnv, isProdApp } = require('../../services/shared');
+const { keys: systemKeys } = require('../../services/system');
 
 loadScriptEnv();
 
 function main(is_me) {
     return new Promise(async (resolve, reject) => {
-        console.log('Delete: instruments');
+        console.log('Delete: tv');
 
         if (isProdApp()) {
             console.error('App env: [prod]', 'exiting');
@@ -34,25 +35,35 @@ function main(is_me) {
                 connection: connection,
             });
 
-            let tables = ['persons_instruments', 'instruments'];
+            let tables = [
+                'persons_tv_shows',
+                'persons_tv_genres',
+                'tv_shows_genres',
+                'tv_shows',
+                'tv_genres',
+            ];
 
             for (let table of tables) {
                 await knex(table).delete();
             }
 
-            let keys = await cacheService.getKeys(cacheService.keys.instrument('') + '*');
+            //delete sync
+            for (let k in systemKeys.sync.data.tv) {
+                await knex('sync').where('sync_process', systemKeys.sync.data.tv[k]).delete();
+            }
 
-            //instruments
-            keys.push(cacheService.keys.instruments);
-            keys.push(cacheService.keys.instruments_common);
+            //delete cache data
+            let tv_keys = await cacheService.getKeysWithPrefix(`tv:`);
 
-            await cacheService.deleteKeys(keys);
-        }
+            await cacheService.deleteKeys(tv_keys);
 
-        if (is_me) {
-            await require('../setup/me/instruments').main();
+            let tv_section_keys = [
+                cacheService.keys.tv_shows,
+                cacheService.keys.tv_genres,
+                cacheService.keys.tv_popular,
+            ];
 
-            process.exit();
+            await cacheService.deleteKeys(tv_section_keys);
         }
 
         resolve();

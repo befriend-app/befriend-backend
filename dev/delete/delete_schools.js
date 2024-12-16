@@ -1,6 +1,6 @@
-const cacheService = require('../services/cache');
-const { loadScriptEnv, isProdApp } = require('../services/shared');
-const { keys: systemKeys } = require('../services/system');
+const cacheService = require('../../services/cache');
+const { loadScriptEnv, isProdApp } = require('../../services/shared');
+const { keys: systemKeys } = require('../../services/system');
 
 loadScriptEnv();
 
@@ -53,7 +53,7 @@ function main(is_me) {
         }
 
         if (is_me) {
-            await require('../setup/me/schools').main();
+            await require('../../setup/me/schools').main();
 
             process.exit();
         }

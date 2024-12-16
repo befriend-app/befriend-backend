@@ -2269,7 +2269,7 @@ function getRelationshipStatus(params = {}) {
         try {
             let { options_only } = params;
 
-            let options = relationshipService.getRelationshipStatus();
+            let options = await relationshipService.getRelationshipStatus();
 
             if (options_only) {
                 return resolve(options);

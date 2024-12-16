@@ -1,7 +1,7 @@
-const cache = require('../services/cache');
-const db = require('../services/db');
-const { loadScriptEnv, isProdApp } = require('../services/shared');
-const cacheService = require('../services/cache');
+const cache = require('../../services/cache');
+const db = require('../../services/db');
+const { loadScriptEnv, isProdApp } = require('../../services/shared');
+const cacheService = require('../../services/cache');
 
 loadScriptEnv();
 

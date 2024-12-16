@@ -1,13 +1,12 @@
-const cacheService = require('../services/cache');
-const db = require('../services/db');
-const { loadScriptEnv, isProdApp } = require('../services/shared');
-const { keys: systemKeys } = require('../services/system');
+const cacheService = require('../../services/cache');
+const db = require('../../services/db');
+const { loadScriptEnv, isProdApp } = require('../../services/shared');
 
 loadScriptEnv();
 
-function main() {
+function main(is_me) {
     return new Promise(async (resolve, reject) => {
-        console.log('Delete: filters');
+        console.log('Delete: instruments');
 
         if (isProdApp()) {
             console.error('App env: [prod]', 'exiting');
@@ -35,16 +34,25 @@ function main() {
                 connection: connection,
             });
 
-            let tables = ['persons_filters', 'persons_availability', 'persons_filters_networks', 'activities_filters'];
+            let tables = ['persons_instruments', 'instruments'];
 
             for (let table of tables) {
                 await knex(table).delete();
             }
 
-            //delete cache data
-            let keys = await cacheService.getKeysWithPrefix(`persons:filters`);
+            let keys = await cacheService.getKeys(cacheService.keys.instrument('') + '*');
+
+            //instruments
+            keys.push(cacheService.keys.instruments);
+            keys.push(cacheService.keys.instruments_common);
 
             await cacheService.deleteKeys(keys);
+        }
+
+        if (is_me) {
+            await require('../../setup/me/instruments').main();
+
+            process.exit();
         }
 
         resolve();
