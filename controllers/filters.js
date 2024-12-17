@@ -62,6 +62,7 @@ function createFilterEntry(filter_id, props = {}) {
 
 function getFiltersOptions(req, res) {
     return new Promise(async (resolve, reject) => {
+        let ts = timeNow();
         try {
             let organized = {
                 networks: null,
@@ -81,7 +82,7 @@ function getFiltersOptions(req, res) {
                 smoking: null,
             };
 
-            let person = await getPerson(req.query.person_token);
+            let person = await getPerson(req.query.person_token || req.body.person_token);
 
             organized.networks = await getNetworksForFilters();
 

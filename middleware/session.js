@@ -26,12 +26,6 @@ function isSessionExpired(session_check) {
 
 async function handleSession(req, res, next) {
     return new Promise(async (resolve, reject) => {
-        if (!('session' in BE_TIMING)) {
-            BE_TIMING.session = 0;
-        }
-
-        let ts = timeNow();
-
         function createSession() {
             return new Promise(async (resolve, reject) => {
                 let session_str = generateToken();
@@ -143,8 +137,6 @@ async function handleSession(req, res, next) {
                 return resolve(next());
             }
         }
-
-        BE_TIMING.session += timeNow() - ts;
 
         return resolve(next());
     });

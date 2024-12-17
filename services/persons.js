@@ -33,28 +33,14 @@ module.exports = {
                 //use cached data
                 let cache_key = cacheService.keys.person(person_token || email);
 
-                if (!('person' in BE_TIMING)) {
-                    BE_TIMING.person = {
-                        getObj: 0,
-                        getDb: 0,
-                        setCache: 0,
-                    };
-                }
-
-                let tsobj = timeNow();
-
                 person = await cacheService.getObj(cache_key);
 
-                BE_TIMING.person.getObj += timeNow() - tsobj;
-
-                //todo remove to use cache
-                if (person && false) {
+                if (person) {
                     return resolve(person);
                 }
 
                 let conn = await dbService.conn();
 
-                let tsdb = timeNow();
                 //todo filter cols
                 if (email) {
                     person = await conn('persons').where('email', email).first();
@@ -62,12 +48,8 @@ module.exports = {
                     person = await conn('persons').where('person_token', person_token).first();
                 }
 
-                BE_TIMING.person.getDb += timeNow() - tsdb;
-
                 if (person) {
-                    let ts = timeNow();
                     await cacheService.setCache(cache_key, person);
-                    BE_TIMING.person.setCache += timeNow() - ts;
                 }
 
                 resolve(person);

@@ -14,7 +14,7 @@ loadScriptEnv();
 
 let args = yargs.argv;
 
-let num_persons = 1000;
+let num_persons = 1000 * 1000;
 
 if (args._ && args._.length) {
     num_persons = args._[0];
@@ -82,16 +82,16 @@ function updatePersonsCount() {
         let person_password = await encryptionService.hash('password');
 
         while (current_count < num_persons) {
-            current_count += max_request_count;
-
-            console.log({
-                current_count,
-            });
-
             let batch_insert = [];
             let person_network_insert = [];
 
             for (let i = 0; i < results.length; i++) {
+                let id = i + 1 + current_count;
+
+                if(prev_highest_id) {
+                    id += prev_highest_id;
+                }
+
                 let person = results[i];
 
                 if (!(person.gender in genders_dict)) {
@@ -111,7 +111,7 @@ function updatePersonsCount() {
                     first_name: person.name.first,
                     last_name: person.name.last,
                     gender_id: gender_id,
-                    email: `user-${prev_highest_id ? prev_highest_id + i + 1 : i + 1}@befriend.app`,
+                    email: `user-${id}@befriend.app`,
                     password: person_password,
                     phone: person.phone,
                     is_online: true,
@@ -145,6 +145,12 @@ function updatePersonsCount() {
             } catch (e) {
                 console.error(e);
             }
+
+            current_count += max_request_count;
+
+            console.log({
+                current_count,
+            });
         }
 
         await updatePersonsCount();

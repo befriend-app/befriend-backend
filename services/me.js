@@ -17,7 +17,7 @@ const religionsService = require('../services/religion');
 const drinkingService = require('../services/drinking');
 const smokingService = require('../services/smoking');
 
-const modes = ['solo', 'plus-one', 'plus-kids'];
+const appModes = ['solo', 'plus-one', 'plus-kids'];
 
 function getModes(me) {
     return new Promise(async (resolve, reject) => {
@@ -1263,8 +1263,7 @@ function getPersonSectionItems(person, section_key) {
                 return resolve({});
             }
 
-            //todo remove
-            if (!organized || true) {
+            if (!organized ) {
                 let fnAll = sectionData?.functions?.all;
 
                 let options;
@@ -1331,10 +1330,19 @@ function getPersonSectionItems(person, section_key) {
 
                         let itemKey = section_option.token || `option_${section_option.id}`;
 
-                        organized[itemKey] = {
-                            ...section_option,
-                            ...item,
-                        };
+                        if(table_key === 'genders') {
+                            organized[itemKey] = {
+                                id: item.id,
+                                token: section_option.token,
+                                name: section_option.name,
+                                gender_id: item.gender_id,
+                            };
+                        } else {
+                            organized[itemKey] = {
+                                ...section_option,
+                                ...item,
+                            };
+                        }
                     }
                 }
 
@@ -1521,11 +1529,9 @@ function getActiveData(person, sections) {
 
                 const section = sectionsData[key];
 
-                if (section.categories?.cacheKeys) {
+                if (section.categories?.cacheKeys?.items?.key) {
                     // Items
-                    if (section.categories.cacheKeys.items?.key) {
-                        multi.get(section.categories.cacheKeys.items.key);
-                    }
+                    multi.get(section.categories.cacheKeys.items.key);
                 }
 
                 // Always get person-specific items
@@ -1554,12 +1560,12 @@ function getActiveData(person, sections) {
                 let items = null;
 
                 // Get category items
-                if (section.categories?.cacheKeys) {
-                    if (section.categories.cacheKeys.items?.key) {
-                        categoryItems = results[resultIndex++];
-                        try {
-                            categoryItems = JSON.parse(categoryItems);
-                        } catch (e) {}
+                if (section.categories?.cacheKeys?.items?.key) {
+                    categoryItems = results[resultIndex++];
+                    try {
+                        categoryItems = JSON.parse(categoryItems);
+                    } catch (e) {
+                        console.error(e);
                     }
                 }
 
@@ -1582,6 +1588,7 @@ function getActiveData(person, sections) {
 
                 // Get person items
                 items = results[resultIndex++];
+
                 try {
                     items = JSON.parse(items);
                 } catch (e) {}
@@ -2812,6 +2819,7 @@ function getWork() {
 
 module.exports = {
     cache: {},
+    modes: appModes,
     sections: sectionsData,
     getModes,
     putMode,

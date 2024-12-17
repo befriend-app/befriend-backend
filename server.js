@@ -6,8 +6,6 @@ let cacheService = require('./services/cache');
 let networkService = require('./services/network');
 let serverService = require('./services/server');
 
-global.BE_TIMING = {};
-
 (async function () {
     try {
         await cacheService.init();

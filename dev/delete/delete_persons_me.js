@@ -51,6 +51,7 @@ function main(is_me) {
                 'persons_religions',
                 'persons_roles',
                 'persons_schools',
+                'persons_sections',
                 'persons_smoking',
                 'persons_sports_leagues',
                 'persons_sports_play',
@@ -58,8 +59,6 @@ function main(is_me) {
                 'persons_sports_watch',
                 'persons_tv_genres',
                 'persons_tv_shows',
-                'persons_sections',
-                'me_sections',
             ];
 
             for (let table of tables) {
@@ -68,19 +67,7 @@ function main(is_me) {
 
             let keys = await cacheService.getKeysWithPrefix(`persons:me`);
 
-            keys.push(cacheService.keys.me_sections);
-
             await cacheService.deleteKeys(keys);
-
-            await cacheService.deleteKeys(Object.values(cacheService.keys.sectionKeys));
-
-            await cacheService.deleteKeys(
-                await cacheService.getKeysWithPrefix(cacheService.keys.languages_country('')),
-            );
-        }
-
-        if (is_me) {
-            await require('../../setup/me/sections').main();
         }
 
         resolve();

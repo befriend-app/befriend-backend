@@ -1093,54 +1093,24 @@ module.exports = {
     doLogin: function (req, res) {
         return new Promise(async (resolve, reject) => {
             try {
-                if (!('login' in BE_TIMING)) {
-                    BE_TIMING.login = {
-                        all: 0,
-                        person: 0,
-                        bcrypt: 0,
-                        generate: 0,
-                        conn: 0,
-                        insert: 0,
-                        addToSet: 0,
-                    };
-                }
-
-                let ts = timeNow();
                 let email = req.body.email;
                 let password = req.body.password;
 
-                let tsp = timeNow();
-
                 let person = await getPerson(null, email);
-
-                BE_TIMING.login.person += timeNow() - tsp;
-
-                let tsbc = timeNow();
 
                 // check if password is correct
                 let validPassword = await encryptionService.compare(password, person.password);
-
-                BE_TIMING.login.bcrypt += timeNow() - tsbc;
 
                 if (!validPassword) {
                     res.json('Invalid login', 403);
                     return resolve();
                 }
 
-                let tsg = timeNow();
-
                 // generate login token return in response. Used for authentication on future requests
                 let login_token = generateToken();
 
-                BE_TIMING.login.generate += timeNow() - tsg;
-
-                let tsc = timeNow();
                 // save to both mysql and redis
                 let conn = await dbService.conn();
-
-                BE_TIMING.login.conn += timeNow() - tsc;
-
-                let tsin = timeNow();
 
                 await conn('persons_login_tokens').insert({
                     person_id: person.id,
@@ -1150,17 +1120,9 @@ module.exports = {
                     updated: timeNow(),
                 });
 
-                BE_TIMING.login.insert += timeNow() - tsin;
-
                 let cache_key = cacheService.keys.person_login_tokens(person.person_token);
 
-                let tsset = timeNow();
-
                 await cacheService.addItemToSet(cache_key, login_token);
-
-                BE_TIMING.login.addToSet += timeNow() - tsset;
-
-                BE_TIMING.login.all += timeNow() - ts;
 
                 res.json(
                     {
@@ -1169,8 +1131,6 @@ module.exports = {
                     },
                     200,
                 );
-
-                console.log(BE_TIMING);
 
                 return resolve();
             } catch (e) {

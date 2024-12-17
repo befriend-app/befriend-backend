@@ -5,7 +5,7 @@ const os = require('os');
 const dbService = require('./db');
 const networkService = require('./network');
 
-// Worker thread code
+//worker thread
 if (!isMainThread) {
     parentPort.on(
         'message',
@@ -57,9 +57,7 @@ if (!isMainThread) {
             }
         },
     );
-}
-// Main thread code
-else {
+} else { // main thread
     const workers = [];
     let currentWorker = 0;
 
