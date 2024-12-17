@@ -672,6 +672,7 @@ function addSectionItem(person_token, section_key, table_key, item_token, hash_k
             if (fnAll) {
                 options = await module.exports[fnAll]();
                 section_option = options.byToken[item_token];
+                section_option = structuredClone(section_option);
             } else if (cacheObj?.byHash) {
                 let cache_key = cacheObj.byHash;
                 section_option = await cacheService.hGetItem(cache_key, item_token);

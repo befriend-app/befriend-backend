@@ -10,8 +10,8 @@ exports.up = function (knex) {
                 table.string('token').notNullable();
                 table.string('name', 255).notNullable();
                 table.integer('popularity').notNullable();
-
                 table.boolean('is_common').defaultTo(false);
+                table.boolean('is_active').defaultTo(true);
 
                 table
                     .enum('category', [
@@ -27,6 +27,7 @@ exports.up = function (knex) {
 
                 table.bigInteger('created').notNullable();
                 table.bigInteger('updated').notNullable();
+                table.bigInteger('deleted').nullable();
 
                 table.index('name');
             })
