@@ -130,7 +130,7 @@ module.exports = {
                             updated: timeNow()
                         });
 
-                    if(!('mode' in person)) {
+                    if(!('mode' in person) || person.mode === null) {
                         person.mode = {};
                     }
 

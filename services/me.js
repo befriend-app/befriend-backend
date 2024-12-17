@@ -745,8 +745,13 @@ function addSectionItem(person_token, section_key, table_key, item_token, hash_k
                 delete section_option.id;
 
                 section_items[item_token] = {
-                    ...section_option,
-                    ...item_data,
+                    id: item_data.id,
+                    [userTableData.cols.id]: item_data[userTableData.cols.id],
+                    ...(section_option.name && { name: section_option.name }),
+                    token: item_token,
+                    table_key: table_key,
+                    created: item_data.created,
+                    updated: item_data.updated
                 };
 
                 let cache_key = cacheService.keys.persons_section_data(
@@ -907,6 +912,7 @@ function updateSectionItem(body) {
                     }
 
                     const conn = await dbService.conn();
+
                     const update = await conn(userTableData.name)
                         .where('id', section_item_id)
                         .where('person_id', person.id)

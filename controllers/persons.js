@@ -89,7 +89,7 @@ module.exports = {
                 resolve();
             } catch (e) {
                 console.error(e);
-                res.json('Error adding section', 400);
+                res.json('Error updating mode', 400);
             }
         });
     },
@@ -139,7 +139,7 @@ module.exports = {
     putMePartner: function (req, res) {
         return new Promise(async (resolve, reject) => {
             try {
-                await putPartner(req.body.person_token, req.body.gender, req.body.isSelect);
+                await putPartner(req.body.person_token, req.body.gender_token, req.body.is_select);
 
                 res.json('partner updated', 200);
 

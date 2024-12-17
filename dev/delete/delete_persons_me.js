@@ -1,12 +1,12 @@
 const cacheService = require('../../services/cache');
 const db = require('../../services/db');
-const { loadScriptEnv, isProdApp } = require('../../services/shared');
+const { loadScriptEnv, isProdApp, timeNow } = require('../../services/shared');
 
 loadScriptEnv();
 
-function main(is_me) {
+function main() {
     return new Promise(async (resolve, reject) => {
-        console.log('Delete: me');
+        console.log('Delete: persons->me');
 
         if (isProdApp()) {
             console.error('App env: [prod]', 'exiting');
@@ -41,6 +41,7 @@ function main(is_me) {
                 'persons_kids',
                 'persons_languages',
                 'persons_life_stages',
+                'persons_login_tokens',
                 'persons_movie_genres',
                 'persons_movies',
                 'persons_music_artists',
@@ -65,9 +66,15 @@ function main(is_me) {
                 await knex(table).delete();
             }
 
-            let keys = await cacheService.getKeysWithPrefix(`persons:me`);
+            await knex('persons')
+                .update({
+                    mode_id: null,
+                    updated: timeNow()
+                });
 
-            await cacheService.deleteKeys(keys);
+            let person_keys = await cacheService.getKeysWithPrefix(`persons`);
+
+            await cacheService.deleteKeys(person_keys);
         }
 
         resolve();

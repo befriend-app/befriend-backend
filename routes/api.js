@@ -448,7 +448,7 @@ router.delete('/me/sections/:section_key', function (req, res, next) {
     });
 });
 
-router.post('/me/sections/item', function (req, res, next) {
+router.post('/me/sections/items', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await personsController.addMeSectionItem(req, res);
@@ -460,7 +460,7 @@ router.post('/me/sections/item', function (req, res, next) {
     });
 });
 
-router.put('/me/sections/item', function (req, res, next) {
+router.put('/me/sections/items', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await personsController.updateMeSectionItem(req, res);
