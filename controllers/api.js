@@ -1107,7 +1107,7 @@ module.exports = {
                 }
 
                 // generate login token return in response. Used for authentication on future requests
-                let login_token = generateToken();
+                let login_token = generateToken(30);
 
                 // save to both mysql and redis
                 let conn = await dbService.conn();
