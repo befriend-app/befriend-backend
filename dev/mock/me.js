@@ -150,7 +150,7 @@ let helpers = {
 
 async function getPersonsLogins() {
     console.log({
-        mock: 'logins'
+        me: 'logins'
     });
 
     let ts = timeNow();
@@ -211,7 +211,7 @@ async function getPersonsLogins() {
 
 async function processSections() {
     console.log({
-        mock: 'sections'
+        me: 'sections'
     });
 
     let ts = timeNow();
@@ -273,7 +273,7 @@ async function processSections() {
 
 async function processModes() {
     console.log({
-        mock: 'modes'
+        me: 'modes'
     });
 
     // Get all available modes
@@ -389,7 +389,7 @@ async function processModes() {
 }
 
 async function processMovies() {
-    console.log({ mock: 'movies' });
+    console.log({ me: 'movies' });
     let ts = timeNow();
 
     // Get top 1000 movies sorted by vote count
@@ -441,7 +441,7 @@ async function processMovies() {
 }
 
 async function processTvShows() {
-    console.log({ mock: 'tv_shows' });
+    console.log({ me: 'tv_shows' });
     let ts = timeNow();
 
     // Get top 1000 TV shows sorted by vote count
@@ -492,7 +492,7 @@ async function processTvShows() {
 }
 
 async function processSports() {
-    console.log({ mock: 'sports' });
+    console.log({ me: 'sports' });
 
     let ts = timeNow();
 
@@ -572,7 +572,7 @@ async function processSports() {
 }
 
 async function processMusic() {
-    console.log({ mock: 'music' });
+    console.log({ me: 'music' });
     let ts = timeNow();
 
     try {
@@ -636,7 +636,7 @@ async function processMusic() {
 }
 
 async function processInstruments() {
-    console.log({ mock: 'instruments' });
+    console.log({ me: 'instruments' });
     let ts = timeNow();
 
     try {
@@ -676,7 +676,7 @@ async function processInstruments() {
 }
 
 async function processSchools() {
-    console.log({ mock: 'schools' });
+    console.log({ me: 'schools' });
     let ts = timeNow();
 
     try {
@@ -760,7 +760,7 @@ async function processSchools() {
 }
 
 async function processWork() {
-    console.log({ mock: 'work' });
+    console.log({ me: 'work' });
     let ts = timeNow();
 
     try {
@@ -835,7 +835,7 @@ async function processButtonSection({
                                         maxSelect = 1,
                                         selectChance = 0.8
                                     }) {
-    console.log({ mock: sectionKey });
+    console.log({ me: sectionKey });
     let ts = timeNow();
 
     try {
