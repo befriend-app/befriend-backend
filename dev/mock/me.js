@@ -429,6 +429,162 @@ async function processMovies() {
     });
 }
 
+async function processTvShows() {
+    console.log({
+        mock: 'tv_shows'
+    });
+
+    let ts = timeNow();
+
+    // Get top 1000 TV shows sorted by vote count
+    const shows = await conn('tv_shows')
+        .whereNull('deleted')
+        .orderBy('vote_count', 'desc')
+        .limit(1000);
+
+    // Get all TV genres
+    const tvGenres = await conn('tv_genres')
+        .whereNull('deleted');
+
+    let processed = 0;
+
+    // Process each chunk of persons
+    for (let chunk of chunks) {
+        await Promise.all(
+            chunk.map(async (person) => {
+                if(processed % 100 === 0) {
+                    console.log({
+                        processing: `${processed+1}/${persons.length}`
+                    });
+                }
+
+                //only add tv shows if section added
+                if(!person.sections.active.tv_shows) {
+                    processed++;
+                    return;
+                }
+
+                try {
+                    // Add 5-15 random shows for each person
+                    const numShows = Math.floor(Math.random() * 11) + 5;
+                    const selectedShows = shuffleFunc([...shows]).slice(0, numShows);
+
+                    let prevFavoriteShowsPosition = Object.values(person.sections.active.tv_shows.items)
+                        .reduce((acc, show) => {
+                            if(show.table_key === 'shows') {
+                                if(show.is_favorite && show.favorite_position >= acc) {
+                                    return acc + 1;
+                                }
+                            }
+                            return acc;
+                        }, 0);
+
+                    let prevFavoriteGenresPosition = Object.values(person.sections.active.tv_shows.items)
+                        .reduce((acc, item) => {
+                            if(item.table_key === 'genres') {
+                                if(item.is_favorite && item.favorite_position >= acc) {
+                                    return acc + 1;
+                                }
+                            }
+                            return acc;
+                        }, 0);
+
+                    let favoriteShowsPosition = prevFavoriteShowsPosition || 0;
+                    let favoriteGenresPosition = prevFavoriteGenresPosition || 0;
+
+                    for (const show of selectedShows) {
+                        //skip if show already added
+                        if(show.token in person.sections.active.tv_shows?.items) {
+                            continue;
+                        }
+
+                        // 40% chance to mark as favorite
+                        const isFavorite = Math.random() > 0.6;
+
+                        // Add show to person's collection
+                        let r = await axios.post(
+                            joinPaths(process.env.APP_URL, '/me/sections/items'),
+                            {
+                                login_token: person.login_token,
+                                person_token: person.person_token,
+                                section_key: 'tv_shows',
+                                table_key: 'shows',
+                                item_token: show.token
+                            }
+                        );
+
+                        if (isFavorite) {
+                            // Mark as favorite if selected
+                            await axios.put(
+                                joinPaths(process.env.APP_URL, '/me/sections/items'),
+                                {
+                                    login_token: person.login_token,
+                                    person_token: person.person_token,
+                                    section_key: 'tv_shows',
+                                    table_key: 'shows',
+                                    section_item_id: r.data.id,
+                                    favorite: {
+                                        active: true,
+                                        position: favoriteShowsPosition++
+                                    }
+                                }
+                            );
+                        }
+                    }
+
+                    // Add 2-5 random genres
+                    const numGenres = Math.floor(Math.random() * 4) + 2;
+                    const selectedGenres = shuffleFunc([...tvGenres]).slice(0, numGenres);
+
+                    for (const genre of selectedGenres) {
+                        if(genre.token in person.sections.active.tv_shows?.items) {
+                            continue;
+                        }
+
+                        const isGenreFavorite = Math.random() > 0.7;
+
+                        let r = await axios.post(
+                            joinPaths(process.env.APP_URL, '/me/sections/items'),
+                            {
+                                login_token: person.login_token,
+                                person_token: person.person_token,
+                                section_key: 'tv_shows',
+                                table_key: 'genres',
+                                item_token: genre.token
+                            }
+                        );
+
+                        if (isGenreFavorite) {
+                            await axios.put(
+                                joinPaths(process.env.APP_URL, '/me/sections/items'),
+                                {
+                                    login_token: person.login_token,
+                                    person_token: person.person_token,
+                                    section_key: 'tv_shows',
+                                    table_key: 'genres',
+                                    section_item_id: r.data.id,
+                                    favorite: {
+                                        active: true,
+                                        position: favoriteGenresPosition++
+                                    }
+                                }
+                            );
+                        }
+                    }
+                } catch (error) {
+                    console.error(`Error processing tv shows for person ${person.person_token}:`, error.message);
+                }
+
+                processed++;
+            })
+        );
+    }
+
+    console.log({
+        tv_shows: timeNow() - ts
+    });
+}
+
 (async function () {
     conn = await dbService.conn();
     self_network = await getNetworkSelf();
@@ -449,9 +605,10 @@ async function processMovies() {
     // await processModes();
 
     //movies
-    await processMovies();
+    // await processMovies();
 
     //tv shows
+    await processTvShows();
 
     //sports
 
