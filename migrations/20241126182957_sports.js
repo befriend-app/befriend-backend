@@ -156,7 +156,7 @@ exports.up = async function (knex) {
             table.bigIncrements('id').primary();
             table.bigInteger('person_id').unsigned().notNullable();
             table.integer('team_id').unsigned().notNullable();
-            table.string('team_token', 32).notNullable();
+            table.string('team_token', 60).notNullable();
             table.string('level', 32).nullable();
             table.boolean('is_favorite').defaultTo(false);
             table.integer('favorite_position').nullable();
