@@ -57,7 +57,6 @@ function main() {
                 'persons_sports_leagues',
                 'persons_sports_play',
                 'persons_sports_teams',
-                'persons_sports_watch',
                 'persons_tv_genres',
                 'persons_tv_shows',
             ];

@@ -40,7 +40,6 @@ async function deleteDb() {
             'persons_sports_teams',
             'persons_sports_leagues',
             'persons_sports_play',
-            'persons_sports_watch',
             'sports_teams',
             'sports_leagues_countries',
             'sports_leagues',
