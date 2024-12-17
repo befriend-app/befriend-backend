@@ -8,8 +8,10 @@ const meService = require('../../services/me');
 const { getNetworkSelf } = require('../../services/network');
 
 const { loadScriptEnv, timeNow, joinPaths, shuffleFunc } = require('../../services/shared');
-const { getSections, modes } = require('../../services/me');
+const { getSections, modes, getSports } = require('../../services/me');
 const { getModes } = require('../../services/modes');
+
+const sectionsData = require('../../services/sections_data');
 
 loadScriptEnv();
 
@@ -24,10 +26,6 @@ if (args._ && args._.length) {
 let conn, self_network, persons;
 
 let parallelCount = 1;
-
-let timing = {
-    section_1: 0,
-}
 
 let chunks = [];
 
@@ -585,6 +583,241 @@ async function processTvShows() {
     });
 }
 
+async function processSports() {
+    console.log({
+        mock: 'sports'
+    });
+
+    let ts = timeNow();
+
+    let test_country = await conn('open_countries')
+        .where('country_code', 'US')
+        .first();
+
+    // Get active sports, leagues, and teams
+    const sports = await conn('sports')
+        .whereNull('deleted')
+        .where('is_active', true);
+
+    const leagues = await conn('sports_leagues AS sl')
+        .join('sports_leagues_countries AS slc', 'slc.league_id', '=', 'sl.id')
+        .where('country_id', test_country.id)
+        .whereNull('sl.deleted')
+        .where('sl.is_active', true)
+        .select('sl.*', 'slc.position');
+
+    const sportsTeams = await conn('sports_teams')
+        .where('country_id', test_country.id)
+        .whereNull('deleted')
+        .where('is_active', true);
+
+    let sportsSecondary = sectionsData.sports.secondary;
+
+    let processed = 0;
+
+    // Process each chunk of persons
+    for (let chunk of chunks) {
+        await Promise.all(
+            chunk.map(async (person) => {
+                if(processed % 100 === 0) {
+                    console.log({
+                        processing: `${processed+1}/${persons.length}`
+                    });
+                }
+
+                //only add sports if section added
+                if(!person.sections.active.sports) {
+                    processed++;
+                    return;
+                }
+
+                try {
+                    // Get current favorite positions for each category
+                    let prevFavoritePlayPosition = Object.values(person.sections.active.sports.items)
+                        .reduce((acc, item) => {
+                            if(item.table_key === 'play') {
+                                if(item.is_favorite && item.favorite_position >= acc) {
+                                    return acc + 1;
+                                }
+                            }
+                            return acc;
+                        }, 0);
+
+                    let prevFavoriteTeamsPosition = Object.values(person.sections.active.sports.items)
+                        .reduce((acc, item) => {
+                            if(item.table_key === 'teams') {
+                                if(item.is_favorite && item.favorite_position >= acc) {
+                                    return acc + 1;
+                                }
+                            }
+                            return acc;
+                        }, 0);
+
+                    let prevFavoriteLeaguesPosition = Object.values(person.sections.active.sports.items)
+                        .reduce((acc, item) => {
+                            if(item.table_key === 'leagues') {
+                                if(item.is_favorite && item.favorite_position >= acc) {
+                                    return acc + 1;
+                                }
+                            }
+                            return acc;
+                        }, 0);
+
+                    let favoritePlayPosition = prevFavoritePlayPosition || 0;
+                    let favoriteTeamsPosition = prevFavoriteTeamsPosition || 0;
+                    let favoriteLeaguesPosition = prevFavoriteLeaguesPosition || 0;
+
+                    // Add 2-5 play sports
+                    const numPlaySports = Math.floor(Math.random() * 4) + 2;
+                    const selectedPlaySports = shuffleFunc(sports.filter(s => s.is_play)).slice(0, numPlaySports);
+
+                    for (const sport of selectedPlaySports) {
+                        if(sport.token in person.sections.active.sports?.items) {
+                            continue;
+                        }
+
+                        const isFavorite = Math.random() > 0.5;
+
+                        const addSecondary = Math.random() > 0.6;
+                        const secondaryValue = addSecondary ? shuffleFunc(sportsSecondary.play.options)[0] : null;
+
+                        let r = await axios.post(
+                            joinPaths(process.env.APP_URL, '/me/sections/items'),
+                            {
+                                login_token: person.login_token,
+                                person_token: person.person_token,
+                                section_key: 'sports',
+                                table_key: 'play',
+                                item_token: sport.token
+                            }
+                        );
+
+                        if (isFavorite || secondaryValue) {
+                            await axios.put(
+                                joinPaths(process.env.APP_URL, '/me/sections/items'),
+                                {
+                                    login_token: person.login_token,
+                                    person_token: person.person_token,
+                                    section_key: 'sports',
+                                    table_key: 'play',
+                                    section_item_id: r.data.id,
+                                    ...(isFavorite && {
+                                        favorite: {
+                                            active: true,
+                                            position: favoritePlayPosition++
+                                        }
+                                    }),
+                                    ...(secondaryValue && { secondary: secondaryValue }),
+                                }
+                            );
+                        }
+                    }
+
+                    // Add 3-7 teams
+                    const numTeams = Math.floor(Math.random() * 5) + 3;
+                    const selectedTeams = shuffleFunc([...sportsTeams]).slice(0, numTeams);
+
+                    for (const team of selectedTeams) {
+                        if(team.token in person.sections.active.sports?.items) {
+                            continue;
+                        }
+
+                        const isFavorite = Math.random() > 0.5;
+
+                        const addSecondary = Math.random() > 0.6;
+                        const secondaryValue = addSecondary ? shuffleFunc(sportsSecondary.teams.options)[0] : null;
+
+                        let r = await axios.post(
+                            joinPaths(process.env.APP_URL, '/me/sections/items'),
+                            {
+                                login_token: person.login_token,
+                                person_token: person.person_token,
+                                section_key: 'sports',
+                                table_key: 'teams',
+                                item_token: team.token
+                            }
+                        );
+
+                        if (isFavorite || secondaryValue) {
+                            await axios.put(
+                                joinPaths(process.env.APP_URL, '/me/sections/items'),
+                                {
+                                    login_token: person.login_token,
+                                    person_token: person.person_token,
+                                    section_key: 'sports',
+                                    table_key: 'teams',
+                                    section_item_id: r.data.id,
+                                    ...(isFavorite && {
+                                        favorite: {
+                                            active: true,
+                                            position: favoritePlayPosition++
+                                        }
+                                    }),
+                                    ...(secondaryValue && { secondary: secondaryValue }),
+                                }
+                            );
+                        }
+                    }
+
+                    // Add 1-3 leagues
+                    const numLeagues = Math.floor(Math.random() * 3) + 1;
+                    const selectedLeagues = shuffleFunc([...leagues]).slice(0, numLeagues);
+
+                    for (const league of selectedLeagues) {
+                        if(league.token in person.sections.active.sports?.items) {
+                            continue;
+                        }
+
+                        // 50% chance to mark as favorite
+                        const isFavorite = Math.random() > 0.5;
+                        const addSecondary = Math.random() > 0.6;
+                        const secondaryValue = addSecondary ? shuffleFunc(sportsSecondary.leagues.options)[0] : null;
+
+                        let r = await axios.post(
+                            joinPaths(process.env.APP_URL, '/me/sections/items'),
+                            {
+                                login_token: person.login_token,
+                                person_token: person.person_token,
+                                section_key: 'sports',
+                                table_key: 'leagues',
+                                item_token: league.token
+                            }
+                        );
+
+                        if (isFavorite || secondaryValue) {
+                            await axios.put(
+                                joinPaths(process.env.APP_URL, '/me/sections/items'),
+                                {
+                                    login_token: person.login_token,
+                                    person_token: person.person_token,
+                                    section_key: 'sports',
+                                    table_key: 'leagues',
+                                    section_item_id: r.data.id,
+                                    ...(isFavorite && {
+                                        favorite: {
+                                            active: true,
+                                            position: favoritePlayPosition++
+                                        }
+                                    }),
+                                    ...(secondaryValue && { secondary: secondaryValue }),
+                                }
+                            );
+                        }
+                    }
+                } catch (error) {
+                    console.error(`Error processing sports for person ${person.person_token}:`, error.message);
+                }
+
+                processed++;
+            })
+        );
+    }
+
+    console.log({
+        sports: timeNow() - ts
+    });
+}
+
 (async function () {
     conn = await dbService.conn();
     self_network = await getNetworkSelf();
@@ -608,9 +841,10 @@ async function processTvShows() {
     // await processMovies();
 
     //tv shows
-    await processTvShows();
+    // await processTvShows();
 
     //sports
+    await processSports();
 
     //music
 
