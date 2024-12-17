@@ -1,6 +1,7 @@
 const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 const { timeNow } = require('./shared');
+const { getModes } = require('./modes');
 
 module.exports = {
     isAuthenticated: function (person_token, login_token) {
@@ -48,6 +49,51 @@ module.exports = {
                     person = await conn('persons').where('person_token', person_token).first();
                 }
 
+                if (!person) {
+                    return resolve(null);
+                }
+
+                let modes = await getModes();
+
+                //add person modes to obj
+                person.mode = {
+                    id: person.mode_id,
+                    token: modes?.byId[person.mode_id]?.token || null,
+                    partner: {},
+                    kids: {}
+                };
+
+                // Get partner data
+                const partner = await conn('persons_partner')
+                    .where('person_id', person.id)
+                    .whereNull('deleted')
+                    .select('id', 'token', 'gender_id', 'created', 'updated')
+                    .first();
+
+                if (partner) {
+                    person.mode.partner = partner;
+                }
+
+                // Get kids data
+                const kids = await conn('persons_kids')
+                    .where('person_id', person.id)
+                    .whereNull('deleted')
+                    .select('id', 'token', 'age_id', 'gender_id', 'is_active', 'created', 'updated');
+
+                // Convert kids array to object with token keys
+                const kids_dict = {};
+
+                for (const kid of kids) {
+                    kids_dict[kid.token] = {
+                        id: kid.id,
+                        token: kid.token,
+                        gender_id: kid.gender_id,
+                        age_id: kid.age_id,
+                        is_active: kid.is_active
+                    };
+                }
+                person.mode.kids = kids_dict;
+
                 if (person) {
                     await cacheService.setCache(cache_key, person);
                 }
@@ -76,11 +122,31 @@ module.exports = {
 
                 let conn = await dbService.conn();
 
-                data.updated = timeNow();
+                if('mode' in data) {
+                    await conn('persons')
+                        .where('id', person.id)
+                        .update({
+                            mode_id: data.mode.id,
+                            updated: timeNow()
+                        });
 
-                await conn('persons').where('id', person.id).update(data);
+                    if(!('mode' in person)) {
+                        person.mode = {};
+                    }
 
-                Object.assign(person, data);
+                    Object.assign(person.mode, {
+                        id: data.mode.id,
+                        token: data.mode.token
+                    });
+                } else {
+                    data.updated = timeNow();
+
+                    await conn('persons')
+                        .where('id', person.id)
+                        .update(data);
+
+                    Object.assign(person, data);
+                }
 
                 await cacheService.setCache(cache_key, person);
 

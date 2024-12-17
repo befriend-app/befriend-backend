@@ -14,7 +14,7 @@ const {
     getSchools,
 } = require('../services/me');
 const { saveAvailabilityData } = require('../services/availability');
-const { filterMappings, getFilters, getPersonFilters, getModes } = require('../services/filters');
+const { filterMappings, getFilters, getPersonFilters } = require('../services/filters');
 const { getActivityTypesMapping } = require('../services/activities');
 const { getLifeStages } = require('../services/life_stages');
 const { getRelationshipStatus } = require('../services/relationships');
@@ -26,6 +26,7 @@ const { getReligions } = require('../services/religion');
 
 let sectionsData = require('../services/sections_data');
 const { getNetworksForFilters } = require('../services/network');
+const { getModes } = require('../services/modes');
 
 function createFilterEntry(filter_id, props = {}) {
     const now = timeNow();
@@ -693,7 +694,7 @@ function putModes(req, res) {
             let modes = await getModes();
 
             const mode = modes?.byToken?.[mode_token];
-            const soloMode = modes?.byToken?.['solo'];
+            const soloMode = modes?.byToken?.['mode-solo'];
 
             if (!mode) {
                 res.json(
@@ -740,7 +741,7 @@ function putModes(req, res) {
             );
 
             // If selecting a non-solo mode and solo isn't present, add it first
-            if (active && mode_token !== 'solo' && !existingSolo && soloMode) {
+            if (active && mode_token !== 'mode-solo' && !existingSolo && soloMode) {
                 let soloEntry = createFilterEntry(filter.id, {
                     person_id: person.id,
                     [mapping.column]: soloMode.id,
@@ -750,7 +751,7 @@ function putModes(req, res) {
 
                 const [soloId] = await conn('persons_filters').insert(soloEntry);
 
-                soloEntry.mode_token = 'solo';
+                soloEntry.mode_token = 'mode-solo';
                 filterItems[soloId] = {
                     ...soloEntry,
                     id: soloId,

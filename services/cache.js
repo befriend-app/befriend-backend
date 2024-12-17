@@ -75,8 +75,6 @@ const keyFunctions = {
     person_filters: (token) => `persons:filters:${token}`,
     person_sections: (token) => `persons:me:sections:${token}`,
     persons_section_data: (token, dataName) => `persons:me:sections:data:${dataName}:${token}`,
-    persons_partner: (token) => `persons:me:partner:${token}`,
-    persons_kids: (token) => `persons:me:kids:${token}`,
 
     instrument: (token) => `instruments:${token}`,
     instruments_prefix: (prefix) => `instruments:prefix:${prefix}`,

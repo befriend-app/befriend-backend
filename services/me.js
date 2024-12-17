@@ -1,23 +1,21 @@
 const cacheService = require('../services/cache');
 const dbService = require('../services/db');
-const { isNumeric, timeNow, generateToken } = require('./shared');
-const { setCache, getObj, execPipeline, hGetAllObj } = require('./cache');
-
-let sectionsData = require('./sections_data');
-
-const { getPerson, updatePerson } = require('./persons');
-const { batchUpdate } = require('./db');
-const { getCountries } = require('./locations');
-const { getLanguagesCountry } = require('./languages');
-
+const modesService = require('../services/modes');
 const lifeStagesService = require('../services/life_stages');
 const relationshipService = require('../services/relationships');
 const politicsService = require('../services/politics');
 const religionsService = require('../services/religion');
 const drinkingService = require('../services/drinking');
 const smokingService = require('../services/smoking');
+let sectionsData = require('../services/sections_data');
 
-const appModes = ['solo', 'plus-one', 'plus-kids'];
+const { isNumeric, timeNow, generateToken } = require('../services/shared');
+const { setCache, getObj, execPipeline, hGetAllObj } = require('../services/cache');
+const { batchUpdate } = require('../services/db');
+const { getCountries } = require('../services/locations');
+const { getLanguagesCountry } = require('../services/languages');
+const { getPerson, updatePerson } = require('../services/persons');
+
 
 function getModes(me) {
     return new Promise(async (resolve, reject) => {
@@ -33,21 +31,13 @@ function getModes(me) {
 
         // Cache keys
         let cache_key_kid_ages = cacheService.keys.kids_ages;
-        let cache_key_partner = cacheService.keys.persons_partner(me.person_token);
-        let cache_key_kids = cacheService.keys.persons_kids(me.person_token);
 
-        // Try to get data from cache first
-        const [cached_ages, cached_partner, cached_kids] = await Promise.all([
-            cacheService.getObj(cache_key_kid_ages),
-            cacheService.getObj(cache_key_partner),
-            cacheService.getObj(cache_key_kids),
-        ]);
+        let cached_ages = await cacheService.getObj(cache_key_kid_ages);
 
-        // If we have all cached data, use it
-        if (cached_ages && cached_partner && cached_kids) {
+        if (me.mode) {
             modes.options.kids = cached_ages;
-            modes.data.partner = cached_partner;
-            modes.data.kids = cached_kids;
+            modes.data.partner = me.mode?.partner || {};
+            modes.data.kids = me.mode?.kids || {};
             return resolve(modes);
         }
 
@@ -100,11 +90,7 @@ function getModes(me) {
         }
 
         // Update cache
-        await Promise.all([
-            cacheService.setCache(cache_key_kid_ages, ages_dict),
-            cacheService.setCache(cache_key_partner, partner || {}),
-            cacheService.setCache(cache_key_kids, kids_dict),
-        ]);
+        await cacheService.setCache(cache_key_kid_ages, ages_dict);
 
         modes.options.kids = ages_dict;
         modes.data.partner = partner || {};
@@ -123,12 +109,14 @@ function putMode(person_token, mode) {
                 return reject('Person not found');
             }
 
-            if (!mode || !modes.includes(mode)) {
+            let modes = await modesService.getModes();
+
+            if (!mode || !(modes?.byToken[mode])) {
                 return reject('Invalid mode');
             }
 
             await updatePerson(person_token, {
-                mode: mode,
+                mode: modes.byToken[mode],
             });
         } catch (e) {
             console.error(e);
@@ -141,6 +129,7 @@ function putMode(person_token, mode) {
 function putPartner(person_token, gender_token, is_select) {
     return new Promise(async (resolve, reject) => {
         try {
+            let cache_key = cacheService.keys.person(person_token);
             let person = await getPerson(person_token);
 
             if (!person) {
@@ -155,12 +144,21 @@ function putPartner(person_token, gender_token, is_select) {
                 return reject('Gender not found');
             }
 
-            let cache_key = cacheService.keys.persons_partner(person_token);
+            //init cache
+            if(!('mode' in person)) {
+                person.mode = {};
+            }
+
+            if(!('partner' in person.mode)) {
+                person.mode.partner = {};
+            }
 
             let conn = await dbService.conn();
 
             //check if record exists
-            let check = await conn('persons_partner').where('person_id', person.id).first();
+            let check = await conn('persons_partner')
+                .where('person_id', person.id)
+                .first();
 
             if (check) {
                 let updateData = {};
@@ -174,13 +172,13 @@ function putPartner(person_token, gender_token, is_select) {
                     updateData.updated = timeNow();
                 }
 
-                await conn('persons_partner').where('id', check.id).update(updateData);
+                await conn('persons_partner')
+                    .where('id', check.id)
+                    .update(updateData);
 
-                let cacheData = Object.assign(check, updateData);
-
-                await cacheService.setCache(cache_key, cacheData);
+                Object.assign(person.mode.partner, updateData);
             } else {
-                let token = generateToken(16);
+                let token = generateToken(12);
 
                 let createData = {
                     person_id: person.id,
@@ -190,12 +188,15 @@ function putPartner(person_token, gender_token, is_select) {
                     updated: timeNow(),
                 };
 
-                let [id] = await conn('persons_partner').insert(createData);
+                let [id] = await conn('persons_partner')
+                    .insert(createData);
 
                 createData.id = id;
 
-                await cacheService.setCache(cache_key, createData);
+                Object.assign(person.mode.partner, createData);
             }
+
+            await setCache(cache_key, person);
         } catch (e) {
             console.error(e);
             return reject(e);
@@ -217,7 +218,7 @@ function addKid(person_token) {
 
             // Generate new kid
             let kid = {
-                token: generateToken(14),
+                token: generateToken(12),
                 person_id: person.id,
                 is_active: true,
                 created: timeNow(),
@@ -228,8 +229,8 @@ function addKid(person_token) {
             kid.id = id;
 
             // Update cache
-            const cache_key = cacheService.keys.persons_kids(person.person_token);
-            let cached_kids = (await cacheService.getObj(cache_key)) || {};
+            const cache_key = cacheService.keys.person(person.person_token);
+            let cached_kids = person.mode?.kids || {};
 
             cached_kids[kid.token] = {
                 token: kid.token,
@@ -238,27 +239,29 @@ function addKid(person_token) {
                 is_active: true,
             };
 
-            await cacheService.setCache(cache_key, cached_kids);
+            if(!('mode' in person)) {
+                person.mode = {};
+            }
+
+            if(!('kids' in person.mode)) {
+                person.mode.kids = {};
+            }
+
+            person.mode.kids = cached_kids;
+
+            await cacheService.setCache(cache_key, person);
 
             resolve(kid);
         } catch (e) {
             return reject(e);
         }
-
-        resolve();
     });
 }
 
-function updateKid(
-    person_token,
-    kid_token,
-    age_token = null,
-    gender_token = null,
-    is_select = null,
-    is_active = null,
-) {
+function updateKid(person_token, kid_token, age_token = null, gender_token = null, is_select = null, is_active = null) {
     return new Promise(async (resolve, reject) => {
         try {
+            let cache_key = cacheService.keys.person(person_token);
             let person = await getPerson(person_token);
 
             if (!person) {
@@ -328,11 +331,12 @@ function updateKid(
                 updates.is_active = is_active;
             }
 
-            await conn('persons_kids').where('id', kid.id).update(updates);
+            await conn('persons_kids')
+                .where('id', kid.id)
+                .update(updates);
 
             // Update cache
-            const cache_key = cacheService.keys.persons_kids(person.person_token);
-            let cached_kids = (await cacheService.getObj(cache_key)) || {};
+            let cached_kids = person?.mode?.kids || {};
 
             if (cached_kids[kid_token]) {
                 if (age_id !== null) {
@@ -349,7 +353,17 @@ function updateKid(
                     cached_kids[kid_token].is_active = is_active;
                 }
 
-                await cacheService.setCache(cache_key, cached_kids);
+                if(!('mode' in person)) {
+                    person.mode = {};
+                }
+
+                if(!('kids' in person.mode)) {
+                    person.mode.kids = {};
+                }
+
+                person.mode.kids = cached_kids;
+
+                await cacheService.setCache(cache_key, person);
             }
         } catch (e) {
             return reject(e);
@@ -362,6 +376,7 @@ function updateKid(
 function removeKid(person_token, kid_token) {
     return new Promise(async (resolve, reject) => {
         try {
+            let cache_key = cacheService.keys.person(person_token);
             let person = await getPerson(person_token);
 
             if (!person) {
@@ -384,12 +399,12 @@ function removeKid(person_token, kid_token) {
                 });
 
             // Update cache
-            const cache_key = cacheService.keys.persons_kids(person.person_token);
-            let cached_kids = await cacheService.getObj(cache_key);
+            let cached_kids = person?.mode?.kids;
 
             if (cached_kids) {
                 delete cached_kids[kid_token];
-                await cacheService.setCache(cache_key, cached_kids);
+                person.mode.kids = cached_kids;
+                await cacheService.setCache(cache_key, person);
             }
         } catch (e) {
             console.error(e);
@@ -2819,7 +2834,6 @@ function getWork() {
 
 module.exports = {
     cache: {},
-    modes: appModes,
     sections: sectionsData,
     getModes,
     putMode,

@@ -429,41 +429,9 @@ function getPersonFilters(person) {
     });
 }
 
-function getModes() {
-    return new Promise(async (resolve, reject) => {
-        if (module.exports.modes) {
-            return resolve(module.exports.modes);
-        }
-
-        try {
-            let conn = await dbService.conn();
-
-            let data = await conn('modes').whereNull('deleted');
-
-            let organized = data.reduce(
-                (acc, item) => {
-                    acc.byId[item.id] = item;
-                    acc.byToken[item.token] = item;
-                    return acc;
-                },
-                { byId: {}, byToken: {} },
-            );
-
-            module.exports.modes = organized;
-
-            resolve(organized);
-        } catch (e) {
-            console.error(e);
-            return reject(e);
-        }
-    });
-}
-
 module.exports = {
     filters: null,
-    modes: null,
     filterMappings,
     getFilters,
-    getModes,
     getPersonFilters,
 };

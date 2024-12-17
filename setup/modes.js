@@ -1,51 +1,36 @@
-const axios = require('axios');
 const cacheService = require('../services/cache');
 const dbService = require('../services/db');
-const { loadScriptEnv, dataEndpoint, timeNow } = require('../services/shared');
-const { deleteKeys, keys } = require('../services/cache');
+const { loadScriptEnv, timeNow } = require('../services/shared');
+const { deleteKeys } = require('../services/cache');
+
+const { modes } = require('../services/modes');
 
 loadScriptEnv();
 
 function main() {
     return new Promise(async (resolve, reject) => {
-        console.log('Add modes');
+        console.log('Add Modes');
 
         let table_name = 'modes';
 
         try {
-            let now = timeNow();
-
             let conn = await dbService.conn();
 
-            let modes = [
-                {
-                    token: 'solo',
-                    name: 'Solo',
-                    sort_position: 1,
-                    created: now,
-                    updated: now,
-                },
-                {
-                    token: 'partner',
-                    name: 'Partner',
-                    sort_position: 2,
-                    created: now,
-                    updated: now,
-                },
-                {
-                    token: 'kids',
-                    name: 'Kids',
-                    sort_position: 3,
-                    created: now,
-                    updated: now,
-                },
-            ];
+            for (let i = 0; i < modes.data.length; i++) {
+                let mode = modes.data[i];
 
-            for (let mode of modes) {
-                let qry = await conn(table_name).where('token', mode.token).first();
+                let qry = await conn(table_name)
+                    .where('token', mode.token)
+                    .first();
 
                 if (!qry) {
-                    await conn(table_name).insert(mode);
+                    await conn(table_name)
+                        .insert({
+                            ...mode,
+                            sort_position: i,
+                            created: timeNow(),
+                            updated: timeNow()
+                        });
                 }
             }
         } catch (e) {
