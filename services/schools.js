@@ -1,4 +1,4 @@
-const { normalizeSearch, timeNow, getDistanceMeters } = require('./shared');
+const { normalizeSearch, timeNow, calculateDistanceMeters } = require('./shared');
 const cacheService = require('./cache');
 const { getCitiesByCountry, getStates } = require('./locations');
 const RESULTS_LIMIT = 50;
@@ -57,7 +57,7 @@ function scoreSchools(schools, location) {
 
         return results
             .map((school) => {
-                const distance = getDistanceMeters(
+                const distance = calculateDistanceMeters(
                     {
                         lat: userLat,
                         lon: userLon,

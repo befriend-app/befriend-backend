@@ -1,6 +1,6 @@
 const cacheService = require('../services/cache');
 const dbService = require('./db');
-const { getDistanceMeters, normalizeSearch, latLonLookup } = require('./shared');
+const { calculateDistanceMeters, normalizeSearch, latLonLookup } = require('./shared');
 
 const RESULTS_LIMIT = 20;
 const MIN_COUNTRY_CHARS = 1;
@@ -304,7 +304,7 @@ function calculateCityScore(city, userLat, userLon, maxDistance, locationCountry
     let distance = null;
 
     if (userLat != null && userLon != null) {
-        distance = getDistanceMeters(
+        distance = calculateDistanceMeters(
             { lat: userLat, lon: userLon },
             { lat: city.lat, lon: city.lon },
         );

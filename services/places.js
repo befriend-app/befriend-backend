@@ -5,7 +5,7 @@ const fsqService = require('../services/fsq');
 const {
     getMetersFromMilesOrKm,
     timeNow,
-    getDistanceMeters,
+    calculateDistanceMeters,
     normalizeDistance,
     getMilesOrKmFromMeters,
     useKM,
@@ -248,7 +248,7 @@ module.exports = {
             for (let place of places_organized) {
                 place.distance = {
                     use_km: useKM(),
-                    meters: getDistanceMeters(from_location, {
+                    meters: calculateDistanceMeters(from_location, {
                         lat: place.location_lat,
                         lon: place.location_lon,
                     }),
@@ -604,7 +604,7 @@ module.exports = {
 
                             place_data.distance = {
                                 use_km: useKM(),
-                                meters: getDistanceMeters(
+                                meters: calculateDistanceMeters(
                                     {
                                         lat: from_lat,
                                         lon: from_lon,
