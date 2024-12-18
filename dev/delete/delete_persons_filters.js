@@ -37,11 +37,15 @@ function main() {
             let tables = ['persons_filters_networks', 'persons_filters'];
 
             for (let table of tables) {
-                await knex(table).delete();
+                try {
+                    await knex(table).delete();
+                } catch(e) {
+                    console.error(e);
+                }
             }
 
             let person_keys = await cacheService.getKeysWithPrefix(
-                cacheService.keys.person_filters('person'),
+                cacheService.keys.person_filters(''),
             );
 
             await deleteKeys(person_keys);
@@ -58,7 +62,7 @@ module.exports = {
 if (require.main === module) {
     (async function () {
         try {
-            await main(true);
+            await main();
             process.exit();
         } catch (e) {
             console.error(e);
