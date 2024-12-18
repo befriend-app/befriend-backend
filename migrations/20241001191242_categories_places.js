@@ -15,13 +15,13 @@ exports.up = function (knex) {
                 );
             table.integer('search_radius_meters').notNullable();
 
-            table.float('location_lat', 14, 10).notNullable();
-            table.float('location_lat_min', 14, 10).notNullable();
-            table.float('location_lat_max', 14, 10).notNullable();
+            table.decimal('location_lat', 10, 7).notNullable();
+            table.decimal('location_lat_min', 10, 7).notNullable();
+            table.decimal('location_lat_max', 10, 7).notNullable();
 
-            table.float('location_lon', 14, 10).notNullable();
-            table.float('location_lon_min', 14, 10).notNullable();
-            table.float('location_lon_max', 14, 10).notNullable();
+            table.decimal('location_lon', 11, 7).notNullable();
+            table.decimal('location_lon_min', 11, 7).notNullable();
+            table.decimal('location_lon_max', 11, 7).notNullable();
 
             table.mediumint('location_lat_1000').notNullable();
             table.mediumint('location_lat_min_1000').notNullable();
@@ -65,9 +65,9 @@ exports.up = function (knex) {
 
             table.string('business_open').nullable();
 
-            table.float('location_lat', 14, 10).notNullable();
+            table.decimal('location_lat', 10, 7).notNullable();
             table.mediumint('location_lat_1000').notNullable();
-            table.float('location_lon', 14, 10).notNullable();
+            table.decimal('location_lon', 11, 7).notNullable();
             table.mediumint('location_lon_1000').notNullable();
 
             table.string('hours', 1000).nullable();

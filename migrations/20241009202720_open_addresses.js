@@ -12,8 +12,8 @@ exports.up = function (knex) {
 
             table.integer('population').nullable();
 
-            table.float('lat', 14, 10).nullable();
-            table.float('lon', 14, 10).nullable();
+            table.decimal('lat', 10, 7).nullable();
+            table.decimal('lon', 11, 7).nullable();
 
             table.index('country_name');
         })
@@ -27,8 +27,8 @@ exports.up = function (knex) {
 
             table.integer('population').nullable();
 
-            table.float('lat', 14, 10).nullable();
-            table.float('lon', 14, 10).nullable();
+            table.decimal('lat', 10, 7).nullable();
+            table.decimal('lon', 11, 7).nullable();
 
             table.index('state_name');
 
@@ -45,8 +45,8 @@ exports.up = function (knex) {
 
             table.integer('population').nullable();
 
-            table.float('lat', 14, 10).nullable();
-            table.float('lon', 14, 10).nullable();
+            table.decimal('lat', 10, 7).nullable();
+            table.decimal('lon', 11, 7).nullable();
 
             table.boolean('is_city').defaultTo(0);
             table.boolean('is_town').defaultTo(0);
@@ -76,8 +76,8 @@ exports.up = function (knex) {
             // table.string('country_code').nullable();
             // table.string('country_name').nullable();
 
-            table.float('lat', 14, 10).nullable();
-            table.float('lon', 14, 10).nullable();
+            table.decimal('lat', 10, 7).nullable();
+            table.decimal('lon', 11, 7).nullable();
 
             let indexes = ['hash', 'number', 'street', 'unit'];
 

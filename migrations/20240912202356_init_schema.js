@@ -117,8 +117,8 @@ exports.up = async function (knex) {
             table.string('phone', 255).nullable();
             table.boolean('is_online').notNullable().defaultTo(false);
             table.string('image_url', 255).nullable();
-            table.float('location_lat', 14, 10).nullable();
-            table.float('location_lon', 14, 10).nullable();
+            table.decimal('location_lat', 10, 7).nullable();
+            table.decimal('location_lon', 11, 7).nullable();
             table
                 .integer('reviews_count')
                 .unsigned()

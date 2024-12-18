@@ -23,8 +23,8 @@ exports.up = async function (knex) {
 
         table.integer('country_id').unsigned().notNullable().after('state');
 
-        table.float('lat', 14, 10).nullable().after('country_id');
-        table.float('lon', 14, 10).nullable().after('lat');
+        table.decimal('lat', 10, 7).nullable().after('country_id');
+        table.decimal('lon', 11, 7).nullable().after('lat');
 
         table.bigInteger('deleted').nullable();
 

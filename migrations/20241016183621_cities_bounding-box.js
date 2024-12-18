@@ -4,11 +4,11 @@
  */
 exports.up = function (knex) {
     return knex.schema.alterTable('open_cities', (table) => {
-        table.float('bbox_lat_min', 14, 10).notNullable().after('lon');
-        table.float('bbox_lat_max', 14, 10).notNullable().after('bbox_lat_min');
+        table.decimal('bbox_lat_min', 10, 7).notNullable().after('lon');
+        table.decimal('bbox_lat_max', 10, 7).notNullable().after('bbox_lat_min');
 
-        table.float('bbox_lon_min', 14, 10).notNullable().after('bbox_lat_max');
-        table.float('bbox_lon_max', 14, 10).notNullable().after('bbox_lon_min');
+        table.decimal('bbox_lon_min', 11, 7).notNullable().after('bbox_lat_max');
+        table.decimal('bbox_lon_max', 11, 7).notNullable().after('bbox_lon_min');
 
         table.mediumint('bbox_lat_min_1000').notNullable().after('bbox_lon_max');
         table.mediumint('bbox_lat_max_1000').notNullable().after('bbox_lat_min_1000');
