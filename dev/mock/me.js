@@ -8,7 +8,7 @@ const meService = require('../../services/me');
 const { getNetworkSelf } = require('../../services/network');
 
 const { loadScriptEnv, timeNow, joinPaths, shuffleFunc, getCoordsFromPointDistance } = require('../../services/shared');
-const { getSections, modes, getSports } = require('../../services/me');
+const { getSections } = require('../../services/me');
 const { getModes } = require('../../services/modes');
 
 const sectionsData = require('../../services/sections_data');
@@ -180,7 +180,7 @@ async function getPersonsLogins() {
             chunk.map(async (person) => {
                 if(processed % 100 === 0) {
                     console.log({
-                        processing: `${processed+1}/${persons.length}`
+                        logins: `${processed+1}/${persons.length}`
                     });
                 }
 
