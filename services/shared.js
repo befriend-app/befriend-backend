@@ -16,6 +16,7 @@ const data_api_url = 'https://data.befriend.app';
 
 const earth_radius_km = 6371;
 const earth_radius_miles = 3958.762079;
+const km_per_degree_lat = 111.32;
 const meters_to_miles = 0.000621371192;
 const miles_to_km = 1.60934;
 
@@ -188,6 +189,26 @@ function birthDatePure(birth_date) {
     }
 
     return birth_date.substring(0, 10);
+}
+
+function calculateDistanceMeters(loc_1, loc_2, in_km) {
+    const dLat = deg2rad(loc_2.lat - loc_1.lat);
+    const dLon = deg2rad(loc_2.lon - loc_1.lon);
+
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos((loc_1.lat * Math.PI) / 180) *
+        Math.cos((loc_1.lat * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    if(in_km) {
+        return earth_radius_km * c;
+    }
+
+    return earth_radius_km * c * 1000;
 }
 
 function changeTimezone(date, ianatz) {
@@ -519,24 +540,8 @@ function getDateTimeStr() {
     return date.toISOString().slice(0, 10) + ' ' + date.toISOString().substring(11, 19);
 }
 
-function getDistanceMeters(loc_1, loc_2) {
-    const dLat = deg2rad(loc_2.lat - loc_1.lat);
-    const dLon = deg2rad(loc_2.lon - loc_1.lon);
-
-    const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos((loc_1.lat * Math.PI) / 180) *
-            Math.cos((loc_1.lat * Math.PI) / 180) *
-            Math.sin(dLon / 2) *
-            Math.sin(dLon / 2);
-
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-    return earth_radius_km * c * 1000;
-}
-
 function getDistanceMilesOrKM(loc_1, loc_2) {
-    let distance_meters = getDistanceMeters(loc_1, loc_2);
+    let distance_meters = calculateDistanceMeters(loc_1, loc_2);
 
     return getMilesOrKmFromMeters(distance_meters);
 }
@@ -1155,7 +1160,10 @@ function mdpe(key) {
 }
 
 module.exports = {
+    earth_radius_km,
+    km_per_degree_lat,
     birthDatePure: birthDatePure,
+    calculateDistanceMeters: calculateDistanceMeters,
     changeTimezone: changeTimezone,
     cloneObj: cloneObj,
     dataEndpoint: dataEndpoint,
@@ -1172,7 +1180,6 @@ module.exports = {
     getDateDiff: getDateDiff,
     getDateStr: getDateStr,
     getDateTimeStr: getDateTimeStr,
-    getDistanceMeters: getDistanceMeters,
     getDistanceMilesOrKM: getDistanceMilesOrKM,
     getIPAddr: getIPAddr,
     getLocalDate: getLocalDate,
