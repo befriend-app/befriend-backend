@@ -1261,9 +1261,12 @@ module.exports = {
         return new Promise(async (resolve, reject) => {
             //get temporary mapbox token for use in app
 
+            let expires_when = Date.now() + 60 * 60 * 1000;
+            let expires = new Date(expires_when).toISOString();
+
             const tokenConfig = {
                 note: 'Temporary token for accessing maps',
-                expires: new Date(Date.now() + 60 * 60 * 1000).toISOString(), // 1 hour expiration
+                expires: new Date(expires),
                 scopes: [
                     'styles:tiles',
                     'styles:read', // Allow reading styles
@@ -1281,6 +1284,7 @@ module.exports = {
 
                 res.json(
                     {
+                        expires: expires_when,
                         token: response.data.token,
                     },
                     200,

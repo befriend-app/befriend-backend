@@ -63,7 +63,6 @@ function createFilterEntry(filter_id, props = {}) {
 
 function getFiltersOptions(req, res) {
     return new Promise(async (resolve, reject) => {
-        let ts = timeNow();
         try {
             let organized = {
                 networks: null,

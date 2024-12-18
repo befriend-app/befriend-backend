@@ -1,9 +1,12 @@
 const cacheService = require('../services/cache');
 const dbService = require('../services/db');
+const gridService = require('../services/grid');
 
 const { timeNow, generateToken, latLonLookup } = require('../services/shared');
-
 const { getPerson, updatePerson } = require('../services/persons');
+const { findMatches, notifyMatches, prepareActivity } = require('../services/activities');
+const { getCountryByCode } = require('../services/locations');
+const { getPersonFilters } = require('../services/filters');
 
 const {
     getSections,
@@ -21,11 +24,7 @@ const {
     updateKid,
     removeKid,
 } = require('../services/me');
-
-const { findMatches, notifyMatches, prepareActivity } = require('../services/activities');
-
-const { getCountryByCode } = require('../services/locations');
-const { getPersonFilters } = require('../services/filters');
+const { execPipeline } = require('../services/cache');
 
 module.exports = {
     getMe: function (req, res) {
@@ -71,6 +70,115 @@ module.exports = {
                     modes,
                     sections,
                 });
+
+                resolve();
+            } catch (e) {
+                console.error(e);
+                res.json('Error getting person', 400);
+            }
+        });
+    },
+    updateLocation: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let person_token = req.body.person_token;
+                let lat = req.body.lat;
+                let lon = req.body.lon;
+
+                if(typeof lat !== 'number' || typeof lon !== 'number' || Math.abs(lat) > 90 || Math.abs(lon) > 180) {
+                    res.json({
+                        message: 'Invalid location provided'
+                    }, 400);
+
+                    return resolve();
+                }
+
+                let grid = await gridService.findNearest(lat, lon);
+
+                if(!grid) {
+                    res.json({
+                        message: 'Grid not found'
+                    }, 400);
+
+                    return resolve();
+                }
+
+                let conn = await dbService.conn();
+
+                let me = await getPerson(person_token);
+                let cache_key_person = cacheService.keys.person(person_token);
+
+                if(!me) {
+                    res.json({
+                        message: 'Invalid person'
+                    }, 400);
+
+                    return resolve();
+                }
+
+                //update db
+                let dbUpdate = {
+                    location_lat: lat,
+                    location_lat_1000: Math.floor(parseFloat(lat) * 1000),
+                    location_lon: lon,
+                    location_lon_1000: Math.floor(parseFloat(lon) * 1000),
+                    updated: timeNow()
+                };
+
+                let prev_grid_token = me.grid?.token;
+
+                if(!prev_grid_token || prev_grid_token !== grid.token) {
+                    dbUpdate.grid_id = grid.id;
+                }
+
+                await conn('persons')
+                    .where('id', me.id)
+                    .update(dbUpdate);
+
+                //update cache
+                //person location cache
+                for(let k in dbUpdate) {
+                    if(k !== 'grid_id') {
+                        me[k] = dbUpdate[k];
+                    }
+                }
+
+                let pipeline = cacheService.startPipeline();
+
+                //person grid data/sets
+                if(!prev_grid_token || prev_grid_token !== grid.token) {
+                    let cache_key_to = cacheService.keys.persons_grid(grid.token);
+
+                    console.log({
+                        cache_key_to
+                    });
+
+                    me.grid = {
+                        id: grid.id,
+                        token: grid.token
+                    }
+
+                    if(prev_grid_token) {
+                        let cache_key_from = cacheService.keys.persons_grid(prev_grid_token);
+
+                        console.log({
+                            cache_key_from
+                        });
+
+                        //remove person token from previous grid
+                        pipeline.sRem(cache_key_from, person_token);
+                    }
+
+                    //add person token to current grid
+                    pipeline.sAdd(cache_key_to, person_token);
+                }
+
+                //person obj
+                pipeline.set(cache_key_person, JSON.stringify(me));
+
+                await execPipeline(pipeline);
+
+                res.json("Location updated successfully", 202);
 
                 resolve();
             } catch (e) {

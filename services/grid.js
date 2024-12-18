@@ -5,6 +5,7 @@ loadScriptEnv();
 
 const TABLE_NAME = 'earth_grid';
 const COORD_PRECISION = 1000;
+const DEFAULT_RADIUS_KM = 30;
 
 let gridStructure = null;
 
@@ -65,7 +66,7 @@ function getKeys(lat, lon) {
     return { lat_key: latKey, lon_key: lonKey };
 }
 
-function findNearest(lat, lon, radiusKm) {
+function findNearest(lat, lon, radiusKm = DEFAULT_RADIUS_KM) {
     return new Promise(async (resolve, reject) => {
         try {
             if(!gridStructure) {
@@ -81,7 +82,7 @@ function findNearest(lat, lon, radiusKm) {
     });
 }
 
-function findNearby(lat, lon, radiusKm, limit = null) {
+function findNearby(lat, lon, radiusKm = DEFAULT_RADIUS_KM, limit = null) {
     return new Promise(async (resolve, reject) => {
         try {
             if(!gridStructure) {

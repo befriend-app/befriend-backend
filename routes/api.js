@@ -18,6 +18,18 @@ router.get('/me', function (req, res, next) {
     });
 });
 
+router.put('/location', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await personsController.updateLocation(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
 router.get('/filters', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {

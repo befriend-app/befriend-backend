@@ -75,6 +75,7 @@ const keyFunctions = {
     person_filters: (token) => `persons:filters:${token}`,
     person_sections: (token) => `persons:me:sections:${token}`,
     persons_section_data: (token, dataName) => `persons:me:sections:data:${dataName}:${token}`,
+    persons_grid: (gridToken) => `persons:grid:${gridToken}`,
 
     instrument: (token) => `instruments:${token}`,
     instruments_prefix: (prefix) => `instruments:prefix:${prefix}`,
