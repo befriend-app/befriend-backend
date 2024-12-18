@@ -1,18 +1,15 @@
 const axios = require('axios');
 const yargs = require('yargs');
 
-const cacheService = require('../../services/cache');
 const dbService = require('../../services/db');
 const { getNetworkSelf } = require('../../services/network');
 const { loadScriptEnv, timeNow, joinPaths, shuffleFunc } = require('../../services/shared');
-const { getPerson } = require('../../services/persons');
 const { filterMappings, getFilters } = require('../../services/filters');
 const { getActivityTypes } = require('../../services/activities');
 const { getModes } = require('../../services/modes');
 const { getGendersLookup } = require('../../services/genders');
 const sectionsData = require('../../services/sections_data');
 const meService = require('../../services/me');
-const { cols } = require('../../services/places');
 
 loadScriptEnv();
 
@@ -2141,42 +2138,42 @@ async function processSmoking() {
 
     await getPersonsLogins();
 
-    //notifications
-    // await processAvailability();
-    // await processActivityTypes();
-    // await processModes();
-    // await processNetworks();
-    // await processReviews();
-    // await processVerifications();
-    //
-    // //general
-    // await processDistance();
-    // await processAge();
-    // await processGender();
-    //
-    // //interests
-    // await processMovies();
-    // await processTvShows();
-    // await processSports();
-    // await processMusic();
-    // await processInstruments();
-    //
-    // //schools & work
-    // await processSchools();
-    // await processWork();
-    //
-    // //personal
-    // await processLifeStages();
-    // await processRelationships();
-    // await processLanguages();
-    // await processPolitics();
-    // await processReligions();
-    // await processDrinking();
-    // await processSmoking();
-    //
-    // //settings
-    // await processActive();
-    // await processSendReceive();
+    // notifications
+    await processAvailability();
+    await processActivityTypes();
+    await processModes();
+    await processNetworks();
+    await processReviews();
+    await processVerifications();
+
+    //general
+    await processDistance();
+    await processAge();
+    await processGender();
+
+    //interests
+    await processMovies();
+    await processTvShows();
+    await processSports();
+    await processMusic();
+    await processInstruments();
+
+    //schools & work
+    await processSchools();
+    await processWork();
+
+    //personal
+    await processLifeStages();
+    await processRelationships();
+    await processLanguages();
+    await processPolitics();
+    await processReligions();
+    await processDrinking();
+    await processSmoking();
+
+    //settings
+    await processActive();
+    await processSendReceive();
     await processImportance();
 
     process.exit();
