@@ -19,18 +19,15 @@ function main() {
             for (let i = 0; i < modes.data.length; i++) {
                 let mode = modes.data[i];
 
-                let qry = await conn(table_name)
-                    .where('token', mode.token)
-                    .first();
+                let qry = await conn(table_name).where('token', mode.token).first();
 
                 if (!qry) {
-                    await conn(table_name)
-                        .insert({
-                            ...mode,
-                            sort_position: i,
-                            created: timeNow(),
-                            updated: timeNow()
-                        });
+                    await conn(table_name).insert({
+                        ...mode,
+                        sort_position: i,
+                        created: timeNow(),
+                        updated: timeNow(),
+                    });
                 }
             }
         } catch (e) {

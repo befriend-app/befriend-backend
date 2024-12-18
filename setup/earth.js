@@ -28,8 +28,17 @@ async function syncEarthGrid() {
             let last_sync = await conn('sync').where('sync_process', sync_name).first();
 
             // Load existing grid cells into dictionary
-            let previous = await conn(main_table)
-                .select('id', 'token', 'lat_key', 'lon_key', 'center_lat', 'center_lon', 'grid_size_km', 'updated', 'deleted');
+            let previous = await conn(main_table).select(
+                'id',
+                'token',
+                'lat_key',
+                'lon_key',
+                'center_lat',
+                'center_lon',
+                'grid_size_km',
+                'updated',
+                'deleted',
+            );
 
             for (let item of previous) {
                 db_dict_grid[item.token] = item;
@@ -64,7 +73,7 @@ async function syncEarthGrid() {
                     let db_item = db_dict_grid[item.token];
 
                     if (!db_item) {
-                        if(item.deleted) {
+                        if (item.deleted) {
                             continue;
                         }
 
@@ -77,7 +86,7 @@ async function syncEarthGrid() {
                             center_lon: item.center_lon,
                             grid_size_km: item.grid_size_km,
                             created: timeNow(),
-                            updated: timeNow()
+                            updated: timeNow(),
                         };
 
                         batch_insert.push(new_item);
@@ -140,7 +149,7 @@ async function syncEarthGrid() {
                     processed: items.length,
                     added,
                     updated,
-                    offset
+                    offset,
                 });
 
                 await timeoutAwait(1000);
@@ -150,20 +159,20 @@ async function syncEarthGrid() {
             if (last_sync) {
                 await conn('sync').where('id', last_sync.id).update({
                     last_updated: timeNow(),
-                    updated: timeNow()
+                    updated: timeNow(),
                 });
             } else {
                 await conn('sync').insert({
                     sync_process: sync_name,
                     last_updated: timeNow(),
                     created: timeNow(),
-                    updated: timeNow()
+                    updated: timeNow(),
                 });
             }
 
             console.log({
                 added,
-                updated
+                updated,
             });
         } catch (e) {
             console.error(e);
@@ -188,7 +197,7 @@ async function main() {
 }
 
 module.exports = {
-    main: main
+    main: main,
 };
 
 if (require.main === module) {

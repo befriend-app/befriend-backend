@@ -11,7 +11,7 @@ exports.up = async function (knex) {
         table.integer('lon_key').notNullable();
         table.decimal('center_lat', 7, 3);
         table.decimal('center_lon', 7, 3);
-        table.decimal('grid_size_km', 5,1);
+        table.decimal('grid_size_km', 5, 1);
 
         table.bigInteger('created').notNullable();
         table.bigInteger('updated').notNullable();
@@ -24,7 +24,13 @@ exports.up = async function (knex) {
     });
 
     await knex.schema.alterTable('persons', (table) => {
-        table.integer('grid_id').unsigned().nullable().after('network_id').references('id').inTable('earth_grid');
+        table
+            .integer('grid_id')
+            .unsigned()
+            .nullable()
+            .after('network_id')
+            .references('id')
+            .inTable('earth_grid');
     });
 };
 

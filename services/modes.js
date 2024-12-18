@@ -24,8 +24,7 @@ function getModes() {
         try {
             let conn = await dbService.conn();
 
-            let data = await conn('modes')
-                .whereNull('deleted');
+            let data = await conn('modes').whereNull('deleted');
 
             let organized = data.reduce(
                 (acc, item) => {
@@ -49,7 +48,7 @@ function getModes() {
 module.exports = {
     modes: {
         data: appModes,
-        lookup: null
+        lookup: null,
     },
-    getModes
+    getModes,
 };

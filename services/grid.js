@@ -16,15 +16,23 @@ function initialize() {
     return new Promise(async (resolve, reject) => {
         try {
             gridStructure = {
-                lat: {}
+                lat: {},
             };
 
             const conn = await dbService.conn();
             const records = await conn(TABLE_NAME)
                 .whereNull('deleted')
-                .select('id', 'token', 'lat_key', 'lon_key', 'center_lat', 'center_lon', 'grid_size_km');
+                .select(
+                    'id',
+                    'token',
+                    'lat_key',
+                    'lon_key',
+                    'center_lat',
+                    'center_lon',
+                    'grid_size_km',
+                );
 
-            for(let record of records) {
+            for (let record of records) {
                 addGridCell(record);
             }
 
@@ -60,7 +68,7 @@ function addGridCell(cell) {
 }
 
 function kmPerDegreeLon(lat) {
-    return Math.cos(lat * Math.PI / 180) * km_per_degree_lat;
+    return Math.cos((lat * Math.PI) / 180) * km_per_degree_lat;
 }
 
 function getKeys(lat, lon) {
@@ -76,13 +84,13 @@ function getKeys(lat, lon) {
 function findNearest(lat, lon, radiusKm = DEFAULT_RADIUS_KM) {
     return new Promise(async (resolve, reject) => {
         try {
-            if(!gridStructure) {
+            if (!gridStructure) {
                 await initialize();
             }
 
             const results = await findNearby(lat, lon, radiusKm, 1);
             resolve(results.length ? results[0] : null);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             reject(e);
         }
@@ -92,7 +100,7 @@ function findNearest(lat, lon, radiusKm = DEFAULT_RADIUS_KM) {
 function findNearby(lat, lon, radiusKm = DEFAULT_RADIUS_KM, limit = null) {
     return new Promise(async (resolve, reject) => {
         try {
-            if(!gridStructure) {
+            if (!gridStructure) {
                 await initialize();
             }
 
@@ -101,30 +109,36 @@ function findNearby(lat, lon, radiusKm = DEFAULT_RADIUS_KM, limit = null) {
             const results = [];
 
             for (let latDiff = -bucketsToSearch; latDiff <= bucketsToSearch; latDiff++) {
-                const currentBucketLat = lat_key + (latDiff * 100);
+                const currentBucketLat = lat_key + latDiff * 100;
                 const latBand = gridStructure.lat[currentBucketLat];
 
                 if (latBand) {
                     const currentLat = currentBucketLat / COORD_PRECISION;
-                    const lonBucketsToSearch = Math.ceil(radiusKm / (kmPerDegreeLon(currentLat) / 10));
+                    const lonBucketsToSearch = Math.ceil(
+                        radiusKm / (kmPerDegreeLon(currentLat) / 10),
+                    );
 
-                    for (let lonDiff = -lonBucketsToSearch; lonDiff <= lonBucketsToSearch; lonDiff++) {
-                        const currentBucketLon = lon_key + (lonDiff * 100);
+                    for (
+                        let lonDiff = -lonBucketsToSearch;
+                        lonDiff <= lonBucketsToSearch;
+                        lonDiff++
+                    ) {
+                        const currentBucketLon = lon_key + lonDiff * 100;
                         const cells = latBand.lon[currentBucketLon];
 
                         if (cells) {
-                            const cellsWithDistances = cells.map(cell => ({
+                            const cellsWithDistances = cells.map((cell) => ({
                                 ...cell,
                                 distance: calculateDistanceMeters(
                                     { lat, lon },
                                     { lat: cell.center_lat, lon: cell.center_lon },
-                                    true
-                                )
+                                    true,
+                                ),
                             }));
 
-                            results.push(...cellsWithDistances.filter(cell =>
-                                cell.distance <= radiusKm
-                            ));
+                            results.push(
+                                ...cellsWithDistances.filter((cell) => cell.distance <= radiusKm),
+                            );
                         }
                     }
                 }
@@ -133,7 +147,7 @@ function findNearby(lat, lon, radiusKm = DEFAULT_RADIUS_KM, limit = null) {
             const sorted = results.sort((a, b) => a.distance - b.distance);
 
             resolve(limit ? sorted.slice(0, limit) : sorted);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             reject(e);
         }

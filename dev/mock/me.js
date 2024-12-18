@@ -7,7 +7,13 @@ const meService = require('../../services/me');
 
 const { getNetworkSelf } = require('../../services/network');
 
-const { loadScriptEnv, timeNow, joinPaths, shuffleFunc, getCoordsFromPointDistance } = require('../../services/shared');
+const {
+    loadScriptEnv,
+    timeNow,
+    joinPaths,
+    shuffleFunc,
+    getCoordsFromPointDistance,
+} = require('../../services/shared');
 const { getSections } = require('../../services/me');
 const { getModes } = require('../../services/modes');
 
@@ -31,34 +37,33 @@ let chunks = [];
 
 let helpers = {
     favoritePositionTracker: function (items = {}, tableKey) {
-        const currentPosition = Object.values(items)
-            .reduce((acc, item) => {
-                if (item.table_key === tableKey) {
-                    if (item.is_favorite && item.favorite_position >= acc) {
-                        return acc + 1;
-                    }
+        const currentPosition = Object.values(items).reduce((acc, item) => {
+            if (item.table_key === tableKey) {
+                if (item.is_favorite && item.favorite_position >= acc) {
+                    return acc + 1;
                 }
-                return acc;
-            }, 0);
+            }
+            return acc;
+        }, 0);
 
         return {
             position: currentPosition || 0,
             next() {
                 return this.position++;
-            }
+            },
         };
     },
-    addSectionItems: async function({
-                                 person,
-                                 sectionKey,
-                                 tableKey,
-                                 items,
-                                 favoriteTracker = null,
-                                 secondaryOptions = null,
-                                 favoriteChance = 0.4,
-                                 secondaryChance = 0.6,
-                                 hashToken = null
-                             }) {
+    addSectionItems: async function ({
+        person,
+        sectionKey,
+        tableKey,
+        items,
+        favoriteTracker = null,
+        secondaryOptions = null,
+        favoriteChance = 0.4,
+        secondaryChance = 0.6,
+        hashToken = null,
+    }) {
         const results = [];
 
         for (const item of items) {
@@ -78,44 +83,44 @@ let helpers = {
                         table_key: tableKey,
                         item_token: item.token,
                         ...(hashToken && {
-                            hash_token: hashToken
-                        })
-                    }
+                            hash_token: hashToken,
+                        }),
+                    },
                 );
 
-                const isFavorite = favoriteTracker && Math.random() > (1 - favoriteChance);
-                const addSecondary = secondaryOptions && Math.random() > (1 - secondaryChance);
+                const isFavorite = favoriteTracker && Math.random() > 1 - favoriteChance;
+                const addSecondary = secondaryOptions && Math.random() > 1 - secondaryChance;
                 const secondaryValue = addSecondary ? shuffleFunc(secondaryOptions)[0] : null;
 
                 if (isFavorite || secondaryValue) {
-                    await axios.put(
-                        joinPaths(process.env.APP_URL, '/me/sections/items'),
-                        {
-                            login_token: person.login_token,
-                            person_token: person.person_token,
-                            section_key: sectionKey,
-                            table_key: tableKey,
-                            section_item_id: response.data.id,
-                            ...(isFavorite && {
-                                favorite: {
-                                    active: true,
-                                    position: favoriteTracker.next()
-                                }
-                            }),
-                            ...(secondaryValue && { secondary: secondaryValue }),
-                        }
-                    );
+                    await axios.put(joinPaths(process.env.APP_URL, '/me/sections/items'), {
+                        login_token: person.login_token,
+                        person_token: person.person_token,
+                        section_key: sectionKey,
+                        table_key: tableKey,
+                        section_item_id: response.data.id,
+                        ...(isFavorite && {
+                            favorite: {
+                                active: true,
+                                position: favoriteTracker.next(),
+                            },
+                        }),
+                        ...(secondaryValue && { secondary: secondaryValue }),
+                    });
                 }
 
                 results.push(response.data);
             } catch (error) {
-                console.error(`Error adding item ${item.token} for person ${person.person_token}:`, error.message);
+                console.error(
+                    `Error adding item ${item.token} for person ${person.person_token}:`,
+                    error.message,
+                );
             }
         }
 
         return results;
     },
-    processBatch: async function(key, processFn) {
+    processBatch: async function (key, processFn) {
         let processed = 0;
         const total = persons.length;
 
@@ -124,7 +129,7 @@ let helpers = {
                 chunk.map(async (person) => {
                     if (processed % 100 === 0) {
                         console.log({
-                            [key]: `${processed + 1}/${total}`
+                            [key]: `${processed + 1}/${total}`,
                         });
                     }
 
@@ -133,31 +138,32 @@ let helpers = {
                     try {
                         await processFn(person);
                     } catch (error) {
-                        console.error(`Error processing person ${person.person_token}:`, error.message);
+                        console.error(
+                            `Error processing person ${person.person_token}:`,
+                            error.message,
+                        );
                     }
-                })
+                }),
             );
         }
     },
-    selectRandomItems: function(items, min, max) {
+    selectRandomItems: function (items, min, max) {
         const count = Math.floor(Math.random() * (max - min + 1)) + min;
         return shuffleFunc([...items]).slice(0, count);
     },
-    isSectionActive: function(person, sectionKey) {
+    isSectionActive: function (person, sectionKey) {
         return !!person.sections?.active?.[sectionKey];
-    }
+    },
 };
 
 async function getPersonsLogins() {
     console.log({
-        me: 'logins'
+        me: 'logins',
     });
 
     let ts = timeNow();
 
-    persons = await conn('persons')
-        .where('network_id', self_network.id)
-        .limit(num_persons);
+    persons = await conn('persons').where('network_id', self_network.id).limit(num_persons);
 
     let persons_logins = await conn('persons_login_tokens').whereIn(
         'person_id',
@@ -178,9 +184,9 @@ async function getPersonsLogins() {
     for (let chunk of chunks) {
         await Promise.all(
             chunk.map(async (person) => {
-                if(processed % 100 === 0) {
+                if (processed % 100 === 0) {
                     console.log({
-                        logins: `${processed+1}/${persons.length}`
+                        logins: `${processed + 1}/${persons.length}`,
                     });
                 }
 
@@ -194,7 +200,7 @@ async function getPersonsLogins() {
                         });
                         persons_dict[person.id] = r.data.login_token;
                         person.login_token = r.data.login_token;
-                    } catch(e) {
+                    } catch (e) {
                         console.error(e);
                     }
                 } else {
@@ -205,13 +211,13 @@ async function getPersonsLogins() {
     }
 
     console.log({
-        logins: timeNow() - ts
+        logins: timeNow() - ts,
     });
 }
 
 async function processSections() {
     console.log({
-        me: 'sections'
+        me: 'sections',
     });
 
     let ts = timeNow();
@@ -222,9 +228,9 @@ async function processSections() {
     for (let chunk of chunks) {
         await Promise.all(
             chunk.map(async (person) => {
-                if(processed % 100 === 0) {
+                if (processed % 100 === 0) {
                     console.log({
-                        sections: `${processed+1}/${persons.length}`
+                        sections: `${processed + 1}/${persons.length}`,
                     });
                 }
 
@@ -238,8 +244,8 @@ async function processSections() {
 
                     let changed = false;
 
-                    while ((active_keys.length / all_keys.length) < .7) {
-                        let options = all_keys.filter(item => !active_keys.includes(item));
+                    while (active_keys.length / all_keys.length < 0.7) {
+                        let options = all_keys.filter((item) => !active_keys.includes(item));
 
                         let key = shuffleFunc(options)[0];
 
@@ -254,12 +260,12 @@ async function processSections() {
                         changed = true;
                     }
 
-                    if(changed) {
+                    if (changed) {
                         person.sections = await getSections(person);
                     } else {
                         person.sections = sections;
                     }
-                } catch(e) {
+                } catch (e) {
                     console.error(e);
                 }
             }),
@@ -267,18 +273,18 @@ async function processSections() {
     }
 
     console.log({
-        sections: timeNow() - ts
+        sections: timeNow() - ts,
     });
 }
 
 async function processLocation() {
     console.log({
-        me: 'location'
+        me: 'location',
     });
 
     let centerLocation = {
-        lat: 41.810,
-        lon: -88
+        lat: 41.81,
+        lon: -88,
     };
 
     let directions = ['east', 'west', 'north', 'south'];
@@ -288,9 +294,9 @@ async function processLocation() {
     for (let chunk of chunks) {
         await Promise.all(
             chunk.map(async (person) => {
-                if(processed % 100 === 0) {
+                if (processed % 100 === 0) {
                     console.log({
-                        location: `${processed+1}/${persons.length}`
+                        location: `${processed + 1}/${persons.length}`,
                     });
                 }
 
@@ -307,29 +313,34 @@ async function processLocation() {
 
                     let direction = shuffleFunc(directions)[0];
 
-                    const newLocation = getCoordsFromPointDistance(centerLocation.lat, centerLocation.lon, random_distance_km, direction)
+                    const newLocation = getCoordsFromPointDistance(
+                        centerLocation.lat,
+                        centerLocation.lon,
+                        random_distance_km,
+                        direction,
+                    );
 
                     // Update person's mode
-                    let r = await axios.put(
-                        joinPaths(process.env.APP_URL, '/location'),
-                        {
-                            login_token: person.login_token,
-                            person_token: person.person_token,
-                            lat: newLocation.lat,
-                            lon: newLocation.lon,
-                        }
-                    );
+                    let r = await axios.put(joinPaths(process.env.APP_URL, '/location'), {
+                        login_token: person.login_token,
+                        person_token: person.person_token,
+                        lat: newLocation.lat,
+                        lon: newLocation.lon,
+                    });
                 } catch (error) {
-                    console.error(`Error processing location for person ${person.person_token}:`, error.message);
+                    console.error(
+                        `Error processing location for person ${person.person_token}:`,
+                        error.message,
+                    );
                 }
-            })
+            }),
         );
     }
 }
 
 async function processModes() {
     console.log({
-        me: 'modes'
+        me: 'modes',
     });
 
     // Get all available modes
@@ -348,9 +359,9 @@ async function processModes() {
     for (let chunk of chunks) {
         await Promise.all(
             chunk.map(async (person) => {
-                if(processed % 100 === 0) {
+                if (processed % 100 === 0) {
                     console.log({
-                        modes: `${processed+1}/${persons.length}`
+                        modes: `${processed + 1}/${persons.length}`,
                     });
                 }
 
@@ -366,28 +377,22 @@ async function processModes() {
                     const newMode = shuffleFunc(modesArray)[0];
 
                     // Update person's mode
-                    await axios.put(
-                        joinPaths(process.env.APP_URL, '/me/mode'),
-                        {
-                            login_token: person.login_token,
-                            person_token: person.person_token,
-                            mode: newMode.token,
-                        }
-                    );
+                    await axios.put(joinPaths(process.env.APP_URL, '/me/mode'), {
+                        login_token: person.login_token,
+                        person_token: person.person_token,
+                        mode: newMode.token,
+                    });
 
                     // Randomly decide if we should add partner
                     if (Math.random() > 0.5) {
                         const randomGender = shuffleFunc(genders)[0];
 
-                        await axios.put(
-                            joinPaths(process.env.APP_URL, '/me/mode/partner'),
-                            {
-                                login_token: person.login_token,
-                                person_token: person.person_token,
-                                gender_token: randomGender.token,
-                                is_select: true,
-                            }
-                        );
+                        await axios.put(joinPaths(process.env.APP_URL, '/me/mode/partner'), {
+                            login_token: person.login_token,
+                            person_token: person.person_token,
+                            gender_token: randomGender.token,
+                            is_select: true,
+                        });
                     }
 
                     // Randomly decide if we should add kids (30% chance)
@@ -402,7 +407,7 @@ async function processModes() {
                                 {
                                     login_token: person.login_token,
                                     person_token: person.person_token,
-                                }
+                                },
                             );
 
                             if (response.data) {
@@ -410,36 +415,33 @@ async function processModes() {
                                 const randomGender = shuffleFunc(genders)[0];
 
                                 // Update kid's gender
-                                await axios.put(
-                                    joinPaths(process.env.APP_URL, '/me/mode/kids'),
-                                    {
-                                        login_token: person.login_token,
-                                        person_token: person.person_token,
-                                        kid_token: kid.token,
-                                        gender_token: randomGender.token,
-                                        is_select: true,
-                                    }
-                                );
+                                await axios.put(joinPaths(process.env.APP_URL, '/me/mode/kids'), {
+                                    login_token: person.login_token,
+                                    person_token: person.person_token,
+                                    kid_token: kid.token,
+                                    gender_token: randomGender.token,
+                                    is_select: true,
+                                });
 
                                 const randomAge = shuffleFunc(ageTokens)[0];
 
                                 // Update kid's age
-                                await axios.put(
-                                    joinPaths(process.env.APP_URL, '/me/mode/kids'),
-                                    {
-                                        login_token: person.login_token,
-                                        person_token: person.person_token,
-                                        kid_token: kid.token,
-                                        age_token: randomAge,
-                                    }
-                                );
+                                await axios.put(joinPaths(process.env.APP_URL, '/me/mode/kids'), {
+                                    login_token: person.login_token,
+                                    person_token: person.person_token,
+                                    kid_token: kid.token,
+                                    age_token: randomAge,
+                                });
                             }
                         }
                     }
                 } catch (error) {
-                    console.error(`Error processing mode for person ${person.person_token}:`, error.message);
+                    console.error(
+                        `Error processing mode for person ${person.person_token}:`,
+                        error.message,
+                    );
                 }
-            })
+            }),
         );
     }
 }
@@ -455,19 +457,27 @@ async function processMovies() {
         .limit(1000);
 
     // Get all movie genres
-    const movieGenres = await conn('movie_genres')
-        .whereNull('deleted');
+    const movieGenres = await conn('movie_genres').whereNull('deleted');
 
     await helpers.processBatch('movies', async (person) => {
         if (!helpers.isSectionActive(person, 'movies')) return;
 
-        if(person.sections.active?.movies?.items && Object.keys(person.sections.active.movies.items).length) {
+        if (
+            person.sections.active?.movies?.items &&
+            Object.keys(person.sections.active.movies.items).length
+        ) {
             return;
         }
 
         // Setup favorite position trackers
-        const movieFavorites = helpers.favoritePositionTracker(person.sections.active.movies.items, 'movies');
-        const genreFavorites = helpers.favoritePositionTracker(person.sections.active.movies.items, 'genres');
+        const movieFavorites = helpers.favoritePositionTracker(
+            person.sections.active.movies.items,
+            'movies',
+        );
+        const genreFavorites = helpers.favoritePositionTracker(
+            person.sections.active.movies.items,
+            'genres',
+        );
 
         // Add movies
         const selectedMovies = helpers.selectRandomItems(movies, 5, 15);
@@ -477,7 +487,7 @@ async function processMovies() {
             tableKey: 'movies',
             items: selectedMovies,
             favoriteTracker: movieFavorites,
-            favoriteChance: 0.4
+            favoriteChance: 0.4,
         });
 
         // Add genres
@@ -489,7 +499,7 @@ async function processMovies() {
             tableKey: 'genres',
             items: selectedGenres,
             favoriteTracker: genreFavorites,
-            favoriteChance: 0.3
+            favoriteChance: 0.3,
         });
     });
 
@@ -507,19 +517,27 @@ async function processTvShows() {
         .limit(1000);
 
     // Get all TV genres
-    const tvGenres = await conn('tv_genres')
-        .whereNull('deleted');
+    const tvGenres = await conn('tv_genres').whereNull('deleted');
 
-    await helpers.processBatch('tv_shows',async (person) => {
+    await helpers.processBatch('tv_shows', async (person) => {
         if (!helpers.isSectionActive(person, 'tv_shows')) return;
 
-        if(person.sections.active?.tv_shows?.items && Object.keys(person.sections.active.tv_shows.items).length) {
+        if (
+            person.sections.active?.tv_shows?.items &&
+            Object.keys(person.sections.active.tv_shows.items).length
+        ) {
             return;
         }
 
         // Setup favorite position trackers
-        const showFavorites = helpers.favoritePositionTracker(person.sections.active.tv_shows.items, 'shows');
-        const genreFavorites = helpers.favoritePositionTracker(person.sections.active.tv_shows.items, 'genres');
+        const showFavorites = helpers.favoritePositionTracker(
+            person.sections.active.tv_shows.items,
+            'shows',
+        );
+        const genreFavorites = helpers.favoritePositionTracker(
+            person.sections.active.tv_shows.items,
+            'genres',
+        );
 
         // Add shows
         const selectedShows = helpers.selectRandomItems(shows, 5, 15);
@@ -529,7 +547,7 @@ async function processTvShows() {
             tableKey: 'shows',
             items: selectedShows,
             favoriteTracker: showFavorites,
-            favoriteChance: 0.4
+            favoriteChance: 0.4,
         });
 
         // Add genres
@@ -540,7 +558,7 @@ async function processTvShows() {
             tableKey: 'genres',
             items: selectedGenres,
             favoriteTracker: genreFavorites,
-            favoriteChance: 0.3
+            favoriteChance: 0.3,
         });
     });
 
@@ -552,14 +570,10 @@ async function processSports() {
 
     let ts = timeNow();
 
-    let test_country = await conn('open_countries')
-        .where('country_code', 'US')
-        .first();
+    let test_country = await conn('open_countries').where('country_code', 'US').first();
 
     // Get active sports, leagues, and teams
-    const sports = await conn('sports')
-        .whereNull('deleted')
-        .where('is_active', true);
+    const sports = await conn('sports').whereNull('deleted').where('is_active', true);
 
     const leagues = await conn('sports_leagues AS sl')
         .join('sports_leagues_countries AS slc', 'slc.league_id', '=', 'sl.id')
@@ -575,20 +589,36 @@ async function processSports() {
 
     let sportsSecondary = sectionsData.sports.secondary;
 
-    await helpers.processBatch('sports',async (person) => {
+    await helpers.processBatch('sports', async (person) => {
         if (!helpers.isSectionActive(person, 'sports')) return;
 
-        if(person.sections.active?.sports?.items && Object.keys(person.sections.active.sports.items).length) {
+        if (
+            person.sections.active?.sports?.items &&
+            Object.keys(person.sections.active.sports.items).length
+        ) {
             return;
         }
 
         // Setup favorite position trackers
-        const playFavorites = helpers.favoritePositionTracker(person.sections.active.sports.items, 'play');
-        const teamFavorites = helpers.favoritePositionTracker(person.sections.active.sports.items, 'teams');
-        const leagueFavorites = helpers.favoritePositionTracker(person.sections.active.sports.items, 'leagues');
+        const playFavorites = helpers.favoritePositionTracker(
+            person.sections.active.sports.items,
+            'play',
+        );
+        const teamFavorites = helpers.favoritePositionTracker(
+            person.sections.active.sports.items,
+            'teams',
+        );
+        const leagueFavorites = helpers.favoritePositionTracker(
+            person.sections.active.sports.items,
+            'leagues',
+        );
 
         // Add play sports
-        const selectedPlaySports = helpers.selectRandomItems(sports.filter(s => s.is_play), 2, 5);
+        const selectedPlaySports = helpers.selectRandomItems(
+            sports.filter((s) => s.is_play),
+            2,
+            5,
+        );
         await helpers.addSectionItems({
             person,
             sectionKey: 'sports',
@@ -596,7 +626,7 @@ async function processSports() {
             items: selectedPlaySports,
             favoriteTracker: playFavorites,
             favoriteChance: 0.5,
-            secondaryOptions: sportsSecondary.play.options
+            secondaryOptions: sportsSecondary.play.options,
         });
 
         // Add teams
@@ -608,7 +638,7 @@ async function processSports() {
             items: selectedTeams,
             favoriteTracker: teamFavorites,
             favoriteChance: 0.5,
-            secondaryOptions: sportsSecondary.teams.options
+            secondaryOptions: sportsSecondary.teams.options,
         });
 
         // Add leagues
@@ -620,7 +650,7 @@ async function processSports() {
             items: selectedLeagues,
             favoriteTracker: leagueFavorites,
             favoriteChance: 0.5,
-            secondaryOptions: sportsSecondary.leagues.options
+            secondaryOptions: sportsSecondary.leagues.options,
         });
     });
 
@@ -644,21 +674,24 @@ async function processMusic() {
             .where('is_active', true)
             .orderBy('position', 'asc');
 
-        await helpers.processBatch('music',async (person) => {
+        await helpers.processBatch('music', async (person) => {
             if (!helpers.isSectionActive(person, 'music')) return;
 
-            if(person.sections.active?.music?.items && Object.keys(person.sections.active.music.items).length) {
+            if (
+                person.sections.active?.music?.items &&
+                Object.keys(person.sections.active.music.items).length
+            ) {
                 return;
             }
 
             // Setup favorite position trackers for both artists and genres
             const artistFavorites = helpers.favoritePositionTracker(
                 person.sections.active.music.items,
-                'artists'
+                'artists',
             );
             const genreFavorites = helpers.favoritePositionTracker(
                 person.sections.active.music.items,
-                'genres'
+                'genres',
             );
 
             // Add 5-15 random artists
@@ -669,7 +702,7 @@ async function processMusic() {
                 tableKey: 'artists',
                 items: selectedArtists,
                 favoriteTracker: artistFavorites,
-                favoriteChance: 0.5
+                favoriteChance: 0.5,
             });
 
             // Add 3-7 random genres
@@ -680,10 +713,9 @@ async function processMusic() {
                 tableKey: 'genres',
                 items: selectedGenres,
                 favoriteTracker: genreFavorites,
-                favoriteChance: 0.5
+                favoriteChance: 0.5,
             });
         });
-
     } catch (error) {
         console.error('Error processing music:', error);
     }
@@ -705,10 +737,13 @@ async function processInstruments() {
         // Get skill level options from the section data
         const skillLevels = sectionsData.instruments.secondary.instruments.options;
 
-        await helpers.processBatch('instruments',async (person) => {
+        await helpers.processBatch('instruments', async (person) => {
             if (!helpers.isSectionActive(person, 'instruments')) return;
 
-            if(person.sections.active?.instruments?.items && Object.keys(person.sections.active.instruments.items).length) {
+            if (
+                person.sections.active?.instruments?.items &&
+                Object.keys(person.sections.active.instruments.items).length
+            ) {
                 return;
             }
 
@@ -720,10 +755,9 @@ async function processInstruments() {
                 tableKey: 'instruments',
                 items: selectedInstruments,
                 secondaryOptions: skillLevels,
-                secondaryChance: 0.7
+                secondaryChance: 0.7,
             });
         });
-
     } catch (error) {
         console.error('Error processing instruments:', error);
     }
@@ -737,32 +771,28 @@ async function processSchools() {
 
     try {
         // Get US as test country like in sports
-        const test_country = await conn('open_countries')
-            .where('country_code', 'US')
-            .first();
+        const test_country = await conn('open_countries').where('country_code', 'US').first();
 
         // Get schools for the test country ordered by student count
         const schools = await conn('schools')
             .where('country_id', test_country.id)
             .whereNull('deleted')
             .orderBy('student_count', 'desc')
-            .select(
-                'id',
-                'token',
-                'is_grade_school',
-                'is_high_school',
-                'is_college'
-            ).limit(500)
+            .select('id', 'token', 'is_grade_school', 'is_high_school', 'is_college')
+            .limit(500);
 
         // Separate schools by type for balanced selection
-        const collegeSchools = schools.filter(s => s.is_college);
-        const highSchools = schools.filter(s => s.is_high_school);
-        const gradeSchools = schools.filter(s => s.is_grade_school);
+        const collegeSchools = schools.filter((s) => s.is_college);
+        const highSchools = schools.filter((s) => s.is_high_school);
+        const gradeSchools = schools.filter((s) => s.is_grade_school);
 
-        await helpers.processBatch('schools',async (person) => {
+        await helpers.processBatch('schools', async (person) => {
             if (!helpers.isSectionActive(person, 'schools')) return;
 
-            if(person.sections.active?.schools?.items && Object.keys(person.sections.active.schools.items).length) {
+            if (
+                person.sections.active?.schools?.items &&
+                Object.keys(person.sections.active.schools.items).length
+            ) {
                 return;
             }
 
@@ -779,7 +809,7 @@ async function processSchools() {
                     sectionKey: 'schools',
                     tableKey: 'schools',
                     items: selectedColleges,
-                    hashToken: test_country.country_code
+                    hashToken: test_country.country_code,
                 });
             }
 
@@ -791,7 +821,7 @@ async function processSchools() {
                     sectionKey: 'schools',
                     tableKey: 'schools',
                     items: selectedHighSchools,
-                    hashToken: test_country.country_code
+                    hashToken: test_country.country_code,
                 });
             }
 
@@ -803,11 +833,10 @@ async function processSchools() {
                     sectionKey: 'schools',
                     tableKey: 'schools',
                     items: selectedGradeSchools,
-                    hashToken: test_country.country_code
+                    hashToken: test_country.country_code,
                 });
             }
         });
-
     } catch (error) {
         console.error('Error processing schools:', error);
     }
@@ -825,9 +854,7 @@ async function processWork() {
             .whereNull('deleted')
             .where('is_visible', true);
 
-        const roles = await conn('work_roles')
-            .whereNull('deleted')
-            .where('is_visible', true);
+        const roles = await conn('work_roles').whereNull('deleted').where('is_visible', true);
 
         // Group roles by category for balanced selection
         const rolesByCategory = roles.reduce((acc, role) => {
@@ -841,7 +868,10 @@ async function processWork() {
         await helpers.processBatch('work', async (person) => {
             if (!helpers.isSectionActive(person, 'work')) return;
 
-            if(person.sections.active?.work?.items && Object.keys(person.sections.active.work.items).length) {
+            if (
+                person.sections.active?.work?.items &&
+                Object.keys(person.sections.active.work.items).length
+            ) {
                 return;
             }
 
@@ -873,7 +903,6 @@ async function processWork() {
                 }
             }
         });
-
     } catch (error) {
         console.error('Error processing work:', error);
     }
@@ -882,15 +911,15 @@ async function processWork() {
 }
 
 async function processButtonSection({
-                                        sectionKey,
-                                        tableKey,
-                                        getOptionsFunc,
-                                        multiSelect = false,
-                                        exclusive = null,
-                                        minSelect = 1,
-                                        maxSelect = 1,
-                                        selectChance = 0.8
-                                    }) {
+    sectionKey,
+    tableKey,
+    getOptionsFunc,
+    multiSelect = false,
+    exclusive = null,
+    minSelect = 1,
+    maxSelect = 1,
+    selectChance = 0.8,
+}) {
     console.log({ me: sectionKey });
     let ts = timeNow();
 
@@ -898,67 +927,67 @@ async function processButtonSection({
         // Get options using the provided function
         const options = await getOptionsFunc();
 
-        await helpers.processBatch(sectionKey,async (person) => {
+        await helpers.processBatch(sectionKey, async (person) => {
             if (!helpers.isSectionActive(person, sectionKey)) {
                 return;
             }
-            
-            if(person.sections.active?.[sectionKey]?.items && Object.keys(person.sections.active[sectionKey].items).length) {
+
+            if (
+                person.sections.active?.[sectionKey]?.items &&
+                Object.keys(person.sections.active[sectionKey].items).length
+            ) {
                 return;
             }
 
             // For multi-select, determine how many items to select
-            const numToSelect = multiSelect ?
-                Math.floor(Math.random() * (maxSelect - minSelect + 1)) + minSelect : 1;
+            const numToSelect = multiSelect
+                ? Math.floor(Math.random() * (maxSelect - minSelect + 1)) + minSelect
+                : 1;
 
             // Only proceed with chance of selection
             if (Math.random() > selectChance) return;
 
             // If exclusive option exists and is selected (30% chance)
             if (exclusive && Math.random() > 0.7) {
-                const exclusiveOption = options.find(opt => opt.token === exclusive);
+                const exclusiveOption = options.find((opt) => opt.token === exclusive);
                 if (exclusiveOption) {
-                    await axios.post(
-                        joinPaths(process.env.APP_URL, '/me/sections/items/select'),
-                        {
-                            login_token: person.login_token,
-                            person_token: person.person_token,
-                            section_key: sectionKey,
-                            table_key: tableKey || sectionKey,
-                            item_token: exclusiveOption.token,
-                            is_select: true
-                        }
-                    );
+                    await axios.post(joinPaths(process.env.APP_URL, '/me/sections/items/select'), {
+                        login_token: person.login_token,
+                        person_token: person.person_token,
+                        section_key: sectionKey,
+                        table_key: tableKey || sectionKey,
+                        item_token: exclusiveOption.token,
+                        is_select: true,
+                    });
                 }
                 return;
             }
 
             // Select random items
             const selectedItems = helpers.selectRandomItems(
-                options.filter(opt => !exclusive || opt.token !== exclusive),
+                options.filter((opt) => !exclusive || opt.token !== exclusive),
                 numToSelect,
-                numToSelect
+                numToSelect,
             );
 
             for (const item of selectedItems) {
                 try {
-                    await axios.put(
-                        joinPaths(process.env.APP_URL, '/me/sections/selection'),
-                        {
-                            login_token: person.login_token,
-                            person_token: person.person_token,
-                            section_key: sectionKey,
-                            table_key: tableKey || sectionKey,
-                            item_token: item.token,
-                            is_select: true
-                        }
-                    );
+                    await axios.put(joinPaths(process.env.APP_URL, '/me/sections/selection'), {
+                        login_token: person.login_token,
+                        person_token: person.person_token,
+                        section_key: sectionKey,
+                        table_key: tableKey || sectionKey,
+                        item_token: item.token,
+                        is_select: true,
+                    });
                 } catch (error) {
-                    console.error(`Error selecting ${sectionKey} item for person ${person.person_token}:`, error.message);
+                    console.error(
+                        `Error selecting ${sectionKey} item for person ${person.person_token}:`,
+                        error.message,
+                    );
                 }
             }
         });
-
     } catch (error) {
         console.error(`Error processing ${sectionKey}:`, error);
     }
@@ -973,7 +1002,7 @@ async function processLifeStages() {
         multiSelect: true,
         minSelect: 1,
         maxSelect: 3,
-        selectChance: 0.8
+        selectChance: 0.8,
     });
 }
 
@@ -985,7 +1014,7 @@ async function processRelationshipStatus() {
         multiSelect: true,
         minSelect: 1,
         maxSelect: 2,
-        selectChance: 0.85
+        selectChance: 0.85,
     });
 }
 
@@ -996,7 +1025,7 @@ async function processLanguages() {
         multiSelect: true,
         minSelect: 1,
         maxSelect: 3,
-        selectChance: 0.8
+        selectChance: 0.8,
     });
 }
 
@@ -1005,7 +1034,7 @@ async function processPolitics() {
         sectionKey: 'politics',
         getOptionsFunc: () => meService.getPolitics({ options_only: true }),
         multiSelect: false,
-        selectChance: 0.7
+        selectChance: 0.7,
     });
 }
 
@@ -1017,7 +1046,7 @@ async function processReligion() {
         exclusive: 'not_religious',
         minSelect: 1,
         maxSelect: 2,
-        selectChance: 0.7
+        selectChance: 0.7,
     });
 }
 
@@ -1026,7 +1055,7 @@ async function processDrinking() {
         sectionKey: 'drinking',
         getOptionsFunc: () => meService.getDrinking({ options_only: true }),
         multiSelect: false,
-        selectChance: 0.9
+        selectChance: 0.9,
     });
 }
 
@@ -1035,7 +1064,7 @@ async function processSmoking() {
         sectionKey: 'smoking',
         getOptionsFunc: () => meService.getSmoking({ options_only: true }),
         multiSelect: false,
-        selectChance: 0.8
+        selectChance: 0.8,
     });
 }
 

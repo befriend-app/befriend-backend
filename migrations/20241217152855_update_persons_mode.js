@@ -12,7 +12,13 @@ exports.up = async function (knex) {
     }
 
     await knex.schema.alterTable('persons', (table) => {
-        table.integer('mode_id').unsigned().nullable().after('person_token').references('id').inTable('modes');
+        table
+            .integer('mode_id')
+            .unsigned()
+            .nullable()
+            .after('person_token')
+            .references('id')
+            .inTable('modes');
     });
 };
 

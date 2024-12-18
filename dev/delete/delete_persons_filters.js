@@ -34,16 +34,15 @@ function main() {
                 connection: connection,
             });
 
-            let tables = [
-                'persons_filters_networks',
-                'persons_filters'
-            ];
+            let tables = ['persons_filters_networks', 'persons_filters'];
 
             for (let table of tables) {
                 await knex(table).delete();
             }
 
-            let person_keys = await cacheService.getKeysWithPrefix(cacheService.keys.person_filters('person'));
+            let person_keys = await cacheService.getKeysWithPrefix(
+                cacheService.keys.person_filters('person'),
+            );
 
             await deleteKeys(person_keys);
         }

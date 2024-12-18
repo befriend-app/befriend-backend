@@ -198,13 +198,13 @@ function calculateDistanceMeters(loc_1, loc_2, in_km) {
     const a =
         Math.sin(dLat / 2) * Math.sin(dLat / 2) +
         Math.cos((loc_1.lat * Math.PI) / 180) *
-        Math.cos((loc_1.lat * Math.PI) / 180) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
+            Math.cos((loc_1.lat * Math.PI) / 180) *
+            Math.sin(dLon / 2) *
+            Math.sin(dLon / 2);
 
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-    if(in_km) {
+    if (in_km) {
         return earth_radius_km * c;
     }
 

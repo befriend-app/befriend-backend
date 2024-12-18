@@ -57,7 +57,8 @@ if (!isMainThread) {
             }
         },
     );
-} else { // main thread
+} else {
+    // main thread
     const workers = [];
     let currentWorker = 0;
 

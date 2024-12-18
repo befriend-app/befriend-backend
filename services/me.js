@@ -16,7 +16,6 @@ const { getCountries } = require('../services/locations');
 const { getLanguagesCountry } = require('../services/languages');
 const { getPerson, updatePerson } = require('../services/persons');
 
-
 function getModes(me) {
     return new Promise(async (resolve, reject) => {
         let modes = {
@@ -111,7 +110,7 @@ function putMode(person_token, mode) {
 
             let modes = await modesService.getModes();
 
-            if (!mode || !(modes?.byToken[mode])) {
+            if (!mode || !modes?.byToken[mode]) {
                 return reject('Invalid mode');
             }
 
@@ -145,20 +144,18 @@ function putPartner(person_token, gender_token, is_select) {
             }
 
             //init cache
-            if(!('mode' in person)) {
+            if (!('mode' in person)) {
                 person.mode = {};
             }
 
-            if(!('partner' in person.mode)) {
+            if (!('partner' in person.mode)) {
                 person.mode.partner = {};
             }
 
             let conn = await dbService.conn();
 
             //check if record exists
-            let check = await conn('persons_partner')
-                .where('person_id', person.id)
-                .first();
+            let check = await conn('persons_partner').where('person_id', person.id).first();
 
             if (check) {
                 let updateData = {};
@@ -172,9 +169,7 @@ function putPartner(person_token, gender_token, is_select) {
                     updateData.updated = timeNow();
                 }
 
-                await conn('persons_partner')
-                    .where('id', check.id)
-                    .update(updateData);
+                await conn('persons_partner').where('id', check.id).update(updateData);
 
                 Object.assign(person.mode.partner, updateData);
             } else {
@@ -188,8 +183,7 @@ function putPartner(person_token, gender_token, is_select) {
                     updated: timeNow(),
                 };
 
-                let [id] = await conn('persons_partner')
-                    .insert(createData);
+                let [id] = await conn('persons_partner').insert(createData);
 
                 createData.id = id;
 
@@ -239,11 +233,11 @@ function addKid(person_token) {
                 is_active: true,
             };
 
-            if(!('mode' in person)) {
+            if (!('mode' in person)) {
                 person.mode = {};
             }
 
-            if(!('kids' in person.mode)) {
+            if (!('kids' in person.mode)) {
                 person.mode.kids = {};
             }
 
@@ -258,7 +252,14 @@ function addKid(person_token) {
     });
 }
 
-function updateKid(person_token, kid_token, age_token = null, gender_token = null, is_select = null, is_active = null) {
+function updateKid(
+    person_token,
+    kid_token,
+    age_token = null,
+    gender_token = null,
+    is_select = null,
+    is_active = null,
+) {
     return new Promise(async (resolve, reject) => {
         try {
             let cache_key = cacheService.keys.person(person_token);
@@ -331,9 +332,7 @@ function updateKid(person_token, kid_token, age_token = null, gender_token = nul
                 updates.is_active = is_active;
             }
 
-            await conn('persons_kids')
-                .where('id', kid.id)
-                .update(updates);
+            await conn('persons_kids').where('id', kid.id).update(updates);
 
             // Update cache
             let cached_kids = person?.mode?.kids || {};
@@ -353,11 +352,11 @@ function updateKid(person_token, kid_token, age_token = null, gender_token = nul
                     cached_kids[kid_token].is_active = is_active;
                 }
 
-                if(!('mode' in person)) {
+                if (!('mode' in person)) {
                     person.mode = {};
                 }
 
-                if(!('kids' in person.mode)) {
+                if (!('kids' in person.mode)) {
                     person.mode.kids = {};
                 }
 
@@ -752,7 +751,7 @@ function addSectionItem(person_token, section_key, table_key, item_token, hash_k
                     token: item_token,
                     table_key: table_key,
                     created: item_data.created,
-                    updated: item_data.updated
+                    updated: item_data.updated,
                 };
 
                 let cache_key = cacheService.keys.persons_section_data(
@@ -1285,7 +1284,7 @@ function getPersonSectionItems(person, section_key) {
                 return resolve({});
             }
 
-            if (!organized ) {
+            if (!organized) {
                 let fnAll = sectionData?.functions?.all;
 
                 let options;
@@ -1352,7 +1351,7 @@ function getPersonSectionItems(person, section_key) {
 
                         let itemKey = section_option.token || `option_${section_option.id}`;
 
-                        if(table_key === 'genders') {
+                        if (table_key === 'genders') {
                             organized[itemKey] = {
                                 id: item.id,
                                 token: section_option.token,

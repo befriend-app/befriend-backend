@@ -65,12 +65,11 @@ function main() {
                 await knex(table).delete();
             }
 
-            await knex('persons')
-                .update({
-                    grid_id:null,
-                    mode_id: null,
-                    updated: timeNow()
-                });
+            await knex('persons').update({
+                grid_id: null,
+                mode_id: null,
+                updated: timeNow(),
+            });
 
             let person_keys = await cacheService.getKeysWithPrefix(`persons`);
 

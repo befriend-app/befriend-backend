@@ -60,7 +60,7 @@ module.exports = {
                     id: person.mode_id,
                     token: modes?.byId[person.mode_id]?.token || null,
                     partner: {},
-                    kids: {}
+                    kids: {},
                 };
 
                 // Get partner data
@@ -78,7 +78,15 @@ module.exports = {
                 const kids = await conn('persons_kids')
                     .where('person_id', person.id)
                     .whereNull('deleted')
-                    .select('id', 'token', 'age_id', 'gender_id', 'is_active', 'created', 'updated');
+                    .select(
+                        'id',
+                        'token',
+                        'age_id',
+                        'gender_id',
+                        'is_active',
+                        'created',
+                        'updated',
+                    );
 
                 // Convert kids array to object with token keys
                 const kids_dict = {};
@@ -89,22 +97,20 @@ module.exports = {
                         token: kid.token,
                         gender_id: kid.gender_id,
                         age_id: kid.age_id,
-                        is_active: kid.is_active
+                        is_active: kid.is_active,
                     };
                 }
                 person.mode.kids = kids_dict;
 
                 //add grid
-                if(person.grid_id) {
-                    let grid = await conn('earth_grid')
-                        .where('id', person.grid_id)
-                        .first();
+                if (person.grid_id) {
+                    let grid = await conn('earth_grid').where('id', person.grid_id).first();
 
-                    if(grid) {
+                    if (grid) {
                         person.grid = {
                             id: grid.id,
                             token: grid.token,
-                        }
+                        };
                     }
                 }
 
@@ -134,28 +140,24 @@ module.exports = {
 
                 let conn = await dbService.conn();
 
-                if('mode' in data) {
-                    await conn('persons')
-                        .where('id', person.id)
-                        .update({
-                            mode_id: data.mode.id,
-                            updated: timeNow()
-                        });
+                if ('mode' in data) {
+                    await conn('persons').where('id', person.id).update({
+                        mode_id: data.mode.id,
+                        updated: timeNow(),
+                    });
 
-                    if(!('mode' in person) || person.mode === null) {
+                    if (!('mode' in person) || person.mode === null) {
                         person.mode = {};
                     }
 
                     Object.assign(person.mode, {
                         id: data.mode.id,
-                        token: data.mode.token
+                        token: data.mode.token,
                     });
                 } else {
                     data.updated = timeNow();
 
-                    await conn('persons')
-                        .where('id', person.id)
-                        .update(data);
+                    await conn('persons').where('id', person.id).update(data);
 
                     Object.assign(person, data);
                 }

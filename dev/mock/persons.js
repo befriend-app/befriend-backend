@@ -88,7 +88,7 @@ function updatePersonsCount() {
             for (let i = 0; i < results.length; i++) {
                 let id = i + 1 + current_count;
 
-                if(prev_highest_id) {
+                if (prev_highest_id) {
                     id += prev_highest_id;
                 }
 

@@ -85,20 +85,31 @@ module.exports = {
                 let lat = req.body.lat;
                 let lon = req.body.lon;
 
-                if(typeof lat !== 'number' || typeof lon !== 'number' || Math.abs(lat) > 90 || Math.abs(lon) > 180) {
-                    res.json({
-                        message: 'Invalid location provided'
-                    }, 400);
+                if (
+                    typeof lat !== 'number' ||
+                    typeof lon !== 'number' ||
+                    Math.abs(lat) > 90 ||
+                    Math.abs(lon) > 180
+                ) {
+                    res.json(
+                        {
+                            message: 'Invalid location provided',
+                        },
+                        400,
+                    );
 
                     return resolve();
                 }
 
                 let grid = await gridService.findNearest(lat, lon);
 
-                if(!grid) {
-                    res.json({
-                        message: 'Grid not found'
-                    }, 400);
+                if (!grid) {
+                    res.json(
+                        {
+                            message: 'Grid not found',
+                        },
+                        400,
+                    );
 
                     return resolve();
                 }
@@ -108,10 +119,13 @@ module.exports = {
                 let me = await getPerson(person_token);
                 let cache_key_person = cacheService.keys.person(person_token);
 
-                if(!me) {
-                    res.json({
-                        message: 'Invalid person'
-                    }, 400);
+                if (!me) {
+                    res.json(
+                        {
+                            message: 'Invalid person',
+                        },
+                        400,
+                    );
 
                     return resolve();
                 }
@@ -122,23 +136,21 @@ module.exports = {
                     location_lat_1000: Math.floor(parseFloat(lat) * 1000),
                     location_lon: lon,
                     location_lon_1000: Math.floor(parseFloat(lon) * 1000),
-                    updated: timeNow()
+                    updated: timeNow(),
                 };
 
                 let prev_grid_token = me.grid?.token;
 
-                if(!prev_grid_token || prev_grid_token !== grid.token) {
+                if (!prev_grid_token || prev_grid_token !== grid.token) {
                     dbUpdate.grid_id = grid.id;
                 }
 
-                await conn('persons')
-                    .where('id', me.id)
-                    .update(dbUpdate);
+                await conn('persons').where('id', me.id).update(dbUpdate);
 
                 //update cache
                 //person location cache
-                for(let k in dbUpdate) {
-                    if(k !== 'grid_id') {
+                for (let k in dbUpdate) {
+                    if (k !== 'grid_id') {
                         me[k] = dbUpdate[k];
                     }
                 }
@@ -146,15 +158,15 @@ module.exports = {
                 let pipeline = cacheService.startPipeline();
 
                 //person grid data/sets
-                if(!prev_grid_token || prev_grid_token !== grid.token) {
+                if (!prev_grid_token || prev_grid_token !== grid.token) {
                     let cache_key_to = cacheService.keys.persons_grid(grid.token);
 
                     me.grid = {
                         id: grid.id,
-                        token: grid.token
-                    }
+                        token: grid.token,
+                    };
 
-                    if(prev_grid_token) {
+                    if (prev_grid_token) {
                         let cache_key_from = cacheService.keys.persons_grid(prev_grid_token);
 
                         //remove person token from previous grid
@@ -170,7 +182,7 @@ module.exports = {
 
                 await execPipeline(pipeline);
 
-                res.json("Location updated successfully", 202);
+                res.json('Location updated successfully', 202);
 
                 resolve();
             } catch (e) {
