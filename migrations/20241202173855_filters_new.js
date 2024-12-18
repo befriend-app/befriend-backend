@@ -165,6 +165,8 @@ exports.up = async function (knex) {
         }
 
         timestampCols(table);
+
+        table.index(['person_id', 'filter_id']);
     });
 
     return knex.schema.createTable('activities_filters', (table) => {
