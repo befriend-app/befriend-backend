@@ -20,6 +20,7 @@ exports.up = async function (knex) {
         table.index('token');
         table.index('lat_key');
         table.index('lon_key');
+        table.index('updated');
     });
 
     await knex.schema.alterTable('persons', (table) => {

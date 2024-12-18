@@ -64,6 +64,7 @@ module.exports = {
     keys: {
         sync: {
             data: {
+                earth: 'sync_earth_grid',
                 locations: 'sync_open_locations',
                 movies: {
                     all: 'sync_movies',
