@@ -149,10 +149,6 @@ module.exports = {
                 if(!prev_grid_token || prev_grid_token !== grid.token) {
                     let cache_key_to = cacheService.keys.persons_grid(grid.token);
 
-                    console.log({
-                        cache_key_to
-                    });
-
                     me.grid = {
                         id: grid.id,
                         token: grid.token
@@ -160,10 +156,6 @@ module.exports = {
 
                     if(prev_grid_token) {
                         let cache_key_from = cacheService.keys.persons_grid(prev_grid_token);
-
-                        console.log({
-                            cache_key_from
-                        });
 
                         //remove person token from previous grid
                         pipeline.sRem(cache_key_from, person_token);

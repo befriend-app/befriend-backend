@@ -480,9 +480,7 @@ function getCoordsBoundBox(latitude, longitude, distance_miles_or_km) {
     };
 }
 
-function getCoordsFromPointDistance(lat, lon, distance_miles_or_km, direction) {
-    let distance_km = useKM() ? distance_miles_or_km : distance_miles_or_km * miles_to_km;
-
+function getCoordsFromPointDistance(lat, lon, distance_km, direction) {
     const latRad = deg2rad(lat);
     const lonRad = deg2rad(lon);
 

@@ -7,7 +7,7 @@ const meService = require('../../services/me');
 
 const { getNetworkSelf } = require('../../services/network');
 
-const { loadScriptEnv, timeNow, joinPaths, shuffleFunc } = require('../../services/shared');
+const { loadScriptEnv, timeNow, joinPaths, shuffleFunc, getCoordsFromPointDistance } = require('../../services/shared');
 const { getSections, modes, getSports } = require('../../services/me');
 const { getModes } = require('../../services/modes');
 
@@ -115,7 +115,7 @@ let helpers = {
 
         return results;
     },
-    processBatch: async function(processFn) {
+    processBatch: async function(key, processFn) {
         let processed = 0;
         const total = persons.length;
 
@@ -124,7 +124,7 @@ let helpers = {
                 chunk.map(async (person) => {
                     if (processed % 100 === 0) {
                         console.log({
-                            processing: `${processed + 1}/${total}`
+                            [key]: `${processed + 1}/${total}`
                         });
                     }
 
@@ -224,7 +224,7 @@ async function processSections() {
             chunk.map(async (person) => {
                 if(processed % 100 === 0) {
                     console.log({
-                        processing: `${processed+1}/${persons.length}`
+                        sections: `${processed+1}/${persons.length}`
                     });
                 }
 
@@ -271,6 +271,62 @@ async function processSections() {
     });
 }
 
+async function processLocation() {
+    console.log({
+        me: 'location'
+    });
+
+    let centerLocation = {
+        lat: 41.810,
+        lon: -88
+    };
+
+    let directions = ['east', 'west', 'north', 'south'];
+
+    let processed = 0;
+
+    for (let chunk of chunks) {
+        await Promise.all(
+            chunk.map(async (person) => {
+                if(processed % 100 === 0) {
+                    console.log({
+                        location: `${processed+1}/${persons.length}`
+                    });
+                }
+
+                processed++;
+
+                try {
+                    // Skip if person already has a grid_id
+                    // if (person.grid_id !== null) {
+                    //     return;
+                    // }
+
+                    // Create random location 0-200 km away
+                    let random_distance_km = Math.floor(Math.random() * 200);
+
+                    let direction = shuffleFunc(directions)[0];
+
+                    const newLocation = getCoordsFromPointDistance(centerLocation.lat, centerLocation.lon, random_distance_km, direction)
+
+                    // Update person's mode
+                    let r = await axios.put(
+                        joinPaths(process.env.APP_URL, '/location'),
+                        {
+                            login_token: person.login_token,
+                            person_token: person.person_token,
+                            lat: newLocation.lat,
+                            lon: newLocation.lon,
+                        }
+                    );
+                } catch (error) {
+                    console.error(`Error processing location for person ${person.person_token}:`, error.message);
+                }
+            })
+        );
+    }
+}
+
 async function processModes() {
     console.log({
         me: 'modes'
@@ -294,7 +350,7 @@ async function processModes() {
             chunk.map(async (person) => {
                 if(processed % 100 === 0) {
                     console.log({
-                        processing: `${processed+1}/${persons.length}`
+                        modes: `${processed+1}/${persons.length}`
                     });
                 }
 
@@ -402,7 +458,7 @@ async function processMovies() {
     const movieGenres = await conn('movie_genres')
         .whereNull('deleted');
 
-    await helpers.processBatch(async (person) => {
+    await helpers.processBatch('movies', async (person) => {
         if (!helpers.isSectionActive(person, 'movies')) return;
 
         if(person.sections.active?.movies?.items && Object.keys(person.sections.active.movies.items).length) {
@@ -454,7 +510,7 @@ async function processTvShows() {
     const tvGenres = await conn('tv_genres')
         .whereNull('deleted');
 
-    await helpers.processBatch(async (person) => {
+    await helpers.processBatch('tv_shows',async (person) => {
         if (!helpers.isSectionActive(person, 'tv_shows')) return;
 
         if(person.sections.active?.tv_shows?.items && Object.keys(person.sections.active.tv_shows.items).length) {
@@ -519,7 +575,7 @@ async function processSports() {
 
     let sportsSecondary = sectionsData.sports.secondary;
 
-    await helpers.processBatch(async (person) => {
+    await helpers.processBatch('sports',async (person) => {
         if (!helpers.isSectionActive(person, 'sports')) return;
 
         if(person.sections.active?.sports?.items && Object.keys(person.sections.active.sports.items).length) {
@@ -588,7 +644,7 @@ async function processMusic() {
             .where('is_active', true)
             .orderBy('position', 'asc');
 
-        await helpers.processBatch(async (person) => {
+        await helpers.processBatch('music',async (person) => {
             if (!helpers.isSectionActive(person, 'music')) return;
 
             if(person.sections.active?.music?.items && Object.keys(person.sections.active.music.items).length) {
@@ -649,7 +705,7 @@ async function processInstruments() {
         // Get skill level options from the section data
         const skillLevels = sectionsData.instruments.secondary.instruments.options;
 
-        await helpers.processBatch(async (person) => {
+        await helpers.processBatch('instruments',async (person) => {
             if (!helpers.isSectionActive(person, 'instruments')) return;
 
             if(person.sections.active?.instruments?.items && Object.keys(person.sections.active.instruments.items).length) {
@@ -703,7 +759,7 @@ async function processSchools() {
         const highSchools = schools.filter(s => s.is_high_school);
         const gradeSchools = schools.filter(s => s.is_grade_school);
 
-        await helpers.processBatch(async (person) => {
+        await helpers.processBatch('schools',async (person) => {
             if (!helpers.isSectionActive(person, 'schools')) return;
 
             if(person.sections.active?.schools?.items && Object.keys(person.sections.active.schools.items).length) {
@@ -782,7 +838,7 @@ async function processWork() {
             return acc;
         }, {});
 
-        await helpers.processBatch(async (person) => {
+        await helpers.processBatch('work', async (person) => {
             if (!helpers.isSectionActive(person, 'work')) return;
 
             if(person.sections.active?.work?.items && Object.keys(person.sections.active.work.items).length) {
@@ -842,7 +898,7 @@ async function processButtonSection({
         // Get options using the provided function
         const options = await getOptionsFunc();
 
-        await helpers.processBatch(async (person) => {
+        await helpers.processBatch(sectionKey,async (person) => {
             if (!helpers.isSectionActive(person, sectionKey)) {
                 return;
             }
@@ -995,6 +1051,8 @@ async function processSmoking() {
     }
 
     await getPersonsLogins();
+
+    await processLocation();
 
     await processModes();
 

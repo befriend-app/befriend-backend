@@ -20,7 +20,9 @@ function initialize() {
             };
 
             const conn = await dbService.conn();
-            const records = await conn(TABLE_NAME).whereNull('deleted');
+            const records = await conn(TABLE_NAME)
+                .whereNull('deleted')
+                .select('id', 'token', 'lat_key', 'lon_key', 'center_lat', 'center_lon', 'grid_size_km');
 
             for(let record of records) {
                 addGridCell(record);
@@ -49,7 +51,12 @@ function addGridCell(cell) {
         gridStructure.lat[lat_key].lon[lon_key] = [];
     }
 
-    gridStructure.lat[lat_key].lon[lon_key].push(cell);
+    gridStructure.lat[lat_key].lon[lon_key].push({
+        id: cell.id,
+        token: cell.token,
+        center_lat: cell.center_lat,
+        center_lon: cell.center_lon,
+    });
 }
 
 function kmPerDegreeLon(lat) {

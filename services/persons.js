@@ -94,9 +94,21 @@ module.exports = {
                 }
                 person.mode.kids = kids_dict;
 
-                if (person) {
-                    await cacheService.setCache(cache_key, person);
+                //add grid
+                if(person.grid_id) {
+                    let grid = await conn('earth_grid')
+                        .where('id', person.grid_id)
+                        .first();
+
+                    if(grid) {
+                        person.grid = {
+                            id: grid.id,
+                            token: grid.token,
+                        }
+                    }
                 }
+
+                await cacheService.setCache(cache_key, person);
 
                 resolve(person);
             } catch (e) {
