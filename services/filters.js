@@ -2,12 +2,10 @@ const cacheService = require('./cache');
 const dbService = require('./db');
 
 const filterMappings = {
-    networks: {
-        token: 'networks',
-        name: 'Networks',
-        table: 'networks',
-        column: 'network_id',
-        filters_table: 'persons_filters_networks',
+    availability: {
+        token: 'availability',
+        name: 'Availability',
+        table: 'persons_availability',
         multi: true,
     },
     activity_types: {
@@ -24,20 +22,22 @@ const filterMappings = {
         column: 'mode_id',
         multi: true,
     },
-    availability: {
-        token: 'availability',
-        name: 'Availability',
-        table: 'persons_availability',
+    networks: {
+        token: 'networks',
+        name: 'Networks',
+        table: 'networks',
+        column: 'network_id',
+        filters_table: 'persons_filters_networks',
         multi: true,
-    },
-    distance: {
-        token: 'distance',
-        name: 'Distance',
-        single: true,
     },
     reviews: {
         token: 'reviews',
         name: 'Reviews',
+        single: true,
+    },
+    reviews_unrated: {
+        token: 'reviews_unrated',
+        name: 'Unrated',
         single: true,
     },
     reviews_safety: {
@@ -65,14 +65,14 @@ const filterMappings = {
         name: 'Fun',
         single: true,
     },
-    reviews_unrated: {
-        token: 'reviews_unrated',
-        name: 'Unrated',
-        single: true,
-    },
     verifications: {
         token: 'verifications',
         name: 'Verifications',
+        single: true,
+    },
+    verification_in_person: {
+        token: 'verification_in_person',
+        name: 'In-Person',
         single: true,
     },
     verification_linkedin: {
@@ -95,14 +95,14 @@ const filterMappings = {
         name: 'Video',
         single: true,
     },
-    verification_in_person: {
-        token: 'verification_in_person',
-        name: 'In-Person',
-        single: true,
-    },
     verification_mailer: {
         token: 'verification_mailer',
         name: 'Mail',
+        single: true,
+    },
+    distance: {
+        token: 'distance',
+        name: 'Distance',
         single: true,
     },
     ages: {
@@ -117,71 +117,13 @@ const filterMappings = {
         table: 'genders',
         multi: true,
     },
-    life_stages: {
-        token: 'life_stages',
-        name: 'Life Stage',
-        table: 'life_stages',
-        column: 'life_stage_id',
+    movies: {
+        token: 'movies',
+        name: 'Movies',
+        table: 'movies',
+        column: 'movie_id',
         multi: true,
-    },
-    relationship: {
-        token: 'relationship',
-        name: 'Relationship Status',
-        table: 'relationship_status',
-        column: 'relationship_status_id',
-        multi: true,
-    },
-    schools: {
-        token: 'schools',
-        name: 'Schools',
-        table: 'schools',
-        column: 'school_id',
-        multi: true,
-    },
-    work: {
-        token: 'work',
-        name: 'Work',
-        multi: true,
-    },
-    work_industries: {
-        token: 'work_industries',
-        name: 'Industry',
-        table: 'work_industries',
-        column: 'work_industry_id',
-        multi: true,
-    },
-    work_roles: {
-        token: 'work_roles',
-        name: 'Role',
-        table: 'work_roles',
-        column: 'work_role_id',
-        multi: true,
-    },
-    sports: {
-        token: 'sports',
-        name: 'Sports',
-        multi: true,
-    },
-    sports_play: {
-        token: 'sports_play',
-        name: 'Play',
-        table: 'sports',
-        column: 'sport_play_id',
-        multi: true,
-    },
-    sports_leagues: {
-        token: 'sports_league',
-        name: 'Leagues',
-        table: 'sports_leagues',
-        column: 'sport_league_id',
-        multi: true,
-    },
-    sports_teams: {
-        token: 'sport_team',
-        name: 'Teams',
-        table: 'sports_teams',
-        column: 'sport_team_id',
-        multi: true,
+        importance: true
     },
     movie_genres: {
         token: 'movie_genres',
@@ -189,20 +131,7 @@ const filterMappings = {
         table: 'movie_genres',
         column: 'movie_genre_id',
         multi: true,
-    },
-    movies: {
-        token: 'movies',
-        name: 'Movies',
-        table: 'movies',
-        column: 'movie_id',
-        multi: true,
-    },
-    tv_show_genres: {
-        token: 'tv_show_genres',
-        name: 'TV Show Genres',
-        table: 'tv_genres',
-        column: 'tv_show_genre_id',
-        multi: true,
+        importance: true
     },
     tv_shows: {
         token: 'tv_shows',
@@ -210,11 +139,51 @@ const filterMappings = {
         table: 'tv_shows',
         column: 'tv_show_id',
         multi: true,
+        importance: true
+    },
+    tv_show_genres: {
+        token: 'tv_show_genres',
+        name: 'TV Show Genres',
+        table: 'tv_genres',
+        column: 'tv_show_genre_id',
+        multi: true,
+        importance: true
+    },
+    sports: {
+        token: 'sports',
+        name: 'Sports',
+        multi: true,
+        importance: true
+    },
+    sports_play: {
+        token: 'sports_play',
+        name: 'Play',
+        table: 'sports',
+        column: 'sport_play_id',
+        multi: true,
+        importance: true
+    },
+    sports_leagues: {
+        token: 'sports_league',
+        name: 'Leagues',
+        table: 'sports_leagues',
+        column: 'sport_league_id',
+        multi: true,
+        importance: true
+    },
+    sports_teams: {
+        token: 'sport_team',
+        name: 'Teams',
+        table: 'sports_teams',
+        column: 'sport_team_id',
+        multi: true,
+        importance: true
     },
     music: {
         token: 'music',
         name: 'Music',
         multi: true,
+        importance: true
     },
     music_artists: {
         token: 'music_artists',
@@ -222,6 +191,7 @@ const filterMappings = {
         table: 'music_artists',
         column: 'music_artist_id',
         multi: true,
+        importance: true
     },
     music_genres: {
         token: 'music_genres',
@@ -229,6 +199,7 @@ const filterMappings = {
         table: 'music_genres',
         column: 'music_genre_id',
         multi: true,
+        importance: true
     },
     instruments: {
         token: 'instruments',
@@ -236,6 +207,53 @@ const filterMappings = {
         table: 'instruments',
         column: 'instrument_id',
         multi: true,
+        importance: true
+    },
+    schools: {
+        token: 'schools',
+        name: 'Schools',
+        table: 'schools',
+        column: 'school_id',
+        multi: true,
+        importance: true
+    },
+    work: {
+        token: 'work',
+        name: 'Work',
+        multi: true,
+        importance: true
+    },
+    work_industries: {
+        token: 'work_industries',
+        name: 'Industry',
+        table: 'work_industries',
+        column: 'work_industry_id',
+        multi: true,
+        importance: true
+    },
+    work_roles: {
+        token: 'work_roles',
+        name: 'Role',
+        table: 'work_roles',
+        column: 'work_role_id',
+        multi: true,
+        importance: true
+    },
+    life_stages: {
+        token: 'life_stages',
+        name: 'Life Stage',
+        table: 'life_stages',
+        column: 'life_stage_id',
+        multi: true,
+        importance: true
+    },
+    relationship: {
+        token: 'relationship',
+        name: 'Relationship Status',
+        table: 'relationship_status',
+        column: 'relationship_status_id',
+        multi: true,
+        importance: true
     },
     languages: {
         token: 'languages',
@@ -243,20 +261,7 @@ const filterMappings = {
         table: 'languages',
         column: 'language_id',
         multi: true,
-    },
-    drinking: {
-        token: 'drinking',
-        name: 'Drinking',
-        table: 'drinking',
-        column: 'drinking_id',
-        multi: true,
-    },
-    smoking: {
-        token: 'smoking',
-        name: 'Smoking',
-        table: 'smoking',
-        column: 'smoking_id',
-        multi: true,
+        importance: true
     },
     politics: {
         token: 'politics',
@@ -264,6 +269,7 @@ const filterMappings = {
         table: 'politics',
         column: 'politics_id',
         multi: true,
+        importance: true
     },
     religion: {
         token: 'religion',
@@ -271,6 +277,23 @@ const filterMappings = {
         table: 'religions',
         column: 'religion_id',
         multi: true,
+        importance: true
+    },
+    drinking: {
+        token: 'drinking',
+        name: 'Drinking',
+        table: 'drinking',
+        column: 'drinking_id',
+        multi: true,
+        importance: true
+    },
+    smoking: {
+        token: 'smoking',
+        name: 'Smoking',
+        table: 'smoking',
+        column: 'smoking_id',
+        multi: true,
+        importance: true
     },
 };
 
