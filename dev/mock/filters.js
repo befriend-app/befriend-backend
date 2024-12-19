@@ -732,7 +732,7 @@ async function processAge() {
                     login_token: person.login_token,
                     person_token: person.person_token,
                     min_age: minAge,
-                    max_age: Math.min(maxAge, 130), // Ensure we don't exceed 130
+                    max_age: Math.min(maxAge, 80),
                 });
             } catch (error) {
                 console.error('Error setting age filter:', error.message);

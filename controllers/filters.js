@@ -1144,12 +1144,12 @@ function putAge(req, res) {
                 typeof min_age !== 'number' ||
                 typeof max_age !== 'number' ||
                 min_age < 18 ||
-                max_age > 130 ||
+                max_age > 80 ||
                 min_age > max_age
             ) {
                 res.json(
                     {
-                        message: 'Valid age range required (18-130)',
+                        message: 'Valid age range required (18-80)',
                     },
                     400,
                 );
@@ -1190,23 +1190,25 @@ function putAge(req, res) {
             // Get or create filter entry
             let existingFilter = person_filters['ages'];
 
+            let max_age_value = max_age !== 80 ? max_age : null;
+
             if (existingFilter) {
                 // Update existing filter
                 await conn('persons_filters').where('id', existingFilter.id).update({
                     filter_value_min: min_age.toString(),
-                    filter_value_max: max_age.toString(),
+                    filter_value_max: max_age_value,
                     updated: now,
                 });
 
                 existingFilter.filter_value_min = min_age.toString();
-                existingFilter.filter_value_max = max_age.toString();
+                existingFilter.filter_value_max = max_age_value;
                 existingFilter.updated = now;
             } else {
                 // Create new filter entry
                 const filterEntry = createFilterEntry(filter.id, {
                     person_id: person.id,
                     filter_value_min: min_age.toString(),
-                    filter_value_max: max_age.toString(),
+                    filter_value_max: max_age_value,
                 });
 
                 const [id] = await conn('persons_filters').insert(filterEntry);
