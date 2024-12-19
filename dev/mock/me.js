@@ -277,6 +277,44 @@ async function processSections() {
     });
 }
 
+async function processOnline() {
+    console.log({
+        me: 'online',
+    });
+
+    let processed = 0;
+
+    for (let chunk of chunks) {
+        await Promise.all(
+            chunk.map(async (person) => {
+                if (processed % 100 === 0) {
+                    console.log({
+                        location: `${processed + 1}/${persons.length}`,
+                    });
+                }
+
+                processed++;
+
+                try {
+                    // Update person online status
+                    let online = Math.random() > 0.3; //70% chance of setting online true
+
+                    let r = await axios.put(joinPaths(process.env.APP_URL, '/online'), {
+                        login_token: person.login_token,
+                        person_token: person.person_token,
+                        online: online
+                    });
+                } catch (error) {
+                    console.error(
+                        `Error processing online status for person ${person.person_token}:`,
+                        error.message,
+                    );
+                }
+            }),
+        );
+    }
+}
+
 async function processLocation() {
     console.log({
         me: 'location',
@@ -303,11 +341,6 @@ async function processLocation() {
                 processed++;
 
                 try {
-                    // Skip if person already has a grid_id
-                    // if (person.grid_id !== null) {
-                    //     return;
-                    // }
-
                     // Create random location 0-200 km away
                     let random_distance_km = Math.floor(Math.random() * 200);
 
@@ -1080,6 +1113,8 @@ async function processSmoking() {
     }
 
     await getPersonsLogins();
+
+    await processOnline();
 
     await processLocation();
 
