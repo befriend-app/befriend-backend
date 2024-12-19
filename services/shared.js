@@ -116,7 +116,9 @@ function latLonLookup(lat, lon) {
         //initialize geo lookup
         if (!geoLookup.countries) {
             try {
-                geoLookup.countries = (await require('./locations').getCountries()).list;
+                let countries = (await require('./locations').getCountries()).list;
+
+                geoLookup.countries = structuredClone(countries);
             } catch (e) {
                 console.error(e);
             }
