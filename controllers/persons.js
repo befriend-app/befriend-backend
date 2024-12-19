@@ -78,6 +78,49 @@ module.exports = {
             }
         });
     },
+    putOnline: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let person_token = req.body.person_token;
+                let online = req.body.online;
+
+                if (typeof online !== 'boolean') {
+                    res.json(
+                        {
+                            message: 'Invalid request',
+                        },
+                        400,
+                    );
+
+                    return resolve();
+                }
+
+                let me = await getPerson(person_token);
+
+                if (!me) {
+                    res.json(
+                        {
+                            message: 'Invalid person',
+                        },
+                        400,
+                    );
+
+                    return resolve();
+                }
+
+                await updatePerson(person_token, {
+                    is_online: online
+                });
+
+                res.json('Online status updated successfully', 202);
+
+                resolve();
+            } catch (e) {
+                console.error(e);
+                res.json('Error updating online status', 400);
+            }
+        });
+    },
     updateLocation: function (req, res) {
         return new Promise(async (resolve, reject) => {
             try {

@@ -18,6 +18,18 @@ router.get('/me', function (req, res, next) {
     });
 });
 
+router.put('/online', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await personsController.putOnline(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
 router.put('/location', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
