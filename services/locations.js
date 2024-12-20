@@ -200,6 +200,7 @@ function getCityCountryIds(parsed, locationCountry) {
             let cityKey = cacheService.keys.cities_prefix(
                 parsed.city.substring(0, MAX_PREFIX_LIMIT),
             );
+
             let globalCities = await cacheService.getSortedSetByScore(cityKey, 1000);
 
             for (let city of globalCities) {

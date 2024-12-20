@@ -17,8 +17,8 @@ const data_api_url = 'https://data.befriend.app';
 const earth_radius_km = 6371;
 const earth_radius_miles = 3958.762079;
 const km_per_degree_lat = 111.32;
-const meters_to_miles = 0.000621371192;
-const miles_to_km = 1.60934;
+const kms_per_mile = 1.60934;
+const miles_per_meter = 0.000621371192;
 
 Object.defineProperty(String.prototype, 'capitalize', {
     value: function () {
@@ -585,7 +585,7 @@ function getMetersFromMilesOrKm(miles_or_km, to_int) {
     if (useKM()) {
         meters = miles_or_km * 1000;
     } else {
-        meters = miles_or_km / meters_to_miles;
+        meters = miles_or_km / miles_per_meter;
     }
 
     if (to_int) {
@@ -599,7 +599,7 @@ function getMilesOrKmFromMeters(meters) {
     if (useKM()) {
         return meters / 1000;
     } else {
-        return meters * meters_to_miles;
+        return meters * miles_per_meter;
     }
 }
 
@@ -1162,6 +1162,7 @@ function mdpe(key) {
 module.exports = {
     earth_radius_km,
     km_per_degree_lat,
+    kms_per_mile,
     birthDatePure: birthDatePure,
     calculateDistanceMeters: calculateDistanceMeters,
     changeTimezone: changeTimezone,
