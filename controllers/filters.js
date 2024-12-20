@@ -2558,7 +2558,7 @@ function putInstruments(req, res) {
                             .where('person_id', person.id)
                             .where('id', existingItem.id)
                             .update({
-                                filter_value: JSON.stringify(secondary),
+                                secondary_level: JSON.stringify(secondary),
                                 updated: now,
                                 deleted: null,
                             });
@@ -3287,7 +3287,7 @@ function putSports(req, res) {
                             .where('person_id', person.id)
                             .where('id', existingItem.id)
                             .update({
-                                filter_value: JSON.stringify(secondary),
+                                secondary_level: JSON.stringify(secondary),
                                 updated: now,
                                 deleted: null,
                             });

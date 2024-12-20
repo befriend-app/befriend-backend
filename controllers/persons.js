@@ -1,6 +1,7 @@
 const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 const gridService = require('../services/grid');
+const matchingService = require('../services/matching');
 
 const { timeNow, generateToken, latLonLookup } = require('../services/shared');
 const { getPerson, updatePerson } = require('../services/persons');
@@ -119,6 +120,22 @@ module.exports = {
                 console.error(e);
                 res.json('Error updating online status', 400);
             }
+        });
+    },
+    getMatches: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let person = await getPerson(req.query.person_token);
+                let matches = await matchingService.getMatches(person);
+            } catch(e) {
+                console.error(e);
+
+                res.json({
+                    message: 'Error getting matches',
+                }, 400);
+            }
+
+            resolve();
         });
     },
     updateLocation: function (req, res) {

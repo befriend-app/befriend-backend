@@ -358,6 +358,7 @@ function getPersonFilters(person) {
             person_filters = {};
 
             let groupedRows = {};
+
             for (let row of qry) {
                 let filter = filters.byId[row.filter_id];
                 if (!filter) continue;
