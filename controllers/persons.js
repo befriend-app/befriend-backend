@@ -158,6 +158,10 @@ module.exports = {
                     online: {
                         from: null,
                         to: null,
+                    },
+                    modes: {
+                        from: null,
+                        to: null
                     }
                 },
             };
@@ -270,6 +274,16 @@ module.exports = {
                     if(prev_grid_token) {
                         cache_keys.grid.online.from = cacheService.keys.persons_grid_set(prev_grid_token, 'online');
                         pipeline.sRem(cache_keys.grid.online.from, person_token);
+                    }
+
+                    //(4) update modes
+                    if(me.modes?.selected?.length) {
+                        for(let mode of me.modes.selected) {
+                            if(prev_grid_token) {
+                                pipeline.sRem(cacheService.keys.persons_grid_set(grid.token, mode), person_token);
+                            }
+                            pipeline.sAdd(cacheService.keys.persons_grid_set(grid.token, mode), person_token);
+                        }
                     }
                 }
 

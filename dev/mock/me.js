@@ -403,7 +403,9 @@ async function processModes() {
                 try {
                     // Randomly select a new mode
                     //select 1-3 modes
-                    const newModes = shuffleFunc(modesArray).slice(0, Math.floor(Math.random() * 3) + 1);
+                    const newModes = shuffleFunc(modesArray)
+                        .slice(0, Math.floor(Math.random() * 3) + 1)
+                        .map(mode => mode.token);
 
                     // Update person's mode
                     await axios.put(joinPaths(process.env.APP_URL, '/me/modes'), {
@@ -1110,11 +1112,12 @@ async function processSmoking() {
 
     await getPersonsLogins();
 
-    await processLocation();
+    await processModes();
+
+    await processLocation();return;
 
     await processOnline();
 
-    await processModes();
 
     await processSections();
 

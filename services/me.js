@@ -31,6 +31,10 @@ function putModes(person_token, modes) {
                 return reject('Invalid mode');
             }
 
+            if(modes.length > Object.values(allModes.byToken).length) {
+                return reject('Invalid data');
+            }
+
             await updatePerson(person_token, {
                 modes
             });
