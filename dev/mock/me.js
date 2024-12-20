@@ -23,7 +23,7 @@ loadScriptEnv();
 
 let args = yargs.argv;
 
-let num_persons = 1000;
+let num_persons = 10 * 1000;
 
 if (args._ && args._.length) {
     num_persons = args._[0];
@@ -1114,9 +1114,9 @@ async function processSmoking() {
 
     await getPersonsLogins();
 
-    await processOnline();
-
     await processLocation();
+
+    await processOnline();
 
     await processModes();
 
