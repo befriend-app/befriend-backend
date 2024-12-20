@@ -7,17 +7,42 @@ const TABLE_NAME = 'earth_grid';
 const COORD_PRECISION = 1000;
 const DEFAULT_RADIUS_KM = 30;
 
-let gridStructure = null;
+let gridStructure = {
+    lat: {}
+};
+
+let gridInitialization = {
+    initialized: false,
+    in_progress: false
+};
+
+function isInitialized() {
+    return new Promise(async (resolve, reject) => {
+        let int = setInterval(function() {
+            if(gridInitialization.initialized) {
+                clearInterval(int);
+                resolve();
+            }
+        }, 10);
+    });
+}
 
 function initialize() {
-    console.log('Initializing grid service...');
+    let wait_for_initialized = gridInitialization.in_progress;
+
+    if(!gridInitialization.in_progress) {
+        gridInitialization.in_progress = true;
+        console.log('Initializing grid service...');
+    }
+
     const startTime = timeNow();
 
     return new Promise(async (resolve, reject) => {
         try {
-            gridStructure = {
-                lat: {},
-            };
+            if(wait_for_initialized) {
+                await isInitialized();
+                return resolve();
+            }
 
             const conn = await dbService.conn();
             const records = await conn(TABLE_NAME)
@@ -40,7 +65,10 @@ function initialize() {
 
             console.log(`Time taken: ${totalTime.toFixed(2)} seconds`);
 
-            resolve(true);
+            gridInitialization.initialized = true;
+            gridInitialization.in_progress = false;
+
+            resolve();
         } catch (error) {
             console.error('Failed to initialize grid service:', error);
             reject(error);
@@ -84,7 +112,7 @@ function getKeys(lat, lon) {
 function findNearest(lat, lon, radiusKm = DEFAULT_RADIUS_KM) {
     return new Promise(async (resolve, reject) => {
         try {
-            if (!gridStructure) {
+            if (!gridInitialization.initialized) {
                 await initialize();
             }
 
@@ -100,7 +128,7 @@ function findNearest(lat, lon, radiusKm = DEFAULT_RADIUS_KM) {
 function findNearby(lat, lon, radiusKm = DEFAULT_RADIUS_KM, limit = null) {
     return new Promise(async (resolve, reject) => {
         try {
-            if (!gridStructure) {
+            if (!gridInitialization.initialized) {
                 await initialize();
             }
 
