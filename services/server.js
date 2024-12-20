@@ -6,7 +6,6 @@ const cors = require('cors');
 const express = require('express');
 const http = require('http');
 const logger = require('morgan');
-const sessionMid = require('../middleware/session');
 const webRouter = require('../routes/web');
 const apiRouter = require('../routes/api');
 const syncRouter = require('../routes/sync');
@@ -46,8 +45,6 @@ server.use(express.json({ limit: '5mb' }));
 server.use(express.urlencoded({ limit: '5mb', extended: false }));
 
 server.use(cookieParser());
-
-server.use(sessionMid.handle);
 
 server.use(express.static(joinPaths(getRepoRoot(), 'public')));
 
