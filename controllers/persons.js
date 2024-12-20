@@ -25,7 +25,7 @@ const {
     updateKid,
     removeKid,
 } = require('../services/me');
-const { execPipeline } = require('../services/cache');
+const { execPipeline, addItemToSet, removeMemberFromSet } = require('../services/cache');
 
 module.exports = {
     getMe: function (req, res) {
@@ -109,6 +109,22 @@ module.exports = {
                     return resolve();
                 }
 
+                //update cache sets
+                if(me.grid?.token) {
+                    let cache_key = cacheService.keys.persons_grid_set(me.grid.token, 'online');
+
+                    try {
+                        if(online) {
+                            await addItemToSet(cache_key, me.person_token);
+                        } else {
+                            await removeMemberFromSet(cache_key, me.person_token);
+                        }
+                    } catch(e) {
+                        console.error(e);
+                    }
+                }
+
+                //update db
                 await updatePerson(person_token, {
                     is_online: online
                 });
@@ -127,6 +143,8 @@ module.exports = {
             try {
                 let person = await getPerson(req.query.person_token);
                 let matches = await matchingService.getMatches(person);
+
+                res.json(matches);
             } catch(e) {
                 console.error(e);
 
@@ -140,6 +158,20 @@ module.exports = {
     },
     updateLocation: function (req, res) {
         return new Promise(async (resolve, reject) => {
+            let cache_keys = {
+                person: null,
+                grid: {
+                    location: {
+                        from: null,
+                        to: null
+                    },
+                    online: {
+                        from: null,
+                        to: null,
+                    }
+                },
+            };
+
             try {
                 let person_token = req.body.person_token;
                 let lat = req.body.lat;
@@ -177,7 +209,8 @@ module.exports = {
                 let conn = await dbService.conn();
 
                 let me = await getPerson(person_token);
-                let cache_key_person = cacheService.keys.person(person_token);
+
+                cache_keys.person = cacheService.keys.person(person_token);
 
                 if (!me) {
                     res.json(
@@ -219,26 +252,39 @@ module.exports = {
 
                 //person grid data/sets
                 if (!prev_grid_token || prev_grid_token !== grid.token) {
-                    let cache_key_to = cacheService.keys.persons_grid(grid.token);
-
+                    //(1) update grid data on main person object
                     me.grid = {
                         id: grid.id,
                         token: grid.token,
                     };
 
-                    if (prev_grid_token) {
-                        let cache_key_from = cacheService.keys.persons_grid(prev_grid_token);
-
-                        //remove person token from previous grid
-                        pipeline.sRem(cache_key_from, person_token);
-                    }
+                    //(2) update location
+                    cache_keys.grid.location.to = cacheService.keys.persons_grid_set(grid.token, 'location');
 
                     //add person token to current grid
-                    pipeline.sAdd(cache_key_to, person_token);
+                    pipeline.sAdd(cache_keys.grid.location.to, person_token);
+
+                    if (prev_grid_token) {
+                        cache_keys.grid.location.from = cacheService.keys.persons_grid_set(prev_grid_token, 'location');
+
+                        //remove person token from previous grid
+                        pipeline.sRem(cache_keys.grid.location.from, person_token);
+                    }
+
+                    //(3) update online
+                    if(me.is_online) {
+                        cache_keys.grid.online.to = cacheService.keys.persons_grid_set(grid.token, 'online');
+                        pipeline.sAdd(cache_keys.grid.online.to, person_token);
+                    }
+
+                    if(prev_grid_token) {
+                        cache_keys.grid.online.from = cacheService.keys.persons_grid_set(prev_grid_token, 'online');
+                        pipeline.sRem(cache_keys.grid.online.from, person_token);
+                    }
                 }
 
                 //person obj
-                pipeline.set(cache_key_person, JSON.stringify(me));
+                pipeline.set(cache_keys.person, JSON.stringify(me));
 
                 await execPipeline(pipeline);
 

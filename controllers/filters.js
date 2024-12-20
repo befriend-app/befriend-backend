@@ -1487,13 +1487,13 @@ function putDistance(req, res) {
                     updated: now,
                 });
 
-                existingFilter.filter_value = distance.toString();
+                existingFilter.filter_value = distance;
                 existingFilter.updated = now;
             } else {
                 // Create new filter entry
                 const filterEntry = createFilterEntry(filter.id, {
                     person_id: person.id,
-                    filter_value: distance.toString(),
+                    filter_value: distance,
                 });
 
                 const [id] = await conn('persons_filters').insert(filterEntry);
