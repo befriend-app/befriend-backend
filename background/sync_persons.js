@@ -62,7 +62,7 @@ function processPersons(network_id, persons) {
                     let person_id = await conn('persons').insert({
                         person_token: person.person_token,
                         network_id: network_id,
-                        mode: person.mode,
+                        modes: person.modes,
                         is_verified_in_person: person.is_verified_in_person,
                         is_verified_linkedin: person.is_verified_linkedin,
                         is_online: person.is_online,

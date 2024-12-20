@@ -16,90 +16,7 @@ const { getCountries } = require('../services/locations');
 const { getLanguagesCountry } = require('../services/languages');
 const { getPerson, updatePerson } = require('../services/persons');
 
-function getModes(me) {
-    return new Promise(async (resolve, reject) => {
-        let modes = {
-            data: {
-                partner: {},
-                kids: {},
-            },
-            options: {
-                kids: {},
-            },
-        };
-
-        // Cache keys
-        let cache_key_kid_ages = cacheService.keys.kids_ages;
-
-        let cached_ages = await cacheService.getObj(cache_key_kid_ages);
-
-        if (me.mode) {
-            modes.options.kids = cached_ages;
-            modes.data.partner = me.mode?.partner || {};
-            modes.data.kids = me.mode?.kids || {};
-            return resolve(modes);
-        }
-
-        // Otherwise fetch from database
-        let conn = await dbService.conn();
-
-        // Get kid age options
-        let ages = await conn('kids_ages')
-            .whereNull('deleted')
-            .orderBy('age_min')
-            .select('id', 'token', 'name', 'age_min', 'age_max');
-
-        // Get partner data
-        let partner = await conn('persons_partner')
-            .where('person_id', me.id)
-            .whereNull('deleted')
-            .select('token', 'gender_id')
-            .first();
-
-        // Get kids data
-        let kids = await conn('persons_kids')
-            .where('person_id', me.id)
-            .whereNull('deleted')
-            .select('token', 'age_id', 'gender_id');
-
-        // Organize data
-        let ages_dict = {};
-        for (let age of ages) {
-            ages_dict[age.token] = {
-                id: age.id,
-                token: age.token,
-                name: age.name,
-                range: {
-                    min: age.age_min,
-                    max: age.age_max,
-                },
-            };
-        }
-
-        let kids_dict = {};
-
-        for (let kid of kids) {
-            kids_dict[kid.token] = {
-                id: kid.id,
-                token: kid.token,
-                gender_id: kid.gender_id,
-                age_id: kid.age_id,
-                is_active: kid.is_active,
-            };
-        }
-
-        // Update cache
-        await cacheService.setCache(cache_key_kid_ages, ages_dict);
-
-        modes.options.kids = ages_dict;
-        modes.data.partner = partner || {};
-        modes.data.kids = kids_dict;
-
-        resolve(modes);
-    });
-}
-
-function putMode(person_token, mode) {
+function putModes(person_token, modes) {
     return new Promise(async (resolve, reject) => {
         try {
             let person = await getPerson(person_token);
@@ -108,14 +25,14 @@ function putMode(person_token, mode) {
                 return reject('Person not found');
             }
 
-            let modes = await modesService.getModes();
+            let allModes = await modesService.getModes();
 
-            if (!mode || !modes?.byToken[mode]) {
+            if (!modes || !Array.isArray(modes) || !modes.every(mode => mode in allModes.byToken)) {
                 return reject('Invalid mode');
             }
 
             await updatePerson(person_token, {
-                mode: modes.byToken[mode],
+                modes
             });
         } catch (e) {
             console.error(e);
@@ -144,12 +61,12 @@ function putPartner(person_token, gender_token, is_select) {
             }
 
             //init cache
-            if (!('mode' in person)) {
-                person.mode = {};
+            if (!('modes' in person)) {
+                person.modes = {};
             }
 
-            if (!('partner' in person.mode)) {
-                person.mode.partner = {};
+            if (!('partner' in person.modes)) {
+                person.modes.partner = {};
             }
 
             let conn = await dbService.conn();
@@ -171,7 +88,7 @@ function putPartner(person_token, gender_token, is_select) {
 
                 await conn('persons_partner').where('id', check.id).update(updateData);
 
-                Object.assign(person.mode.partner, updateData);
+                Object.assign(person.modes.partner, updateData);
             } else {
                 let token = generateToken(12);
 
@@ -187,7 +104,7 @@ function putPartner(person_token, gender_token, is_select) {
 
                 createData.id = id;
 
-                Object.assign(person.mode.partner, createData);
+                Object.assign(person.modes.partner, createData);
             }
 
             await setCache(cache_key, person);
@@ -224,7 +141,7 @@ function addKid(person_token) {
 
             // Update cache
             const cache_key = cacheService.keys.person(person.person_token);
-            let cached_kids = person.mode?.kids || {};
+            let cached_kids = person.modes?.kids || {};
 
             cached_kids[kid.token] = {
                 token: kid.token,
@@ -233,15 +150,15 @@ function addKid(person_token) {
                 is_active: true,
             };
 
-            if (!('mode' in person)) {
-                person.mode = {};
+            if (!('modes' in person)) {
+                person.modes = {};
             }
 
-            if (!('kids' in person.mode)) {
-                person.mode.kids = {};
+            if (!('kids' in person.modes)) {
+                person.modes.kids = {};
             }
 
-            person.mode.kids = cached_kids;
+            person.modes.kids = cached_kids;
 
             await cacheService.setCache(cache_key, person);
 
@@ -335,7 +252,7 @@ function updateKid(
             await conn('persons_kids').where('id', kid.id).update(updates);
 
             // Update cache
-            let cached_kids = person?.mode?.kids || {};
+            let cached_kids = person?.modes?.kids || {};
 
             if (cached_kids[kid_token]) {
                 if (age_id !== null) {
@@ -352,15 +269,15 @@ function updateKid(
                     cached_kids[kid_token].is_active = is_active;
                 }
 
-                if (!('mode' in person)) {
-                    person.mode = {};
+                if (!('modes' in person)) {
+                    person.modes = {};
                 }
 
-                if (!('kids' in person.mode)) {
-                    person.mode.kids = {};
+                if (!('kids' in person.modes)) {
+                    person.modes.kids = {};
                 }
 
-                person.mode.kids = cached_kids;
+                person.modes.kids = cached_kids;
 
                 await cacheService.setCache(cache_key, person);
             }
@@ -398,11 +315,11 @@ function removeKid(person_token, kid_token) {
                 });
 
             // Update cache
-            let cached_kids = person?.mode?.kids;
+            let cached_kids = person?.modes?.kids;
 
             if (cached_kids) {
                 delete cached_kids[kid_token];
-                person.mode.kids = cached_kids;
+                person.modes.kids = cached_kids;
                 await cacheService.setCache(cache_key, person);
             }
         } catch (e) {
@@ -2841,8 +2758,7 @@ function getWork() {
 module.exports = {
     cache: {},
     sections: sectionsData,
-    getModes,
-    putMode,
+    putModes,
     putPartner,
     addKid,
     updateKid,

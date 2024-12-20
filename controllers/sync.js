@@ -63,7 +63,7 @@ module.exports = {
                     .limit(module.exports.limit)
                     .select(
                         'person_token',
-                        'mode',
+                        'modes',
                         'is_verified_in_person',
                         'is_verified_linkedin',
                         'is_online',

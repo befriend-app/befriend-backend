@@ -353,7 +353,7 @@ async function processLocation() {
                         direction,
                     );
 
-                    // Update person's mode
+                    // Update person's location
                     let r = await axios.put(joinPaths(process.env.APP_URL, '/location'), {
                         login_token: person.login_token,
                         person_token: person.person_token,
@@ -401,26 +401,22 @@ async function processModes() {
                 processed++;
 
                 try {
-                    // Skip if person already has a mode
-                    if (person.mode_id !== null) {
-                        return;
-                    }
-
                     // Randomly select a new mode
-                    const newMode = shuffleFunc(modesArray)[0];
+                    //select 1-3 modes
+                    const newModes = shuffleFunc(modesArray).slice(0, Math.floor(Math.random() * 3) + 1);
 
                     // Update person's mode
-                    await axios.put(joinPaths(process.env.APP_URL, '/me/mode'), {
+                    await axios.put(joinPaths(process.env.APP_URL, '/me/modes'), {
                         login_token: person.login_token,
                         person_token: person.person_token,
-                        mode: newMode.token,
+                        modes: newModes
                     });
 
                     // Randomly decide if we should add partner
                     if (Math.random() > 0.5) {
                         const randomGender = shuffleFunc(genders)[0];
 
-                        await axios.put(joinPaths(process.env.APP_URL, '/me/mode/partner'), {
+                        await axios.put(joinPaths(process.env.APP_URL, '/me/modes/partner'), {
                             login_token: person.login_token,
                             person_token: person.person_token,
                             gender_token: randomGender.token,
@@ -436,7 +432,7 @@ async function processModes() {
                         for (let i = 0; i < numKids; i++) {
                             // Add a kid
                             const response = await axios.post(
-                                joinPaths(process.env.APP_URL, '/me/mode/kids'),
+                                joinPaths(process.env.APP_URL, '/me/modes/kids'),
                                 {
                                     login_token: person.login_token,
                                     person_token: person.person_token,
@@ -448,7 +444,7 @@ async function processModes() {
                                 const randomGender = shuffleFunc(genders)[0];
 
                                 // Update kid's gender
-                                await axios.put(joinPaths(process.env.APP_URL, '/me/mode/kids'), {
+                                await axios.put(joinPaths(process.env.APP_URL, '/me/modes/kids'), {
                                     login_token: person.login_token,
                                     person_token: person.person_token,
                                     kid_token: kid.token,
@@ -459,7 +455,7 @@ async function processModes() {
                                 const randomAge = shuffleFunc(ageTokens)[0];
 
                                 // Update kid's age
-                                await axios.put(joinPaths(process.env.APP_URL, '/me/mode/kids'), {
+                                await axios.put(joinPaths(process.env.APP_URL, '/me/modes/kids'), {
                                     login_token: person.login_token,
                                     person_token: person.person_token,
                                     kid_token: kid.token,

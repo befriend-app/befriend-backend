@@ -117,7 +117,7 @@ router.put('/filters/availability', function (req, res, next) {
 router.put('/filters/modes', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
-            await filtersController.putModes(req, res);
+            await filtersController.putMode(req, res);
         } catch (err) {
             console.log(err);
         }
@@ -366,10 +366,10 @@ router.put('/filters/smoking', function (req, res, next) {
     });
 });
 
-router.put('/me/mode', function (req, res, next) {
+router.put('/me/modes', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
-            await personsController.putMeMode(req, res);
+            await personsController.putModes(req, res);
         } catch (err) {
             console.log(err);
         }
@@ -390,7 +390,7 @@ router.put('/me/country', function (req, res, next) {
     });
 });
 
-router.put('/me/mode/partner', function (req, res, next) {
+router.put('/me/modes/partner', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await personsController.putMePartner(req, res);
@@ -402,7 +402,7 @@ router.put('/me/mode/partner', function (req, res, next) {
     });
 });
 
-router.post('/me/mode/kids', function (req, res, next) {
+router.post('/me/modes/kids', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await personsController.postMeKids(req, res);
@@ -414,7 +414,7 @@ router.post('/me/mode/kids', function (req, res, next) {
     });
 });
 
-router.put('/me/mode/kids', function (req, res, next) {
+router.put('/me/modes/kids', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await personsController.putMeKids(req, res);
@@ -426,7 +426,7 @@ router.put('/me/mode/kids', function (req, res, next) {
     });
 });
 
-router.delete('/me/mode/kids', function (req, res, next) {
+router.delete('/me/modes/kids', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await personsController.removeMeKids(req, res);

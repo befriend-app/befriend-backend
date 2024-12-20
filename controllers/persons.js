@@ -19,13 +19,14 @@ const {
     updateSectionPositions,
     getModes,
     getGenders,
-    putMode,
+    putModes,
     putPartner,
     addKid,
     updateKid,
     removeKid,
 } = require('../services/me');
 const { execPipeline, addItemToSet, removeMemberFromSet } = require('../services/cache');
+const { getKidAgeOptions } = require('../services/modes');
 
 module.exports = {
     getMe: function (req, res) {
@@ -60,7 +61,7 @@ module.exports = {
 
                 let genders = await getGenders(true);
 
-                let modes = await getModes(me);
+                let kidAgeOptions = await getKidAgeOptions();
 
                 let sections = await getSections(me);
 
@@ -68,8 +69,12 @@ module.exports = {
                     me,
                     filters,
                     genders,
-                    modes,
                     sections,
+                    modes: {
+                        kids: {
+                            options: kidAgeOptions
+                        }
+                    }
                 });
 
                 resolve();
@@ -96,9 +101,9 @@ module.exports = {
                     return resolve();
                 }
 
-                let me = await getPerson(person_token);
+                let person = await getPerson(person_token);
 
-                if (!me) {
+                if (!person) {
                     res.json(
                         {
                             message: 'Invalid person',
@@ -107,21 +112,6 @@ module.exports = {
                     );
 
                     return resolve();
-                }
-
-                //update cache sets
-                if(me.grid?.token) {
-                    let cache_key = cacheService.keys.persons_grid_set(me.grid.token, 'online');
-
-                    try {
-                        if(online) {
-                            await addItemToSet(cache_key, me.person_token);
-                        } else {
-                            await removeMemberFromSet(cache_key, me.person_token);
-                        }
-                    } catch(e) {
-                        console.error(e);
-                    }
                 }
 
                 //update db
@@ -297,10 +287,10 @@ module.exports = {
             }
         });
     },
-    putMeMode: function (req, res) {
+    putModes: function (req, res) {
         return new Promise(async (resolve, reject) => {
             try {
-                let data = await putMode(req.body.person_token, req.body.mode);
+                let data = await putModes(req.body.person_token, req.body.modes);
 
                 res.json(data, 200);
 

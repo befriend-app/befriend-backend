@@ -648,7 +648,7 @@ function putAvailability(req, res) {
     });
 }
 
-function putModes(req, res) {
+function putMode(req, res) {
     return new Promise(async (resolve, reject) => {
         try {
             const { person_token, mode_token, active } = req.body;
@@ -3366,7 +3366,7 @@ module.exports = {
     putImportance,
     putSendReceive,
     putAvailability,
-    putModes,
+    putMode,
     putNetworks,
     putReviewRating,
     putAge,

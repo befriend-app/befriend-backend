@@ -1,4 +1,5 @@
 const dbService = require('./db');
+const cacheService = require('./cache');
 
 const appModes = [
     {
@@ -45,10 +46,57 @@ function getModes() {
     });
 }
 
+function getKidAgeOptions() {
+    return new Promise(async (resolve, reject) => {
+        if(module.exports.kidAgeOptions) {
+            return resolve(module.exports.kidAgeOptions);
+        }
+
+        let cache_key_kid_ages = cacheService.keys.kids_ages;
+
+        let cached_ages = await cacheService.getObj(cache_key_kid_ages);
+
+        if (cached_ages) {
+            return resolve(cached_ages);
+        }
+
+        let conn = await dbService.conn();
+
+        let ages = await conn('kids_ages')
+            .whereNull('deleted')
+            .orderBy('age_min')
+            .select('id', 'token', 'name', 'age_min', 'age_max');
+
+
+        // Organize data
+        let ages_dict = {};
+        for (let age of ages) {
+            ages_dict[age.token] = {
+                id: age.id,
+                token: age.token,
+                name: age.name,
+                range: {
+                    min: age.age_min,
+                    max: age.age_max,
+                },
+            };
+        }
+
+        // Update cache
+        await cacheService.setCache(cache_key_kid_ages, ages_dict);
+
+        module.exports.kidAgeOptions = ages_dict;
+
+        resolve(ages_dict);
+    });
+}
+
 module.exports = {
     modes: {
         data: appModes,
         lookup: null,
     },
+    kidAgeOptions: null,
     getModes,
+    getKidAgeOptions
 };

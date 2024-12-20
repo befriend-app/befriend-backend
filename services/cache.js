@@ -531,6 +531,16 @@ module.exports = {
             }
         });
     },
+    getSetDiff: function(key, keys) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let data = await module.exports.conn.sDiff(key, keys);
+                resolve(data);
+            } catch (err) {
+                reject(err);
+            }
+        });
+    },
     isSetMember: function (key, member) {
         return new Promise(async (resolve, reject) => {
             if (!key || !member) {

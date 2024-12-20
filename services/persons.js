@@ -53,28 +53,32 @@ module.exports = {
                     return resolve(null);
                 }
 
-                let modes = await getModes();
+                let modes = [];
 
-                //add person modes to obj
-                person.mode = {
-                    id: person.mode_id,
-                    token: modes?.byId[person.mode_id]?.token || null,
+                try {
+                    modes = person.modes ? JSON.parse(person.modes) : [];
+                } catch (e) {
+                    console.error('Error parsing modes:', e);
+                    modes = [];
+                }
+
+                //add modes to person obj
+                person.modes = {
+                    selected: modes,
                     partner: {},
                     kids: {},
                 };
 
-                // Get partner data
                 const partner = await conn('persons_partner')
                     .where('person_id', person.id)
                     .whereNull('deleted')
-                    .select('id', 'token', 'gender_id', 'created', 'updated')
+                    .select('id', 'token', 'gender_id')
                     .first();
 
                 if (partner) {
-                    person.mode.partner = partner;
+                    person.modes.partner = partner;
                 }
 
-                // Get kids data
                 const kids = await conn('persons_kids')
                     .where('person_id', person.id)
                     .whereNull('deleted')
@@ -83,9 +87,7 @@ module.exports = {
                         'token',
                         'age_id',
                         'gender_id',
-                        'is_active',
-                        'created',
-                        'updated',
+                        'is_active'
                     );
 
                 // Convert kids array to object with token keys
@@ -100,7 +102,7 @@ module.exports = {
                         is_active: kid.is_active,
                     };
                 }
-                person.mode.kids = kids_dict;
+                person.modes.kids = kids_dict;
 
                 //add grid
                 if (person.grid_id) {
@@ -140,26 +142,48 @@ module.exports = {
 
                 let conn = await dbService.conn();
 
-                if ('mode' in data) {
+                if ('modes' in data) {
                     await conn('persons').where('id', person.id).update({
-                        mode_id: data.mode.id,
+                        modes: JSON.stringify(data.modes),
                         updated: timeNow(),
                     });
 
-                    if (!('mode' in person) || person.mode === null) {
-                        person.mode = {};
+                    if (!('modes' in person) || person.modes === null) {
+                        person.modes = {};
                     }
 
-                    Object.assign(person.mode, {
-                        id: data.mode.id,
-                        token: data.mode.token,
-                    });
+                    person.modes.selected = data.modes;
                 } else {
                     data.updated = timeNow();
 
+                    //update db
                     await conn('persons').where('id', person.id).update(data);
 
+                    //merge updated data for cache
                     Object.assign(person, data);
+
+                    //update grid cache sets
+                    if(person.grid?.token) {
+                        let cache_key;
+
+                        let addToSet = false;
+
+                        if('is_online' in data) {
+                            cache_key = cacheService.keys.persons_grid_set(person.grid.token, 'online');
+
+                            if(data.is_online) {
+                                addToSet = true;
+                            }
+                        }
+
+                        if(cache_key) {
+                            if(addToSet) {
+                                await cacheService.addItemToSet(cache_key, person.person_token);
+                            } else {
+                                await cacheService.removeMemberFromSet(cache_key, person.person_token);
+                            }
+                        }
+                    }
                 }
 
                 await cacheService.setCache(cache_key, person);
