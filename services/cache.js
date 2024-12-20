@@ -75,7 +75,7 @@ const keyFunctions = {
     person_filters: (token) => `persons:filters:${token}`,
     person_sections: (token) => `persons:me:sections:${token}`,
     persons_section_data: (token, dataName) => `persons:me:sections:data:${dataName}:${token}`,
-    persons_grid: (gridToken) => `persons:grid:${gridToken}`,
+    persons_grid_set: (gridToken, key) => `persons:grid:${gridToken}:${key}`,
 
     instrument: (token) => `instruments:${token}`,
     instruments_prefix: (prefix) => `instruments:prefix:${prefix}`,
@@ -127,6 +127,7 @@ module.exports = {
         sectionKeys,
         mediaKeys,
         sportsKeys,
+        keyFunctions
     },
     init: function () {
         return new Promise(async (resolve, reject) => {
