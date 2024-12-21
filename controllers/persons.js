@@ -246,13 +246,13 @@ module.exports = {
 
                 //person grid data/sets
                 if (!prev_grid_token || prev_grid_token !== grid.token) {
-                    //(1) update grid data on main person object
+                    // (1) update grid data on main person object
                     me.grid = {
                         id: grid.id,
                         token: grid.token,
                     };
 
-                    //(2) update location
+                    // (2) update location
                     cache_keys.grid.location.to = cacheService.keys.persons_grid_set(grid.token, 'location');
 
                     //add person token to current grid
@@ -265,7 +265,7 @@ module.exports = {
                         pipeline.sRem(cache_keys.grid.location.from, person_token);
                     }
 
-                    //(3) update online
+                    // (3) update online
                     if(me.is_online) {
                         cache_keys.grid.online.to = cacheService.keys.persons_grid_set(grid.token, 'online');
                         pipeline.sAdd(cache_keys.grid.online.to, person_token);
@@ -276,7 +276,7 @@ module.exports = {
                         pipeline.sRem(cache_keys.grid.online.from, person_token);
                     }
 
-                    //(4) update modes
+                    // (4) update modes
                     if(me.modes?.selected?.length) {
                         for(let mode of me.modes.selected) {
                             if(prev_grid_token) {
