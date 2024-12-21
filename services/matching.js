@@ -164,7 +164,7 @@ function getMatches(person, activity_type = null) {
                     });
                 }
 
-                // Default to solo mode if no valid modes remain
+                // Default to solo mode if no valid modes
                 if (!filter_modes.length) {
                     filter_modes = ['mode-solo'];
                 }

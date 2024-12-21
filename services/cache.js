@@ -76,6 +76,7 @@ const keyFunctions = {
     person_sections: (token) => `persons:me:sections:${token}`,
     persons_section_data: (token, dataName) => `persons:me:sections:data:${dataName}:${token}`,
     persons_grid_set: (gridToken, key) => `persons:grid:${gridToken}:${key}`,
+    persons_grid_send_receive: (gridToken, key, send_receive) => `persons:grid:${gridToken}:${key}:${send_receive}`,
 
     instrument: (token) => `instruments:${token}`,
     instruments_prefix: (prefix) => `instruments:prefix:${prefix}`,
