@@ -14,7 +14,7 @@ const {
     getSchools,
 } = require('../services/me');
 const { saveAvailabilityData } = require('../services/availability');
-const { filterMappings, getFilters, getPersonFilters } = require('../services/filters');
+const { filterMappings, getFilters, getPersonFilters, updateGridSets } = require('../services/filters');
 const { getActivityTypesMapping } = require('../services/activities');
 const { getLifeStages } = require('../services/life_stages');
 const { getRelationshipStatus } = require('../services/relationships');
@@ -385,6 +385,8 @@ function putActive(req, res) {
 
             await cacheService.setCache(person_filter_cache_key, person_filters);
 
+            await updateGridSets(person, person_filters, filter_token);
+
             res.json('Updated');
         } catch (e) {
             console.error(e);
@@ -583,6 +585,8 @@ function putSendReceive(req, res) {
             }
 
             await cacheService.setCache(person_filter_cache_key, person_filters);
+
+            await updateGridSets(person, person_filters, filter_token);
 
             res.json({
                 success: true,
@@ -814,6 +818,8 @@ function putMode(req, res) {
             // Update cache
             await cacheService.setCache(person_filter_cache_key, person_filters);
 
+            await updateGridSets(person, person_filters, 'modes');
+
             res.json({
                 success: true,
             });
@@ -867,6 +873,7 @@ function putNetworks(req, res) {
 
             // Get person
             let person = await getPerson(person_token);
+
             if (!person) {
                 res.json(
                     {
@@ -914,12 +921,13 @@ function putNetworks(req, res) {
                     id,
                     items: {},
                 };
+
                 person_filters[filter.token] = existingFilter;
             } else if (!existingFilter.items) {
                 existingFilter.items = {};
             }
 
-            // Handle special "any network" case
+            // Handle any network
             if (typeof is_any_network === 'boolean') {
                 if (is_any_network !== existingFilter.is_any_network) {
                     existingFilter.is_any_network = is_any_network;
@@ -938,7 +946,7 @@ function putNetworks(req, res) {
                 }
             }
 
-            // Handle "verified networks" case
+            // Handle verified networks
             if (typeof is_all_verified === 'boolean') {
                 if (is_all_verified !== existingFilter.is_all_verified) {
                     existingFilter.is_all_verified = is_all_verified || false;
@@ -1020,6 +1028,8 @@ function putNetworks(req, res) {
 
             // Update cache
             await cacheService.setCache(person_filter_cache_key, person_filters);
+
+            await updateGridSets(person, person_filters, filter.token);
 
             res.json(person_filters[filter.token]);
         } catch (error) {

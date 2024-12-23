@@ -7,7 +7,7 @@ const { timeNow, generateToken, latLonLookup } = require('../services/shared');
 const { getPerson, updatePerson } = require('../services/persons');
 const { findMatches, notifyMatches, prepareActivity } = require('../services/activities');
 const { getCountryByCode } = require('../services/locations');
-const { getPersonFilters } = require('../services/filters');
+const { getPersonFilters, updateGridSets } = require('../services/filters');
 
 const {
     getSections,
@@ -17,7 +17,6 @@ const {
     updateSectionItem,
     selectSectionOptionItem,
     updateSectionPositions,
-    getModes,
     getGenders,
     putModes,
     putPartner,
@@ -25,8 +24,9 @@ const {
     updateKid,
     removeKid,
 } = require('../services/me');
-const { execPipeline, addItemToSet, removeMemberFromSet } = require('../services/cache');
+
 const { getKidAgeOptions } = require('../services/modes');
+
 
 module.exports = {
     getMe: function (req, res) {
@@ -148,24 +148,6 @@ module.exports = {
     },
     updateLocation: function (req, res) {
         return new Promise(async (resolve, reject) => {
-            let cache_keys = {
-                person: null,
-                grid: {
-                    location: {
-                        from: null,
-                        to: null
-                    },
-                    online: {
-                        from: null,
-                        to: null,
-                    },
-                    modes: {
-                        from: null,
-                        to: null
-                    }
-                },
-            };
-
             try {
                 let person_token = req.body.person_token;
                 let lat = req.body.lat;
@@ -204,8 +186,6 @@ module.exports = {
 
                 let me = await getPerson(person_token);
 
-                cache_keys.person = cacheService.keys.person(person_token);
-
                 if (!me) {
                     res.json(
                         {
@@ -242,55 +222,21 @@ module.exports = {
                     }
                 }
 
-                let pipeline = cacheService.startPipeline();
-
                 //person grid data/sets
                 if (!prev_grid_token || prev_grid_token !== grid.token) {
-                    // (1) update grid data on main person object
+                    // update grid data on main person object
                     me.grid = {
                         id: grid.id,
                         token: grid.token,
                     };
-
-                    // (2) update location
-                    cache_keys.grid.location.to = cacheService.keys.persons_grid_set(grid.token, 'location');
-
-                    //add person token to current grid
-                    pipeline.sAdd(cache_keys.grid.location.to, person_token);
-
-                    if (prev_grid_token) {
-                        cache_keys.grid.location.from = cacheService.keys.persons_grid_set(prev_grid_token, 'location');
-
-                        //remove person token from previous grid
-                        pipeline.sRem(cache_keys.grid.location.from, person_token);
-                    }
-
-                    // (3) update online
-                    if(me.is_online) {
-                        cache_keys.grid.online.to = cacheService.keys.persons_grid_set(grid.token, 'online');
-                        pipeline.sAdd(cache_keys.grid.online.to, person_token);
-                    }
-
-                    if(prev_grid_token) {
-                        cache_keys.grid.online.from = cacheService.keys.persons_grid_set(prev_grid_token, 'online');
-                        pipeline.sRem(cache_keys.grid.online.from, person_token);
-                    }
-
-                    // (4) update modes
-                    if(me.modes?.selected?.length) {
-                        for(let mode of me.modes.selected) {
-                            if(prev_grid_token) {
-                                pipeline.sRem(cacheService.keys.persons_grid_set(grid.token, mode), person_token);
-                            }
-                            pipeline.sAdd(cacheService.keys.persons_grid_set(grid.token, mode), person_token);
-                        }
-                    }
                 }
 
                 //person obj
-                pipeline.set(cache_keys.person, JSON.stringify(me));
+                await cacheService.setCache(cacheService.keys.person(person_token), me);
 
-                await execPipeline(pipeline);
+                if (!prev_grid_token || prev_grid_token !== grid.token) {
+                    await updateGridSets(me, null, null, prev_grid_token);
+                }
 
                 res.json('Location updated successfully', 202);
 

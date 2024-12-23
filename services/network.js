@@ -244,7 +244,7 @@ module.exports = {
                         process.exit();
                     }
 
-                    //Do not allow ip's and ports in prod
+                    //Do not allow ip's or ports in prod
                     if (isProdApp()) {
                         let is_ip_domain = isIPAddress(network_data.api_domain);
 

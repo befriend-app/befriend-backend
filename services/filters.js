@@ -1,5 +1,7 @@
 const cacheService = require('./cache');
 const dbService = require('./db');
+const { getModes } = require('./modes');
+const { getNetworksForFilters } = require('./network');
 
 const filterMappings = {
     availability: {
@@ -453,9 +455,256 @@ function getPersonFilters(person) {
     });
 }
 
+function updateGridSets(person, person_filters = null, filter_token, prev_grid_token = null) {
+    let allNetworks, network_token, grid_token, cache_keys_add, cache_keys_del, rem_pipeline, add_pipeline;
+
+    function updateNetworks() {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const networksFilter = person_filters.networks;
+
+                if (!networksFilter) {
+                    return resolve();
+                }
+
+                //add to own network
+                cache_keys_add.add(cacheService.keys.persons_grid_set(grid_token, `networks:${network_token}`));
+
+                for(let item of Object.values(networksFilter.items || {})) {
+                    if (item.is_active) {
+                        cache_keys_add.add(cacheService.keys.persons_grid_set(grid_token, `networks:${item.network_token}`));
+                    } else {
+                        cache_keys_del.add(cacheService.keys.persons_grid_set(grid_token, `networks:${item.network_token}`));
+                    }
+                }
+
+                if(!networksFilter.is_active || networksFilter.is_any_network) {
+                    cache_keys_add.add(cacheService.keys.persons_grid_send_receive(grid_token, 'networks:any', 'send'));
+                    cache_keys_add.add(cacheService.keys.persons_grid_send_receive(grid_token, 'networks:any', 'receive'));
+                } else {
+                    if(networksFilter.is_all_verified) {
+                        for(let network of allNetworks.networks) {
+                            if (network.is_verified) {
+                                cache_keys_add.add(cacheService.keys.persons_grid_set(grid_token, `networks:${network.network_token}`));
+                            } else {
+                                cache_keys_del.add(cacheService.keys.persons_grid_set(grid_token, `networks:${network.network_token}`));
+                            }
+                        }
+                    } else {
+                        for(let network of allNetworks.networks) {
+                            cache_keys_del.add(cacheService.keys.persons_grid_set(grid_token, `networks:${network.network_token}`));
+                        }
+                    }
+
+                    if(networksFilter.is_send) {
+                        if(networksFilter.is_any_network) {
+                            cache_keys_add.add(cacheService.keys.persons_grid_send_receive(grid_token, 'networks:any', 'send'));
+                        } else {
+                            cache_keys_del.add(cacheService.keys.persons_grid_send_receive(grid_token, 'networks:any', 'send'));
+                        }
+                    } else {
+                        cache_keys_add.add(cacheService.keys.persons_grid_send_receive(grid_token, 'networks:any', 'send'));
+                    }
+
+                    if(networksFilter.is_receive) {
+                        if(networksFilter.is_any_network) {
+                            cache_keys_add.add(cacheService.keys.persons_grid_send_receive(grid_token, 'networks:any', 'receive'));
+                        } else {
+                            cache_keys_del.add(cacheService.keys.persons_grid_send_receive(grid_token, 'networks:any', 'receive'));
+                        }
+                    } else {
+                        cache_keys_add.add(cacheService.keys.persons_grid_send_receive(grid_token, 'networks:any', 'receive'));
+                    }
+                }
+            } catch(e) {
+                console.error(e);
+            }
+
+            resolve();
+        });
+    }
+
+    function updateModes() {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let personModes = person.modes;
+                let personSelectedModes = personModes?.selected || [];
+                let modes = await getModes();
+                let modesFilter = person_filters.modes;
+
+                //person modes
+                //validate partner
+                if (personSelectedModes.includes('mode-partner')) {
+                    if (!personModes?.partner ||
+                        personModes.partner.deleted ||
+                        !personModes.partner.gender_id) {
+                        personSelectedModes = personSelectedModes.filter(item => item !== 'mode-partner');
+                    }
+                }
+
+                //validate kids
+                if (personSelectedModes.includes('mode-kids')) {
+                    if (!personModes?.kids) {
+                        personSelectedModes = personSelectedModes.filter(item => item !== 'mode-kids');
+                    } else {
+                        const hasValidKid = Object.values(personModes.kids).some(kid =>
+                            !kid.deleted &&
+                            kid.gender_id &&
+                            kid.age_id &&
+                            kid.is_active
+                        );
+
+                        if (!hasValidKid) {
+                            personSelectedModes = personSelectedModes.filter(item => item !== 'mode-kids');
+                        }
+                    }
+                }
+
+                for(let mode of personSelectedModes) {
+                    cache_keys_add.add(cacheService.keys.persons_grid_set(grid_token, `modes:${mode}`));
+                }
+
+                for(let mode of Object.values(modes.byId) || {}) {
+                    cache_keys_del.add(cacheService.keys.persons_grid_set(grid_token, `modes:${mode.token}`));
+
+                    cache_keys_del.add(cacheService.keys.persons_grid_send_receive(grid_token, mode.token, 'send'));
+                    cache_keys_del.add(cacheService.keys.persons_grid_send_receive(grid_token, mode.token, 'receive'));
+
+                    if(prev_grid_token) {
+                        cache_keys_del.add(cacheService.keys.persons_grid_set(prev_grid_token, `modes:${mode.token}`));
+
+                        cache_keys_del.add(cacheService.keys.persons_grid_send_receive(prev_grid_token, mode.token, 'send'));
+                        cache_keys_del.add(cacheService.keys.persons_grid_send_receive(prev_grid_token, mode.token, 'receive'));
+                    }
+
+                    if(!modesFilter?.is_active) {
+                        cache_keys_add.add(cacheService.keys.persons_grid_send_receive(grid_token, mode.token, 'send'));
+                        cache_keys_add.add(cacheService.keys.persons_grid_send_receive(grid_token, mode.token, 'receive'));
+                    } else {
+                        let modeItem = Object.values(modesFilter.items || {})
+                            .find(item => item.mode_id === mode.id);
+
+                        if(modesFilter?.is_send) {
+                            if(modeItem && modeItem.is_active && !modeItem.is_negative && !modeItem.deleted) {
+                                cache_keys_add.add(cacheService.keys.persons_grid_send_receive(grid_token, mode.token, 'send'));
+                            }
+                        } else {
+                            cache_keys_add.add(cacheService.keys.persons_grid_send_receive(grid_token, mode.token, 'send'));
+                        }
+
+                        if(modesFilter?.is_receive) {
+                            if(modeItem && modeItem.is_active && !modeItem.is_negative && !modeItem.deleted) {
+                                cache_keys_add.add(cacheService.keys.persons_grid_send_receive(grid_token, mode.token, 'receive'));
+                            }
+                        } else {
+                            cache_keys_add.add(cacheService.keys.persons_grid_send_receive(grid_token, mode.token, 'receive'));
+                        }
+                    }
+                }
+            } catch(e) {
+                console.error(e);
+            }
+
+            resolve();
+        });
+    }
+
+    return new Promise(async (resolve, reject) => {
+        if(!person) {
+            return reject();
+        }
+
+        if(!person.grid?.token) {
+            console.error("Grid token required");
+            return resolve();
+        }
+
+        grid_token = person.grid.token;
+
+        try {
+            if(!person_filters) {
+                person_filters = await getPersonFilters(person);
+            }
+
+            allNetworks = await getNetworksForFilters();
+            network_token = allNetworks.networks?.find(network=>network.id === person.network_id)?.network_token;
+
+            if(!network_token) {
+                console.error("Network token not found");
+
+                return resolve();
+            }
+        } catch(e) {
+            console.error(e);
+            return reject();
+        }
+
+        cache_keys_add = new Set();
+        cache_keys_del = new Set();
+
+        rem_pipeline = cacheService.startPipeline();
+        add_pipeline = cacheService.startPipeline();
+
+        if(prev_grid_token) {
+            // (1) networks
+            cache_keys_del.add(cacheService.keys.persons_grid_send_receive(prev_grid_token, 'networks:any', 'send'));
+            cache_keys_del.add(cacheService.keys.persons_grid_send_receive(prev_grid_token, 'networks:any', 'receive'));
+
+            for(let network of allNetworks.networks) {
+                cache_keys_del.add(cacheService.keys.persons_grid_set(prev_grid_token, `networks:${network.network_token}`));
+            }
+
+            await updateNetworks();
+
+            // (2) location
+            cache_keys_del.add(cacheService.keys.persons_grid_set(prev_grid_token, 'location'));
+            cache_keys_add.add(cacheService.keys.persons_grid_set(grid_token, 'location'));
+
+            // (3) online
+            cache_keys_del.add(cacheService.keys.persons_grid_set(prev_grid_token, 'online'));
+            cache_keys_add.add(cacheService.keys.persons_grid_set(grid_token, 'online'));
+
+            // (4) modes
+            await updateModes();
+        } else {
+            //networks
+            if(filter_token === 'networks') {
+                await updateNetworks();
+            }
+
+            if(filter_token === 'modes') {
+                await updateModes();
+            }
+        }
+
+        try {
+            if(cache_keys_del.size) {
+                for(let key of cache_keys_del) {
+                    rem_pipeline.sRem(key, person.person_token);
+                }
+
+                await cacheService.execPipeline(rem_pipeline);
+            }
+
+            if(cache_keys_add.size) {
+                for(let key of cache_keys_add) {
+                    add_pipeline.sAdd(key, person.person_token);
+                }
+
+                await cacheService.execPipeline(add_pipeline);
+            }
+        } catch(e) {
+            console.error(e);
+        }
+
+        resolve();
+    });
+}
+
 module.exports = {
     filters: null,
     filterMappings,
     getFilters,
     getPersonFilters,
+    updateGridSets
 };

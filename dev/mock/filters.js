@@ -13,16 +13,17 @@ const meService = require('../../services/me');
 
 loadScriptEnv();
 
+let conn, self_network, persons;
+
 let args = yargs.argv;
 
-let num_persons = 10 * 1000;
+let num_persons = 1000;
+let parallelCount = 20;
 
 if (args._ && args._.length) {
     num_persons = args._[0];
 }
 
-let conn, self_network, persons;
-let parallelCount = 10;
 let chunks = [];
 let personsLookup = {};
 
@@ -2137,6 +2138,9 @@ async function processSmoking() {
     }
 
     await getPersonsLogins();
+
+    await processActive();
+    return await processSendReceive();
 
     // notifications
     await processAvailability();

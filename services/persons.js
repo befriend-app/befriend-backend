@@ -1,7 +1,8 @@
 const cacheService = require('../services/cache');
 const dbService = require('../services/db');
-const { timeNow } = require('./shared');
-const { getModes } = require('./modes');
+const { timeNow } = require('../services/shared');
+const { updateGridSets } = require('../services/filters');
+
 
 module.exports = {
     isAuthenticated: function (person_token, login_token) {
@@ -155,6 +156,8 @@ module.exports = {
                     let prev_modes = person.modes.selected || [];
 
                     person.modes.selected = data.modes;
+
+                    await updateGridSets(person, null, 'modes');
 
                     let new_modes = data.modes.filter(mode => !prev_modes.includes(mode));
                     let deselected_mode = prev_modes.find(mode => !data.modes.includes(mode));

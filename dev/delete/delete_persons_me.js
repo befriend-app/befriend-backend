@@ -67,7 +67,8 @@ function main() {
 
             await knex('persons').update({
                 grid_id: null,
-                mode_id: null,
+                current_mode_id: null,
+                modes: null,
                 updated: timeNow(),
             });
 

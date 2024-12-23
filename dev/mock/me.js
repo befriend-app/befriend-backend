@@ -21,17 +21,16 @@ const sectionsData = require('../../services/sections_data');
 
 loadScriptEnv();
 
+let conn, self_network, persons;
+
 let args = yargs.argv;
 
-let num_persons = 10 * 1000;
+let num_persons = 1000;
+let parallelCount = 20;
 
 if (args._ && args._.length) {
     num_persons = args._[0];
 }
-
-let conn, self_network, persons;
-
-let parallelCount = 10;
 
 let chunks = [];
 
@@ -341,8 +340,8 @@ async function processLocation() {
                 processed++;
 
                 try {
-                    // Create random location 0-200 km away
-                    let random_distance_km = Math.floor(Math.random() * 200);
+                    // Create random location 0-30 km away
+                    let random_distance_km = Math.floor(Math.random() * 30);
 
                     let direction = shuffleFunc(directions)[0];
 
@@ -1113,12 +1112,8 @@ async function processSmoking() {
     await getPersonsLogins();
 
     await processModes();
-
-    await processLocation();return;
-
+    await processLocation();
     await processOnline();
-
-
     await processSections();
 
     await processMovies();
