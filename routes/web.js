@@ -215,6 +215,31 @@ router.post('/travel-time', function (req, res, next) {
     });
 });
 
+router.get('/hash-test', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let start_id = 2118620;
+            let cities = 30000;
+
+            let pipeline = require('../services/cache').startPipeline();
+
+            for(let i = start_id; i < cities + start_id; i++) {
+                pipeline.hGet(require('../services/cache').keys.cities_country('US'), i.toString());
+            }
+
+            let r = await require('../services/cache').execPipeline(pipeline);
+
+            console.log();
+        } catch(e) {
+            console.error(e);
+        }
+
+        res.json();
+
+        resolve();
+    });
+});
+
 router.get('/review-venues', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         let conn = await require('../services/db').conn();
@@ -270,5 +295,7 @@ router.get('/review-venues', function (req, res, next) {
         resolve();
     });
 });
+
+
 
 module.exports = router;

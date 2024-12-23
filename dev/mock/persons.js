@@ -1,14 +1,15 @@
 const axios = require('axios');
 const yargs = require('yargs');
+const dayjs = require('dayjs');
 const dbService = require('../../services/db');
 const encryptionService = require('../../services/encryption');
 const { getNetworkSelf } = require('../../services/network');
 
-const { loadScriptEnv, generateToken, timeNow, birthDatePure } = require('../../services/shared');
+const { loadScriptEnv, generateToken, timeNow, birthDatePure, calculateAge } = require('../../services/shared');
 
-const { batchInsert } = require('../../services/db');
-const { deleteKeys } = require('../../services/cache');
+const { batchInsert, batchUpdate } = require('../../services/db');
 const cacheService = require('../../services/cache');
+const { getPerson } = require('../../services/persons');
 
 loadScriptEnv();
 
@@ -39,7 +40,7 @@ function updatePersonsCount() {
                 updated: timeNow(),
             });
 
-            await deleteKeys([cacheService.keys.networks, cacheService.keys.networks_filters]);
+            await cacheService.deleteKeys([cacheService.keys.networks, cacheService.keys.networks_filters]);
         } catch (e) {
             console.error(e);
         }
@@ -49,6 +50,192 @@ function updatePersonsCount() {
 }
 
 (async function () {
+    async function updateAgeSets() {
+        try {
+            await cacheService.init();
+
+            let pipeline = cacheService.startPipeline();
+
+            let conn = await dbService.conn();
+
+            let persons = await conn('persons')
+                .join('earth_grid as eg', 'eg.id', '=', 'persons.grid_id')
+                .select('eg.token AS grid_token', 'persons.id', 'persons.person_token', 'persons.age', 'persons.birth_date')
+                .limit(num_persons);
+
+            let batch_update = [];
+
+            let cache_keys = {
+                add: {},
+                del: {},
+            }
+
+            for(let person of persons) {
+                let prev_age = person.age;
+                let age = calculateAge(person.birth_date);
+
+                if(prev_age !== age || age === null) {
+                    batch_update.push({
+                        id: person.id,
+                        age
+                    });
+
+                    person.age = age;
+
+                    if(prev_age !== null) {
+                        if(!cache_keys.del[person.grid_token]) {
+                            cache_keys.del[person.grid_token] = []
+                        }
+
+                        cache_keys.del[person.grid_token].push(person);
+                    }
+
+                    if(!cache_keys.add[person.grid_token]) {
+                        cache_keys.add[person.grid_token] = [];
+                    }
+
+                    cache_keys.add[person.grid_token].push(person);
+
+                    let personCache = await getPerson(person.person_token);
+
+                    personCache.age = age;
+
+                    pipeline.set(cacheService.keys.person(person.person_token), JSON.stringify(personCache));
+                }
+            }
+
+            for(let grid_token in cache_keys.del) {
+                let grid_persons = cache_keys.del[grid_token];
+
+                for(let person of grid_persons) {
+                    let key = cacheService.keys.persons_grid_set(grid_token, 'age');
+                    pipeline.zRem(key, person.person_token);
+                }
+            }
+
+            for(let grid_token in cache_keys.add) {
+                let grid_persons = cache_keys.add[grid_token];
+
+                for(let person of grid_persons) {
+                    let key = cacheService.keys.persons_grid_set(grid_token, 'age');
+
+                    pipeline.zAdd(key, [
+                        {
+                            value: person.person_token,
+                            score: person.age,
+                        },
+                    ],);
+                }
+            }
+
+            await cacheService.execPipeline(pipeline);
+
+            if(batch_update.length) {
+                await batchUpdate('persons', batch_update);
+            }
+        } catch(e) {
+            console.error(e);
+        }
+    }
+
+    async function addPersons() {
+        let current_count = 0;
+
+        let genders = await conn('genders');
+
+        let genders_dict = {};
+
+        for (let g of genders) {
+            genders_dict[g.gender_name.toLowerCase()] = g.id;
+        }
+
+        try {
+            let prev_highest_id = (await conn('persons').orderBy('id', 'desc').first())?.id || null;
+
+            let r = await axios.get(
+                `https://randomuser.me/api/?results=${Math.min(num_persons, max_request_count)}`,
+            );
+
+            results = r.data.results;
+
+            let person_password = await encryptionService.hash('password');
+
+            while (current_count < num_persons) {
+                let batch_insert = [];
+                let person_network_insert = [];
+
+                for (let i = 0; i < results.length; i++) {
+                    let id = i + 1 + current_count;
+
+                    if (prev_highest_id) {
+                        id += prev_highest_id;
+                    }
+
+                    let person = results[i];
+
+                    if (!(person.gender in genders_dict)) {
+                        continue;
+                    }
+
+                    let gender_id = genders_dict[person.gender.toLowerCase()];
+
+                    let lat = 41.881;
+                    let lon = -87.624;
+                    // let lat = getRandomInRange(-180, 180, 4);
+                    // let lon = getRandomInRange(-180, 180, 4);
+
+                    let person_insert = {
+                        person_token: generateToken(),
+                        network_id: self_network.id,
+                        first_name: person.name.first,
+                        last_name: person.name.last,
+                        gender_id: gender_id,
+                        email: `user-${id}@befriend.app`,
+                        password: person_password,
+                        phone: person.phone,
+                        is_online: true,
+                        image_url: person.picture.large,
+                        location_lat: lat,
+                        location_lat_1000: Math.floor(parseFloat(lat) * 1000),
+                        location_lon: lon,
+                        location_lon_1000: Math.floor(parseFloat(lon) * 1000),
+                        age: null, //todo
+                        birth_date: birthDatePure(person.dob.date),
+                        created: timeNow(),
+                        updated: timeNow(),
+                    };
+
+                    batch_insert.push(person_insert);
+                }
+
+                await batchInsert('persons', batch_insert, true);
+
+                for (let person of batch_insert) {
+                    person_network_insert.push({
+                        person_id: person.id,
+                        network_id: self_network.id,
+                        created: timeNow(),
+                        updated: timeNow(),
+                    });
+                }
+
+                try {
+                    await batchInsert('persons_networks', person_network_insert);
+                } catch (e) {
+                    console.error(e);
+                }
+
+                current_count += max_request_count;
+
+                console.log({
+                    current_count,
+                });
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
     let results;
     let conn = await dbService.conn();
     let self_network = await getNetworkSelf();
@@ -60,102 +247,12 @@ function updatePersonsCount() {
         process.exit(1);
     }
 
-    let current_count = 0;
-
-    let genders = await conn('genders');
-
-    let genders_dict = {};
-
-    for (let g of genders) {
-        genders_dict[g.gender_name.toLowerCase()] = g.id;
-    }
-
     try {
-        let prev_highest_id = (await conn('persons').orderBy('id', 'desc').first())?.id || null;
+        // await addPersons();
+        await updateAgeSets();
+        // await updatePersonsCount();
+    } catch(e) {
 
-        let r = await axios.get(
-            `https://randomuser.me/api/?results=${Math.min(num_persons, max_request_count)}`,
-        );
-
-        results = r.data.results;
-
-        let person_password = await encryptionService.hash('password');
-
-        while (current_count < num_persons) {
-            let batch_insert = [];
-            let person_network_insert = [];
-
-            for (let i = 0; i < results.length; i++) {
-                let id = i + 1 + current_count;
-
-                if (prev_highest_id) {
-                    id += prev_highest_id;
-                }
-
-                let person = results[i];
-
-                if (!(person.gender in genders_dict)) {
-                    continue;
-                }
-
-                let gender_id = genders_dict[person.gender.toLowerCase()];
-
-                let lat = 41.881;
-                let lon = -87.624;
-                // let lat = getRandomInRange(-180, 180, 4);
-                // let lon = getRandomInRange(-180, 180, 4);
-
-                let person_insert = {
-                    person_token: generateToken(),
-                    network_id: self_network.id,
-                    first_name: person.name.first,
-                    last_name: person.name.last,
-                    gender_id: gender_id,
-                    email: `user-${id}@befriend.app`,
-                    password: person_password,
-                    phone: person.phone,
-                    is_online: true,
-                    image_url: person.picture.large,
-                    location_lat: lat,
-                    location_lat_1000: Math.floor(parseFloat(lat) * 1000),
-                    location_lon: lon,
-                    location_lon_1000: Math.floor(parseFloat(lon) * 1000),
-                    age: null, //todo
-                    birth_date: birthDatePure(person.dob.date),
-                    created: timeNow(),
-                    updated: timeNow(),
-                };
-
-                batch_insert.push(person_insert);
-            }
-
-            await batchInsert('persons', batch_insert, true);
-
-            for (let person of batch_insert) {
-                person_network_insert.push({
-                    person_id: person.id,
-                    network_id: self_network.id,
-                    created: timeNow(),
-                    updated: timeNow(),
-                });
-            }
-
-            try {
-                await batchInsert('persons_networks', person_network_insert);
-            } catch (e) {
-                console.error(e);
-            }
-
-            current_count += max_request_count;
-
-            console.log({
-                current_count,
-            });
-        }
-
-        await updatePersonsCount();
-    } catch (e) {
-        console.error(e);
     }
 
     process.exit();

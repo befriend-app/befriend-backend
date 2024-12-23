@@ -171,11 +171,6 @@ function getMatches(person, activity_type = null) {
 
         return new Promise(async (resolve, reject) => {
             try {
-                let networksFilter = person_filters.networks;
-                let sendMatches = {};
-                let receiveMatches = {};
-
-                // Get networks data
                 let allNetworks = await getNetworksForFilters();
                 let network_token = allNetworks.networks?.find(network => network.id === person.network_id)?.network_token;
 
@@ -185,76 +180,24 @@ function getMatches(person, activity_type = null) {
 
                 let pipeline = cacheService.startPipeline();
 
-                // Get all potential matches from grid tokens
                 for (let grid_token of neighbor_grid_tokens) {
-                    // Get any network send/receive
-                    pipeline.sMembers(cacheService.keys.persons_grid_send_receive(grid_token, 'networks:any', 'send'));
-                    pipeline.sMembers(cacheService.keys.persons_grid_send_receive(grid_token, 'networks:any', 'receive'));
-
-                    // Get own network matches
-                    pipeline.sMembers(cacheService.keys.persons_grid_set(grid_token, `networks:${network_token}`));
+                    pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `networks:${network_token}`, 'send'));
+                    pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `networks:${network_token}`, 'receive'));
                 }
 
                 let results = await cacheService.execPipeline(pipeline);
 
-                let sendAnyPersons = {};
-                let receiveAnyPersons = {};
-                let sameNetworkPersons = {};
+                let idx = 0;
 
-                for(let i = 0; i < results.length; i++) {
-                    let result = results[i];
+                for(let grid_token of neighbor_grid_tokens) {
+                    let excludeSend = results[idx++];
+                    let excludeReceive = results[idx++];
 
-                    if(i % 3 === 0) {
-                        for(let token of result) {
-                            sendAnyPersons[token] = true;
-                        }
-                    } else if(i % 3 === 1) {
-                        for(let token of result) {
-                            receiveAnyPersons[token] = true;
-                        }
-                    } else if(i % 3 === 2) {
-                        for(let token of result) {
-                            sameNetworkPersons[token] = true;
-                        }
-                    }
-                }
-
-                // Add to send/receive matches
-                // Always allow when on same network
-                for(let token in sameNetworkPersons) {
-                    sendMatches[token] = true;
-                    receiveMatches[token] = true;
-                }
-
-                if(!networksFilter?.is_active) {
-                    for(let token in receiveAnyPersons) {
-                        sendMatches[token] = true;
-                    }
-
-                    for(let token in sendAnyPersons) {
-                        receiveMatches[token] = true;
-                    }
-                } else {
-                    if(!networksFilter.is_send) {
-                        for(let token in receiveAnyPersons) {
-                            sendMatches[token] = true;
-                        }
-                    }
-
-                    if(!networksFilter.is_receive) {
-                        for(let token in sendAnyPersons) {
-                            receiveMatches[token] = true;
-                        }
-                    }
-                }
-
-                // Update excluded
-                for(let token in person_tokens) {
-                    if(!sendMatches[token]) {
+                    for(let token of excludeSend) {
                         exclude.send[token] = true;
                     }
 
-                    if(!receiveMatches[token]) {
+                    for(let token of excludeReceive) {
                         exclude.receive[token] = true;
                     }
                 }
@@ -501,6 +444,29 @@ function getMatches(person, activity_type = null) {
         });
     }
 
+    function filterAge() {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let pipeline = cacheService.startPipeline();
+
+                for(let grid_token of neighbor_grid_tokens) {
+                    pipeline.sMembers(cacheService.keys.persons_grid_send_receive(grid_token, `age`, 'send'));
+                    pipeline.sMembers(cacheService.keys.persons_grid_send_receive(grid_token, `age`, 'receive'));
+                }
+
+                let results = await cacheService.execPipeline(pipeline);
+
+                let idx = 0;
+
+                resolve();
+            } catch (e) {
+                console.error('Error in filterVerifications:', e);
+                reject(e);
+            }
+        });
+    }
+
+
     return new Promise(async (resolve, reject) => {
         try {
             if (!person) {
@@ -570,6 +536,14 @@ function getMatches(person, activity_type = null) {
 
             console.log({
                 verifications: timeNow() - t7
+            });
+
+            let t8 = timeNow();
+
+            await filterAge();
+
+            console.log({
+                age: timeNow() - t8
             });
 
             // let memory_end = process.memoryUsage().heapTotal / 1024 / 1024;

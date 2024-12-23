@@ -193,6 +193,14 @@ function birthDatePure(birth_date) {
     return birth_date.substring(0, 10);
 }
 
+function calculateAge(birth_date) {
+    if(!birth_date) {
+        return null;
+    }
+
+    return dayjs().diff(dayjs(birth_date), 'year');
+}
+
 function calculateDistanceMeters(loc_1, loc_2, in_km) {
     const dLat = deg2rad(loc_2.lat - loc_1.lat);
     const dLon = deg2rad(loc_2.lon - loc_1.lon);
@@ -1164,6 +1172,7 @@ module.exports = {
     km_per_degree_lat,
     kms_per_mile,
     birthDatePure: birthDatePure,
+    calculateAge: calculateAge,
     calculateDistanceMeters: calculateDistanceMeters,
     changeTimezone: changeTimezone,
     cloneObj: cloneObj,
