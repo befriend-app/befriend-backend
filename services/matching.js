@@ -292,7 +292,6 @@ function getMatches(person, activity_type = null) {
                 let results = await cacheService.execPipeline(pipeline);
 
                 let idx = 0;
-
                 let modesPersonTokens = {};
                 let sendMode = {};
                 let receiveMode = {};
@@ -407,6 +406,101 @@ function getMatches(person, activity_type = null) {
         });
     }
 
+    function filterVerifications() {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const verificationTypes = ['in_person', 'linkedin'];
+
+                let pipeline = cacheService.startPipeline();
+
+                // Get all verification data for each grid token and type
+                for(let type of verificationTypes) {
+                    for(let grid_token of neighbor_grid_tokens) {
+                        // Get verified persons
+                        pipeline.sMembers(cacheService.keys.persons_grid_set(grid_token, `verified:${type}`));
+
+                        // Get send/receive filter states
+                        pipeline.sMembers(cacheService.keys.persons_grid_send_receive(grid_token, `verifications:${type}`, 'send'));
+                        pipeline.sMembers(cacheService.keys.persons_grid_send_receive(grid_token, `verifications:${type}`, 'receive'));
+                    }
+                }
+
+                let results = await cacheService.execPipeline(pipeline);
+
+                let idx = 0;
+                let verifiedPersons = {};
+                let sendVerification = {};
+                let receiveVerification = {};
+
+                // Process pipeline results
+                for (let type of verificationTypes) {
+                    verifiedPersons[type] = {};
+                    sendVerification[type] = {};
+                    receiveVerification[type] = {};
+
+                    for (let grid_token of neighbor_grid_tokens) {
+                        let verified_tokens = results[idx++];
+                        let send_tokens = results[idx++];
+                        let receive_tokens = results[idx++];
+
+                        // Track verified persons
+                        for (let token of verified_tokens) {
+                            verifiedPersons[type][token] = true;
+                        }
+                        // Track send filter states
+                        for (let token of send_tokens) {
+                            sendVerification[type][token] = true;
+                        }
+                        // Track receive filter states
+                        for (let token of receive_tokens) {
+                            receiveVerification[type][token] = true;
+                        }
+                    }
+                }
+                
+                for(let token in person_tokens) {
+                    for(let type of verificationTypes) {
+                        if(person[`is_verified_${type}`]) {
+                            //if filter enabled
+                            if(person_filters.verifications?.is_active && person_filters[`verification_${type}`]?.is_active) {
+                                if(person_filters[`verification_${type}`].is_send) {
+                                    //send to verified only
+                                    if(!verifiedPersons[type][token]) {
+                                        exclude.send[token] = true;
+                                    }
+                                }
+
+                                if(person_filters[`verification_${type}`].is_receive) {
+                                    //receive from verified only
+                                    if(!verifiedPersons[type][token]) {
+                                        exclude.receive[token] = true;
+                                    }
+                                }
+                            } else {
+                                //send/receive from anybody
+                            }
+                        } else {
+                            //exclude from sending if token in verified and receive
+                            if(token in verifiedPersons[type] && token in receiveVerification[type]) {
+                                exclude.send[token] = true;
+                            }
+
+                            //exclude from receiving if token in verified and send
+                            if(token in verifiedPersons[type] && token in sendVerification[type]) {
+                                exclude.receive[token] = true;
+                            }
+                        }
+                    }
+                }
+
+                resolve();
+            } catch (e) {
+                console.error('Error in filterVerifications:', e);
+                reject(e);
+            }
+        });
+    }
+
     return new Promise(async (resolve, reject) => {
         try {
             if (!person) {
@@ -470,7 +564,13 @@ function getMatches(person, activity_type = null) {
                 modes: timeNow() - t6
             });
 
-            console.log(onlineTime);
+            let t7 = timeNow();
+
+            await filterVerifications();
+
+            console.log({
+                verifications: timeNow() - t7
+            });
 
             // let memory_end = process.memoryUsage().heapTotal / 1024 / 1024;
 
