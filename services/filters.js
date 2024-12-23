@@ -609,6 +609,82 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
         });
     }
 
+    function updateVerifications() {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const verificationTypes = [
+                    'in_person',
+                    'linkedin',
+                ];
+
+                if(person.is_verified_in_person) {
+                    cache_keys_add.add(cacheService.keys.persons_grid_set(grid_token, `verified:in_person`));
+                } else {
+                    cache_keys_del.add(cacheService.keys.persons_grid_set(grid_token, `verified:in_person`));
+                }
+
+                if(person.is_verified_linkedin) {
+                    cache_keys_add.add(cacheService.keys.persons_grid_set(grid_token, `verified:linkedin`));
+                } else {
+                    cache_keys_del.add(cacheService.keys.persons_grid_set(grid_token, `verified:linkedin`));
+                }
+
+                if(!person_filters.verifications?.is_active) {
+                    cache_keys_del.add(cacheService.keys.persons_grid_send_receive(grid_token, 'verifications:in_person', 'send'));
+                    cache_keys_del.add(cacheService.keys.persons_grid_send_receive(grid_token, 'verifications:in_person', 'receive'));
+                    cache_keys_del.add(cacheService.keys.persons_grid_send_receive(grid_token, 'verifications:linkedin', 'send'));
+                    cache_keys_del.add(cacheService.keys.persons_grid_send_receive(grid_token,'verifications:linkedin', 'receive'));
+                } else {
+                    if(!person_filters.verification_in_person?.is_active) {
+                        cache_keys_del.add(cacheService.keys.persons_grid_send_receive('verifications:in_person', 'send'));
+                        cache_keys_del.add(cacheService.keys.persons_grid_send_receive('verifications:in_person', 'receive'));
+                    } else {
+                        if (person_filters.verification_in_person.is_send) {
+                            cache_keys_add.add(cacheService.keys.persons_grid_send_receive(grid_token, 'verifications:in_person', 'send'));
+                        } else {
+                            cache_keys_del.add(cacheService.keys.persons_grid_send_receive(grid_token, 'verifications:in_person', 'send'));
+                        }
+
+                        if (person_filters.verification_in_person.is_receive) {
+                            cache_keys_add.add(cacheService.keys.persons_grid_send_receive(grid_token, 'verifications:in_person', 'receive'));
+                        } else {
+                            cache_keys_del.add(cacheService.keys.persons_grid_send_receive(grid_token, 'verifications:in_person', 'receive'));
+                        }
+                    }
+
+                    if(!person_filters.verification_linkedin?.is_active) {
+                        cache_keys_del.add(cacheService.keys.persons_grid_send_receive('verifications:linkedin', 'send'));
+                        cache_keys_del.add(cacheService.keys.persons_grid_send_receive('verifications:linkedin', 'receive'));
+                    } else {
+                        if (person_filters.verification_linkedin.is_send) {
+                            cache_keys_add.add(cacheService.keys.persons_grid_send_receive(grid_token, 'verifications:linkedin', 'send'));
+                        } else {
+                            cache_keys_del.add(cacheService.keys.persons_grid_send_receive(grid_token, 'verifications:linkedin', 'send'));
+                        }
+
+                        if (person_filters.verification_linkedin.is_receive) {
+                            cache_keys_add.add(cacheService.keys.persons_grid_send_receive(grid_token, 'verifications:linkedin', 'receive'));
+                        } else {
+                            cache_keys_del.add(cacheService.keys.persons_grid_send_receive(grid_token, 'verifications:linkedin', 'receive'));
+                        }
+                    }
+                }
+
+                if (prev_grid_token) {
+                    for (let type of verificationTypes) {
+                        cache_keys_del.add(cacheService.keys.persons_grid_set(prev_grid_token, `verified:${type}`));
+                        cache_keys_del.add(cacheService.keys.persons_grid_send_receive(prev_grid_token, `verifications:${type}`, 'send'));
+                        cache_keys_del.add(cacheService.keys.persons_grid_send_receive(prev_grid_token, `verifications:${type}`, 'receive'));
+                    }
+                }
+            } catch(e) {
+                console.error('Error in updateVerifications:', e);
+            }
+
+            resolve();
+        });
+    }
+
     return new Promise(async (resolve, reject) => {
         if(!person) {
             return reject();
@@ -646,7 +722,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
         add_pipeline = cacheService.startPipeline();
 
         if(prev_grid_token) {
-            // (1) networks
+            // networks
             cache_keys_del.add(cacheService.keys.persons_grid_send_receive(prev_grid_token, 'networks:any', 'send'));
             cache_keys_del.add(cacheService.keys.persons_grid_send_receive(prev_grid_token, 'networks:any', 'receive'));
 
@@ -656,16 +732,20 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
 
             await updateNetworks();
 
-            // (2) location
+            // location
             cache_keys_del.add(cacheService.keys.persons_grid_set(prev_grid_token, 'location'));
             cache_keys_add.add(cacheService.keys.persons_grid_set(grid_token, 'location'));
 
-            // (3) online
+            // online
             cache_keys_del.add(cacheService.keys.persons_grid_set(prev_grid_token, 'online'));
             cache_keys_add.add(cacheService.keys.persons_grid_set(grid_token, 'online'));
 
-            // (4) modes
+            // modes
             await updateModes();
+
+            // verifications
+            await updateVerifications();
+
         } else {
             //networks
             if(filter_token === 'networks') {
@@ -674,6 +754,10 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
 
             if(filter_token === 'modes') {
                 await updateModes();
+            }
+
+            if(filter_token === 'verifications') {
+                await updateVerifications();
             }
         }
 
