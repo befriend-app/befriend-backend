@@ -23,6 +23,7 @@ function main() {
                 delete filter.table;
                 delete filter.column;
                 delete filter.filters_table;
+                delete filter.importance;
 
                 if (filter.single) {
                     filter.is_single = true;

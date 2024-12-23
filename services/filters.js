@@ -37,9 +37,9 @@ const filterMappings = {
         name: 'Reviews',
         single: true,
     },
-    reviews_unrated: {
-        token: 'reviews_unrated',
-        name: 'Unrated',
+    reviews_new: {
+        token: 'reviews_new',
+        name: 'New',
         single: true,
     },
     reviews_safety: {

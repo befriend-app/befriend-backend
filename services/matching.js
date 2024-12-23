@@ -1,8 +1,9 @@
 let cacheService = require('../services/cache');
+let dbService = require('../services/db');
 let gridService = require('../services/grid');
 
 const { getPersonFilters } = require('./filters');
-const { kms_per_mile, mdp, timeNow } = require('./shared');
+const { kms_per_mile, timeNow } = require('./shared');
 const { getNetworksForFilters } = require('./network');
 const { getModes } = require('./modes');
 
@@ -10,19 +11,14 @@ const DEFAULT_DISTANCE_MILES = 20;
 
 function getMatches(person, activity_type = null) {
     let person_filters;
-
     let neighbor_grid_tokens = [];
-
-    let person_tokens = new Set();
-
-    let online_person_tokens = new Set();
+    let person_tokens = {};
+    let online_person_tokens = {};
 
     let exclude = {
-        send: new Set(),
-        receive: new Set()
-    }
-
-    let person_modes = [];
+        send: {},
+        receive: {}
+    };
 
     let matches = {
         send: [],
@@ -41,6 +37,7 @@ function getMatches(person, activity_type = null) {
                 neighbor_grid_tokens.push(person_grid_token);
 
                 let max_distance = DEFAULT_DISTANCE_MILES;
+
                 if (person_filters.distance?.is_active &&
                     person_filters.distance.is_send &&
                     person_filters.distance.filter_value) {
@@ -50,11 +47,11 @@ function getMatches(person, activity_type = null) {
 
                 let grids = await gridService.findNearby(person.location_lat, person.location_lon, max_distance);
 
-                grids.map(grid => {
+                for(let grid of grids) {
                     if (!neighbor_grid_tokens.includes(grid.token)) {
                         neighbor_grid_tokens.push(grid.token);
                     }
-                });
+                }
 
                 resolve();
             } catch(e) {
@@ -79,7 +76,7 @@ function getMatches(person, activity_type = null) {
 
                 for (let grid_persons of results_persons) {
                     for (let token of grid_persons) {
-                        person_tokens.add(token);
+                        person_tokens[token] = true;
                     }
                 }
 
@@ -90,6 +87,8 @@ function getMatches(person, activity_type = null) {
             }
         });
     }
+
+    let onlineTime = {redis: 0, loops: 0};
 
     function filterOnlineStatus() {
         return new Promise(async (resolve, reject) => {
@@ -102,20 +101,28 @@ function getMatches(person, activity_type = null) {
                     );
                 }
 
+                let t = timeNow();
+
                 let results_online = await cacheService.execPipeline(pipeline_online);
+
+                onlineTime.redis += timeNow() - t;
+
+                let t2 = timeNow();
 
                 for (let grid of results_online) {
                     for (let token of grid) {
-                        online_person_tokens.add(token);
+                        online_person_tokens[token] = true;
                     }
                 }
 
-                for (let token of person_tokens) {
-                    if (!online_person_tokens.has(token)) {
-                        exclude.send.add(token);
-                        exclude.receive.add(token);
+                for (let token in person_tokens) {
+                    if (!online_person_tokens[token]) {
+                        exclude.send[token] = true;
+                        exclude.receive[token] = true;
                     }
                 }
+
+                onlineTime.loops += timeNow() - t2;
 
                 resolve();
             } catch (e) {
@@ -165,9 +172,8 @@ function getMatches(person, activity_type = null) {
         return new Promise(async (resolve, reject) => {
             try {
                 let networksFilter = person_filters.networks;
-
-                let sendMatches = new Set();
-                let receiveMatches = new Set();
+                let sendMatches = {};
+                let receiveMatches = {};
 
                 // Get networks data
                 let allNetworks = await getNetworksForFilters();
@@ -191,64 +197,65 @@ function getMatches(person, activity_type = null) {
 
                 let results = await cacheService.execPipeline(pipeline);
 
-                let sendAnyPersons = [];
-                let receiveAnyPersons = [];
-                let sameNetworkPersons = [];
+                let sendAnyPersons = {};
+                let receiveAnyPersons = {};
+                let sameNetworkPersons = {};
 
                 for(let i = 0; i < results.length; i++) {
                     let result = results[i];
 
                     if(i % 3 === 0) {
-                        sendAnyPersons = sendAnyPersons.concat(result);
+                        for(let token of result) {
+                            sendAnyPersons[token] = true;
+                        }
                     } else if(i % 3 === 1) {
-                        receiveAnyPersons = receiveAnyPersons.concat(result);
+                        for(let token of result) {
+                            receiveAnyPersons[token] = true;
+                        }
                     } else if(i % 3 === 2) {
-                        sameNetworkPersons = sameNetworkPersons.concat(result);
+                        for(let token of result) {
+                            sameNetworkPersons[token] = true;
+                        }
                     }
                 }
 
-                sendAnyPersons = new Set(sendAnyPersons);
-                receiveAnyPersons = new Set(receiveAnyPersons);
-                sameNetworkPersons = new Set(sameNetworkPersons);
-
-                //add to send/receive matches
-
-                //always allow when on same network
-                for(let token of sameNetworkPersons) {
-                    sendMatches.add(token);
-                    receiveMatches.add(token);
+                // Add to send/receive matches
+                // Always allow when on same network
+                for(let token in sameNetworkPersons) {
+                    sendMatches[token] = true;
+                    receiveMatches[token] = true;
                 }
 
                 if(!networksFilter?.is_active) {
-                    for(let token of receiveAnyPersons) {
-                        sendMatches.add(token);
+                    for(let token in receiveAnyPersons) {
+                        sendMatches[token] = true;
                     }
 
-                    for(let token of sendAnyPersons) {
-                        receiveMatches.add(token);
+                    for(let token in sendAnyPersons) {
+                        receiveMatches[token] = true;
                     }
                 } else {
                     if(!networksFilter.is_send) {
-                        for(let token of receiveAnyPersons) {
-                            sendMatches.add(token);
+                        for(let token in receiveAnyPersons) {
+                            sendMatches[token] = true;
                         }
                     }
 
                     if(!networksFilter.is_receive) {
-                        for(let token of sendAnyPersons) {
-                            receiveMatches.add(token);
+                        for(let token in sendAnyPersons) {
+                            receiveMatches[token] = true;
                         }
                     }
                 }
 
-                // update excluded
-                for(let token of person_tokens) {
-                    if(!sendMatches.has(token)) {
-                        exclude.send.add(token);
+                // Update excluded
+                for(let token in person_tokens) {
+                    if(!sendMatches[token]) {
+                        exclude.send[token] = true;
                     }
 
-                    if(!receiveMatches.has(token)) {
-                        exclude.receive.add(token);
+                    if(!receiveMatches[token]) {
+                        exclude.receive[token] = true;
                     }
                 }
 
@@ -301,15 +308,15 @@ function getMatches(person, activity_type = null) {
                         let receive_tokens = results[idx++];
 
                         for(let token of person_tokens) {
-                            modesPersonTokens[mode][token] = true;
+                            modesPersonTokens[mode][token] = true
                         }
 
                         for(let token of send_tokens) {
-                            sendMode[mode][token] = true;
+                            sendMode[mode][token] = true
                         }
 
                         for(let token of receive_tokens) {
-                            receiveMode[mode][token] = true;
+                            receiveMode[mode][token] = true
                         }
                     }
                 }
@@ -318,11 +325,11 @@ function getMatches(person, activity_type = null) {
                     // If filter is off, use all modes for both send and receive
                     for (let mode of personSelectedModes) {
                         for (let token in modesPersonTokens[mode]) {
-                            if(token in sendMode[mode]) {
+                            if(sendMode[mode][token]) {
                                 sendMatches[token] = true;
                             }
 
-                            if(token in receiveMode[mode]) {
+                            if(receiveMode[mode][token]) {
                                 receiveMatches[token] = true;
                             }
                         }
@@ -339,7 +346,7 @@ function getMatches(person, activity_type = null) {
                         // If send is disabled, use all selected modes for send matches
                         for (let mode of personSelectedModes) {
                             for (let token in modesPersonTokens[mode]) {
-                                if (token in sendMode[mode]) {
+                                if (sendMode[mode][token]) {
                                     sendMatches[token] = true;
                                 }
                             }
@@ -349,7 +356,7 @@ function getMatches(person, activity_type = null) {
                         for (let mode of personSelectedModes) {
                             if (activeFilterModes.includes(mode)) {
                                 for (let token in modesPersonTokens[mode]) {
-                                    if (token in sendMode[mode]) {
+                                    if (sendMode[mode][token]) {
                                         sendMatches[token] = true;
                                     }
                                 }
@@ -362,7 +369,7 @@ function getMatches(person, activity_type = null) {
                         // If receive is disabled, use all selected modes for receive matches
                         for (let mode of personSelectedModes) {
                             for (let token in modesPersonTokens[mode]) {
-                                if (token in receiveMode[mode]) {
+                                if (receiveMode[mode][token]) {
                                     receiveMatches[token] = true;
                                 }
                             }
@@ -372,7 +379,7 @@ function getMatches(person, activity_type = null) {
                         for (let mode of personSelectedModes) {
                             if (activeFilterModes.includes(mode)) {
                                 for (let token in modesPersonTokens[mode]) {
-                                    if (token in receiveMode[mode]) {
+                                    if (receiveMode[mode][token]) {
                                         receiveMatches[token] = true;
                                     }
                                 }
@@ -382,13 +389,13 @@ function getMatches(person, activity_type = null) {
                 }
 
                 // Update excluded sets based on matches
-                for (let token of person_tokens) {
+                for (let token in person_tokens) {
                     if (!sendMatches[token]) {
-                        exclude.send.add(token);
+                        exclude.send[token] = true;
                     }
 
                     if (!receiveMatches[token]) {
-                        exclude.receive.add(token);
+                        exclude.receive[token] = true;
                     }
                 }
 
@@ -406,6 +413,8 @@ function getMatches(person, activity_type = null) {
                 return reject("Person required");
             }
 
+            let memory_start = process.memoryUsage().heapTotal / 1024 / 1024;
+
             let t1 = timeNow();
             person_filters = await getPersonFilters(person);
 
@@ -414,15 +423,15 @@ function getMatches(person, activity_type = null) {
             });
 
             let t2 = timeNow();
-
             await getGridTokens();
+
+            let memory_end = process.memoryUsage().heapTotal / 1024 / 1024;
 
             console.log({
                 grid_tokens: timeNow() - t2
             });
 
             let t3 = timeNow();
-
             await getGridPersonTokens();
 
             console.log({
@@ -431,6 +440,16 @@ function getMatches(person, activity_type = null) {
 
             let t4 = timeNow();
 
+            console.log({
+                mass_pipeline: timeNow() - t3
+            });
+
+            console.log({
+                memory_start,
+                memory_end
+            });
+
+            // let t4 = timeNow();
             await filterOnlineStatus();
 
             console.log({
@@ -438,7 +457,6 @@ function getMatches(person, activity_type = null) {
             });
 
             let t5 = timeNow();
-
             await filterNetworks();
 
             console.log({
@@ -446,11 +464,19 @@ function getMatches(person, activity_type = null) {
             });
 
             let t6 = timeNow();
-
             await filterModes();
 
             console.log({
                 modes: timeNow() - t6
+            });
+
+            console.log(onlineTime);
+
+            // let memory_end = process.memoryUsage().heapTotal / 1024 / 1024;
+
+            console.log({
+                memory_start,
+                memory_end
             });
 
             resolve();
@@ -460,7 +486,6 @@ function getMatches(person, activity_type = null) {
         }
     });
 }
-
 
 module.exports = {
     getMatches

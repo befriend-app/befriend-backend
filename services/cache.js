@@ -522,6 +522,18 @@ module.exports = {
             }
         });
     },
+    getSetIntersection: function (key, keys) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                 let results = await module.exports.conn.sInter(key, keys);
+
+                 resolve(results);
+            } catch(e) {
+                console.error(e);
+                return reject(e);
+            }
+        });
+    },
     getSetCount: function (key) {
         return new Promise(async (resolve, reject) => {
             try {

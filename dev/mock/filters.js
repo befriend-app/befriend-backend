@@ -612,16 +612,16 @@ async function processReviews() {
     }
 
     await helpers.processBatch(async (person) => {
-        //unrated
-        let includeUnrated = Math.random() > 0.3;
+        //new members
+        let includeNew = Math.random() > 0.3;
 
-        //70% chance of enabling unrated matches
+        //70% chance of enabling new member matches
         try {
             await axios.put(joinPaths(process.env.APP_URL, '/filters/active'), {
                 login_token: person.login_token,
                 person_token: person.person_token,
-                filter_token: 'reviews_unrated',
-                active: includeUnrated
+                filter_token: 'reviews_new',
+                active: includeNew
             });
         } catch (error) {
             console.error(`Error setting unrated:`, error.message);
