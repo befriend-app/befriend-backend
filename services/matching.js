@@ -555,12 +555,12 @@ function getMatches(me, location = null, activity_type = null) {
                         }
 
                         // Exclude send if person has excluded my gender or I have excluded the person's gender
-                        if (token in genderExcludeReceive[myGender] || my_token in genderExcludeReceive[personGender]) {
+                        if (token in genderExcludeReceive[myGender] || my_token in genderExcludeSend[personGender]) {
                             exclude.send[token] = true;
                         }
 
                         // Exclude receive if person has excluded my gender or I have excluded the person's gender
-                        if (token in genderExcludeSend[myGender] || my_token in genderExcludeSend[personGender]) {
+                        if (token in genderExcludeSend[myGender] || my_token in genderExcludeReceive[personGender]) {
                             exclude.receive[token] = true;
                         }
                     }
@@ -583,25 +583,27 @@ function getMatches(me, location = null, activity_type = null) {
 
                 let pipeline = cacheService.startPipeline();
 
-                let personDrinkingToken = null;
-
+                let myDrinkingToken = null;
                 if (Object.keys(section_data).length) {
                     let item = Object.values(section_data)[0];
-                    personDrinkingToken = item.token;
+                    myDrinkingToken = item.token;
                 }
 
                 for (let grid_token of neighbor_grid_tokens) {
                     for (let option of drinkingOptions) {
-                        // Get persons with this drinking preference
-                        pipeline.sMembers(cacheService.keys.persons_grid_set(grid_token, `drinking:${option.token}`));
+                        pipeline.sMembers(cacheService.keys.persons_grid_set(
+                            grid_token,
+                            `drinking:${option.token}`
+                        ));
+                    }
 
-                        // Get send/receive filter states
+                    // Get excluded drinking send/receive
+                    for (let option of drinkingOptions) {
                         pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(
                             grid_token,
                             `drinkings:${option.token}`,
                             'send'
                         ));
-
                         pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(
                             grid_token,
                             `drinkings:${option.token}`,
@@ -617,11 +619,22 @@ function getMatches(me, location = null, activity_type = null) {
                 let drinkingExcludeSend = {};
                 let drinkingExcludeReceive = {};
 
+                // Process pipeline results
                 for (let grid_token of neighbor_grid_tokens) {
+                    // Process drinking set memberships
                     for (let option of drinkingOptions) {
                         if (!drinkingSets[option.token]) {
                             drinkingSets[option.token] = {};
                         }
+
+                        let members = results[idx++];
+                        for (let member of members) {
+                            drinkingSets[option.token][member] = true;
+                        }
+                    }
+
+                    // Process drinking exclusions
+                    for (let option of drinkingOptions) {
                         if (!drinkingExcludeSend[option.token]) {
                             drinkingExcludeSend[option.token] = {};
                         }
@@ -629,40 +642,92 @@ function getMatches(me, location = null, activity_type = null) {
                             drinkingExcludeReceive[option.token] = {};
                         }
 
-                        let members = results[idx++];
-
-                        for (let member of members) {
-                            drinkingSets[option.token][member] = true;
-                        }
-
+                        // Send exclusions
                         let sendExclusions = results[idx++];
-
                         for (let token of sendExclusions) {
                             drinkingExcludeSend[option.token][token] = true;
                         }
 
+                        // Receive exclusions
                         let receiveExclusions = results[idx++];
-
                         for (let token of receiveExclusions) {
                             drinkingExcludeReceive[option.token][token] = true;
                         }
                     }
                 }
 
-                for(let token in person_tokens) {
-                    if(token in drinkingExcludeReceive[personDrinkingToken]) {
-                        exclude.send[token] = true;
+                let counts = {
+                    send: 0,
+                    receive: 0
+                };
+
+                for(let k in drinkingExcludeReceive) {
+                    counts.receive += Object.keys(drinkingExcludeReceive[k]).length;
+                    counts.send += Object.keys(drinkingExcludeSend[k]).length;
+                }
+
+                // If drinking not set, exclude for all excluded
+                if (!myDrinkingToken) {
+                    for (let drinking_token in drinkingExcludeReceive) {
+                        let tokens = drinkingExcludeReceive[drinking_token];
+                        for (let token in tokens) {
+                            exclude.send[token] = true;
+                        }
                     }
 
-                    if(token in drinkingExcludeSend[personDrinkingToken]) {
-                        exclude.receive[token] = true;
+                    for (let drinking_token in drinkingExcludeSend) {
+                        let tokens = drinkingExcludeSend[drinking_token];
+                        for (let token in tokens) {
+                            exclude.receive[token] = true;
+                        }
+                    }
+                } else {
+                    // Process each person token
+                    for (let token in person_tokens) {
+                        let personDrinkingToken = null;
+
+                        for (let drinkingToken in drinkingSets) {
+                            if (drinkingSets[drinkingToken][token]) {
+                                personDrinkingToken = drinkingToken;
+                                break;
+                            }
+                        }
+
+                        if(!personDrinkingToken) {
+                            //exclude sending/receiving if filter specified with importance
+                            for(let k in drinkingExcludeSend) {
+                                if(my_token in drinkingExcludeSend[k]) {
+                                    exclude.send[token] = true;
+                                    break;
+                                }
+                            }
+
+                            for(let k in drinkingExcludeReceive) {
+                                if(my_token in drinkingExcludeReceive[k]) {
+                                    exclude.receive[token] = true;
+                                    break;
+                                }
+                            }
+                        } else {
+                            // Exclude send if person has excluded my preference or I have excluded their preference
+                            if (token in drinkingExcludeReceive[myDrinkingToken] ||
+                                my_token in drinkingExcludeSend[personDrinkingToken]) {
+                                exclude.send[token] = true;
+                            }
+
+                            // Exclude receive if person has excluded my preference or I have excluded their preference
+                            if (token in drinkingExcludeSend[myDrinkingToken] ||
+                                my_token in drinkingExcludeReceive[personDrinkingToken]) {
+                                exclude.receive[token] = true;
+                            }
+                        }
                     }
                 }
 
                 resolve();
-            } catch(e) {
-                console.error(e);
-                return reject(e);
+            } catch (e) {
+                console.error('Error in filterDrinking:', e);
+                reject(e);
             }
         });
     }
