@@ -875,6 +875,8 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                         }
                     }
                 }
+
+                resolve();
             } catch (e) {
                 console.error(`Error in update ${sectionKey}:`, e);
                 return reject(e);
