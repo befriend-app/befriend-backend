@@ -14,7 +14,6 @@ function getMatches(person, activity_type = null) {
     let person_filters;
     let neighbor_grid_tokens = [];
     let person_tokens = {};
-    let online_person_tokens = {};
 
     let exclude = {
         send: {},
@@ -44,6 +43,7 @@ function getMatches(person, activity_type = null) {
                     person_filters.distance.filter_value) {
                     max_distance = person_filters.distance.filter_value;
                 }
+
                 max_distance *= kms_per_mile;
 
                 let grids = await gridService.findNearby(person.location_lat, person.location_lon, max_distance);
@@ -94,30 +94,24 @@ function getMatches(person, activity_type = null) {
     function filterOnlineStatus() {
         return new Promise(async (resolve, reject) => {
             try {
-                let pipeline_online = cacheService.startPipeline();
+                let pipeline_offline = cacheService.startPipeline();
 
                 for (let grid_token of neighbor_grid_tokens) {
-                    pipeline_online.sMembers(
-                        cacheService.keys.persons_grid_set(grid_token, 'online')
+                    pipeline_offline.sMembers(
+                        cacheService.keys.persons_grid_exclude(grid_token, 'online')
                     );
                 }
 
                 let t = timeNow();
 
-                let results_online = await cacheService.execPipeline(pipeline_online);
+                let results_offline = await cacheService.execPipeline(pipeline_offline);
 
                 onlineTime.redis += timeNow() - t;
 
                 let t2 = timeNow();
 
-                for (let grid of results_online) {
+                for (let grid of results_offline) {
                     for (let token of grid) {
-                        online_person_tokens[token] = true;
-                    }
-                }
-
-                for (let token in person_tokens) {
-                    if (!online_person_tokens[token]) {
                         exclude.send[token] = true;
                         exclude.receive[token] = true;
                     }
@@ -524,6 +518,7 @@ function getMatches(person, activity_type = null) {
 
                             // Receive exclusions
                             let receiveExclusions = results[idx++];
+
                             for (let token of receiveExclusions) {
                                 genderExcludeReceive[gender_token][token] = true;
                             }
@@ -535,7 +530,7 @@ function getMatches(person, activity_type = null) {
                 for (let token in person_tokens) {
                     // Get person's gender
                     let personGender = null;
-                    
+
                     for (let genderToken in genderSets) {
                         if (genderSets[genderToken][token]) {
                             personGender = genderToken;
@@ -595,10 +590,6 @@ function getMatches(person, activity_type = null) {
             });
 
             let t4 = timeNow();
-
-            console.log({
-                mass_pipeline: timeNow() - t3
-            });
 
             console.log({
                 memory_start,
