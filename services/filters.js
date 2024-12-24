@@ -810,9 +810,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                 }
 
                 // Clear existing keys for this grid
-                for (let i = 0; i < section_options.length; i++) {
-                    let option = section_options[i];
-
+                for (let option of section_options) {
                     if (prev_grid_token) {
                         keys_sets_del.add(cacheService.keys.persons_grid_set(prev_grid_token, `${sectionKey}:${option.token}`));
                         keys_sets_del.add(cacheService.keys.persons_grid_exclude_send_receive(prev_grid_token, `${sectionKey}:${option.token}`, 'send'));
@@ -841,8 +839,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
 
                 // Check selected filters for importance
                 let filterItems = Object.values(filter.items);
-                for (let i = 0; i < filterItems.length; i++) {
-                    let item = filterItems[i];
+                for (let item of filterItems) {
                     if (item.is_active && !item.is_negative && !item.deleted) {
                         added_tokens.push(item.token);
 
@@ -856,8 +853,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
 
                 // If high importance filters are set, exclude non-matching options
                 if (is_high_importance) {
-                    for (let i = 0; i < section_options.length; i++) {
-                        let option = section_options[i];
+                    for (let option of section_options) {
                         if (!added_tokens.includes(option.token)) {
                             // Apply send exclusions
                             if (filter.is_send) {
@@ -886,143 +882,88 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
         });
     }
 
-    function updateDrinking() {
+    function updateSingleFilter(sectionKey, getOptions, default_importance = 5, importance_threshold = 8) {
         return new Promise(async (resolve, reject) => {
             try {
-                const importance_threshold = 8;
-
-                let section_options = await drinkingService.getDrinking();
+                let section_options = await getOptions();
                 let section_key = cacheService.keys.persons_section_data(person.person_token, filter_token);
                 let section_data = (await cacheService.getObj(section_key)) || {};
 
-                let drinkingFilter = person_filters.drinking;
+                let filter = person_filters[sectionKey];
 
-                for(let option of section_options) {
-                    if(prev_grid_token) {
-                        keys_sets_del.add(cacheService.keys.persons_grid_set(prev_grid_token, `drinking:${option.token}`));
-                        keys_sets_del.add(cacheService.keys.persons_grid_exclude_send_receive(prev_grid_token, `drinkings:${option.token}`, 'send'));
-                        keys_sets_del.add(cacheService.keys.persons_grid_exclude_send_receive(prev_grid_token, `drinkings:${option.token}`, 'receive'));
+                if(!filter) {
+                    filter = person_filters[sectionKey.substring(0, sectionKey.length - 1)];
+                }
+
+                // Clear existing keys for this grid
+                for (let option of section_options) {
+                    if (prev_grid_token) {
+                        keys_sets_del.add(cacheService.keys.persons_grid_set(prev_grid_token, `${sectionKey}:${option.token}`));
+                        keys_sets_del.add(cacheService.keys.persons_grid_exclude_send_receive(prev_grid_token, `${sectionKey}:${option.token}`, 'send'));
+                        keys_sets_del.add(cacheService.keys.persons_grid_exclude_send_receive(prev_grid_token, `${sectionKey}:${option.token}`, 'receive'));
                     }
 
-                    keys_sets_del.add(cacheService.keys.persons_grid_set(grid_token, `drinking:${option.token}`));
-                    keys_sets_del.add(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `drinkings:${option.token}`, 'send'));
-                    keys_sets_del.add(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `drinkings:${option.token}`, 'receive'));
+                    keys_sets_del.add(cacheService.keys.persons_grid_set(grid_token, `${sectionKey}:${option.token}`));
+                    keys_sets_del.add(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `${sectionKey}:${option.token}`, 'send'));
+                    keys_sets_del.add(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `${sectionKey}:${option.token}`, 'receive'));
                 }
 
-                // Add person's drinking section
-                if(Object.keys(section_data).length) {
+                // Add person's current selection to grid sets
+                if (Object.keys(section_data).length) {
                     let item = Object.values(section_data)[0];
-                    keys_sets_add.add(cacheService.keys.persons_grid_set(grid_token, `drinking:${item.token}`));
+                    keys_sets_add.add(cacheService.keys.persons_grid_set(grid_token, `${sectionKey}:${item.token}`));
                 }
 
-                if(!drinkingFilter?.is_active || drinkingFilter.is_any) {
+                if (!filter?.is_active || filter.is_any) {
                     return resolve();
                 }
 
-                //exclude if one or more selected filters have high importance
                 let added_tokens = [];
                 let is_high_importance = false;
 
-                for(let item of Object.values(drinkingFilter.items)) {
-                    if(item.is_active && !item.is_negative && !item.deleted) {
+                // Check selected filters for importance
+                let filterItems = Object.values(filter.items);
+
+                for (let item of filterItems) {
+                    if (item.is_active && !item.is_negative && !item.deleted) {
                         added_tokens.push(item.token);
 
-                        let importance = isNumeric(item.importance) ? item.importance : drinkingService.importance.default;
+                        let importance = isNumeric(item.importance) ? item.importance : default_importance;
 
-                        if(importance >= importance_threshold) {
+                        if (importance >= importance_threshold) {
                             is_high_importance = true;
                         }
                     }
                 }
 
-                if(is_high_importance) {
-                    for(let option of section_options) {
-                        if(!added_tokens.includes(option.token)) {
-                            if(drinkingFilter.is_send) {
-                                keys_sets_add.add(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `drinkings:${option.token}`, 'send'));
+                // If high importance filters are set, exclude non-matching options
+                if (is_high_importance) {
+                    for (let option of section_options) {
+                        if (!added_tokens.includes(option.token)) {
+                            // Apply send exclusions
+                            if (filter.is_send) {
+                                keys_sets_add.add(cacheService.keys.persons_grid_exclude_send_receive(
+                                    grid_token,
+                                    `${sectionKey}:${option.token}`,
+                                    'send'
+                                ));
                             }
 
-                            if(drinkingFilter.is_receive) {
-                                keys_sets_add.add(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `drinkings:${option.token}`, 'receive'));
+                            // Apply receive exclusions
+                            if (filter.is_receive) {
+                                keys_sets_add.add(cacheService.keys.persons_grid_exclude_send_receive(
+                                    grid_token,
+                                    `${sectionKey}:${option.token}`,
+                                    'receive'
+                                ));
                             }
                         }
                     }
                 }
 
                 resolve();
-            } catch(e) {
-                console.error('Error in updateDrinking:', e);
-                reject(e);
-            }
-        });
-    }
-
-    function updateSmoking() {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const importance_threshold = 8;
-
-                let section_options = await smokingService.getSmoking();
-                let section_key = cacheService.keys.persons_section_data(person.person_token, filter_token);
-                let section_data = (await cacheService.getObj(section_key)) || {};
-
-                let smokingFilter = person_filters.smoking;
-
-                for(let option of section_options) {
-                    if(prev_grid_token) {
-                        keys_sets_del.add(cacheService.keys.persons_grid_set(prev_grid_token, `smoking:${option.token}`));
-                        keys_sets_del.add(cacheService.keys.persons_grid_exclude_send_receive(prev_grid_token, `smokings:${option.token}`, 'send'));
-                        keys_sets_del.add(cacheService.keys.persons_grid_exclude_send_receive(prev_grid_token, `smokings:${option.token}`, 'receive'));
-                    }
-
-                    keys_sets_del.add(cacheService.keys.persons_grid_set(grid_token, `smoking:${option.token}`));
-                    keys_sets_del.add(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `smokings:${option.token}`, 'send'));
-                    keys_sets_del.add(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `smokings:${option.token}`, 'receive'));
-                }
-
-                // Add person's smoking section
-                if(Object.keys(section_data).length) {
-                    let item = Object.values(section_data)[0];
-                    keys_sets_add.add(cacheService.keys.persons_grid_set(grid_token, `smoking:${item.token}`));
-                }
-
-                if(!smokingFilter?.is_active || smokingFilter.is_any) {
-                    return resolve();
-                }
-
-                //exclude if one or more selected filters have high importance
-                let added_tokens = [];
-                let is_high_importance = false;
-
-                for(let item of Object.values(smokingFilter.items)) {
-                    if(item.is_active && !item.is_negative && !item.deleted) {
-                        added_tokens.push(item.token);
-
-                        let importance = isNumeric(item.importance) ? item.importance : smokingService.importance.default;
-
-                        if(importance >= importance_threshold) {
-                            is_high_importance = true;
-                        }
-                    }
-                }
-
-                if(is_high_importance) {
-                    for(let option of section_options) {
-                        if(!added_tokens.includes(option.token)) {
-                            if(smokingFilter.is_send) {
-                                keys_sets_add.add(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `smokings:${option.token}`, 'send'));
-                            }
-
-                            if(smokingFilter.is_receive) {
-                                keys_sets_add.add(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `smokings:${option.token}`, 'receive'));
-                            }
-                        }
-                    }
-                }
-
-                resolve();
-            } catch(e) {
-                console.error('Error in updateSmoking:', e);
+            } catch (e) {
+                console.error(`Error in update ${sectionKey}:`, e);
                 reject(e);
             }
         });
@@ -1088,9 +1029,9 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
 
             await updateMultiFilter('relationships', relationshipService.getRelationshipStatus, relationshipService.importance.default);
 
-            await updateDrinking();
+            await updateSingleFilter('drinking', drinkingService.getDrinking, drinkingService.importance.default);
 
-            await updateSmoking();
+            await updateSingleFilter('smoking', smokingService.getSmoking, smokingService.importance.default);
         } else {
             if(filter_token === 'online') {
                 await updateOnline();
@@ -1125,11 +1066,11 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
             }
 
             if(filter_token === 'drinking') {
-                await updateDrinking();
+                await updateSingleFilter('drinking', drinkingService.getDrinking, drinkingService.importance.default);
             }
 
             if(filter_token === 'smoking') {
-                await updateSmoking();
+                await updateSingleFilter('smoking', smokingService.getSmoking, smokingService.importance.default);
             }
         }
 
