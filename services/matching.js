@@ -10,6 +10,7 @@ const { getGendersLookup } = require('./genders');
 const { getDrinking } = require('./drinking');
 const { getSmoking } = require('./smoking');
 const { getLifeStages } = require('./life_stages');
+const { getRelationshipStatus } = require('./relationships');
 
 const DEFAULT_DISTANCE_MILES = 20;
 
@@ -735,6 +736,164 @@ function getMatches(me, location = null, activity_type = null) {
         });
     }
 
+    function filterRelationships() {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const data_key = 'relationships';
+
+                let options = await getRelationshipStatus();
+                let section_key = cacheService.keys.persons_section_data(my_token, data_key);
+                let section_data = (await cacheService.getObj(section_key)) || {};
+
+                let pipeline = cacheService.startPipeline();
+
+                for (let grid_token of neighbor_grid_tokens) {
+                    for (let option of options) {
+                        // Get persons with this option
+                        pipeline.sMembers(cacheService.keys.persons_grid_set(
+                            grid_token,
+                            `${data_key}:${option.token}`
+                        ));
+
+                        // Get send/receive filter states
+                        pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(
+                            grid_token,
+                            `${data_key}:${option.token}`,
+                            'send'
+                        ));
+
+                        pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(
+                            grid_token,
+                            `${data_key}:${option.token}`,
+                            'receive'
+                        ));
+                    }
+                }
+
+                let results = await cacheService.execPipeline(pipeline);
+
+                let idx = 0;
+                let optionSets = {};
+                let excludeSend = {};
+                let excludeReceive = {};
+
+                // Process pipeline results for each grid
+                for (let grid_token of neighbor_grid_tokens) {
+                    for (let option of options) {
+                        if (!optionSets[option.token]) {
+                            optionSets[option.token] = {};
+                        }
+                        if (!excludeSend[option.token]) {
+                            excludeSend[option.token] = {};
+                        }
+                        if (!excludeReceive[option.token]) {
+                            excludeReceive[option.token] = {};
+                        }
+
+                        let members = results[idx++];
+                        for (let member of members) {
+                            optionSets[option.token][member] = true;
+                        }
+
+                        let sendExclusions = results[idx++];
+                        for (let token of sendExclusions) {
+                            excludeSend[option.token][token] = true;
+                        }
+
+                        let receiveExclusions = results[idx++];
+                        for (let token of receiveExclusions) {
+                            excludeReceive[option.token][token] = true;
+                        }
+                    }
+                }
+
+                let myOptionTokens = new Set();
+
+                for (let key in section_data) {
+                    if (!section_data[key].deleted) {
+                        myOptionTokens.add(section_data[key].token);
+                    }
+                }
+
+                // If no options set, handle exclusions
+                if (myOptionTokens.size === 0) {
+                    for (let option_token in excludeReceive) {
+                        for (let person_token in excludeReceive[option_token]) {
+                            exclude.send[person_token] = true;
+                        }
+                    }
+
+                    for (let option_token in excludeSend) {
+                        for (let person_token in excludeSend[option_token]) {
+                            exclude.receive[person_token] = true;
+                        }
+                    }
+                } else {
+                    for (let token in person_tokens) {
+                        let personOptionTokens = new Set();
+
+                        // Find all relationship statuses for this person
+                        for (let option_token in optionSets) {
+                            if (optionSets[option_token][token]) {
+                                personOptionTokens.add(option_token);
+                            }
+                        }
+
+                        if (personOptionTokens.size === 0) {
+                            // Exclude sending/receiving if filter specified with importance
+                            for (let k in excludeSend) {
+                                if (my_token in excludeSend[k]) {
+                                    exclude.send[token] = true;
+                                    break;
+                                }
+                            }
+
+                            for (let k in excludeReceive) {
+                                if (my_token in excludeReceive[k]) {
+                                    exclude.receive[token] = true;
+                                    break;
+                                }
+                            }
+                        } else {
+                            // Check bi-directional exclusions
+                            let shouldExcludeSend = true;
+                            let shouldExcludeReceive = true;
+
+                            // For each of my set options
+                            for (let myOption of myOptionTokens) {
+                                // For each of their set options
+                                for (let theirOption of personOptionTokens) {
+                                    // Check if they accept my option and I accept theirs
+                                    if (!(token in excludeReceive[myOption]) &&
+                                        !(my_token in excludeSend[theirOption])) {
+                                        shouldExcludeSend = false;
+                                    }
+
+                                    if (!(token in excludeSend[myOption]) &&
+                                        !(my_token in excludeReceive[theirOption])) {
+                                        shouldExcludeReceive = false;
+                                    }
+                                }
+                            }
+
+                            if (shouldExcludeSend) {
+                                exclude.send[token] = true;
+                            }
+                            if (shouldExcludeReceive) {
+                                exclude.receive[token] = true;
+                            }
+                        }
+                    }
+                }
+
+                resolve();
+            } catch (e) {
+                console.error('Error in filterRelationship:', e);
+                reject(e);
+            }
+        });
+    }
+
     function filterDrinking() {
         return new Promise(async (resolve, reject) => {
             try {
@@ -1071,6 +1230,10 @@ function getMatches(me, location = null, activity_type = null) {
             await getGridPersonTokens();
 
             console.log({
+                total_initial_persons: Object.keys(person_tokens).length
+            });
+
+            console.log({
                 person_tokens: timeNow() - t3
             });
 
@@ -1182,6 +1345,21 @@ function getMatches(me, location = null, activity_type = null) {
                 life: timeNow() - t
             });
 
+            t = timeNow();
+
+            await filterRelationships();
+
+            console.log({
+                after_relationships_excluded: {
+                    send: Object.keys(exclude.send).length,
+                    receive: Object.keys(exclude.receive).length,
+                }
+            });
+
+            console.log({
+                relationships: timeNow() - t
+            });
+
             let t10 = timeNow();
 
             await filterDrinking();
@@ -1225,6 +1403,10 @@ function getMatches(me, location = null, activity_type = null) {
             console.log({
                 memory_start,
                 memory_end
+            });
+
+            console.log({
+                final_persons: Object.keys(persons_not_excluded).length
             });
 
             resolve();

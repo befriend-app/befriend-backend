@@ -2,6 +2,8 @@ const cacheService = require('./cache');
 const dbService = require('./db');
 
 const lifeStageService = require('./life_stages');
+const relationshipService = require('./relationships');
+
 const drinkingService = require('./drinking');
 const smokingService = require('./smoking');
 
@@ -793,6 +795,97 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
         });
     }
 
+    function updateMultiFilter(sectionKey, getOptions, default_importance = 5, importance_threshold = 8) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let section_options = await getOptions();
+                let section_key = cacheService.keys.persons_section_data(person.person_token, sectionKey);
+                let section_data = (await cacheService.getObj(section_key)) || {};
+
+                let filter = person_filters[sectionKey];
+
+                //try key without s
+                if(!filter) {
+                    filter = person_filters[sectionKey.substring(0, sectionKey.length - 1)];
+                }
+
+                // Clear existing keys for this grid
+                for (let i = 0; i < section_options.length; i++) {
+                    let option = section_options[i];
+
+                    if (prev_grid_token) {
+                        keys_sets_del.add(cacheService.keys.persons_grid_set(prev_grid_token, `${sectionKey}:${option.token}`));
+                        keys_sets_del.add(cacheService.keys.persons_grid_exclude_send_receive(prev_grid_token, `${sectionKey}:${option.token}`, 'send'));
+                        keys_sets_del.add(cacheService.keys.persons_grid_exclude_send_receive(prev_grid_token, `${sectionKey}:${option.token}`, 'receive'));
+                    }
+
+                    keys_sets_del.add(cacheService.keys.persons_grid_set(grid_token, `${sectionKey}:${option.token}`));
+                    keys_sets_del.add(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `${sectionKey}:${option.token}`, 'send'));
+                    keys_sets_del.add(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `${sectionKey}:${option.token}`, 'receive'));
+                }
+
+                // Add person's section items to grid sets
+                for (let key in section_data) {
+                    let item = section_data[key];
+                    if (!item.deleted) {
+                        keys_sets_add.add(cacheService.keys.persons_grid_set(grid_token, `${sectionKey}:${item.token}`));
+                    }
+                }
+
+                if (!filter?.is_active) {
+                    return resolve();
+                }
+
+                let added_tokens = [];
+                let is_high_importance = false;
+
+                // Check selected filters for importance
+                let filterItems = Object.values(filter.items);
+                for (let i = 0; i < filterItems.length; i++) {
+                    let item = filterItems[i];
+                    if (item.is_active && !item.is_negative && !item.deleted) {
+                        added_tokens.push(item.token);
+
+                        let importance = isNumeric(item.importance) ? item.importance : default_importance;
+
+                        if (importance >= importance_threshold) {
+                            is_high_importance = true;
+                        }
+                    }
+                }
+
+                // If high importance filters are set, exclude non-matching options
+                if (is_high_importance) {
+                    for (let i = 0; i < section_options.length; i++) {
+                        let option = section_options[i];
+                        if (!added_tokens.includes(option.token)) {
+                            // Apply send exclusions
+                            if (filter.is_send) {
+                                keys_sets_add.add(cacheService.keys.persons_grid_exclude_send_receive(
+                                    grid_token,
+                                    `${sectionKey}:${option.token}`,
+                                    'send'
+                                ));
+                            }
+
+                            // Apply receive exclusions
+                            if (filter.is_receive) {
+                                keys_sets_add.add(cacheService.keys.persons_grid_exclude_send_receive(
+                                    grid_token,
+                                    `${sectionKey}:${option.token}`,
+                                    'receive'
+                                ));
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error(`Error in update ${sectionKey}:`, e);
+                return reject(e);
+            }
+        });
+    }
+
     function updateLifeStages() {
         return new Promise(async (resolve, reject) => {
             try {
@@ -875,6 +968,92 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                 resolve();
             } catch(e) {
                 console.error('Error in updateLifeStages:', e);
+                reject(e);
+            }
+        });
+    }
+
+    function updateRelationships() {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let data_key = 'relationships';
+                const importance_threshold = 8;
+
+                // Get life stage options
+                let section_options = await relationshipService.getRelationshipStatus();
+                let section_key = cacheService.keys.persons_section_data(person.person_token, data_key);
+                let section_data = (await cacheService.getObj(section_key)) || {};
+
+                let filter = person_filters.relationship;
+
+                // First clear all existing life stage keys for this grid
+                for(let option of section_options) {
+                    if(prev_grid_token) {
+                        keys_sets_del.add(cacheService.keys.persons_grid_set(prev_grid_token, `${data_key}:${option.token}`));
+                        keys_sets_del.add(cacheService.keys.persons_grid_exclude_send_receive(prev_grid_token, `${data_key}:${option.token}`, 'send'));
+                        keys_sets_del.add(cacheService.keys.persons_grid_exclude_send_receive(prev_grid_token, `${data_key}:${option.token}`, 'receive'));
+                    }
+
+                    keys_sets_del.add(cacheService.keys.persons_grid_set(grid_token, `${data_key}:${option.token}`));
+                    keys_sets_del.add(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `${data_key}:${option.token}`, 'send'));
+                    keys_sets_del.add(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `${data_key}:${option.token}`, 'receive'));
+                }
+
+                for(let k in section_data) {
+                    let item = section_data[k];
+
+                    if(!item.deleted) {
+                        keys_sets_add.add(cacheService.keys.persons_grid_set(grid_token, `${data_key}:${item.token}`));
+                    }
+                }
+
+                if(!filter?.is_active) {
+                    return resolve();
+                }
+
+                let added_tokens = [];
+                let is_high_importance = false;
+
+                for(let item of Object.values(filter.items)) {
+                    if(item.is_active && !item.is_negative && !item.deleted) {
+                        added_tokens.push(item.token);
+
+                        let importance = isNumeric(item.importance) ? item.importance : relationshipService.importance.default;
+
+                        if(importance >= importance_threshold) {
+                            is_high_importance = true;
+                        }
+                    }
+                }
+
+                // If high importance filters are set, exclude non-matching options
+                if(is_high_importance) {
+                    for(let option of section_options) {
+                        if(!added_tokens.includes(option.token)) {
+                            // Apply send exclusions
+                            if(filter.is_send) {
+                                keys_sets_add.add(cacheService.keys.persons_grid_exclude_send_receive(
+                                    grid_token,
+                                    `${data_key}:${option.token}`,
+                                    'send'
+                                ));
+                            }
+
+                            // Apply receive exclusions
+                            if(filter.is_receive) {
+                                keys_sets_add.add(cacheService.keys.persons_grid_exclude_send_receive(
+                                    grid_token,
+                                    `${data_key}:${option.token}`,
+                                    'receive'
+                                ));
+                            }
+                        }
+                    }
+                }
+
+                resolve();
+            } catch(e) {
+                console.error('Error in update relationship:', e);
                 reject(e);
             }
         });
@@ -1078,7 +1257,9 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
 
             await updateGenders();
 
-            await updateLifeStages();
+            await updateMultiFilter('life_stages', lifeStageService.getLifeStages, lifeStageService.importance.default);
+
+            await updateMultiFilter('relationships', relationshipService.getRelationshipStatus, relationshipService.importance.default);
 
             await updateDrinking();
 
@@ -1108,8 +1289,12 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                 await updateGenders();
             }
 
-            if(filter_token === 'life_stages') {
-                await updateLifeStages();
+            if(filter_token.startsWith('life_stage')) {
+                await updateMultiFilter('life_stages', lifeStageService.getLifeStages, lifeStageService.importance.default);
+            }
+
+            if(filter_token.startsWith('relationship')) {
+                await updateMultiFilter('relationships', relationshipService.getRelationshipStatus, relationshipService.importance.default);
             }
 
             if(filter_token === 'drinking') {
