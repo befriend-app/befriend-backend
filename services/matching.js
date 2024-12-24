@@ -5,7 +5,7 @@ let gridService = require('../services/grid');
 const { getPersonFilters } = require('./filters');
 const { kms_per_mile, timeNow } = require('./shared');
 const { getNetworksForFilters } = require('./network');
-const { getModes } = require('./modes');
+const { getModes, getPersonExcludedModes } = require('./modes');
 
 const DEFAULT_DISTANCE_MILES = 20;
 
@@ -213,130 +213,109 @@ function getMatches(person, activity_type = null) {
     function filterModes() {
         return new Promise(async (resolve, reject) => {
             try {
-                let sendMatches = {};
-                let receiveMatches = {};
+                // Get all modes, not just excluded ones
+                let modeTypes = Object.values((await getModes())?.byId);
+                let excluded_modes = await getPersonExcludedModes(person, person_filters);
+                let included_modes = {
+                    send: [],
+                    receive: []
+                };
 
-                // Get modes data
-                let personModes = person.modes;
-                let personSelectedModes = personModes?.selected || [];
-                let modes = await getModes();
-                let modesFilter = person_filters.modes;
+                for(let mode of modeTypes) {
+                    if(!excluded_modes.send.has(mode.token)) {
+                        included_modes.send.push(mode.token);
+                    }
+
+                    if(!excluded_modes.receive.has(mode.token)) {
+                        included_modes.receive.push(mode.token);
+                    }
+                }
 
                 let pipeline = cacheService.startPipeline();
 
-                for(let mode of personSelectedModes) {
+                // Check all modes for send
+                for(let mode of modeTypes) {
                     for (let grid_token of neighbor_grid_tokens) {
-                        pipeline.sMembers(cacheService.keys.persons_grid_set(grid_token, `modes:${mode}`));
-                        pipeline.sMembers(cacheService.keys.persons_grid_send_receive(grid_token, mode, 'send'));
-                        pipeline.sMembers(cacheService.keys.persons_grid_send_receive(grid_token, mode, 'receive'));
+                        pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(
+                            grid_token,
+                            `modes:${mode.token}`,
+                            'send'
+                        ));
+                    }
+                }
+
+                // Check all modes for receive
+                for(let mode of modeTypes) {
+                    for(let grid_token of neighbor_grid_tokens) {
+                        pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(
+                            grid_token,
+                            `modes:${mode.token}`,
+                            'receive'
+                        ));
                     }
                 }
 
                 let results = await cacheService.execPipeline(pipeline);
 
                 let idx = 0;
-                let modesPersonTokens = {};
-                let sendMode = {};
-                let receiveMode = {};
 
-                for(let mode of personSelectedModes) {
-                    modesPersonTokens[mode] = {};
-                    sendMode[mode] = {};
-                    receiveMode[mode] = {};
+                let excludeModesSend = {};
+                let excludeModesReceive = {};
+
+                // Process send results
+                for(let mode of modeTypes) {
+                    excludeModesSend[mode.token] = {};
 
                     for (let grid_token of neighbor_grid_tokens) {
-                        let person_tokens = results[idx++];
-                        let send_tokens = results[idx++];
-                        let receive_tokens = results[idx++];
+                        let excludeSend = results[idx++];
 
-                        for(let token of person_tokens) {
-                            modesPersonTokens[mode][token] = true
-                        }
-
-                        for(let token of send_tokens) {
-                            sendMode[mode][token] = true
-                        }
-
-                        for(let token of receive_tokens) {
-                            receiveMode[mode][token] = true
+                        for (let token of excludeSend) {
+                            excludeModesSend[mode.token][token] = true;
                         }
                     }
                 }
 
-                if (!modesFilter?.is_active) {
-                    // If filter is off, use all modes for both send and receive
-                    for (let mode of personSelectedModes) {
-                        for (let token in modesPersonTokens[mode]) {
-                            if(sendMode[mode][token]) {
-                                sendMatches[token] = true;
-                            }
+                // Process receive results
+                for(let mode of modeTypes) {
+                    excludeModesReceive[mode.token] = {};
 
-                            if(receiveMode[mode][token]) {
-                                receiveMatches[token] = true;
-                            }
-                        }
-                    }
-                } else {
-                    // Get active filter modes (non-negative, non-deleted)
-                    const activeFilterModes = Object.values(modesFilter.items || {})
-                        .filter(item => item.is_active && !item.is_negative && !item.deleted)
-                        .map(item => modes.byId[item.mode_id]?.token)
-                        .filter(Boolean);
+                    for (let grid_token of neighbor_grid_tokens) {
+                        let excludeReceive = results[idx++];
 
-                    // Handle send matches
-                    if (!modesFilter.is_send) {
-                        // If send is disabled, use all selected modes for send matches
-                        for (let mode of personSelectedModes) {
-                            for (let token in modesPersonTokens[mode]) {
-                                if (sendMode[mode][token]) {
-                                    sendMatches[token] = true;
-                                }
-                            }
-                        }
-                    } else {
-                        // If send is enabled, only use modes that are in both selected modes and filter modes
-                        for (let mode of personSelectedModes) {
-                            if (activeFilterModes.includes(mode)) {
-                                for (let token in modesPersonTokens[mode]) {
-                                    if (sendMode[mode][token]) {
-                                        sendMatches[token] = true;
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // Handle receive matches
-                    if (!modesFilter.is_receive) {
-                        // If receive is disabled, use all selected modes for receive matches
-                        for (let mode of personSelectedModes) {
-                            for (let token in modesPersonTokens[mode]) {
-                                if (receiveMode[mode][token]) {
-                                    receiveMatches[token] = true;
-                                }
-                            }
-                        }
-                    } else {
-                        // If receive is enabled, only use modes that are in both selected modes and filter modes
-                        for (let mode of personSelectedModes) {
-                            if (activeFilterModes.includes(mode)) {
-                                for (let token in modesPersonTokens[mode]) {
-                                    if (receiveMode[mode][token]) {
-                                        receiveMatches[token] = true;
-                                    }
-                                }
-                            }
+                        for (let token of excludeReceive) {
+                            excludeModesReceive[mode.token][token] = true;
                         }
                     }
                 }
 
-                // Update excluded sets based on matches
-                for (let token in person_tokens) {
-                    if (!sendMatches[token]) {
+                for(let token in person_tokens) {
+                    //send
+                    let hasSendModeMatch = false;
+
+                    for(let includedMode of included_modes.send) {
+                        // If not excluded from receiving
+                        if(!(token in excludeModesReceive[includedMode])) {
+                            hasSendModeMatch = true;
+                            break;
+                        }
+                    }
+
+                    if(!hasSendModeMatch) {
                         exclude.send[token] = true;
                     }
 
-                    if (!receiveMatches[token]) {
+                    //receive
+                    let hasReceiveModeMatch = false;
+
+                    for(let includedMode of included_modes.receive) {
+                        // If not excluded from sending
+                        if(!(token in excludeModesSend[includedMode])) {
+                            hasReceiveModeMatch = true;
+                            break;
+                        }
+                    }
+
+                    if(!hasReceiveModeMatch) {
                         exclude.receive[token] = true;
                     }
                 }
@@ -466,7 +445,6 @@ function getMatches(person, activity_type = null) {
         });
     }
 
-
     return new Promise(async (resolve, reject) => {
         try {
             if (!person) {
@@ -483,6 +461,7 @@ function getMatches(person, activity_type = null) {
             });
 
             let t2 = timeNow();
+
             await getGridTokens();
 
             let memory_end = process.memoryUsage().heapTotal / 1024 / 1024;

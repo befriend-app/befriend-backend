@@ -76,6 +76,7 @@ const keyFunctions = {
     person_sections: (token) => `persons:me:sections:${token}`,
     persons_section_data: (token, dataName) => `persons:me:sections:data:${dataName}:${token}`,
     persons_grid_set: (gridToken, key) => `persons:grid:${gridToken}:set:${key}`,
+    persons_grid_exclude: (gridToken, key, send_or_receive) => `persons:grid:${gridToken}:exclude:${key}`,
     persons_grid_exclude_send_receive: (gridToken, key, send_or_receive) => `persons:grid:${gridToken}:exclude:${key}:${send_or_receive}`,
     persons_grid_send_receive: (gridToken, key, send_or_receive) => `persons:grid:${gridToken}:${key}:${send_or_receive}`,
 

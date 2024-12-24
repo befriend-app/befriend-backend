@@ -1,6 +1,6 @@
 const cacheService = require('./cache');
 const dbService = require('./db');
-const { getModes } = require('./modes');
+const { getModes, getPersonExcludedModes } = require('./modes');
 const { getNetworksForFilters } = require('./network');
 
 const filterMappings = {
@@ -459,6 +459,18 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
     let allNetworks, network_token, grid_token, keys_sets_add,keys_sets_del,
         keys_sorted_del, keys_sorted_add, rem_pipeline, add_pipeline;
 
+    function updateOnline() {
+        if(prev_grid_token) {
+            keys_sets_del.add(cacheService.keys.persons_grid_exclude(prev_grid_token, 'online'));
+        }
+
+        if(person.is_online) {
+            keys_sets_del.add(cacheService.keys.persons_grid_exclude(grid_token, 'online'));
+        } else {
+            keys_sets_add.add(cacheService.keys.persons_grid_exclude(grid_token, 'online'));
+        }
+    }
+
     function updateNetworks() {
         return new Promise(async (resolve, reject) => {
             try {
@@ -552,79 +564,26 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
     function updateModes() {
         return new Promise(async (resolve, reject) => {
             try {
-                let personModes = person.modes;
-                let personSelectedModes = personModes?.selected || [];
                 let modes = await getModes();
-                let modesFilter = person_filters.modes;
 
-                //person modes
-                //validate partner
-                if (personSelectedModes.includes('mode-partner')) {
-                    if (!personModes?.partner ||
-                        personModes.partner.deleted ||
-                        !personModes.partner.gender_id) {
-                        personSelectedModes = personSelectedModes.filter(item => item !== 'mode-partner');
-                    }
-                }
-
-                //validate kids
-                if (personSelectedModes.includes('mode-kids')) {
-                    if (!personModes?.kids) {
-                        personSelectedModes = personSelectedModes.filter(item => item !== 'mode-kids');
-                    } else {
-                        const hasValidKid = Object.values(personModes.kids).some(kid =>
-                            !kid.deleted &&
-                            kid.gender_id &&
-                            kid.age_id &&
-                            kid.is_active
-                        );
-
-                        if (!hasValidKid) {
-                            personSelectedModes = personSelectedModes.filter(item => item !== 'mode-kids');
-                        }
-                    }
-                }
-
-                for(let mode of personSelectedModes) {
-                    keys_sets_add.add(cacheService.keys.persons_grid_set(grid_token, `modes:${mode}`));
-                }
+                let excluded_modes = await getPersonExcludedModes(person, person_filters);
 
                 for(let mode of Object.values(modes.byId) || {}) {
-                   keys_sets_del.add(cacheService.keys.persons_grid_set(grid_token, `modes:${mode.token}`));
-
-                   keys_sets_del.add(cacheService.keys.persons_grid_send_receive(grid_token, mode.token, 'send'));
-                   keys_sets_del.add(cacheService.keys.persons_grid_send_receive(grid_token, mode.token, 'receive'));
+                   keys_sets_del.add(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `modes:${mode.token}`, 'send'));
+                   keys_sets_del.add(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `modes:${mode.token}`, 'receive'));
 
                     if(prev_grid_token) {
-                       keys_sets_del.add(cacheService.keys.persons_grid_set(prev_grid_token, `modes:${mode.token}`));
-
-                       keys_sets_del.add(cacheService.keys.persons_grid_send_receive(prev_grid_token, mode.token, 'send'));
-                       keys_sets_del.add(cacheService.keys.persons_grid_send_receive(prev_grid_token, mode.token, 'receive'));
+                        keys_sets_del.add(cacheService.keys.persons_grid_exclude_send_receive(prev_grid_token, `modes:${mode.token}`, 'send'));
+                        keys_sets_del.add(cacheService.keys.persons_grid_exclude_send_receive(prev_grid_token, `modes:${mode.token}`, 'receive'));
                     }
+                }
 
-                    if(!modesFilter?.is_active) {
-                        keys_sets_add.add(cacheService.keys.persons_grid_send_receive(grid_token, mode.token, 'send'));
-                        keys_sets_add.add(cacheService.keys.persons_grid_send_receive(grid_token, mode.token, 'receive'));
-                    } else {
-                        let modeItem = Object.values(modesFilter.items || {})
-                            .find(item => item.mode_id === mode.id);
+                for(let mode_token of excluded_modes.send) {
+                    keys_sets_add.add(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `modes:${mode_token}`, 'send'));
+                }
 
-                        if(modesFilter?.is_send) {
-                            if(modeItem && modeItem.is_active && !modeItem.is_negative && !modeItem.deleted) {
-                                keys_sets_add.add(cacheService.keys.persons_grid_send_receive(grid_token, mode.token, 'send'));
-                            }
-                        } else {
-                            keys_sets_add.add(cacheService.keys.persons_grid_send_receive(grid_token, mode.token, 'send'));
-                        }
-
-                        if(modesFilter?.is_receive) {
-                            if(modeItem && modeItem.is_active && !modeItem.is_negative && !modeItem.deleted) {
-                                keys_sets_add.add(cacheService.keys.persons_grid_send_receive(grid_token, mode.token, 'receive'));
-                            }
-                        } else {
-                            keys_sets_add.add(cacheService.keys.persons_grid_send_receive(grid_token, mode.token, 'receive'));
-                        }
-                    }
+                for(let mode_token of excluded_modes.receive) {
+                    keys_sets_add.add(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `modes:${mode_token}`, 'receive'));
                 }
             } catch(e) {
                 console.error(e);
@@ -711,6 +670,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
     }
     
     function updateAge() {
+        return;
         let agesFilter = person_filters.ages;
 
         const sendKey = cacheService.keys.persons_grid_send_receive(grid_token, 'ages', 'send');
@@ -750,6 +710,12 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
             keys_sets_del.add(sendKey);
             keys_sets_del.add(receiveKey);
         }
+    }
+
+    function updateGenders() {
+        return new Promise(async (resolve, reject) => {
+
+        });
     }
 
     return new Promise(async (resolve, reject) => {
@@ -792,25 +758,26 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
         add_pipeline = cacheService.startPipeline();
 
         if(prev_grid_token) {
+            await updateOnline();
+
             await updateNetworks();
 
             // location
             keys_sets_del.add(cacheService.keys.persons_grid_set(prev_grid_token, 'location'));
             keys_sets_add.add(cacheService.keys.persons_grid_set(grid_token, 'location'));
 
-            // online
-            keys_sets_del.add(cacheService.keys.persons_grid_set(prev_grid_token, 'online'));
-            keys_sets_add.add(cacheService.keys.persons_grid_set(grid_token, 'online'));
-
-            // modes
             await updateModes();
 
-            // verifications
             await updateVerifications();
             
             await updateAge();
+
+            await updateGenders();
         } else {
-            //networks
+            if(filter_token === 'online') {
+                await updateOnline();
+            }
+
             if(filter_token === 'networks') {
                 await updateNetworks();
             }
@@ -825,6 +792,10 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
             
             if(filter_token === 'ages') {
                 await updateAge();
+            }
+
+            if(filter_token === 'genders') {
+                await updateGenders();
             }
         }
 

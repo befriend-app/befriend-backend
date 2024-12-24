@@ -1423,6 +1423,8 @@ function putGender(req, res) {
 
             await cacheService.setCache(person_filter_cache_key, person_filters);
 
+            await updateGridSets(person, person_filters, 'genders');
+
             res.json({
                 success: true,
             });

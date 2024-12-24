@@ -183,27 +183,8 @@ module.exports = {
                     //merge updated data for cache
                     Object.assign(person, data);
 
-                    //update grid cache sets
-                    if(person.grid?.token) {
-                        let cache_key;
-
-                        let addToSet = false;
-
-                        if('is_online' in data) {
-                            cache_key = cacheService.keys.persons_grid_set(person.grid.token, 'online');
-
-                            if(data.is_online) {
-                                addToSet = true;
-                            }
-                        }
-
-                        if(cache_key) {
-                            if(addToSet) {
-                                await cacheService.addItemToSet(cache_key, person.person_token);
-                            } else {
-                                await cacheService.removeMemberFromSet(cache_key, person.person_token);
-                            }
-                        }
+                    if('is_online' in data) {
+                        await updateGridSets(person, null, 'online');
                     }
                 }
 

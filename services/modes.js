@@ -91,6 +91,111 @@ function getKidAgeOptions() {
     });
 }
 
+function getPersonExcludedModes(person, person_filters) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let personModes = person.modes;
+            let personSelectedModes = personModes?.selected || [];
+            let modesFilter = person_filters.modes;
+
+            let hasValidPartner = false;
+            let hasValidKid = false;
+
+            let soloModeItem = Object.values(modesFilter.items || {})
+                .find(item => item.mode_token === 'mode-solo');
+
+            let partnerModeItem = Object.values(modesFilter.items || {})
+                .find(item => item.mode_token === 'mode-partner');
+
+            let kidsModeItem = Object.values(modesFilter.items || {})
+                .find(item => item.mode_token === 'mode-kids');
+
+            let exclude_send = new Set();
+            let exclude_receive = new Set();
+
+            if(!personSelectedModes.includes('mode-solo')) {
+                exclude_send.add('mode-solo');
+                exclude_receive.add('mode-solo');
+            } else {
+                if(!soloModeItem?.is_active || soloModeItem?.is_negative) {
+                    if(modesFilter.is_active) {
+                        if(modesFilter.is_send) {
+                            exclude_send.add('mode-solo');
+                        }
+
+                        if(modesFilter.is_receive) {
+                            exclude_receive.add('mode-solo');
+                        }
+                    }
+                }
+            }
+
+            if(!personSelectedModes.includes('mode-partner')) {
+                exclude_send.add('mode-partner');
+                exclude_receive.add('mode-partner');
+            } else {
+                hasValidPartner = personModes?.partner &&
+                    !personModes.partner.deleted &&
+                    personModes.partner.gender_id;
+
+                if (!hasValidPartner) {
+                    exclude_send.add('mode-partner');
+                    exclude_receive.add('mode-partner');
+                }
+
+                if(!partnerModeItem || !partnerModeItem.is_active || partnerModeItem.is_negative) {
+                    if(modesFilter.is_active) {
+                        if(modesFilter.is_send) {
+                            exclude_send.add('mode-partner');
+                        }
+
+                        if(modesFilter.is_receive) {
+                            exclude_receive.add('mode-partner');
+                        }
+                    }
+                }
+            }
+
+            if(!personSelectedModes.includes('mode-kids')) {
+                exclude_send.add('mode-kids');
+                exclude_receive.add('mode-kids');
+            } else {
+                hasValidKid = Object.values(personModes.kids || {}).some(kid =>
+                    !kid.deleted &&
+                    kid.gender_id &&
+                    kid.age_id &&
+                    kid.is_active
+                );
+
+                if (!hasValidKid) {
+                    exclude_send.add('mode-kids');
+                    exclude_receive.add('mode-kids');
+                }
+
+                if(!kidsModeItem || !kidsModeItem.is_active || kidsModeItem.is_negative) {
+                    if(modesFilter.is_active) {
+                        if(modesFilter.is_send) {
+                            exclude_send.add('mode-kids');
+                        }
+
+                        if(modesFilter.is_receive) {
+                            exclude_receive.add('mode-kids');
+                        }
+                    }
+                }
+            }
+
+            resolve({
+                send: exclude_send,
+                receive: exclude_receive,
+            });
+        } catch(e) {
+            console.error(e);
+            return reject(e);
+        }
+    });
+}
+
 module.exports = {
     modes: {
         data: appModes,
@@ -98,5 +203,6 @@ module.exports = {
     },
     kidAgeOptions: null,
     getModes,
-    getKidAgeOptions
+    getKidAgeOptions,
+    getPersonExcludedModes
 };
