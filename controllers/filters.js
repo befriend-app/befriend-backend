@@ -474,6 +474,8 @@ function putImportance(req, res) {
 
             await cacheService.setCache(person_filter_cache_key, person_filters);
 
+            await updateGridSets(person, person_filters, section);
+
             res.json('Updated');
         } catch (e) {
             console.error(e);
