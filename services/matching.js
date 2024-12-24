@@ -11,8 +11,8 @@ const { getDrinking } = require('./drinking');
 
 const DEFAULT_DISTANCE_MILES = 20;
 
-function getMatches(person, location = null, activity_type = null) {
-    let person_filters;
+function getMatches(me, location = null, activity_type = null) {
+    let my_filters, my_token;
     let neighbor_grid_tokens = [];
     let person_tokens = {};
 
@@ -29,25 +29,25 @@ function getMatches(person, location = null, activity_type = null) {
     function getGridTokens() {
         return new Promise(async (resolve, reject) => {
             try {
-                let person_grid_token = person.grid?.token;
+                let my_grid_token = me.grid?.token;
 
-                if (!person_grid_token) {
+                if (!my_grid_token) {
                     return reject('Grid token required');
                 }
 
-                neighbor_grid_tokens.push(person_grid_token);
+                neighbor_grid_tokens.push(my_grid_token);
 
                 let max_distance = DEFAULT_DISTANCE_MILES;
 
-                if (person_filters.distance?.is_active &&
-                    person_filters.distance.is_send &&
-                    person_filters.distance.filter_value) {
-                    max_distance = person_filters.distance.filter_value;
+                if (my_filters.distance?.is_active &&
+                    my_filters.distance.is_send &&
+                    my_filters.distance.filter_value) {
+                    max_distance = my_filters.distance.filter_value;
                 }
 
                 max_distance *= kms_per_mile;
 
-                let grids = await gridService.findNearby(person.location_lat, person.location_lon, max_distance);
+                let grids = await gridService.findNearby(me.location_lat, me.location_lon, max_distance);
 
                 for(let grid of grids) {
                     if (!neighbor_grid_tokens.includes(grid.token)) {
@@ -90,8 +90,6 @@ function getMatches(person, location = null, activity_type = null) {
         });
     }
 
-    let onlineTime = {redis: 0, loops: 0};
-
     function filterOnlineStatus() {
         return new Promise(async (resolve, reject) => {
             try {
@@ -107,8 +105,6 @@ function getMatches(person, location = null, activity_type = null) {
 
                 let results_offline = await cacheService.execPipeline(pipeline_offline);
 
-                onlineTime.redis += timeNow() - t;
-
                 let t2 = timeNow();
 
                 for (let grid of results_offline) {
@@ -117,8 +113,6 @@ function getMatches(person, location = null, activity_type = null) {
                         exclude.receive[token] = true;
                     }
                 }
-
-                onlineTime.loops += timeNow() - t2;
 
                 resolve();
             } catch (e) {
@@ -168,7 +162,7 @@ function getMatches(person, location = null, activity_type = null) {
         return new Promise(async (resolve, reject) => {
             try {
                 let allNetworks = await getNetworksForFilters();
-                let network_token = allNetworks.networks?.find(network => network.id === person.network_id)?.network_token;
+                let network_token = allNetworks.networks?.find(network => network.id === me.network_id)?.network_token;
 
                 if(!network_token) {
                     return resolve();
@@ -211,7 +205,7 @@ function getMatches(person, location = null, activity_type = null) {
             try {
                 // Get all modes, not just excluded ones
                 let modeTypes = Object.values((await getModes())?.byId);
-                let excluded_modes = await getPersonExcludedModes(person, person_filters);
+                let excluded_modes = await getPersonExcludedModes(me, my_filters);
                 let included_modes = {
                     send: [],
                     receive: []
@@ -378,17 +372,17 @@ function getMatches(person, location = null, activity_type = null) {
                 
                 for(let token in person_tokens) {
                     for(let type of verificationTypes) {
-                        if(person[`is_verified_${type}`]) {
+                        if(me[`is_verified_${type}`]) {
                             //if filter enabled
-                            if(person_filters.verifications?.is_active && person_filters[`verification_${type}`]?.is_active) {
-                                if(person_filters[`verification_${type}`].is_send) {
+                            if(my_filters.verifications?.is_active && my_filters[`verification_${type}`]?.is_active) {
+                                if(my_filters[`verification_${type}`].is_send) {
                                     //send to verified only
                                     if(!verifiedPersons[type][token]) {
                                         exclude.send[token] = true;
                                     }
                                 }
 
-                                if(person_filters[`verification_${type}`].is_receive) {
+                                if(my_filters[`verification_${type}`].is_receive) {
                                     //receive from verified only
                                     if(!verifiedPersons[type][token]) {
                                         exclude.receive[token] = true;
@@ -449,7 +443,7 @@ function getMatches(person, location = null, activity_type = null) {
 
                 let pipeline = cacheService.startPipeline();
 
-                let myGender = gendersLookup.byId[person?.gender_id];
+                let myGender = gendersLookup.byId[me?.gender_id]?.gender_token;
 
                 for (let grid_token of neighbor_grid_tokens) {
                     // Get all gender set members
@@ -530,26 +524,45 @@ function getMatches(person, location = null, activity_type = null) {
                     }
                 }
 
-                // Process each person token
-                for (let token in person_tokens) {
-                    // Get person's gender
-                    let personGender = null;
+                //if gender not set, exclude for all excluded
+                if(!myGender) {
+                    for(let gender_token in genderExcludeReceive) {
+                        let tokens = genderExcludeReceive[gender_token];
 
-                    for (let genderToken in genderSets) {
-                        if (genderSets[genderToken][token]) {
-                            personGender = genderToken;
-                            break;
+                        for(let token in tokens) {
+                            exclude.send[token] = true;
                         }
                     }
 
-                    // Check send permissions
-                    if (!personGender || token in genderExcludeReceive[personGender]) {
-                        exclude.send[token] = true;
-                    }
+                    for(let gender_token in genderExcludeSend) {
+                        let tokens = genderExcludeSend[gender_token];
 
-                    // Check receive permissions
-                    if (!personGender || token in genderExcludeSend[personGender]) {
-                        exclude.receive[token] = true;
+                        for(let token in tokens) {
+                            exclude.receive[token] = true;
+                        }
+                    }
+                } else {
+                    // Process each person token
+                    for (let token in person_tokens) {
+                        // Get person's gender
+                        let personGender = null;
+
+                        for (let genderToken in genderSets) {
+                            if (genderSets[genderToken][token]) {
+                                personGender = genderToken;
+                                break;
+                            }
+                        }
+
+                        // Exclude send if person has excluded my gender or I have excluded the person's gender
+                        if (token in genderExcludeReceive[myGender] || my_token in genderExcludeReceive[personGender]) {
+                            exclude.send[token] = true;
+                        }
+
+                        // Exclude receive if person has excluded my gender or I have excluded the person's gender
+                        if (token in genderExcludeSend[myGender] || my_token in genderExcludeSend[personGender]) {
+                            exclude.receive[token] = true;
+                        }
                     }
                 }
 
@@ -565,7 +578,7 @@ function getMatches(person, location = null, activity_type = null) {
         return new Promise(async (resolve, reject) => {
             try {
                 let drinkingOptions = await getDrinking();
-                let section_key = cacheService.keys.persons_section_data(person.person_token, 'drinking');
+                let section_key = cacheService.keys.persons_section_data(my_token, 'drinking');
                 let section_data = (await cacheService.getObj(section_key)) || {};
 
                 let pipeline = cacheService.startPipeline();
@@ -656,17 +669,19 @@ function getMatches(person, location = null, activity_type = null) {
 
     return new Promise(async (resolve, reject) => {
         try {
-            if (!person) {
+            if (!me) {
                 return reject("Person required");
             }
+            
+            my_token = me.person_token;
 
             let memory_start = process.memoryUsage().heapTotal / 1024 / 1024;
 
             let t1 = timeNow();
-            person_filters = await getPersonFilters(person);
+            my_filters = await getPersonFilters(me);
 
             console.log({
-                person_filters: timeNow() - t1
+                my_filters: timeNow() - t1
             });
 
             let t2 = timeNow();
