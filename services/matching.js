@@ -1191,6 +1191,197 @@ function getMatches(me, location = null, activity_type = null) {
         });
     }
 
+    function filterSection(sectionKey, getOptions, isMultiSelect) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let options = await getOptions();
+                let sectionDataKey = cacheService.keys.persons_section_data(my_token, sectionKey);
+                let sectionData = (await cacheService.getObj(sectionDataKey)) || {};
+
+                // Build sets for my selected options
+                let myOptionTokens = new Set();
+
+                if (isMultiSelect) {
+                    for (let key in sectionData) {
+                        if (!sectionData[key].deleted) {
+                            myOptionTokens.add(sectionData[key].token);
+                        }
+                    }
+                } else if (Object.keys(sectionData).length) {
+                    let item = Object.values(sectionData)[0];
+                    myOptionTokens.add(item.token);
+                }
+
+                let pipeline = cacheService.startPipeline();
+
+                // Get all set members and exclusions for each grid and option
+                for (let grid_token of neighbor_grid_tokens) {
+                    for (let option of options) {
+                        // Get persons with this option
+                        pipeline.sMembers(cacheService.keys.persons_grid_set(
+                            grid_token,
+                            `${sectionKey}:${option.token}`
+                        ));
+                    }
+
+                    // Get excluded send/receive states
+                    for (let option of options) {
+                        pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(
+                            grid_token,
+                            `${sectionKey}:${option.token}`,
+                            'send'
+                        ));
+
+                        pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(
+                            grid_token,
+                            `${sectionKey}:${option.token}`,
+                            'receive'
+                        ));
+                    }
+                }
+
+                let results = await cacheService.execPipeline(pipeline);
+
+                let idx = 0;
+                let optionSets = {};
+                let excludeSend = {};
+                let excludeReceive = {};
+
+                // Process pipeline results for each grid
+                for (let grid_token of neighbor_grid_tokens) {
+                    // Process option set memberships
+                    for (let option of options) {
+                        if (!optionSets[option.token]) {
+                            optionSets[option.token] = {};
+                        }
+
+                        let members = results[idx++];
+                        for (let member of members) {
+                            optionSets[option.token][member] = true;
+                        }
+                    }
+
+                    // Process exclusions
+                    for (let option of options) {
+                        if (!excludeSend[option.token]) {
+                            excludeSend[option.token] = {};
+                        }
+                        if (!excludeReceive[option.token]) {
+                            excludeReceive[option.token] = {};
+                        }
+
+                        // Send exclusions
+                        let sendExclusions = results[idx++];
+                        for (let token of sendExclusions) {
+                            excludeSend[option.token][token] = true;
+                        }
+
+                        // Receive exclusions
+                        let receiveExclusions = results[idx++];
+                        for (let token of receiveExclusions) {
+                            excludeReceive[option.token][token] = true;
+                        }
+                    }
+                }
+
+                // If no options set, handle exclusions
+                if (myOptionTokens.size === 0) {
+                    for (let optionToken in excludeReceive) {
+                        for (let token in excludeReceive[optionToken]) {
+                            exclude.send[token] = true;
+                        }
+                    }
+
+                    for (let optionToken in excludeSend) {
+                        for (let token in excludeSend[optionToken]) {
+                            exclude.receive[token] = true;
+                        }
+                    }
+
+                    return resolve();
+                }
+
+                // Process each person token
+                for (let token in person_tokens) {
+                    let personOptionTokens = new Set();
+
+                    // Find all options for this person
+                    for (let optionToken in optionSets) {
+                        if (optionSets[optionToken][token]) {
+                            personOptionTokens.add(optionToken);
+                        }
+                    }
+
+                    if (personOptionTokens.size === 0) {
+                        // Exclude sending/receiving if filter specified with importance
+                        for (let k in excludeSend) {
+                            if (my_token in excludeSend[k]) {
+                                exclude.send[token] = true;
+                                break;
+                            }
+                        }
+
+                        for (let k in excludeReceive) {
+                            if (my_token in excludeReceive[k]) {
+                                exclude.receive[token] = true;
+                                break;
+                            }
+                        }
+                    } else if (isMultiSelect) {
+                        // Check bi-directional exclusions for multi-select
+                        let shouldExcludeSend = true;
+                        let shouldExcludeReceive = true;
+
+                        // For each of my options
+                        for (let myOption of myOptionTokens) {
+                            // For each of their options
+                            for (let theirOption of personOptionTokens) {
+                                // Check if they accept my option and I accept theirs
+                                if (!(token in excludeReceive[myOption]) &&
+                                    !(my_token in excludeSend[theirOption])) {
+                                    shouldExcludeSend = false;
+                                }
+
+                                if (!(token in excludeSend[myOption]) &&
+                                    !(my_token in excludeReceive[theirOption])) {
+                                    shouldExcludeReceive = false;
+                                }
+                            }
+                        }
+
+                        if (shouldExcludeSend) {
+                            exclude.send[token] = true;
+                        }
+                        if (shouldExcludeReceive) {
+                            exclude.receive[token] = true;
+                        }
+                    } else {
+                        // Handle single-select exclusions
+                        let personOption = Array.from(personOptionTokens)[0];
+                        let myOption = Array.from(myOptionTokens)[0];
+
+                        // Exclude send if person has excluded my option or I have excluded their option
+                        if (token in excludeReceive[myOption] ||
+                            my_token in excludeSend[personOption]) {
+                            exclude.send[token] = true;
+                        }
+
+                        // Exclude receive if person has excluded my option or I have excluded their option
+                        if (token in excludeSend[myOption] ||
+                            my_token in excludeReceive[personOption]) {
+                            exclude.receive[token] = true;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error(`Error in filterSection for ${sectionKey}:`, e);
+                return reject(e);
+            }
+
+            resolve();
+        });
+    }
+
     function setNotExcluded() {
         for(let person_token in person_tokens) {
             if(!(person_token in exclude.send) || !(person_token in exclude.receive)) {
@@ -1332,7 +1523,8 @@ function getMatches(me, location = null, activity_type = null) {
             });
 
             let t = timeNow();
-            await filterLifeStages();
+
+            await filterSection('life_stages', getLifeStages, true);
 
             console.log({
                 after_life_excluded: {
@@ -1347,7 +1539,7 @@ function getMatches(me, location = null, activity_type = null) {
 
             t = timeNow();
 
-            await filterRelationships();
+            await filterSection('relationships', getRelationshipStatus, true);
 
             console.log({
                 after_relationships_excluded: {
@@ -1362,7 +1554,7 @@ function getMatches(me, location = null, activity_type = null) {
 
             let t10 = timeNow();
 
-            await filterDrinking();
+            await filterSection('drinking', getDrinking, false);
 
             console.log({
                 drinking: timeNow() - t10
@@ -1376,8 +1568,8 @@ function getMatches(me, location = null, activity_type = null) {
             });
             
             let t11 = timeNow();
-            
-            await filterSmoking();
+
+            await filterSection('smoking', getSmoking, false);
 
             console.log({
                 smoking: timeNow() - t11
