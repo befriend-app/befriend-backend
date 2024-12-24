@@ -224,12 +224,16 @@ function handleFilterUpdate(req, res, filterType) {
                         });
 
                 // Update cache
+                existingFilter.is_any = true;
+
                 for (let id in existingFilter.items) {
                     existingFilter.items[id].is_negative = false;
                     existingFilter.items[id].updated = now;
                     existingFilter.items[id].deleted = now;
                 }
             } else {
+                existingFilter.is_any = false;
+
                 // Handle specific selection
 
                 // Find existing item for option

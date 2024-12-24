@@ -986,7 +986,7 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
                     .where(person_id_col, person.id)
                     .first();
 
-                if(!existing) {
+                if(!existing || !is_select) {
                     return reject();
                 }
 
@@ -1005,6 +1005,8 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
                         updated: now,
                         deleted: null,
                     };
+
+                    cache_data = {};
 
                     cache_data[item_token] = response_data;
                 }
@@ -1065,6 +1067,8 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
                                 deleted: now,
                                 updated: now,
                             });
+
+                        cache_data = {};
 
                         cache_data[item_token] = response_data;
                     }

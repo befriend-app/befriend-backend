@@ -746,11 +746,18 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
 
                 //filters
                 if(!genderFilter) {
-
                     return resolve();
                 }
 
-                if(genderFilter.is_active) {
+                let anyId = genders.byToken['any']?.id;
+
+                let anyItem = Object.values(genderFilter.items)
+                    .find(item => item.gender_id === anyId);
+
+                let isAnySelected = anyItem?.is_active && !anyItem.is_negative && !anyItem.deleted;
+
+                //if any is selected, do not add self to excluded gender sets
+                if(!isAnySelected && genderFilter.is_active) {
                     for(let gender_id in genders.byId) {
                         let gender = genders.byId[gender_id];
 
@@ -786,11 +793,12 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
     function updateDrinking() {
         return new Promise(async (resolve, reject) => {
             try {
+                const importance_threshold = 8;
+
                 let section_options = await getDrinking();
                 let section_key = cacheService.keys.persons_section_data(person.person_token, filter_token);
                 let section_data = (await cacheService.getObj(section_key)) || {};
 
-                const importance_threshold = 8;
                 let drinkingFilter = person_filters.drinking;
 
                 for(let option of section_options) {
@@ -805,45 +813,40 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                     keys_sets_del.add(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `drinkings:${option.token}`, 'receive'));
                 }
 
-                // Add person's current drinking status
+                // Add person's drinking section
                 if(Object.keys(section_data).length) {
                     let item = Object.values(section_data)[0];
                     keys_sets_add.add(cacheService.keys.persons_grid_set(grid_token, `drinking:${item.token}`));
                 }
 
-                if(!drinkingFilter?.is_active) {
+                if(!drinkingFilter?.is_active || drinkingFilter.is_any) {
                     return resolve();
                 }
 
-                // Process each drinking status in filter items
+                //exclude if one or more selected filters have high importance
+                let added_tokens = [];
+                let is_high_importance = false;
+
                 for(let item of Object.values(drinkingFilter.items)) {
-                    if(!item.is_active || item.deleted) continue;
+                    if(item.is_active && !item.is_negative && !item.deleted) {
+                        added_tokens.push(item.token);
 
-                    const importance = item.importance || 0;
-                    const isHighImportance = importance >= HIGH_IMPORTANCE;
-
-                    // If this is a restrictive preference (never/rarely) with high importance
-                    if(isHighImportance && ['never', 'rarely'].includes(item.token)) {
-                        if(drinkingFilter.is_send) {
-                            // Exclude matching with regular/social drinkers when sending
-                            keys_sets_add.add(cacheService.keys.persons_grid_exclude(grid_token, 'drinking:socially', 'send'));
-                            keys_sets_add.add(cacheService.keys.persons_grid_exclude(grid_token, 'drinking:regularly', 'send'));
-                        }
-
-                        if(drinkingFilter.is_receive) {
-                            // Exclude receiving from regular/social drinkers
-                            keys_sets_add.add(cacheService.keys.persons_grid_exclude(grid_token, 'drinking:socially', 'receive'));
-                            keys_sets_add.add(cacheService.keys.persons_grid_exclude(grid_token, 'drinking:regularly', 'receive'));
+                        if(item?.importance >= importance_threshold) {
+                            is_high_importance = true;
                         }
                     }
+                }
 
-                    // Handle negative preferences (explicitly excluded statuses)
-                    if(item.is_negative) {
-                        if(drinkingFilter.is_send) {
-                            keys_sets_add.add(cacheService.keys.persons_grid_exclude(grid_token, `drinking:${item.token}`, 'send'));
-                        }
-                        if(drinkingFilter.is_receive) {
-                            keys_sets_add.add(cacheService.keys.persons_grid_exclude(grid_token, `drinking:${item.token}`, 'receive'));
+                if(is_high_importance) {
+                    for(let option of section_options) {
+                        if(!added_tokens.includes(option.token)) {
+                            if(drinkingFilter.is_send) {
+                                keys_sets_add.add(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `drinkings:${option.token}`, 'send'));
+                            }
+
+                            if(drinkingFilter.is_receive) {
+                                keys_sets_add.add(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `drinkings:${option.token}`, 'receive'));
+                            }
                         }
                     }
                 }

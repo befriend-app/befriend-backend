@@ -18,7 +18,7 @@ let conn, self_network, persons;
 let args = yargs.argv;
 
 let num_persons = 1000;
-let parallelCount = 20;
+let parallelCount = 30;
 
 if (args._ && args._.length) {
     num_persons = args._[0];
@@ -2139,7 +2139,7 @@ async function processSmoking() {
 
     await getPersonsLogins();
 
-return     await processGender();
+return     await processDrinking();
 
     // notifications
     await processAvailability();

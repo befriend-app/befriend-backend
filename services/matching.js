@@ -7,6 +7,7 @@ const { kms_per_mile, timeNow } = require('./shared');
 const { getNetworksForFilters } = require('./network');
 const { getModes, getPersonExcludedModes } = require('./modes');
 const { getGendersLookup } = require('./genders');
+const { getDrinking } = require('./drinking');
 
 const DEFAULT_DISTANCE_MILES = 20;
 
@@ -442,12 +443,13 @@ function getMatches(person, location = null, activity_type = null) {
 
     function filterGenders() {
         return new Promise(async (resolve, reject) => {
+            //bi-directional gender filtering
             try {
-                // Get genders data
                 let gendersLookup = await getGendersLookup();
 
-                // For each grid token, get gender sets
                 let pipeline = cacheService.startPipeline();
+
+                let myGender = gendersLookup.byId[person?.gender_id];
 
                 for (let grid_token of neighbor_grid_tokens) {
                     // Get all gender set members
@@ -559,6 +561,99 @@ function getMatches(person, location = null, activity_type = null) {
         });
     }
 
+    function filterDrinking() {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let drinkingOptions = await getDrinking();
+                let section_key = cacheService.keys.persons_section_data(person.person_token, 'drinking');
+                let section_data = (await cacheService.getObj(section_key)) || {};
+
+                let pipeline = cacheService.startPipeline();
+
+                let personDrinkingToken = null;
+
+                if (Object.keys(section_data).length) {
+                    let item = Object.values(section_data)[0];
+                    personDrinkingToken = item.token;
+                }
+
+                for (let grid_token of neighbor_grid_tokens) {
+                    for (let option of drinkingOptions) {
+                        // Get persons with this drinking preference
+                        pipeline.sMembers(cacheService.keys.persons_grid_set(grid_token, `drinking:${option.token}`));
+
+                        // Get send/receive filter states
+                        pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(
+                            grid_token,
+                            `drinkings:${option.token}`,
+                            'send'
+                        ));
+
+                        pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(
+                            grid_token,
+                            `drinkings:${option.token}`,
+                            'receive'
+                        ));
+                    }
+                }
+
+                let results = await cacheService.execPipeline(pipeline);
+
+                let idx = 0;
+                let drinkingSets = {};
+                let drinkingExcludeSend = {};
+                let drinkingExcludeReceive = {};
+
+                for (let grid_token of neighbor_grid_tokens) {
+                    for (let option of drinkingOptions) {
+                        if (!drinkingSets[option.token]) {
+                            drinkingSets[option.token] = {};
+                        }
+                        if (!drinkingExcludeSend[option.token]) {
+                            drinkingExcludeSend[option.token] = {};
+                        }
+                        if (!drinkingExcludeReceive[option.token]) {
+                            drinkingExcludeReceive[option.token] = {};
+                        }
+
+                        let members = results[idx++];
+
+                        for (let member of members) {
+                            drinkingSets[option.token][member] = true;
+                        }
+
+                        let sendExclusions = results[idx++];
+
+                        for (let token of sendExclusions) {
+                            drinkingExcludeSend[option.token][token] = true;
+                        }
+
+                        let receiveExclusions = results[idx++];
+
+                        for (let token of receiveExclusions) {
+                            drinkingExcludeReceive[option.token][token] = true;
+                        }
+                    }
+                }
+
+                for(let token in person_tokens) {
+                    if(token in drinkingExcludeReceive[personDrinkingToken]) {
+                        exclude.send[token] = true;
+                    }
+
+                    if(token in drinkingExcludeSend[personDrinkingToken]) {
+                        exclude.receive[token] = true;
+                    }
+                }
+
+                resolve();
+            } catch(e) {
+                console.error(e);
+                return reject(e);
+            }
+        });
+    }
+
     return new Promise(async (resolve, reject) => {
         try {
             if (!person) {
@@ -602,6 +697,13 @@ function getMatches(person, location = null, activity_type = null) {
             await filterOnlineStatus();
 
             console.log({
+                after_online_excluded: {
+                    send: Object.keys(exclude.send).length,
+                    receive: Object.keys(exclude.receive).length,
+                }
+            });
+
+            console.log({
                 online: timeNow() - t4
             });
 
@@ -609,11 +711,25 @@ function getMatches(person, location = null, activity_type = null) {
             await filterNetworks();
 
             console.log({
+                after_networks_excluded: {
+                    send: Object.keys(exclude.send).length,
+                    receive: Object.keys(exclude.receive).length,
+                }
+            });
+
+            console.log({
                 networks: timeNow() - t5
             });
 
             let t6 = timeNow();
             await filterModes();
+
+            console.log({
+                after_modes_excluded: {
+                    send: Object.keys(exclude.send).length,
+                    receive: Object.keys(exclude.receive).length,
+                }
+            });
 
             console.log({
                 modes: timeNow() - t6
@@ -624,12 +740,26 @@ function getMatches(person, location = null, activity_type = null) {
             await filterVerifications();
 
             console.log({
+                after_verifications_excluded: {
+                    send: Object.keys(exclude.send).length,
+                    receive: Object.keys(exclude.receive).length,
+                }
+            });
+
+            console.log({
                 verifications: timeNow() - t7
             });
 
             let t8 = timeNow();
 
             await filterAge();
+
+            console.log({
+                after_age_excluded: {
+                    send: Object.keys(exclude.send).length,
+                    receive: Object.keys(exclude.receive).length,
+                }
+            });
 
             console.log({
                 age: timeNow() - t8
@@ -640,7 +770,29 @@ function getMatches(person, location = null, activity_type = null) {
             await filterGenders();
 
             console.log({
+                after_genders_excluded: {
+                    send: Object.keys(exclude.send).length,
+                    receive: Object.keys(exclude.receive).length,
+                }
+            });
+
+            console.log({
                 genders: timeNow() - t9
+            });
+
+            let t10 = timeNow();
+
+            await filterDrinking();
+
+            console.log({
+                drinking: timeNow() - t10
+            });
+
+            console.log({
+                after_drinking_excluded: {
+                    send: Object.keys(exclude.send).length,
+                    receive: Object.keys(exclude.receive).length,
+                }
             });
 
             // let memory_end = process.memoryUsage().heapTotal / 1024 / 1024;
