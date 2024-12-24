@@ -274,12 +274,16 @@ function handleFilterUpdate(req, res, filterType) {
 
             // Update cache and return
             await cacheService.setCache(cache_key, person_filters);
+
+            await updateGridSets(person, person_filters, filterType);
+
             res.json({
                 id,
                 success: true,
             });
         } catch (error) {
             console.error(`Error in ${filterType} filter update:`, error);
+
             res.json(
                 {
                     message: error.message || `Error updating ${filterType} filter`,

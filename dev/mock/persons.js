@@ -10,12 +10,13 @@ const { loadScriptEnv, generateToken, timeNow, birthDatePure, calculateAge } = r
 const { batchInsert, batchUpdate } = require('../../services/db');
 const cacheService = require('../../services/cache');
 const { getPerson } = require('../../services/persons');
+const { updateGridSets } = require('../../services/filters');
 
 loadScriptEnv();
 
 let args = yargs.argv;
 
-let num_persons = 1000 * 1000;
+let num_persons = 1000 * 50;
 
 if (args._ && args._.length) {
     num_persons = args._[0];
@@ -60,8 +61,7 @@ function updatePersonsCount() {
 
             let persons = await conn('persons')
                 .join('earth_grid as eg', 'eg.id', '=', 'persons.grid_id')
-                .select('eg.token AS grid_token', 'persons.id', 'persons.person_token', 'persons.age', 'persons.birth_date')
-                .limit(num_persons);
+                .select('eg.token AS grid_token', 'persons.id', 'persons.person_token', 'persons.age', 'persons.birth_date');
 
             let batch_update = [];
 
@@ -134,6 +134,26 @@ function updatePersonsCount() {
                 await batchUpdate('persons', batch_update);
             }
         } catch(e) {
+            console.error(e);
+        }
+    }
+
+    async function updateGenderGridSets() {
+        try {
+            await cacheService.init();
+
+            let conn = await dbService.conn();
+
+            let persons_qry = await conn('persons')
+                .orderBy('id')
+                .select('id', 'person_token');
+
+            for(let p of persons_qry) {
+                let person = await getPerson(p.person_token);
+
+                await updateGridSets(person, null, 'genders');
+            }
+        } catch (e) {
             console.error(e);
         }
     }
@@ -249,7 +269,8 @@ function updatePersonsCount() {
 
     try {
         // await addPersons();
-        await updateAgeSets();
+        await updateGenderGridSets();
+        // await updateAgeSets();
         // await updatePersonsCount();
     } catch(e) {
 

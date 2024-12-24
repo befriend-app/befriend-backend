@@ -2141,7 +2141,6 @@ async function processSmoking() {
 
 return     await processGender();
 
-
     // notifications
     await processAvailability();
     await processActivityTypes();

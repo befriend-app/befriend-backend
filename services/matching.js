@@ -10,7 +10,7 @@ const { getGendersLookup } = require('./genders');
 
 const DEFAULT_DISTANCE_MILES = 20;
 
-function getMatches(person, activity_type = null) {
+function getMatches(person, location = null, activity_type = null) {
     let person_filters;
     let neighbor_grid_tokens = [];
     let person_tokens = {};
@@ -463,12 +463,12 @@ function getMatches(person, activity_type = null) {
                     // Get excluded gender send/receive preferences
                     for (let token in gendersLookup.byToken) {
                         if (token !== 'any') {
-                            pipeline.sMembers(cacheService.keys.persons_grid_exclude(
+                            pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(
                                 grid_token,
                                 `genders:${token}`,
                                 'send'
                             ));
-                            pipeline.sMembers(cacheService.keys.persons_grid_exclude(
+                            pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(
                                 grid_token,
                                 `genders:${token}`,
                                 'receive'
@@ -494,6 +494,7 @@ function getMatches(person, activity_type = null) {
                             }
 
                             let members = results[idx++];
+
                             for (let member of members) {
                                 genderSets[token][member] = true;
                             }
@@ -512,6 +513,7 @@ function getMatches(person, activity_type = null) {
 
                             // Send exclusions
                             let sendExclusions = results[idx++];
+
                             for (let token of sendExclusions) {
                                 genderExcludeSend[gender_token][token] = true;
                             }

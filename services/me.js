@@ -996,8 +996,6 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
 
                 person.gender_id = is_select ? itemOption.id : null;
 
-                cache_data = {};
-
                 if (is_select) {
                     response_data = {
                         id: existing.id,
@@ -1068,11 +1066,11 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
                                 updated: now,
                             });
 
-                        // Update cache for single select
-                        cache_data = {};
-                        if (is_select) {
-                            cache_data[item_token] = response_data;
-                        }
+                        cache_data[item_token] = response_data;
+                    }
+
+                    if(!is_select) {
+                        delete cache_data[item_token];
                     }
                 }
                 // Handle Multi Select

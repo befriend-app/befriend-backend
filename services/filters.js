@@ -4,6 +4,9 @@ const dbService = require('./db');
 const { getModes, getPersonExcludedModes } = require('./modes');
 const { getNetworksForFilters } = require('./network');
 const { getGendersLookup } = require('./genders');
+const { getSmoking } = require('./smoking');
+const { getDrinking } = require('./drinking');
+const { timeNow } = require('./shared');
 
 
 const filterMappings = {
@@ -723,19 +726,17 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
 
                 let person_gender = genders.byId[person.gender_id];
 
-                if(prev_grid_token) {
-                    for(let gender_token in genders.byToken) {
-                        if(gender_token !== 'any') {
-                            keys_sets_del.add(cacheService.keys.persons_grid_set(prev_grid_token, `gender:${gender_token}`));
-                            keys_sets_del.add(cacheService.keys.persons_grid_exclude(prev_grid_token, `genders:${gender_token}`, 'send'));
-                            keys_sets_del.add(cacheService.keys.persons_grid_exclude(prev_grid_token, `genders:${gender_token}`, 'receive'));
-                        }
-                    }
-                }
-
                 for(let gender_token in genders.byToken) {
                     if(gender_token !== 'any') {
+                        if(prev_grid_token) {
+                            keys_sets_del.add(cacheService.keys.persons_grid_set(prev_grid_token, `gender:${gender_token}`));
+                            keys_sets_del.add(cacheService.keys.persons_grid_exclude_send_receive(prev_grid_token, `genders:${gender_token}`, 'send'));
+                            keys_sets_del.add(cacheService.keys.persons_grid_exclude_send_receive(prev_grid_token, `genders:${gender_token}`, 'receive'));
+                        }
+
                         keys_sets_del.add(cacheService.keys.persons_grid_set(grid_token, `gender:${gender_token}`));
+                        keys_sets_del.add(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `genders:${gender_token}`, 'send'));
+                        keys_sets_del.add(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `genders:${gender_token}`, 'receive'));
                     }
                 }
 
@@ -745,6 +746,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
 
                 //filters
                 if(!genderFilter) {
+
                     return resolve();
                 }
 
@@ -761,23 +763,95 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
 
                         if(genderFilter.is_send) {
                             if(!genderItem || !genderItem.is_active || genderItem.is_negative || genderItem.deleted) {
-                                keys_sets_add.add(cacheService.keys.persons_grid_exclude(grid_token, `genders:${gender.gender_token}`, 'send'));
+                                keys_sets_add.add(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `genders:${gender.gender_token}`, 'send'));
                             }
                         }
 
                         if(genderFilter.is_receive) {
                             if(!genderItem || !genderItem.is_active || genderItem.is_negative || genderItem.deleted) {
-                                keys_sets_add.add(cacheService.keys.persons_grid_exclude(grid_token, `genders:${gender.gender_token}`, 'receive'));
+                                keys_sets_add.add(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `genders:${gender.gender_token}`, 'receive'));
                             }
                         }
                     }
                 }
 
-
                 resolve();
             } catch(e) {
                 console.error(e);
                 return reject();
+            }
+        });
+    }
+
+    function updateDrinking() {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let section_options = await getDrinking();
+                let section_key = cacheService.keys.persons_section_data(person.person_token, filter_token);
+                let section_data = (await cacheService.getObj(section_key)) || {};
+
+                const importance_threshold = 8;
+                let drinkingFilter = person_filters.drinking;
+
+                for(let option of section_options) {
+                    if(prev_grid_token) {
+                        keys_sets_del.add(cacheService.keys.persons_grid_set(prev_grid_token, `drinking:${option.token}`));
+                        keys_sets_del.add(cacheService.keys.persons_grid_exclude_send_receive(prev_grid_token, `drinkings:${option.token}`, 'send'));
+                        keys_sets_del.add(cacheService.keys.persons_grid_exclude_send_receive(prev_grid_token, `drinkings:${option.token}`, 'receive'));
+                    }
+
+                    keys_sets_del.add(cacheService.keys.persons_grid_set(grid_token, `drinking:${option.token}`));
+                    keys_sets_del.add(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `drinkings:${option.token}`, 'send'));
+                    keys_sets_del.add(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `drinkings:${option.token}`, 'receive'));
+                }
+
+                // Add person's current drinking status
+                if(Object.keys(section_data).length) {
+                    let item = Object.values(section_data)[0];
+                    keys_sets_add.add(cacheService.keys.persons_grid_set(grid_token, `drinking:${item.token}`));
+                }
+
+                if(!drinkingFilter?.is_active) {
+                    return resolve();
+                }
+
+                // Process each drinking status in filter items
+                for(let item of Object.values(drinkingFilter.items)) {
+                    if(!item.is_active || item.deleted) continue;
+
+                    const importance = item.importance || 0;
+                    const isHighImportance = importance >= HIGH_IMPORTANCE;
+
+                    // If this is a restrictive preference (never/rarely) with high importance
+                    if(isHighImportance && ['never', 'rarely'].includes(item.token)) {
+                        if(drinkingFilter.is_send) {
+                            // Exclude matching with regular/social drinkers when sending
+                            keys_sets_add.add(cacheService.keys.persons_grid_exclude(grid_token, 'drinking:socially', 'send'));
+                            keys_sets_add.add(cacheService.keys.persons_grid_exclude(grid_token, 'drinking:regularly', 'send'));
+                        }
+
+                        if(drinkingFilter.is_receive) {
+                            // Exclude receiving from regular/social drinkers
+                            keys_sets_add.add(cacheService.keys.persons_grid_exclude(grid_token, 'drinking:socially', 'receive'));
+                            keys_sets_add.add(cacheService.keys.persons_grid_exclude(grid_token, 'drinking:regularly', 'receive'));
+                        }
+                    }
+
+                    // Handle negative preferences (explicitly excluded statuses)
+                    if(item.is_negative) {
+                        if(drinkingFilter.is_send) {
+                            keys_sets_add.add(cacheService.keys.persons_grid_exclude(grid_token, `drinking:${item.token}`, 'send'));
+                        }
+                        if(drinkingFilter.is_receive) {
+                            keys_sets_add.add(cacheService.keys.persons_grid_exclude(grid_token, `drinking:${item.token}`, 'receive'));
+                        }
+                    }
+                }
+
+                resolve();
+            } catch(e) {
+                console.error('Error in updateDrinking:', e);
+                reject(e);
             }
         });
     }
@@ -837,6 +911,8 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
             await updateAge();
 
             await updateGenders();
+
+            // await updateDrinking();
         } else {
             if(filter_token === 'online') {
                 await updateOnline();
@@ -860,6 +936,10 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
 
             if(filter_token === 'genders') {
                 await updateGenders();
+            }
+
+            if(filter_token === 'drinking') {
+                await updateDrinking();
             }
         }
 
