@@ -1010,10 +1010,6 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
 
                     cache_data[item_token] = response_data;
                 }
-
-                if(section_key === 'genders') {
-                    await updateGridSets(person, null, 'genders');
-                }
             } else {
                 existing = await conn(userTableData.name)
                     .where(person_id_col, person.id)
@@ -1158,6 +1154,8 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
 
             // Update cache with final data
             await cacheService.setCache(cache_key, cache_data);
+
+            await updateGridSets(person, null, section_key);
 
             resolve(response_data);
         } catch (e) {
