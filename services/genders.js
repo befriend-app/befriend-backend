@@ -72,7 +72,7 @@ module.exports = {
                 genders = genders.reduce(
                     (acc, gender) => {
                         acc.byId[gender.id] = gender;
-                        acc.byToken[gender.token] = gender;
+                        acc.byToken[gender.gender_token] = gender;
                         return acc;
                     },
                     { byId: {}, byToken: {} },

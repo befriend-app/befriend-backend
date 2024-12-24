@@ -15,6 +15,7 @@ const { batchUpdate } = require('../services/db');
 const { getCountries } = require('../services/locations');
 const { getLanguagesCountry } = require('../services/languages');
 const { getPerson, updatePerson } = require('../services/persons');
+const { updateGridSets } = require('./filters');
 
 function putModes(person_token, modes) {
     return new Promise(async (resolve, reject) => {
@@ -958,11 +959,13 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
             const options = await module.exports[sectionData.functions.data]({
                 options_only: true,
             });
+
             if (!options) {
                 return reject('Options not found');
             }
 
             const itemOption = options.find((option) => option.token === item_token);
+
             if (!itemOption) {
                 return reject('Invalid item token');
             }
@@ -976,127 +979,91 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
             let response_data = null;
 
             // Get existing selection
-            const existing = await conn(userTableData.name)
-                .where(person_id_col, person.id)
-                .where(userTableData.cols.id, itemOption.id)
-                .first();
+            let existing;
 
-            // Handle Single Select or Exclusive Options
-            if (
-                sectionData.type.single ||
-                (sectionData.type.exclusive && item_token === sectionData.type.exclusive.token)
-            ) {
-                if (existing) {
-                    // Update existing record
-                    await conn(userTableData.name)
-                        .where('id', existing.id)
-                        .update({
-                            deleted: is_select ? null : now,
-                            updated: now,
-                        });
+            if(section_key === 'genders') {
+                existing = await conn(userTableData.name)
+                    .where(person_id_col, person.id)
+                    .first();
 
-                    if (is_select) {
-                        response_data = {
-                            id: existing.id,
-                            token: item_token,
-                            name: itemOption.name,
-                            created: existing.created,
-                            updated: now,
-                            deleted: null,
-                        };
-                    }
-                } else if (is_select) {
-                    // Create new record
-                    const [id] = await conn(userTableData.name).insert({
-                        person_id: person.id,
-                        [userTableData.cols.id]: itemOption.id,
-                        created: now,
-                        updated: now,
-                    });
+                if(!existing) {
+                    return reject();
+                }
 
+                await updatePerson(person.person_token, {
+                    gender_id: is_select ? itemOption.id : null
+                });
+
+                person.gender_id = is_select ? itemOption.id : null;
+
+                cache_data = {};
+
+                if (is_select) {
                     response_data = {
-                        id,
+                        id: existing.id,
                         token: item_token,
                         name: itemOption.name,
-                        created: now,
+                        created: existing.created,
                         updated: now,
+                        deleted: null,
                     };
+
+                    cache_data[item_token] = response_data;
                 }
 
-                // Clear all other selections for single/exclusive
-                if (response_data) {
-                    await conn(userTableData.name)
-                        .where(person_id_col, person.id)
-                        .whereNot('id', response_data.id)
-                        .update({
-                            deleted: now,
-                            updated: now,
-                        });
-
-                    // Update cache for single select
-                    cache_data = {};
-                    if (is_select) {
-                        cache_data[item_token] = response_data;
-                    }
+                if(section_key === 'genders') {
+                    await updateGridSets(person, null, 'genders');
                 }
-            }
-            // Handle Multi Select
-            else {
-                if (existing) {
-                    // Update existing record
-                    await conn(userTableData.name)
-                        .where('id', existing.id)
-                        .update({
-                            deleted: is_select ? null : now,
-                            updated: now,
-                        });
+            } else {
+                existing = await conn(userTableData.name)
+                    .where(person_id_col, person.id)
+                    .where(userTableData.cols.id, itemOption.id)
+                    .first();
 
-                    if (is_select) {
-                        response_data = {
-                            id: existing.id,
-                            token: item_token,
-                            name: itemOption.name,
-                            created: existing.created,
-                            updated: now,
-                        };
-                    }
-                } else if (is_select) {
-                    // Create new multi-select record
-                    const [id] = await conn(userTableData.name).insert({
-                        person_id: person.id,
-                        [userTableData.cols.id]: itemOption.id,
-                        created: now,
-                        updated: now,
-                    });
+                // Handle Single Select or Exclusive Options
+                if (
+                    sectionData.type.single ||
+                    (sectionData.type.exclusive && item_token === sectionData.type.exclusive.token)
+                ) {
+                    if (existing) {
+                        // Update existing record
+                        await conn(userTableData.name)
+                            .where('id', existing.id)
+                            .update({
+                                deleted: is_select ? null : now,
+                                updated: now,
+                            });
 
-                    response_data = {
-                        id,
-                        token: item_token,
-                        name: itemOption.name,
-                        created: now,
-                        updated: now,
-                    };
-                }
-
-                // Handle exclusive option interactions
-                if (is_select && sectionData.type.exclusive) {
-                    if (item_token !== sectionData.type.exclusive.token) {
-                        // Deselect exclusive option if selecting something else
-                        const exclusiveOption = options.find(
-                            (opt) => opt.token === sectionData.type.exclusive.token,
-                        );
-                        if (exclusiveOption) {
-                            await conn(userTableData.name)
-                                .where(person_id_col, person.id)
-                                .where(userTableData.cols.id, exclusiveOption.id)
-                                .update({
-                                    deleted: now,
-                                    updated: now,
-                                });
-                            delete cache_data[sectionData.type.exclusive.token];
+                        if (is_select) {
+                            response_data = {
+                                id: existing.id,
+                                token: item_token,
+                                name: itemOption.name,
+                                created: existing.created,
+                                updated: now,
+                                deleted: null,
+                            };
                         }
-                    } else {
-                        // Deselect all other options if selecting exclusive
+                    } else if (is_select) {
+                        // Create new record
+                        const [id] = await conn(userTableData.name).insert({
+                            [person_id_col]: person.id,
+                            [userTableData.cols.id]: itemOption.id,
+                            created: now,
+                            updated: now,
+                        });
+
+                        response_data = {
+                            id,
+                            token: item_token,
+                            name: itemOption.name,
+                            created: now,
+                            updated: now,
+                        };
+                    }
+
+                    // Clear all other selections for single/exclusive
+                    if (response_data) {
                         await conn(userTableData.name)
                             .where(person_id_col, person.id)
                             .whereNot('id', response_data.id)
@@ -1104,15 +1071,88 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
                                 deleted: now,
                                 updated: now,
                             });
+
+                        // Update cache for single select
                         cache_data = {};
+                        if (is_select) {
+                            cache_data[item_token] = response_data;
+                        }
                     }
                 }
+                // Handle Multi Select
+                else {
+                    if (existing) {
+                        // Update existing record
+                        await conn(userTableData.name)
+                            .where('id', existing.id)
+                            .update({
+                                deleted: is_select ? null : now,
+                                updated: now,
+                            });
 
-                // Update cache for multi-select
-                if (is_select && response_data) {
-                    cache_data[item_token] = response_data;
-                } else if (!is_select) {
-                    delete cache_data[item_token];
+                        if (is_select) {
+                            response_data = {
+                                id: existing.id,
+                                token: item_token,
+                                name: itemOption.name,
+                                created: existing.created,
+                                updated: now,
+                            };
+                        }
+                    } else if (is_select) {
+                        // Create new multi-select record
+                        const [id] = await conn(userTableData.name).insert({
+                            [person_id_col]: person.id,
+                            [userTableData.cols.id]: itemOption.id,
+                            created: now,
+                            updated: now,
+                        });
+
+                        response_data = {
+                            id,
+                            token: item_token,
+                            name: itemOption.name,
+                            created: now,
+                            updated: now,
+                        };
+                    }
+
+                    // Handle exclusive option interactions
+                    if (is_select && sectionData.type.exclusive) {
+                        if (item_token !== sectionData.type.exclusive.token) {
+                            // Deselect exclusive option if selecting something else
+                            const exclusiveOption = options.find(
+                                (opt) => opt.token === sectionData.type.exclusive.token,
+                            );
+                            if (exclusiveOption) {
+                                await conn(userTableData.name)
+                                    .where(person_id_col, person.id)
+                                    .where(userTableData.cols.id, exclusiveOption.id)
+                                    .update({
+                                        deleted: now,
+                                        updated: now,
+                                    });
+                                delete cache_data[sectionData.type.exclusive.token];
+                            }
+                        } else {
+                            // Deselect all other options if selecting exclusive
+                            await conn(userTableData.name)
+                                .where(person_id_col, person.id)
+                                .whereNot('id', response_data.id)
+                                .update({
+                                    deleted: now,
+                                    updated: now,
+                                });
+                            cache_data = {};
+                        }
+                    }
+
+                    // Update cache for multi-select
+                    if (is_select && response_data) {
+                        cache_data[item_token] = response_data;
+                    } else if (!is_select) {
+                        delete cache_data[item_token];
+                    }
                 }
             }
 

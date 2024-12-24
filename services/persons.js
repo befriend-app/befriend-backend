@@ -3,7 +3,6 @@ const dbService = require('../services/db');
 const { timeNow } = require('../services/shared');
 const { updateGridSets } = require('../services/filters');
 
-
 module.exports = {
     isAuthenticated: function (person_token, login_token) {
         return new Promise(async (resolve, reject) => {

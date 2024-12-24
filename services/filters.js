@@ -1,7 +1,10 @@
 const cacheService = require('./cache');
 const dbService = require('./db');
+
 const { getModes, getPersonExcludedModes } = require('./modes');
 const { getNetworksForFilters } = require('./network');
+const { getGendersLookup } = require('./genders');
+
 
 const filterMappings = {
     availability: {
@@ -714,7 +717,68 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
 
     function updateGenders() {
         return new Promise(async (resolve, reject) => {
+            try {
+                let genderFilter = person_filters.genders;
+                let genders = await getGendersLookup();
 
+                let person_gender = genders.byId[person.gender_id];
+
+                if(prev_grid_token) {
+                    for(let gender_token in genders.byToken) {
+                        if(gender_token !== 'any') {
+                            keys_sets_del.add(cacheService.keys.persons_grid_set(prev_grid_token, `gender:${gender_token}`));
+                            keys_sets_del.add(cacheService.keys.persons_grid_exclude(prev_grid_token, `genders:${gender_token}`, 'send'));
+                            keys_sets_del.add(cacheService.keys.persons_grid_exclude(prev_grid_token, `genders:${gender_token}`, 'receive'));
+                        }
+                    }
+                }
+
+                for(let gender_token in genders.byToken) {
+                    if(gender_token !== 'any') {
+                        keys_sets_del.add(cacheService.keys.persons_grid_set(grid_token, `gender:${gender_token}`));
+                    }
+                }
+
+                if(person_gender) {
+                    keys_sets_add.add(cacheService.keys.persons_grid_set(grid_token, `gender:${person_gender.gender_token}`));
+                }
+
+                //filters
+                if(!genderFilter) {
+                    return resolve();
+                }
+
+                if(genderFilter.is_active) {
+                    for(let gender_id in genders.byId) {
+                        let gender = genders.byId[gender_id];
+
+                        if(gender.gender_token === 'any') {
+                            continue;
+                        }
+
+                        let genderItem = Object.values(genderFilter.items)
+                            .find(item => item.gender_id === parseInt(gender_id));
+
+                        if(genderFilter.is_send) {
+                            if(!genderItem || !genderItem.is_active || genderItem.is_negative || genderItem.deleted) {
+                                keys_sets_add.add(cacheService.keys.persons_grid_exclude(grid_token, `genders:${gender.gender_token}`, 'send'));
+                            }
+                        }
+
+                        if(genderFilter.is_receive) {
+                            if(!genderItem || !genderItem.is_active || genderItem.is_negative || genderItem.deleted) {
+                                keys_sets_add.add(cacheService.keys.persons_grid_exclude(grid_token, `genders:${gender.gender_token}`, 'receive'));
+                            }
+                        }
+                    }
+                }
+
+
+                resolve();
+            } catch(e) {
+                console.error(e);
+                return reject();
+            }
         });
     }
 

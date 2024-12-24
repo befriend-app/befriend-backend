@@ -6,6 +6,7 @@ const { getPersonFilters } = require('./filters');
 const { kms_per_mile, timeNow } = require('./shared');
 const { getNetworksForFilters } = require('./network');
 const { getModes, getPersonExcludedModes } = require('./modes');
+const { getGendersLookup } = require('./genders');
 
 const DEFAULT_DISTANCE_MILES = 20;
 
@@ -445,6 +446,122 @@ function getMatches(person, activity_type = null) {
         });
     }
 
+    function filterGenders() {
+        return new Promise(async (resolve, reject) => {
+            try {
+                // Get genders data
+                let gendersLookup = await getGendersLookup();
+
+                // For each grid token, get gender sets
+                let pipeline = cacheService.startPipeline();
+
+                for (let grid_token of neighbor_grid_tokens) {
+                    // Get all gender set members
+                    for (let token in gendersLookup.byToken) {
+                        if (token !== 'any') {
+                            pipeline.sMembers(cacheService.keys.persons_grid_set(
+                                grid_token,
+                                `gender:${token}`
+                            ));
+                        }
+                    }
+
+                    // Get excluded gender send/receive preferences
+                    for (let token in gendersLookup.byToken) {
+                        if (token !== 'any') {
+                            pipeline.sMembers(cacheService.keys.persons_grid_exclude(
+                                grid_token,
+                                `genders:${token}`,
+                                'send'
+                            ));
+                            pipeline.sMembers(cacheService.keys.persons_grid_exclude(
+                                grid_token,
+                                `genders:${token}`,
+                                'receive'
+                            ));
+                        }
+                    }
+                }
+
+                let results = await cacheService.execPipeline(pipeline);
+
+                let idx = 0;
+                let genderSets = {};
+                let genderExcludeSend = {};
+                let genderExcludeReceive = {};
+
+                // Process pipeline results
+                for (let grid_token of neighbor_grid_tokens) {
+                    // Process gender set memberships
+                    for (let token in gendersLookup.byToken) {
+                        if (token !== 'any') {
+                            if (!genderSets[token]) {
+                                genderSets[token] = {};
+                            }
+
+                            let members = results[idx++];
+                            for (let member of members) {
+                                genderSets[token][member] = true;
+                            }
+                        }
+                    }
+
+                    // Process gender exclusions
+                    for (let gender_token in gendersLookup.byToken) {
+                        if (gender_token !== 'any') {
+                            if (!genderExcludeSend[gender_token]) {
+                                genderExcludeSend[gender_token] = {};
+                            }
+                            if (!genderExcludeReceive[gender_token]) {
+                                genderExcludeReceive[gender_token] = {};
+                            }
+
+                            // Send exclusions
+                            let sendExclusions = results[idx++];
+                            for (let token of sendExclusions) {
+                                genderExcludeSend[gender_token][token] = true;
+                            }
+
+                            // Receive exclusions
+                            let receiveExclusions = results[idx++];
+                            for (let token of receiveExclusions) {
+                                genderExcludeReceive[gender_token][token] = true;
+                            }
+                        }
+                    }
+                }
+
+                // Process each person token
+                for (let token in person_tokens) {
+                    // Get person's gender
+                    let personGender = null;
+                    
+                    for (let genderToken in genderSets) {
+                        if (genderSets[genderToken][token]) {
+                            personGender = genderToken;
+                            break;
+                        }
+                    }
+
+                    // Check send permissions
+                    if (!personGender || token in genderExcludeReceive[personGender]) {
+                        exclude.send[token] = true;
+                    }
+
+                    // Check receive permissions
+                    if (!personGender || token in genderExcludeSend[personGender]) {
+                        exclude.receive[token] = true;
+                    }
+                }
+
+                resolve();
+            } catch (e) {
+                console.error('Error in filterGenders:', e);
+                reject(e);
+            }
+        });
+    }
+
     return new Promise(async (resolve, reject) => {
         try {
             if (!person) {
@@ -523,6 +640,14 @@ function getMatches(person, activity_type = null) {
 
             console.log({
                 age: timeNow() - t8
+            });
+
+            let t9 = timeNow();
+
+            await filterGenders();
+
+            console.log({
+                genders: timeNow() - t9
             });
 
             // let memory_end = process.memoryUsage().heapTotal / 1024 / 1024;
