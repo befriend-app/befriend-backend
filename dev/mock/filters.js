@@ -2139,7 +2139,7 @@ async function processSmoking() {
 
     await getPersonsLogins();
 
-return     await processDrinking();
+return     await processLifeStages();
 
     // notifications
     await processAvailability();

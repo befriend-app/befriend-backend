@@ -8,6 +8,8 @@ const { getNetworksForFilters } = require('./network');
 const { getModes, getPersonExcludedModes } = require('./modes');
 const { getGendersLookup } = require('./genders');
 const { getDrinking } = require('./drinking');
+const { getSmoking } = require('./smoking');
+const { getLifeStages } = require('./life_stages');
 
 const DEFAULT_DISTANCE_MILES = 20;
 
@@ -20,6 +22,8 @@ function getMatches(me, location = null, activity_type = null) {
         send: {},
         receive: {}
     };
+
+    let persons_not_excluded = {};
 
     let matches = {
         send: [],
@@ -574,6 +578,163 @@ function getMatches(me, location = null, activity_type = null) {
         });
     }
 
+    function filterLifeStages() {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let lifeStageOptions = await getLifeStages();
+                let section_key = cacheService.keys.persons_section_data(my_token, 'life_stages');
+                let section_data = (await cacheService.getObj(section_key)) || {};
+
+                let pipeline = cacheService.startPipeline();
+
+                let myLifeStageTokens = new Set();
+                for (let key in section_data) {
+                    myLifeStageTokens.add(section_data[key].token);
+                }
+
+                for (let grid_token of neighbor_grid_tokens) {
+                    for (let option of lifeStageOptions) {
+                        pipeline.sMembers(cacheService.keys.persons_grid_set(
+                            grid_token,
+                            `life_stages:${option.token}`
+                        ));
+                    }
+
+                    for (let option of lifeStageOptions) {
+                        pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(
+                            grid_token,
+                            `life_stages:${option.token}`,
+                            'send'
+                        ));
+                        pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(
+                            grid_token,
+                            `life_stages:${option.token}`,
+                            'receive'
+                        ));
+                    }
+                }
+
+                let results = await cacheService.execPipeline(pipeline);
+
+                let idx = 0;
+                let lifeStageSets = {};
+                let lifeStageExcludeSend = {};
+                let lifeStageExcludeReceive = {};
+
+                for (let grid_token of neighbor_grid_tokens) {
+                    for (let option of lifeStageOptions) {
+                        if (!lifeStageSets[option.token]) {
+                            lifeStageSets[option.token] = {};
+                        }
+
+                        let members = results[idx++];
+                        for (let member of members) {
+                            lifeStageSets[option.token][member] = true;
+                        }
+                    }
+
+                    for (let option of lifeStageOptions) {
+                        if (!lifeStageExcludeSend[option.token]) {
+                            lifeStageExcludeSend[option.token] = {};
+                        }
+                        if (!lifeStageExcludeReceive[option.token]) {
+                            lifeStageExcludeReceive[option.token] = {};
+                        }
+
+                        let sendExclusions = results[idx++];
+                        for (let token of sendExclusions) {
+                            lifeStageExcludeSend[option.token][token] = true;
+                        }
+
+                        let receiveExclusions = results[idx++];
+                        for (let token of receiveExclusions) {
+                            lifeStageExcludeReceive[option.token][token] = true;
+                        }
+                    }
+                }
+
+                // If no life stages set for me, handle exclusions
+                if (myLifeStageTokens.size === 0) {
+                    for (let life_stage_token in lifeStageExcludeReceive) {
+                        let tokens = lifeStageExcludeReceive[life_stage_token];
+                        for (let token in tokens) {
+                            exclude.send[token] = true;
+                        }
+                    }
+
+                    for (let life_stage_token in lifeStageExcludeSend) {
+                        let tokens = lifeStageExcludeSend[life_stage_token];
+                        for (let token in tokens) {
+                            exclude.receive[token] = true;
+                        }
+                    }
+                } else {
+                    // Process each person token
+                    for (let token in person_tokens) {
+                        let personLifeStageTokens = new Set();
+
+                        // Find all life stages for this person
+                        for (let lifeStageToken in lifeStageSets) {
+                            if (lifeStageSets[lifeStageToken][token]) {
+                                personLifeStageTokens.add(lifeStageToken);
+                            }
+                        }
+
+                        if (personLifeStageTokens.size === 0) {
+                            // Exclude sending/receiving if filter specified with importance
+                            for (let k in lifeStageExcludeSend) {
+                                if (my_token in lifeStageExcludeSend[k]) {
+                                    exclude.send[token] = true;
+                                    break;
+                                }
+                            }
+
+                            for (let k in lifeStageExcludeReceive) {
+                                if (my_token in lifeStageExcludeReceive[k]) {
+                                    exclude.receive[token] = true;
+                                    break;
+                                }
+                            }
+                        } else {
+                            // Check bi-directional exclusions for each life stage combination
+                            let shouldExcludeSend = true;
+                            let shouldExcludeReceive = true;
+
+                            // For each of my life stages
+                            for (let myLifeStage of myLifeStageTokens) {
+                                // For each of their life stages
+                                for (let theirLifeStage of personLifeStageTokens) {
+                                    // Check if they accept my life stage and I accept their life stage
+                                    if (!(token in lifeStageExcludeReceive[myLifeStage]) &&
+                                        !(my_token in lifeStageExcludeSend[theirLifeStage])) {
+                                        shouldExcludeSend = false;
+                                    }
+
+                                    if (!(token in lifeStageExcludeSend[myLifeStage]) &&
+                                        !(my_token in lifeStageExcludeReceive[theirLifeStage])) {
+                                        shouldExcludeReceive = false;
+                                    }
+                                }
+                            }
+
+                            if (shouldExcludeSend) {
+                                exclude.send[token] = true;
+                            }
+                            if (shouldExcludeReceive) {
+                                exclude.receive[token] = true;
+                            }
+                        }
+                    }
+                }
+
+                resolve();
+            } catch (e) {
+                console.error('Error in filterLifeStages:', e);
+                reject(e);
+            }
+        });
+    }
+
     function filterDrinking() {
         return new Promise(async (resolve, reject) => {
             try {
@@ -656,16 +817,6 @@ function getMatches(me, location = null, activity_type = null) {
                     }
                 }
 
-                let counts = {
-                    send: 0,
-                    receive: 0
-                };
-
-                for(let k in drinkingExcludeReceive) {
-                    counts.receive += Object.keys(drinkingExcludeReceive[k]).length;
-                    counts.send += Object.keys(drinkingExcludeSend[k]).length;
-                }
-
                 // If drinking not set, exclude for all excluded
                 if (!myDrinkingToken) {
                     for (let drinking_token in drinkingExcludeReceive) {
@@ -730,6 +881,163 @@ function getMatches(me, location = null, activity_type = null) {
                 reject(e);
             }
         });
+    }
+
+    function filterSmoking() {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let smokingOptions = await getSmoking();
+                let section_key = cacheService.keys.persons_section_data(my_token, 'smoking');
+                let section_data = (await cacheService.getObj(section_key)) || {};
+
+                let pipeline = cacheService.startPipeline();
+
+                let mySmokingToken = null;
+
+                if (Object.keys(section_data).length) {
+                    let item = Object.values(section_data)[0];
+                    mySmokingToken = item.token;
+                }
+
+                for (let grid_token of neighbor_grid_tokens) {
+                    for (let option of smokingOptions) {
+                        pipeline.sMembers(cacheService.keys.persons_grid_set(
+                            grid_token,
+                            `smoking:${option.token}`
+                        ));
+                    }
+
+                    // Get excluded smoking send/receive
+                    for (let option of smokingOptions) {
+                        pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(
+                            grid_token,
+                            `smokings:${option.token}`,
+                            'send'
+                        ));
+                        pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(
+                            grid_token,
+                            `smokings:${option.token}`,
+                            'receive'
+                        ));
+                    }
+                }
+
+                let results = await cacheService.execPipeline(pipeline);
+
+                let idx = 0;
+                let smokingSets = {};
+                let smokingExcludeSend = {};
+                let smokingExcludeReceive = {};
+
+                // Process pipeline results
+                for (let grid_token of neighbor_grid_tokens) {
+                    // Process smoking set memberships
+                    for (let option of smokingOptions) {
+                        if (!smokingSets[option.token]) {
+                            smokingSets[option.token] = {};
+                        }
+
+                        let members = results[idx++];
+                        for (let member of members) {
+                            smokingSets[option.token][member] = true;
+                        }
+                    }
+
+                    // Process smoking exclusions
+                    for (let option of smokingOptions) {
+                        if (!smokingExcludeSend[option.token]) {
+                            smokingExcludeSend[option.token] = {};
+                        }
+                        if (!smokingExcludeReceive[option.token]) {
+                            smokingExcludeReceive[option.token] = {};
+                        }
+
+                        // Send exclusions
+                        let sendExclusions = results[idx++];
+                        for (let token of sendExclusions) {
+                            smokingExcludeSend[option.token][token] = true;
+                        }
+
+                        // Receive exclusions
+                        let receiveExclusions = results[idx++];
+                        for (let token of receiveExclusions) {
+                            smokingExcludeReceive[option.token][token] = true;
+                        }
+                    }
+                }
+
+                // If smoking not set, exclude for all excluded
+                if (!mySmokingToken) {
+                    for (let smoking_token in smokingExcludeReceive) {
+                        let tokens = smokingExcludeReceive[smoking_token];
+                        for (let token in tokens) {
+                            exclude.send[token] = true;
+                        }
+                    }
+
+                    for (let smoking_token in smokingExcludeSend) {
+                        let tokens = smokingExcludeSend[smoking_token];
+                        for (let token in tokens) {
+                            exclude.receive[token] = true;
+                        }
+                    }
+                } else {
+                    // Process each person token
+                    for (let token in person_tokens) {
+                        let personSmokingToken = null;
+
+                        for (let smokingToken in smokingSets) {
+                            if (smokingSets[smokingToken][token]) {
+                                personSmokingToken = smokingToken;
+                                break;
+                            }
+                        }
+
+                        if(!personSmokingToken) {
+                            //exclude sending/receiving if filter specified with importance
+                            for(let k in smokingExcludeSend) {
+                                if(my_token in smokingExcludeSend[k]) {
+                                    exclude.send[token] = true;
+                                    break;
+                                }
+                            }
+
+                            for(let k in smokingExcludeReceive) {
+                                if(my_token in smokingExcludeReceive[k]) {
+                                    exclude.receive[token] = true;
+                                    break;
+                                }
+                            }
+                        } else {
+                            // Exclude send if person has excluded my preference or I have excluded their preference
+                            if (token in smokingExcludeReceive[mySmokingToken] ||
+                                my_token in smokingExcludeSend[personSmokingToken]) {
+                                exclude.send[token] = true;
+                            }
+
+                            // Exclude receive if person has excluded my preference or I have excluded their preference
+                            if (token in smokingExcludeSend[mySmokingToken] ||
+                                my_token in smokingExcludeReceive[personSmokingToken]) {
+                                exclude.receive[token] = true;
+                            }
+                        }
+                    }
+                }
+
+                resolve();
+            } catch (e) {
+                console.error('Error in filterSmoking:', e);
+                reject(e);
+            }
+        });
+    }
+
+    function setNotExcluded() {
+        for(let person_token in person_tokens) {
+            if(!(person_token in exclude.send) || !(person_token in exclude.receive)) {
+                persons_not_excluded[person_token] = true;
+            }
+        }
     }
 
     return new Promise(async (resolve, reject) => {
@@ -860,6 +1168,20 @@ function getMatches(me, location = null, activity_type = null) {
                 genders: timeNow() - t9
             });
 
+            let t = timeNow();
+            await filterLifeStages();
+
+            console.log({
+                after_life_excluded: {
+                    send: Object.keys(exclude.send).length,
+                    receive: Object.keys(exclude.receive).length,
+                }
+            });
+
+            console.log({
+                life: timeNow() - t
+            });
+
             let t10 = timeNow();
 
             await filterDrinking();
@@ -873,6 +1195,29 @@ function getMatches(me, location = null, activity_type = null) {
                     send: Object.keys(exclude.send).length,
                     receive: Object.keys(exclude.receive).length,
                 }
+            });
+            
+            let t11 = timeNow();
+            
+            await filterSmoking();
+
+            console.log({
+                smoking: timeNow() - t11
+            });
+
+            console.log({
+                after_smoking_excluded: {
+                    send: Object.keys(exclude.send).length,
+                    receive: Object.keys(exclude.receive).length,
+                }
+            });
+
+            let t12 = timeNow();
+
+            setNotExcluded();
+
+            console.log({
+                not_excluded: timeNow() - t12
             });
 
             // let memory_end = process.memoryUsage().heapTotal / 1024 / 1024;

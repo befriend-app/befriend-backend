@@ -2,6 +2,9 @@ const cacheService = require('./cache');
 const dbService = require('./db');
 
 module.exports = {
+    importance: {
+        default: 8
+    },
     data: null,
     getSmoking: function () {
         return new Promise(async (resolve, reject) => {

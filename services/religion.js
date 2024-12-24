@@ -2,6 +2,9 @@ const cacheService = require('./cache');
 const dbService = require('./db');
 
 module.exports = {
+    importance: {
+        default: 5
+    },
     data: null,
     getReligions: function () {
         return new Promise(async (resolve, reject) => {

@@ -2,6 +2,9 @@ const cacheService = require('./cache');
 const dbService = require('./db');
 
 module.exports = {
+    importance: {
+        default: 6
+    },
     data: null,
     getPolitics: function () {
         return new Promise(async (resolve, reject) => {
