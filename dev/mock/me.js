@@ -1113,7 +1113,7 @@ async function processSmoking() {
 
     await processSections();
 
-    return await processDrinking();
+    await processDrinking();
     await processModes();
     await processLocation();
     await processOnline();

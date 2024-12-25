@@ -789,9 +789,15 @@ function getMatches(me, counts_only = false, location = null, activity_type = nu
                 included = true;
             }
 
-            if(!(person_token in exclude.receive)) {
-                organized.counts.receive++;
-                included = true;
+            //if my online status is set to offline, exclude receiving from all
+            if(!me.is_online) {
+                exclude.receive[person_token] = true;
+            } else {
+                //allow receiving notifications if not excluded
+                if(!(person_token in exclude.receive)) {
+                    organized.counts.receive++;
+                    included = true;
+                }
             }
 
             if(included) {
