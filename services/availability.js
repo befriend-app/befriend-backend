@@ -1,6 +1,6 @@
 let cacheService = require('../services/cache');
 let dbService = require('../services/db');
-const { timeNow } = require('./shared');
+const { timeNow, isNumeric } = require('./shared');
 const { getFilters, getPersonFilters } = require('./filters');
 
 const DEFAULT_START = '09:00:00';
@@ -112,9 +112,26 @@ function saveAvailabilityData(person, availabilityData) {
                             ? existingRecords[timeSlot.id]
                             : dayRecords.find((r) => !processedIds.has(r.id) && r.is_time);
 
+                        if(!timeSlot.start.split(':').length || !timeSlot.end.split(':').length) {
+                            continue;
+                        }
+
+                        let startHour = parseInt(timeSlot.start.split(':')[0]);
+                        let endHour = parseInt(timeSlot.end.split(':')[0]);
+
+                        if(!isNumeric(startHour) || !isNumeric(endHour)) {
+                            continue;
+                        }
+
+                        //prevent start time hour from being greater than 23
+                        if(startHour > 23 || endHour > 47) {
+                            continue;
+                        }
+
                         const startTime = ensureTimeFormat(timeSlot.start);
+
                         const endTime = ensureTimeFormat(timeSlot.end);
-                        const isOvernight = isTimeSlotOvernight(startTime, endTime);
+                        const isOvernight = endHour >= 24;
 
                         const newTimeData = {
                             person_id: person.id,
@@ -261,47 +278,11 @@ function saveAvailabilityData(person, availabilityData) {
     });
 }
 
-// Helper function to ensure time is in HH:mm:ss format
+// Ensure time is in HH:mm:ss format
 function ensureTimeFormat(timeString) {
-    // If time is in HH:mm format, add seconds
-    if (/^\d{2}:\d{2}$/.test(timeString)) {
-        return `${timeString}:00`;
-    }
-    return timeString;
-}
+    const [hours, minutes] = timeString.split(':').map(Number);
 
-// Helper function to determine if a time slot crosses midnight
-function isTimeSlotOvernight(startTime, endTime) {
-    const start = new Date(`2000/01/01 ${startTime}`);
-    const end = new Date(`2000/01/01 ${endTime}`);
-    return end < start;
-}
-
-// Helper function to detect changes between current and new records
-function detectChanges(currentRecords, newRecords) {
-    if (currentRecords.length !== newRecords.length) {
-        return true;
-    }
-
-    // Sort both arrays for comparison
-    const sortedCurrent = [...currentRecords].sort(
-        (a, b) => a.day_of_week - b.day_of_week || a.start_time.localeCompare(b.start_time),
-    );
-    const sortedNew = [...newRecords].sort(
-        (a, b) => a.day_of_week - b.day_of_week || a.start_time.localeCompare(b.start_time),
-    );
-
-    // Compare each record
-    return sortedCurrent.some((current, index) => {
-        const next = sortedNew[index];
-        return (
-            current.day_of_week !== next.day_of_week ||
-            current.start_time !== next.start_time ||
-            current.end_time !== next.end_time ||
-            current.is_any_time !== next.is_any_time ||
-            current.is_overnight !== next.is_overnight
-        );
-    });
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
 }
 
 module.exports = {

@@ -16,7 +16,7 @@ const { getReligions } = require('./religion');
 
 const DEFAULT_DISTANCE_MILES = 20;
 
-function getMatches(me, counts_only = false, location = null, activity_type = null) {
+function getMatches(me, counts_only = false, location = null, activity = null) {
     let my_token, my_filters;
     let neighbor_grid_tokens = [];
     let person_tokens = {};
