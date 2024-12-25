@@ -3,6 +3,8 @@ const dbService = require('./db');
 
 const lifeStageService = require('./life_stages');
 const relationshipService = require('./relationships');
+const politicsService = require('./politics');
+const religionService = require('./religion');
 
 const drinkingService = require('./drinking');
 const smokingService = require('./smoking');
@@ -11,8 +13,6 @@ const { getModes, getPersonExcludedModes } = require('./modes');
 const { getNetworksForFilters } = require('./network');
 const { getGendersLookup } = require('./genders');
 const { isNumeric } = require('./shared');
-
-
 
 const filterMappings = {
     availability: {
@@ -804,8 +804,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
 
                 let filter = person_filters[sectionKey];
 
-                //try key without s
-                if(!filter) {
+                if(!filter) { //try key without s
                     filter = person_filters[sectionKey.substring(0, sectionKey.length - 1)];
                 }
 
@@ -893,7 +892,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
 
                 let filter = person_filters[sectionKey];
 
-                if(!filter) {
+                if(!filter) { //try key without s
                     filter = person_filters[sectionKey.substring(0, sectionKey.length - 1)];
                 }
 
@@ -1027,9 +1026,14 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
 
             await updateGenders();
 
+            //personal
             await updateMultiFilter('life_stages', lifeStageService.getLifeStages, lifeStageService.importance.default);
 
             await updateMultiFilter('relationships', relationshipService.getRelationshipStatus, relationshipService.importance.default);
+
+            await updateSingleFilter('politics', politicsService.getPolitics, politicsService.importance.default);
+
+            await updateMultiFilter('religion', religionService.getReligions, religionService.importance.default);
 
             await updateSingleFilter('drinking', drinkingService.getDrinking, drinkingService.importance.default);
 
@@ -1065,6 +1069,14 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
 
             if(filter_token.startsWith('relationship')) {
                 await updateMultiFilter('relationships', relationshipService.getRelationshipStatus, relationshipService.importance.default);
+            }
+
+            if(filter_token.startsWith('politic')) {
+                await updateSingleFilter('politics', politicsService.getPolitics, politicsService.importance.default);
+            }
+
+            if(filter_token.startsWith('religion')) {
+                await updateMultiFilter('religion', religionService.getReligions, religionService.importance.default);
             }
 
             if(filter_token === 'drinking') {

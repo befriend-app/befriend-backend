@@ -11,6 +11,8 @@ const { getDrinking } = require('./drinking');
 const { getSmoking } = require('./smoking');
 const { getLifeStages } = require('./life_stages');
 const { getRelationshipStatus } = require('./relationships');
+const { getPolitics } = require('./politics');
+const { getReligions } = require('./religion');
 
 const DEFAULT_DISTANCE_MILES = 20;
 
@@ -783,29 +785,32 @@ function getMatches(me, location = null, activity_type = null) {
             if (!me) {
                 return reject("Person required");
             }
+
+            let ts = timeNow();
             
             my_token = me.person_token;
 
             let memory_start = process.memoryUsage().heapTotal / 1024 / 1024;
 
-            let t1 = timeNow();
+            let t = timeNow();
             my_filters = await getPersonFilters(me);
 
             console.log({
-                my_filters: timeNow() - t1
+                my_filters: timeNow() - t
             });
 
-            let t2 = timeNow();
+            t = timeNow();
 
             await getGridTokens();
 
             let memory_end = process.memoryUsage().heapTotal / 1024 / 1024;
 
             console.log({
-                grid_tokens: timeNow() - t2
+                grid_tokens: timeNow() - t
             });
 
-            let t3 = timeNow();
+            t = timeNow();
+
             await getGridPersonTokens();
 
             console.log({
@@ -813,17 +818,16 @@ function getMatches(me, location = null, activity_type = null) {
             });
 
             console.log({
-                person_tokens: timeNow() - t3
+                person_tokens: timeNow() - t
             });
 
-            let t4 = timeNow();
+            t = timeNow();
 
             console.log({
                 memory_start,
                 memory_end
             });
 
-            // let t4 = timeNow();
             await filterOnlineStatus();
 
             console.log({
@@ -834,10 +838,11 @@ function getMatches(me, location = null, activity_type = null) {
             });
 
             console.log({
-                online: timeNow() - t4
+                online: timeNow() - t
             });
 
-            let t5 = timeNow();
+            t = timeNow();
+
             await filterNetworks();
 
             console.log({
@@ -848,10 +853,11 @@ function getMatches(me, location = null, activity_type = null) {
             });
 
             console.log({
-                networks: timeNow() - t5
+                networks: timeNow() - t
             });
 
-            let t6 = timeNow();
+            t = timeNow();
+
             await filterModes();
 
             console.log({
@@ -862,10 +868,10 @@ function getMatches(me, location = null, activity_type = null) {
             });
 
             console.log({
-                modes: timeNow() - t6
+                modes: timeNow() - t
             });
 
-            let t7 = timeNow();
+            t = timeNow();
 
             await filterVerifications();
 
@@ -877,10 +883,10 @@ function getMatches(me, location = null, activity_type = null) {
             });
 
             console.log({
-                verifications: timeNow() - t7
+                verifications: timeNow() - t
             });
 
-            let t8 = timeNow();
+            t = timeNow();
 
             await filterAge();
 
@@ -892,10 +898,10 @@ function getMatches(me, location = null, activity_type = null) {
             });
 
             console.log({
-                age: timeNow() - t8
+                age: timeNow() - t
             });
 
-            let t9 = timeNow();
+            t = timeNow();
 
             await filterGenders();
 
@@ -907,10 +913,10 @@ function getMatches(me, location = null, activity_type = null) {
             });
 
             console.log({
-                genders: timeNow() - t9
+                genders: timeNow() - t
             });
 
-            let t = timeNow();
+            t = timeNow();
 
             await filterSection('life_stages', getLifeStages, true);
 
@@ -940,12 +946,42 @@ function getMatches(me, location = null, activity_type = null) {
                 relationships: timeNow() - t
             });
 
-            let t10 = timeNow();
+            t = timeNow();
+
+            await filterSection('politics', getPolitics, false);
+
+            console.log({
+                after_politics_excluded: {
+                    send: Object.keys(exclude.send).length,
+                    receive: Object.keys(exclude.receive).length,
+                }
+            });
+
+            console.log({
+                politics: timeNow() - t
+            });
+
+            t = timeNow();
+
+            await filterSection('religion', getReligions, true);
+
+            console.log({
+                after_religions_excluded: {
+                    send: Object.keys(exclude.send).length,
+                    receive: Object.keys(exclude.receive).length,
+                }
+            });
+
+            console.log({
+                religions: timeNow() - t
+            });
+
+            t = timeNow();
 
             await filterSection('drinking', getDrinking, false);
 
             console.log({
-                drinking: timeNow() - t10
+                drinking: timeNow() - t
             });
 
             console.log({
@@ -955,12 +991,12 @@ function getMatches(me, location = null, activity_type = null) {
                 }
             });
             
-            let t11 = timeNow();
+            t = timeNow();
 
             await filterSection('smoking', getSmoking, false);
 
             console.log({
-                smoking: timeNow() - t11
+                smoking: timeNow() - t
             });
 
             console.log({
@@ -970,12 +1006,12 @@ function getMatches(me, location = null, activity_type = null) {
                 }
             });
 
-            let t12 = timeNow();
+            t = timeNow();
 
             setNotExcluded();
 
             console.log({
-                not_excluded: timeNow() - t12
+                not_excluded: timeNow() - t
             });
 
             // let memory_end = process.memoryUsage().heapTotal / 1024 / 1024;

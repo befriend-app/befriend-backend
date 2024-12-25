@@ -2139,10 +2139,6 @@ async function processSmoking() {
 
     await getPersonsLogins();
 
-await processLifeStages();
-await processRelationships();
-return;
-
     // notifications
     await processAvailability();
     await processActivityTypes();
