@@ -16,8 +16,8 @@ const { getReligions } = require('./religion');
 
 const DEFAULT_DISTANCE_MILES = 20;
 
-function getMatches(me, location = null, activity_type = null) {
-    let my_filters, my_token;
+function getMatches(me, counts_only = false, location = null, activity_type = null) {
+    let my_token, my_filters;
     let neighbor_grid_tokens = [];
     let person_tokens = {};
 
@@ -27,10 +27,18 @@ function getMatches(me, location = null, activity_type = null) {
     };
 
     let persons_not_excluded = {};
-
-    let matches = {
-        send: [],
-        receive: []
+    
+    let organized = {
+        counts: {
+            send: 0,
+            receive: 0,
+            interests: 0,
+            excluded: 0
+        },
+        matches: {
+            send: [],
+            receive: []
+        }
     };
 
     function getGridTokens() {
@@ -772,10 +780,24 @@ function getMatches(me, location = null, activity_type = null) {
         });
     }
 
-    function setNotExcluded() {
+    function organizePersons() {
         for(let person_token in person_tokens) {
-            if(!(person_token in exclude.send) || !(person_token in exclude.receive)) {
+            let included = false;
+
+            if(!(person_token in exclude.send)) {
+                organized.counts.send++;
+                included = true;
+            }
+
+            if(!(person_token in exclude.receive)) {
+                organized.counts.receive++;
+                included = true;
+            }
+
+            if(included) {
                 persons_not_excluded[person_token] = true;
+            } else {
+                organized.counts.excluded++;
             }
         }
     }
@@ -1008,7 +1030,7 @@ function getMatches(me, location = null, activity_type = null) {
 
             t = timeNow();
 
-            setNotExcluded();
+            organizePersons();
 
             console.log({
                 not_excluded: timeNow() - t
@@ -1024,8 +1046,12 @@ function getMatches(me, location = null, activity_type = null) {
             console.log({
                 final_persons: Object.keys(persons_not_excluded).length
             });
+            
+            if(counts_only) {
+                return resolve(organized);
+            }
 
-            resolve();
+            resolve(organized);
         } catch (e) {
             console.error(e);
             reject(e);
