@@ -757,6 +757,8 @@ function getTimeZoneFromCoords(lat, lon) {
     if (tz && tz.length) {
         return tz[0];
     }
+
+    return null;
 }
 
 function getURL(raw_domain, endpoint) {
@@ -805,6 +807,14 @@ function hasPort(domain) {
     let split = pure_domain.split(':');
 
     return split.length > 1;
+}
+
+function isLatValid(lat) {
+    return !(isNaN(lat) || lat > 90 || lat < -90);
+}
+
+function isLonValid(lon) {
+    return !(isNaN(lon) || lon > 180 || lon < -180);
 }
 
 function isIPAddress(address) {
@@ -1206,6 +1216,8 @@ module.exports = {
     getWalkingTime: getWalkingTime,
     getURL: getURL,
     hasPort: hasPort,
+    isLatValid: isLatValid,
+    isLonValid: isLonValid,
     isLocalApp: isLocalApp,
     isLocalHost: isLocalHost,
     isNumeric: isNumeric,

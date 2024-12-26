@@ -3,7 +3,7 @@ const dbService = require('../services/db');
 const gridService = require('../services/grid');
 const matchingService = require('../services/matching');
 
-const { timeNow, generateToken, latLonLookup } = require('../services/shared');
+const { timeNow, generateToken, latLonLookup, getTimeZoneFromCoords, isLatValid, isLonValid } = require('../services/shared');
 const { getPerson, updatePerson } = require('../services/persons');
 const { findMatches, notifyMatches, prepareActivity } = require('../services/activities');
 const { getCountryByCode } = require('../services/locations');
@@ -153,12 +153,7 @@ module.exports = {
                 let lat = req.body.lat;
                 let lon = req.body.lon;
 
-                if (
-                    typeof lat !== 'number' ||
-                    typeof lon !== 'number' ||
-                    Math.abs(lat) > 90 ||
-                    Math.abs(lon) > 180
-                ) {
+                if (!isLatValid(lat) || !isLonValid(lon)) {
                     res.json(
                         {
                             message: 'Invalid location provided',
@@ -203,6 +198,7 @@ module.exports = {
                     location_lat_1000: Math.floor(parseFloat(lat) * 1000),
                     location_lon: lon,
                     location_lon_1000: Math.floor(parseFloat(lon) * 1000),
+                    timezone: getTimeZoneFromCoords(lat, lon),
                     updated: timeNow(),
                 };
 

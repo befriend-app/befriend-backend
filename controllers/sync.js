@@ -68,6 +68,7 @@ module.exports = {
                         'is_verified_linkedin',
                         'is_online',
                         'gender_id', //converted to gender obj with token
+                        'timezone',
                         'reviews_count',
                         'reviews_rating',
                         'age',
@@ -103,6 +104,8 @@ module.exports = {
                 for (let person of persons) {
                     let gender = genders.byId[person.gender_id];
 
+                    gender = structuredClone(gender);
+
                     delete person.gender_id;
 
                     if (gender) {
@@ -115,6 +118,7 @@ module.exports = {
 
                 //paginate if length of results equals query limit
                 if (persons.length === module.exports.limit) {
+                    //works in conjunction with person results in reverse order by id
                     let last_person = persons[persons.length - 1];
 
                     if (last_person) {
@@ -122,7 +126,8 @@ module.exports = {
                     }
                 }
 
-                //first call: data_since_timestamp, second+ call: prev_data_since
+                //first call: data_since_timestamp w/ extra,
+                //second+ call: prev_data_since
                 res.json(
                     {
                         last_person_token: return_last_person_token,
