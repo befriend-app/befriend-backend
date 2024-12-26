@@ -274,7 +274,7 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
                         let excludeSend = results[idx++];
 
                         for (let token of excludeSend) {
-                            personsExcludeModesReceive[mode.token][token] = true;
+                            personsExcludeModesSend[mode.token][token] = true;
                         }
                     }
                 }

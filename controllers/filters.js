@@ -28,6 +28,7 @@ let sectionsData = require('../services/sections_data');
 const { getNetworksForFilters } = require('../services/network');
 const { getModes } = require('../services/modes');
 
+
 function createFilterEntry(filter_id, props = {}) {
     const now = timeNow();
 
@@ -391,7 +392,7 @@ function putActive(req, res) {
                       };
             }
 
-            await cacheService.setCache(person_filter_cache_key, person_filters);
+            await updateFiltersCache(person_filter_cache_key, person_filters);
 
             await updateGridSets(person, person_filters, filter_token);
 
@@ -472,7 +473,7 @@ function putImportance(req, res) {
 
             person_filters[section].items[filter_item_id].importance = importance;
 
-            await cacheService.setCache(person_filter_cache_key, person_filters);
+            await updateFiltersCache(person_filter_cache_key, person_filters);
 
             await updateGridSets(person, person_filters, section);
 
@@ -594,7 +595,7 @@ function putSendReceive(req, res) {
                       };
             }
 
-            await cacheService.setCache(person_filter_cache_key, person_filters);
+            await updateFiltersCache(person_filter_cache_key, person_filters);
 
             await updateGridSets(person, person_filters, filter_token);
 
@@ -826,7 +827,7 @@ function putMode(req, res) {
             }
 
             // Update cache
-            await cacheService.setCache(person_filter_cache_key, person_filters);
+            await updateFiltersCache(person_filter_cache_key, person_filters);
 
             await updateGridSets(person, person_filters, 'modes');
 
@@ -1037,7 +1038,7 @@ function putNetworks(req, res) {
             }
 
             // Update cache
-            await cacheService.setCache(person_filter_cache_key, person_filters);
+            await updateFiltersCache(person_filter_cache_key, person_filters);
 
             await updateGridSets(person, person_filters, filter.token);
 
@@ -1134,7 +1135,7 @@ function putReviewRating(req, res) {
                 };
             }
 
-            await cacheService.setCache(person_filter_cache_key, person_filters);
+            await updateFiltersCache(person_filter_cache_key, person_filters);
 
             res.json({
                 success: true,
@@ -1239,7 +1240,7 @@ function putAge(req, res) {
                 };
             }
 
-            await cacheService.setCache(person_filter_cache_key, person_filters);
+            await updateFiltersCache(person_filter_cache_key, person_filters);
 
             res.json({
                 success: true,
@@ -1431,7 +1432,7 @@ function putGender(req, res) {
                 }
             }
 
-            await cacheService.setCache(person_filter_cache_key, person_filters);
+            await updateFiltersCache(person_filter_cache_key, person_filters);
 
             await updateGridSets(person, person_filters, 'genders');
 
@@ -1526,7 +1527,7 @@ function putDistance(req, res) {
                 };
             }
 
-            await cacheService.setCache(person_filter_cache_key, person_filters);
+            await updateFiltersCache(person_filter_cache_key, person_filters);
 
             res.json({
                 success: true,
@@ -1694,7 +1695,7 @@ function putActivityTypes(req, res) {
             }
 
             // Update cache
-            await cacheService.setCache(person_filter_cache_key, person_filters);
+            await updateFiltersCache(person_filter_cache_key, person_filters);
 
             res.json(person_filters[filterKey]);
         } catch (error) {
@@ -1884,11 +1885,11 @@ function putSchools(req, res) {
                         existingItem.deleted = null;
                     }
                 } else {
-                    // Create new relationship status selection
                     let filterEntry = createFilterEntry(filter.id, {
                         person_id: person.id,
                         [mapping.column]: option.id,
                         is_active: active,
+                        hash_token: hash_token
                     });
 
                     [id] = await conn('persons_filters').insert(filterEntry);
@@ -1903,7 +1904,7 @@ function putSchools(req, res) {
                 }
             }
 
-            await cacheService.setCache(person_filter_cache_key, person_filters);
+            await updateFiltersCache(person_filter_cache_key, person_filters);
 
             res.json({
                 id: id,
@@ -2149,7 +2150,7 @@ function putMovies(req, res) {
                 }
             }
 
-            await cacheService.setCache(person_filter_cache_key, person_filters);
+            await updateFiltersCache(person_filter_cache_key, person_filters);
 
             res.json({
                 id: id,
@@ -2395,7 +2396,7 @@ function putTvShows(req, res) {
                 }
             }
 
-            await cacheService.setCache(person_filter_cache_key, person_filters);
+            await updateFiltersCache(person_filter_cache_key, person_filters);
 
             res.json({
                 id: id,
@@ -2632,7 +2633,7 @@ function putInstruments(req, res) {
                 }
             }
 
-            await cacheService.setCache(person_filter_cache_key, person_filters);
+            await updateFiltersCache(person_filter_cache_key, person_filters);
 
             res.json({
                 id: id,
@@ -2861,7 +2862,7 @@ function putWork(req, res) {
                 }
             }
 
-            await cacheService.setCache(person_filter_cache_key, person_filters);
+            await updateFiltersCache(person_filter_cache_key, person_filters);
 
             res.json({
                 id: id,
@@ -3101,7 +3102,7 @@ function putMusic(req, res) {
                 }
             }
 
-            await cacheService.setCache(person_filter_cache_key, person_filters);
+            await updateFiltersCache(person_filter_cache_key, person_filters);
 
             res.json({
                 id: id,
@@ -3362,7 +3363,7 @@ function putSports(req, res) {
                 }
             }
 
-            await cacheService.setCache(person_filter_cache_key, person_filters);
+            await updateFiltersCache(person_filter_cache_key, person_filters);
 
             res.json({
                 id: id,
@@ -3379,6 +3380,18 @@ function putSports(req, res) {
         }
 
         resolve();
+    });
+}
+
+function updateFiltersCache(key, filters_data) {
+    return new Promise(async (resolve, reject) => {
+        try {
+             await cacheService.setCache(key, filters_data);
+        } catch(e) {
+            console.error(e);
+        }
+
+         resolve();
     });
 }
 
