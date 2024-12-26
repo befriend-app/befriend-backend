@@ -710,7 +710,7 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
                     }
 
                     if (personOptionTokens.size === 0) {
-                        // Exclude sending/receiving if filter specified with importance
+                        // Exclude sending/receiving if filter specified (with importance)
                         for (let k in excludeSend) {
                             if (my_token in excludeSend[k]) {
                                 exclude.send[token] = true;
@@ -757,13 +757,12 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
                         let personOption = Array.from(personOptionTokens)[0];
                         let myOption = Array.from(myOptionTokens)[0];
 
-                        // Exclude send if person has excluded my option or I have excluded their option
+                        // Exclude send/receive if person has excluded my option or I have excluded their option
                         if (token in excludeReceive[myOption] ||
                             my_token in excludeSend[personOption]) {
                             exclude.send[token] = true;
                         }
 
-                        // Exclude receive if person has excluded my option or I have excluded their option
                         if (token in excludeSend[myOption] ||
                             my_token in excludeReceive[personOption]) {
                             exclude.receive[token] = true;
