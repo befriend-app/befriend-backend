@@ -471,7 +471,6 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
                         }
                     }
 
-                    // Get excluded gender send/receive preferences
                     for (let token in gendersLookup.byToken) {
                         if (token !== 'any') {
                             pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(
@@ -492,8 +491,8 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
 
                 let idx = 0;
                 let genderSets = {};
-                let genderExcludeSend = {};
-                let genderExcludeReceive = {};
+                let personsExcludeSend = {};
+                let personsExcludeReceive = {};
 
                 // Process pipeline results
                 for (let grid_token of neighbor_grid_tokens) {
@@ -515,25 +514,25 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
                     // Process gender exclusions
                     for (let gender_token in gendersLookup.byToken) {
                         if (gender_token !== 'any') {
-                            if (!genderExcludeSend[gender_token]) {
-                                genderExcludeSend[gender_token] = {};
+                            if (!personsExcludeSend[gender_token]) {
+                                personsExcludeSend[gender_token] = {};
                             }
-                            if (!genderExcludeReceive[gender_token]) {
-                                genderExcludeReceive[gender_token] = {};
+                            if (!personsExcludeReceive[gender_token]) {
+                                personsExcludeReceive[gender_token] = {};
                             }
 
                             // Send exclusions
                             let sendExclusions = results[idx++];
 
                             for (let token of sendExclusions) {
-                                genderExcludeSend[gender_token][token] = true;
+                                personsExcludeSend[gender_token][token] = true;
                             }
 
                             // Receive exclusions
                             let receiveExclusions = results[idx++];
 
                             for (let token of receiveExclusions) {
-                                genderExcludeReceive[gender_token][token] = true;
+                                personsExcludeReceive[gender_token][token] = true;
                             }
                         }
                     }
@@ -541,16 +540,16 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
 
                 //if gender not set, exclude for all excluded
                 if(!myGender) {
-                    for(let gender_token in genderExcludeReceive) {
-                        let tokens = genderExcludeReceive[gender_token];
+                    for(let gender_token in personsExcludeReceive) {
+                        let tokens = personsExcludeReceive[gender_token];
 
                         for(let token in tokens) {
                             exclude.send[token] = true;
                         }
                     }
 
-                    for(let gender_token in genderExcludeSend) {
-                        let tokens = genderExcludeSend[gender_token];
+                    for(let gender_token in personsExcludeSend) {
+                        let tokens = personsExcludeSend[gender_token];
 
                         for(let token in tokens) {
                             exclude.receive[token] = true;
@@ -570,12 +569,12 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
                         }
 
                         // Exclude send if person has excluded my gender or I have excluded the person's gender
-                        if (token in genderExcludeReceive[myGender] || my_token in genderExcludeSend[personGender]) {
+                        if (token in personsExcludeReceive[myGender] || my_token in personsExcludeSend[personGender]) {
                             exclude.send[token] = true;
                         }
 
                         // Exclude receive if person has excluded my gender or I have excluded the person's gender
-                        if (token in genderExcludeSend[myGender] || my_token in genderExcludeReceive[personGender]) {
+                        if (token in personsExcludeSend[myGender] || my_token in personsExcludeReceive[personGender]) {
                             exclude.receive[token] = true;
                         }
                     }
