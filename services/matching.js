@@ -57,9 +57,13 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
                 let max_distance = DEFAULT_DISTANCE_MILES;
 
                 if (my_filters.distance?.is_active &&
-                    my_filters.distance.is_send &&
                     my_filters.distance.filter_value) {
-                    max_distance = my_filters.distance.filter_value;
+
+                    if(my_filters.distance.is_send && my_filters.distance.is_receive) {
+                        max_distance = my_filters.distance.filter_value;
+                    } else if(my_filters.distance.is_send || my_filters.distance.is_receive) {
+                        max_distance = Math.max(my_filters.distance.filter_value, DEFAULT_DISTANCE_MILES);
+                    }
                 }
 
                 max_distance *= kms_per_mile;
