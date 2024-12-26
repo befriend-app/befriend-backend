@@ -263,31 +263,31 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
 
                 let idx = 0;
 
-                let excludeModesSend = {};
-                let excludeModesReceive = {};
+                let personsExcludeModesSend = {};
+                let personsExcludeModesReceive = {};
 
                 // Process send results
                 for(let mode of modeTypes) {
-                    excludeModesSend[mode.token] = {};
+                    personsExcludeModesSend[mode.token] = {};
 
                     for (let grid_token of neighbor_grid_tokens) {
                         let excludeSend = results[idx++];
 
                         for (let token of excludeSend) {
-                            excludeModesSend[mode.token][token] = true;
+                            personsExcludeModesReceive[mode.token][token] = true;
                         }
                     }
                 }
 
                 // Process receive results
                 for(let mode of modeTypes) {
-                    excludeModesReceive[mode.token] = {};
+                    personsExcludeModesReceive[mode.token] = {};
 
                     for (let grid_token of neighbor_grid_tokens) {
                         let excludeReceive = results[idx++];
 
                         for (let token of excludeReceive) {
-                            excludeModesReceive[mode.token][token] = true;
+                            personsExcludeModesReceive[mode.token][token] = true;
                         }
                     }
                 }
@@ -298,7 +298,7 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
 
                     for(let includedMode of included_modes.send) {
                         // If not excluded from receiving
-                        if(!(token in excludeModesReceive[includedMode])) {
+                        if(!(token in personsExcludeModesReceive[includedMode])) {
                             hasSendModeMatch = true;
                             break;
                         }
@@ -313,7 +313,7 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
 
                     for(let includedMode of included_modes.receive) {
                         // If not excluded from sending
-                        if(!(token in excludeModesSend[includedMode])) {
+                        if(!(token in personsExcludeModesSend[includedMode])) {
                             hasReceiveModeMatch = true;
                             break;
                         }
