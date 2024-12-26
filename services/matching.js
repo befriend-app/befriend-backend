@@ -1044,7 +1044,7 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
                 not_excluded: timeNow() - t
             });
 
-            // let memory_end = process.memoryUsage().heapTotal / 1024 / 1024;
+            memory_end = process.memoryUsage().heapTotal / 1024 / 1024;
 
             console.log({
                 memory_start,
@@ -1054,6 +1054,12 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
             console.log({
                 final_persons: Object.keys(persons_not_excluded).length
             });
+
+            neighbor_grid_tokens = null;
+            person_tokens = null;
+
+            exclude = null;
+            persons_not_excluded = null;
 
             if(counts_only) {
                 return resolve(organized);

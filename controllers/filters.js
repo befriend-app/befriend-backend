@@ -366,11 +366,11 @@ function putActive(req, res) {
                 existingFilter.is_active = active;
                 existingFilter.updated = now;
 
-                if (existingFilter.items) {
-                    for (let k in existingFilter.items) {
-                        existingFilter.items[k].is_active = active;
-                    }
-                }
+                // if (existingFilter.items) {
+                //     for (let k in existingFilter.items) {
+                //         existingFilter.items[k].is_active = active;
+                //     }
+                // }
             } else {
                 // Create new filter entry
                 const filterEntry = createFilterEntry(filter.id, {
