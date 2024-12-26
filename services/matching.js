@@ -1,9 +1,13 @@
+const dayjs = require('dayjs');
+
 let cacheService = require('../services/cache');
 let dbService = require('../services/db');
+
+let availabilityService = require('../services/availability');
 let gridService = require('../services/grid');
 
 const { getPersonFilters } = require('./filters');
-const { kms_per_mile, timeNow } = require('./shared');
+const { kms_per_mile, timeNow, shuffleFunc } = require('./shared');
 const { getNetworksForFilters } = require('./network');
 const { getModes, getPersonExcludedModes } = require('./modes');
 const { getGendersLookup } = require('./genders');
@@ -15,18 +19,21 @@ const { getPolitics } = require('./politics');
 const { getReligions } = require('./religion');
 
 const DEFAULT_DISTANCE_MILES = 20;
+const MAX_PERSONS_PROCESS = 1000;
 
 function getMatches(me, counts_only = false, location = null, activity = null) {
     let my_token, my_filters;
     let neighbor_grid_tokens = [];
     let person_tokens = {};
+    let selected_persons_data = {};
 
     let exclude = {
         send: {},
         receive: {}
     };
-
-    let persons_not_excluded = {};
+    
+    let persons_not_excluded_after_stage_1 = {};
+    let persons_not_excluded_final = {};
 
     let organized = {
         counts: {
@@ -42,6 +49,338 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
     };
 
     let is_offline = !me.is_online;
+    
+    function processStage1() {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let t = timeNow();
+
+                await getGridTokens();
+
+                console.log({
+                    grid_tokens: timeNow() - t
+                });
+
+                t = timeNow();
+
+                await getGridPersonTokens();
+
+                console.log({
+                    total_initial_persons: Object.keys(person_tokens).length
+                });
+
+                console.log({
+                    person_tokens: timeNow() - t
+                });
+
+                t = timeNow();
+
+                await filterOnlineStatus();
+
+                console.log({
+                    after_online_excluded: {
+                        send: Object.keys(exclude.send).length,
+                        receive: Object.keys(exclude.receive).length,
+                    }
+                });
+
+                console.log({
+                    online: timeNow() - t
+                });
+
+                t = timeNow();
+
+                await filterAvailability();
+
+                console.log({
+                    availability: timeNow() - t
+                });
+
+                console.log({
+                    after_availability_excluded: {
+                        send: Object.keys(exclude.send).length,
+                        receive: Object.keys(exclude.receive).length,
+                    }
+                });
+
+                await filterNetworks();
+
+                console.log({
+                    after_networks_excluded: {
+                        send: Object.keys(exclude.send).length,
+                        receive: Object.keys(exclude.receive).length,
+                    }
+                });
+
+                console.log({
+                    networks: timeNow() - t
+                });
+
+                t = timeNow();
+
+                await filterModes();
+
+                console.log({
+                    after_modes_excluded: {
+                        send: Object.keys(exclude.send).length,
+                        receive: Object.keys(exclude.receive).length,
+                    }
+                });
+
+                console.log({
+                    modes: timeNow() - t
+                });
+
+                t = timeNow();
+
+                await filterVerifications();
+
+                console.log({
+                    after_verifications_excluded: {
+                        send: Object.keys(exclude.send).length,
+                        receive: Object.keys(exclude.receive).length,
+                    }
+                });
+
+                console.log({
+                    verifications: timeNow() - t
+                });
+
+                t = timeNow();
+
+                await filterAge();
+
+                console.log({
+                    after_age_excluded: {
+                        send: Object.keys(exclude.send).length,
+                        receive: Object.keys(exclude.receive).length,
+                    }
+                });
+
+                console.log({
+                    age: timeNow() - t
+                });
+
+                t = timeNow();
+
+                await filterGenders();
+
+                console.log({
+                    after_genders_excluded: {
+                        send: Object.keys(exclude.send).length,
+                        receive: Object.keys(exclude.receive).length,
+                    }
+                });
+
+                console.log({
+                    genders: timeNow() - t
+                });
+
+                t = timeNow();
+
+                await filterSection('life_stages', getLifeStages, true);
+
+                console.log({
+                    after_life_excluded: {
+                        send: Object.keys(exclude.send).length,
+                        receive: Object.keys(exclude.receive).length,
+                    }
+                });
+
+                console.log({
+                    life: timeNow() - t
+                });
+
+                t = timeNow();
+
+                await filterSection('relationships', getRelationshipStatus, true);
+
+                console.log({
+                    after_relationships_excluded: {
+                        send: Object.keys(exclude.send).length,
+                        receive: Object.keys(exclude.receive).length,
+                    }
+                });
+
+                console.log({
+                    relationships: timeNow() - t
+                });
+
+                t = timeNow();
+
+                await filterSection('politics', getPolitics, false);
+
+                console.log({
+                    after_politics_excluded: {
+                        send: Object.keys(exclude.send).length,
+                        receive: Object.keys(exclude.receive).length,
+                    }
+                });
+
+                console.log({
+                    politics: timeNow() - t
+                });
+
+                t = timeNow();
+
+                await filterSection('religion', getReligions, true);
+
+                console.log({
+                    after_religions_excluded: {
+                        send: Object.keys(exclude.send).length,
+                        receive: Object.keys(exclude.receive).length,
+                    }
+                });
+
+                console.log({
+                    religions: timeNow() - t
+                });
+
+                t = timeNow();
+
+                await filterSection('drinking', getDrinking, false);
+
+                console.log({
+                    drinking: timeNow() - t
+                });
+
+                console.log({
+                    after_drinking_excluded: {
+                        send: Object.keys(exclude.send).length,
+                        receive: Object.keys(exclude.receive).length,
+                    }
+                });
+
+                t = timeNow();
+
+                await filterSection('smoking', getSmoking, false);
+
+                console.log({
+                    smoking: timeNow() - t
+                });
+
+                console.log({
+                    after_smoking_excluded: {
+                        send: Object.keys(exclude.send).length,
+                        receive: Object.keys(exclude.receive).length,
+                    }
+                });    
+                
+                return resolve();
+            } catch(e) {
+                console.error(e);
+                return reject(e);
+            }       
+        });
+    }
+
+    function processStage2() {
+        return new Promise(async (resolve, reject) => {
+            function filterPersons() {
+                for(let person_token in person_tokens) {
+                    let included = false;
+
+                    if(!(person_token in exclude.send)) {
+                        included = true;
+                    }
+
+                    //if my online status is set to offline, exclude receiving from all
+                    if(!me.is_online) {
+                        exclude.receive[person_token] = true;
+                    } else {
+                        //allow receiving notifications if not excluded
+                        if(!(person_token in exclude.receive)) {
+                            included = true;
+                        }
+                    }
+
+                    if(included) {
+                        persons_not_excluded_after_stage_1[person_token] = true;
+                    } else {
+                        organized.counts.excluded++;
+                    }
+                }
+            }
+
+            try {
+                filterPersons();
+
+                let t = timeNow();
+
+                //get data for up to 1,000 not excluded persons
+                let pipeline = cacheService.startPipeline();
+
+                let persons_keys = Object.keys(persons_not_excluded_after_stage_1);
+
+                if(persons_keys.length > MAX_PERSONS_PROCESS) {
+                    persons_keys = shuffleFunc(persons_keys);
+                    persons_keys = persons_keys.slice(0, MAX_PERSONS_PROCESS);
+                }
+
+                for(let person_token of persons_keys) {
+                    let person_key = cacheService.keys.person(person_token);
+                    let person_filters_key = cacheService.keys.person_filters(person_token);
+
+                    pipeline.get(person_key);
+                    pipeline.get(person_filters_key);
+                }
+
+                let results = await cacheService.execPipeline(pipeline);
+
+                console.log({
+                    stage_2_pipeline: timeNow() - t
+                });
+
+                let t2 = timeNow();
+
+                let idx = 0;
+
+                for(let i = 0; i < persons_keys.length; i++) {
+                    let person_token = persons_keys[i];
+
+                    try {
+                        let data = results[idx++];
+
+                        if(data) {
+                            data = JSON.parse(data);
+                        }
+
+                        let filters = results[idx++];
+
+                        if(filters) {
+                            filters = JSON.parse(filters);
+                        }
+
+                        selected_persons_data[person_token] = {
+                            data: data,
+                            filters: filters,
+                            sections: null
+                        }
+                    } catch(e) {
+                        console.error(e);
+                    }
+                }
+
+                console.log({
+                    stage_2_parse: timeNow() - t2
+                });
+
+                let t3 = timeNow();
+
+                await filterPersonsAvailability();
+
+                console.log({
+                    stage_2_availability: timeNow() - t3
+                });
+
+                results = null;
+            } catch(e) {
+                console.error(e);
+            }
+
+            resolve();
+        });
+    }
 
     function getGridTokens() {
         return new Promise(async (resolve, reject) => {
@@ -136,6 +475,38 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
                 console.error(e);
                 reject(e);
             }
+        });
+    }
+
+    function filterAvailability() {
+        return new Promise(async (resolve, reject) => {
+            //todo day of week based on if activity date/start time provided
+
+            let day_of_week = new Date().getDay();
+
+            let pipeline = cacheService.startPipeline();
+
+            for (let grid_token of neighbor_grid_tokens) {
+                pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(
+                    grid_token,
+                    `availability:day:${day_of_week}`,
+                    'receive'
+                ));
+            }
+
+            try {
+                let results = await cacheService.execPipeline(pipeline);
+
+                for(let persons of results) {
+                    for(let person_token of persons) {
+                        exclude.send[person_token] = true;
+                    }
+                }
+            } catch(e) {
+                console.error(e);
+            }
+
+            resolve();
         });
     }
 
@@ -782,8 +1153,166 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
         });
     }
 
-    function organizePersons() {
-        for(let person_token in person_tokens) {
+    function filterPersonsAvailability() {
+        return new Promise(async (resolve, reject) => {
+            try {
+                //todo compare against activity date/time and duration
+                const currentUTC = dayjs().utc();
+                const DEFAULT_START = availabilityService.default_start;
+                const DEFAULT_END = availabilityService.default_end;
+
+                for (let person_token in selected_persons_data) {
+                    const person = selected_persons_data[person_token].data;
+                    const filters = selected_persons_data[person_token].filters;
+
+                    if (!person.timezone) {
+                        // If no timezone data, exclude from sending
+                        exclude.send[person_token] = true;
+                        continue;
+                    }
+
+                    // Convert current UTC time to person's timezone
+                    const personTime = currentUTC.tz(person.timezone);
+                    const currentDayOfWeek = personTime.day();
+                    const prevDayIndex = (currentDayOfWeek - 1 + 7) % 7;
+
+                    // Handle default availability if filter is disabled or not present
+                    if (!filters.availability || !filters.availability.is_active) {
+                        const currentDate = personTime.format('YYYY-MM-DD');
+                        const start = dayjs.tz(`${currentDate} ${DEFAULT_START}`, person.timezone);
+                        const end = dayjs.tz(`${currentDate} ${DEFAULT_END}`, person.timezone);
+
+                        if (personTime.isSame(start) ||
+                            (personTime.isAfter(start) && personTime.isBefore(end))) {
+                            //do not exclude
+                        } else {
+                            exclude.send[person_token] = true;
+                        }
+
+                        continue;
+                    }
+
+                    const availabilityItems = filters.availability.items;
+
+                    let daySlot = null;
+                    let prevDaySlot = null;
+
+                    for (let id in availabilityItems) {
+                        const slot = availabilityItems[id];
+
+                        if (slot.is_day &&
+                            slot.day_of_week === currentDayOfWeek &&
+                            !slot.deleted) {
+                            daySlot = slot;
+                        }
+
+                        if (slot.is_day &&
+                            slot.day_of_week === prevDayIndex &&
+                            !slot.deleted) {
+                            prevDaySlot = slot;
+                        }
+                    }
+
+                    let isAvailableNow = false;
+
+                    // Check previous day's overnight slots first
+                    if (prevDaySlot && prevDaySlot.is_active) {
+                        for (let id in availabilityItems) {
+                            const slot = availabilityItems[id];
+                            if (slot.day_of_week === prevDayIndex &&
+                                slot.is_time &&
+                                slot.is_overnight &&
+                                slot.is_active &&
+                                !slot.deleted) {
+
+                                // Handle end times > 24:00:00
+                                const [endHour] = slot.end_time.split(':').map(Number);
+                                if (endHour >= 24) {
+                                    const adjustedEndTime = slot.end_time.replace(
+                                        /^\d+/,
+                                        String(endHour - 24).padStart(2, '0')
+                                    );
+                                    const endTime = dayjs.tz(`${personTime.format('YYYY-MM-DD')} ${adjustedEndTime}`, person.timezone);
+                                    if (personTime.isBefore(endTime)) {
+                                        isAvailableNow = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // If not available from overnight slot, check current day
+                    if (!isAvailableNow) {
+                        // Skip if day is disabled
+                        if (!daySlot || !daySlot.is_active) {
+                            exclude.send[person_token] = true;
+                            continue;
+                        }
+
+                        // Available all day if any_time is set
+                        if (daySlot.is_any_time) {
+                            continue; // Don't exclude
+                        }
+
+                        // Check current day's time slots
+                        for (let id in availabilityItems) {
+                            const slot = availabilityItems[id];
+                            if (slot.day_of_week === currentDayOfWeek &&
+                                slot.is_time &&
+                                slot.is_active &&
+                                !slot.deleted) {
+
+                                const currentDate = personTime.format('YYYY-MM-DD');
+                                const startTime = dayjs.tz(`${currentDate} ${slot.start_time}`, person.timezone);
+
+                                // Parse end time hours
+                                const [endHour] = slot.end_time.split(':').map(Number);
+
+                                if (endHour < 24) {
+                                    // Regular time slot ending same day
+                                    const endTime = dayjs.tz(`${currentDate} ${slot.end_time}`, person.timezone);
+                                    if (personTime.isSame(startTime) ||
+                                        (personTime.isAfter(startTime) && personTime.isBefore(endTime))) {
+                                        isAvailableNow = true;
+                                        break;
+                                    }
+                                } else {
+                                    // Overnight slot ending next day
+                                    const nextDate = personTime.add(1, 'day').format('YYYY-MM-DD');
+                                    const adjustedEndTime = slot.end_time.replace(
+                                        /^\d+/,
+                                        String(endHour - 24).padStart(2, '0')
+                                    );
+                                    const endTime = dayjs.tz(`${nextDate} ${adjustedEndTime}`, person.timezone);
+
+                                    if (personTime.isSame(startTime) ||
+                                        personTime.isAfter(startTime)) {
+                                        // For overnight slots, we're available after start
+                                        // until midnight and into next day until end time
+                                        isAvailableNow = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (!isAvailableNow) {
+                            exclude.send[person_token] = true;
+                        }
+                    }
+                }
+
+                resolve();
+            } catch (error) {
+                console.error('Error in filterPersonsAvailability:', error);
+                reject(error);
+            }
+        });
+    }
+
+    function organizeFinal() {
+        for(let person_token in persons_not_excluded_after_stage_1) {
             let included = false;
 
             if(!(person_token in exclude.send)) {
@@ -803,7 +1332,7 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
             }
 
             if(included) {
-                persons_not_excluded[person_token] = true;
+                persons_not_excluded_final[person_token] = true;
             } else {
                 organized.counts.excluded++;
             }
@@ -811,240 +1340,51 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
     }
 
     return new Promise(async (resolve, reject) => {
+        let ts = timeNow();
+        let memory_start = process.memoryUsage().heapTotal / 1024 / 1024;
+
         try {
             if (!me) {
                 return reject("Person required");
             }
 
-            let ts = timeNow();
-
             my_token = me.person_token;
 
-            let memory_start = process.memoryUsage().heapTotal / 1024 / 1024;
+            //exclude sending/receiving to/from self
+            exclude.send[my_token] = true;
+            exclude.receive[my_token] = true;
 
             let t = timeNow();
+
             my_filters = await getPersonFilters(me);
 
             console.log({
                 my_filters: timeNow() - t
             });
-
-            t = timeNow();
-
-            await getGridTokens();
-
-            let memory_end = process.memoryUsage().heapTotal / 1024 / 1024;
+            
+            await processStage1();
 
             console.log({
-                grid_tokens: timeNow() - t
+                stage_1: timeNow() - t
             });
 
             t = timeNow();
 
-            await getGridPersonTokens();
+            await processStage2();
 
             console.log({
-                total_initial_persons: Object.keys(person_tokens).length
-            });
-
-            console.log({
-                person_tokens: timeNow() - t
+                stage_2: timeNow() - t
             });
 
             t = timeNow();
 
-            console.log({
-                memory_start,
-                memory_end
-            });
-
-            await filterOnlineStatus();
-
-            console.log({
-                after_online_excluded: {
-                    send: Object.keys(exclude.send).length,
-                    receive: Object.keys(exclude.receive).length,
-                }
-            });
-
-            console.log({
-                online: timeNow() - t
-            });
-
-            t = timeNow();
-
-            await filterNetworks();
-
-            console.log({
-                after_networks_excluded: {
-                    send: Object.keys(exclude.send).length,
-                    receive: Object.keys(exclude.receive).length,
-                }
-            });
-
-            console.log({
-                networks: timeNow() - t
-            });
-
-            t = timeNow();
-
-            await filterModes();
-
-            console.log({
-                after_modes_excluded: {
-                    send: Object.keys(exclude.send).length,
-                    receive: Object.keys(exclude.receive).length,
-                }
-            });
-
-            console.log({
-                modes: timeNow() - t
-            });
-
-            t = timeNow();
-
-            await filterVerifications();
-
-            console.log({
-                after_verifications_excluded: {
-                    send: Object.keys(exclude.send).length,
-                    receive: Object.keys(exclude.receive).length,
-                }
-            });
-
-            console.log({
-                verifications: timeNow() - t
-            });
-
-            t = timeNow();
-
-            await filterAge();
-
-            console.log({
-                after_age_excluded: {
-                    send: Object.keys(exclude.send).length,
-                    receive: Object.keys(exclude.receive).length,
-                }
-            });
-
-            console.log({
-                age: timeNow() - t
-            });
-
-            t = timeNow();
-
-            await filterGenders();
-
-            console.log({
-                after_genders_excluded: {
-                    send: Object.keys(exclude.send).length,
-                    receive: Object.keys(exclude.receive).length,
-                }
-            });
-
-            console.log({
-                genders: timeNow() - t
-            });
-
-            t = timeNow();
-
-            await filterSection('life_stages', getLifeStages, true);
-
-            console.log({
-                after_life_excluded: {
-                    send: Object.keys(exclude.send).length,
-                    receive: Object.keys(exclude.receive).length,
-                }
-            });
-
-            console.log({
-                life: timeNow() - t
-            });
-
-            t = timeNow();
-
-            await filterSection('relationships', getRelationshipStatus, true);
-
-            console.log({
-                after_relationships_excluded: {
-                    send: Object.keys(exclude.send).length,
-                    receive: Object.keys(exclude.receive).length,
-                }
-            });
-
-            console.log({
-                relationships: timeNow() - t
-            });
-
-            t = timeNow();
-
-            await filterSection('politics', getPolitics, false);
-
-            console.log({
-                after_politics_excluded: {
-                    send: Object.keys(exclude.send).length,
-                    receive: Object.keys(exclude.receive).length,
-                }
-            });
-
-            console.log({
-                politics: timeNow() - t
-            });
-
-            t = timeNow();
-
-            await filterSection('religion', getReligions, true);
-
-            console.log({
-                after_religions_excluded: {
-                    send: Object.keys(exclude.send).length,
-                    receive: Object.keys(exclude.receive).length,
-                }
-            });
-
-            console.log({
-                religions: timeNow() - t
-            });
-
-            t = timeNow();
-
-            await filterSection('drinking', getDrinking, false);
-
-            console.log({
-                drinking: timeNow() - t
-            });
-
-            console.log({
-                after_drinking_excluded: {
-                    send: Object.keys(exclude.send).length,
-                    receive: Object.keys(exclude.receive).length,
-                }
-            });
-
-            t = timeNow();
-
-            await filterSection('smoking', getSmoking, false);
-
-            console.log({
-                smoking: timeNow() - t
-            });
-
-            console.log({
-                after_smoking_excluded: {
-                    send: Object.keys(exclude.send).length,
-                    receive: Object.keys(exclude.receive).length,
-                }
-            });
-
-            t = timeNow();
-
-            organizePersons();
+            organizeFinal();
 
             console.log({
                 not_excluded: timeNow() - t
             });
 
-            memory_end = process.memoryUsage().heapTotal / 1024 / 1024;
+            let memory_end = process.memoryUsage().heapTotal / 1024 / 1024;
 
             console.log({
                 memory_start,
@@ -1052,14 +1392,16 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
             });
 
             console.log({
-                final_persons: Object.keys(persons_not_excluded).length
+                final_persons: Object.keys(persons_not_excluded_final).length
             });
 
             neighbor_grid_tokens = null;
             person_tokens = null;
+            selected_persons_data = null;
 
             exclude = null;
-            persons_not_excluded = null;
+            persons_not_excluded_after_stage_1 = null;
+            persons_not_excluded_final = null;
 
             if(counts_only) {
                 return resolve(organized);

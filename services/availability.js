@@ -1,7 +1,7 @@
 let cacheService = require('../services/cache');
 let dbService = require('../services/db');
 const { timeNow, isNumeric } = require('./shared');
-const { getFilters, getPersonFilters } = require('./filters');
+const { getFilters, getPersonFilters, updateGridSets } = require('./filters');
 
 const DEFAULT_START = '09:00:00';
 const DEFAULT_END = '21:00:00';
@@ -261,6 +261,8 @@ function saveAvailabilityData(person, availabilityData) {
             // Map of frontend IDs to actual database IDs
             const idMapping = Object.fromEntries(newRecordIds);
 
+            await updateGridSets(person, person_filters, 'availability');
+
             resolve({
                 success: true,
                 data: person_filters,
@@ -286,5 +288,7 @@ function ensureTimeFormat(timeString) {
 }
 
 module.exports = {
+    default_start: DEFAULT_START,
+    default_end: DEFAULT_END,
     saveAvailabilityData,
 };

@@ -466,6 +466,8 @@ function getPersonFilters(person) {
     });
 }
 
+
+
 function updateGridSets(person, person_filters = null, filter_token, prev_grid_token = null) {
     let allNetworks, network_token, grid_token, keys_sets_add,keys_sets_del,
         keys_sorted_del, keys_sorted_add, rem_pipeline, add_pipeline;
@@ -509,7 +511,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                         // Check if previous day has any overnight time slots
                         const prevDayIndex = (item.day_of_week - 1 + 7) % 7; //Sunday to Saturday
                         const hasPrevDayOvernightSlot = Object.values(availabilityFilter.items).some(
-                            slot => !slot.is_day &&
+                            slot => slot.is_time &&
                                 slot.day_of_week === prevDayIndex &&
                                 slot.is_overnight &&
                                 slot.is_active &&
