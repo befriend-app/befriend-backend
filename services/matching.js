@@ -406,14 +406,15 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
                                 //send/receive from anybody
                             }
                         } else {
-                            //exclude from sending if token in verified and receive
-                            if(token in verifiedPersons[type] && token in receiveVerification[type]) {
-                                exclude.send[token] = true;
-                            }
+                            //exclude from sending/receiving if person is verified and requires verification
+                            if(token in verifiedPersons[type]) {
+                                if(token in receiveVerification[type]) {
+                                    exclude.send[token] = true;
+                                }
 
-                            //exclude from receiving if token in verified and send
-                            if(token in verifiedPersons[type] && token in sendVerification[type]) {
-                                exclude.receive[token] = true;
+                                if(token in sendVerification[type]) {
+                                    exclude.receive[token] = true;
+                                }
                             }
                         }
                     }
