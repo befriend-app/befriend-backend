@@ -10,6 +10,7 @@ loadScriptEnv();
 
         //add/update data
         await require('./modes').main();
+        await require('./reviews').main();
         await require('./genders').main();
         await require('./activity-types').main();
         await require('./filters').main();

@@ -138,6 +138,21 @@ function updatePersonsCount() {
         }
     }
 
+    async function updateReviews() {
+        let conn = await dbService.conn();
+
+        let persons_qry = await conn('persons')
+            .whereNull('reviews_rating')
+            .orderBy('id')
+            .select('id', 'person_token');
+
+        for(let p of persons_qry) {
+            let person = await getPerson(p.person_token);
+
+            await updateGridSets(person, null, 'genders');
+        }
+    }
+
     async function updateGenderGridSets() {
         try {
             await cacheService.init();
@@ -256,6 +271,8 @@ function updatePersonsCount() {
         }
     }
 
+
+
     let results;
     let conn = await dbService.conn();
     let self_network = await getNetworkSelf();
@@ -269,7 +286,8 @@ function updatePersonsCount() {
 
     try {
         // await addPersons();
-        await updateGenderGridSets();
+        // await updateGenderGridSets();
+        await updateReviews();
         // await updateAgeSets();
         // await updatePersonsCount();
     } catch(e) {
