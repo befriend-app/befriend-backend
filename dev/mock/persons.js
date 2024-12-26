@@ -144,11 +144,11 @@ function updatePersonsCount() {
 
         let persons = await conn('persons')
             .whereNotNull('grid_id')
-            .whereNull('rating_safety')
-            .whereNull('rating_trust')
-            .whereNull('rating_timeliness')
-            .whereNull('rating_friendliness')
-            .whereNull('rating_fun')
+            // .whereNull('rating_safety')
+            // .whereNull('rating_trust')
+            // .whereNull('rating_timeliness')
+            // .whereNull('rating_friendliness')
+            // .whereNull('rating_fun')
             .select('id', 'person_token');
 
         // Rating fields to update

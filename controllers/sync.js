@@ -70,7 +70,11 @@ module.exports = {
                         'gender_id', //converted to gender obj with token
                         'timezone',
                         'reviews_count',
-                        'reviews_rating',
+                        'rating_safety',
+                        'rating_trust',
+                        'rating_timeliness',
+                        'rating_friendliness',
+                        'rating_fun',
                         'age',
                         'birth_date', //todo convert to age
                         'is_blocked',
