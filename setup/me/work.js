@@ -76,7 +76,7 @@ async function syncWorkIndustries() {
                 industriesAll[industry.token] = JSON.stringify(industry);
             }
 
-            await cacheService.hSet(cacheService.keys.work_industries, industriesAll);
+            await cacheService.hSet(cacheService.keys.work_industries, null, industriesAll);
 
             console.log({
                 industries: {
@@ -167,7 +167,7 @@ async function syncWorkRoles() {
                 rolesAll[role.token] = JSON.stringify(role);
             }
 
-            await cacheService.hSet(cacheService.keys.work_roles, rolesAll);
+            await cacheService.hSet(cacheService.keys.work_roles, null, rolesAll);
 
             console.log({
                 roles: {
