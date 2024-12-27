@@ -1,7 +1,7 @@
 const axios = require('axios');
 
-const cacheService = require('../services/cache');
-const dbService = require('../services/db');
+const cacheService = require('../../services/cache');
+const dbService = require('../../services/db');
 
 const {
     timeoutAwait,
@@ -10,10 +10,10 @@ const {
     getURL,
     timeNow,
     generateToken,
-} = require('../services/shared');
+} = require('../../services/shared');
 
-const { homeDomains, cols, getNetworkSelf } = require('../services/network');
-const { deleteKeys } = require('../services/cache');
+const { homeDomains, cols, getNetworkSelf } = require('../../services/network');
+const { deleteKeys } = require('../../services/cache');
 
 const runInterval = 3600 * 1000; //every hour
 

@@ -1,7 +1,7 @@
 const axios = require('axios');
 
-const cacheService = require('../services/cache');
-const dbService = require('../services/db');
+const cacheService = require('../../services/cache');
+const dbService = require('../../services/db');
 
 const {
     loadScriptEnv,
@@ -10,12 +10,12 @@ const {
     getURL,
     joinPaths,
     birthDatePure,
-} = require('../services/shared');
-const { getNetworkSelf } = require('../services/network');
-const { setCache, deleteKeys } = require('../services/cache');
-const { encrypt } = require('../services/encryption');
-const { getGendersLookup } = require('../services/genders');
-const { keys: systemKeys } = require('../services/system');
+} = require('../../services/shared');
+const { getNetworkSelf } = require('../../services/network');
+const { setCache, deleteKeys } = require('../../services/cache');
+const { encrypt } = require('../../services/encryption');
+const { getGendersLookup } = require('../../services/genders');
+const { keys: systemKeys } = require('../../services/system');
 
 const sync_name = systemKeys.sync.network.persons;
 
