@@ -17,6 +17,7 @@ const { getLifeStages } = require('./life_stages');
 const { getRelationshipStatus } = require('./relationships');
 const { getPolitics } = require('./politics');
 const { getReligions } = require('./religion');
+const { isPersonAvailable } = require('./availability');
 
 const DEFAULT_DISTANCE_MILES = 20;
 const MAX_PERSONS_PROCESS = 1000;
@@ -509,7 +510,7 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
             }
 
             //filter receive
-            am_available = isPersonAvailable(me, my_filters);
+            am_available = isPersonAvailable(me, my_filters.availability);
 
             console.log({
                 am_available
@@ -1162,155 +1163,6 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
         });
     }
 
-    function isPersonAvailable(person, filters) {
-        function isWithinDefault() {
-            const currentDate = personTime.format('YYYY-MM-DD');
-            const start = dayjs.tz(`${currentDate} ${DEFAULT_START}`, person.timezone);
-            const end = dayjs.tz(`${currentDate} ${DEFAULT_END}`, person.timezone);
-
-            if (personTime.isSame(start) ||
-                (personTime.isAfter(start) && personTime.isBefore(end))) {
-                return true;
-            } else {
-                return false;
-            }
-        }
-
-        //todo compare against activity date/time and duration
-        const currentUTC = dayjs().utc();
-        const DEFAULT_START = availabilityService.default_start;
-        const DEFAULT_END = availabilityService.default_end;
-
-        if (!person.timezone) {
-            return false;
-        }
-
-        // Convert current UTC time to person's timezone
-        const personTime = currentUTC.tz(person.timezone);
-        const currentDayOfWeek = personTime.day();
-        const prevDayIndex = (currentDayOfWeek - 1 + 7) % 7;
-
-        // Handle default availability if filter is disabled or not present
-        if (!filters.availability || !filters.availability.is_active) {
-            return isWithinDefault();
-        }
-
-        const availabilityItems = filters.availability.items;
-
-        let daySlot = null;
-        let prevDaySlot = null;
-
-        for (let id in availabilityItems) {
-            const slot = availabilityItems[id];
-
-            if (slot.is_day &&
-                slot.day_of_week === currentDayOfWeek &&
-                !slot.deleted) {
-                daySlot = slot;
-            }
-
-            if (slot.is_day &&
-                slot.day_of_week === prevDayIndex &&
-                !slot.deleted) {
-                prevDaySlot = slot;
-            }
-        }
-
-        let isAvailableNow = false;
-
-        // Check previous day's overnight slots first
-        if (prevDaySlot && prevDaySlot.is_active) {
-            for (let id in availabilityItems) {
-                const slot = availabilityItems[id];
-                if (slot.day_of_week === prevDayIndex &&
-                    slot.is_time &&
-                    slot.is_overnight &&
-                    slot.is_active &&
-                    !slot.deleted) {
-
-                    // Handle end times > 24:00:00
-                    const [endHour] = slot.end_time.split(':').map(Number);
-                    if (endHour >= 24) {
-                        const adjustedEndTime = slot.end_time.replace(
-                            /^\d+/,
-                            String(endHour - 24).padStart(2, '0')
-                        );
-                        const endTime = dayjs.tz(`${personTime.format('YYYY-MM-DD')} ${adjustedEndTime}`, person.timezone);
-                        if (personTime.isBefore(endTime)) {
-                            isAvailableNow = true;
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-        // If not available from overnight slot, check current day
-        if (!isAvailableNow) {
-            // Skip if day is disabled
-            if (!daySlot || !daySlot.is_active) {
-                return false;
-            }
-
-            // Available all day if any_time is set
-            if (daySlot.is_any_time) {
-                return true;
-            }
-
-            // Check current day's time slots
-            let hasTimeSlots = false;
-
-            for (let id in availabilityItems) {
-                const slot = availabilityItems[id];
-
-                if (slot.day_of_week === currentDayOfWeek &&
-                    slot.is_time &&
-                    slot.is_active &&
-                    !slot.deleted) {
-
-                    hasTimeSlots = true;
-
-                    const currentDate = personTime.format('YYYY-MM-DD');
-                    const startTime = dayjs.tz(`${currentDate} ${slot.start_time}`, person.timezone);
-
-                    // Parse end time hours
-                    const [endHour] = slot.end_time.split(':').map(Number);
-
-                    if (endHour < 24) {
-                        // Regular time slot ending same day
-                        const endTime = dayjs.tz(`${currentDate} ${slot.end_time}`, person.timezone);
-                        if (personTime.isSame(startTime) ||
-                            (personTime.isAfter(startTime) && personTime.isBefore(endTime))) {
-                            isAvailableNow = true;
-                            break;
-                        }
-                    } else {
-                        // Overnight slot ending next day
-                        const nextDate = personTime.add(1, 'day').format('YYYY-MM-DD');
-                        const adjustedEndTime = slot.end_time.replace(
-                            /^\d+/,
-                            String(endHour - 24).padStart(2, '0')
-                        );
-                        const endTime = dayjs.tz(`${nextDate} ${adjustedEndTime}`, person.timezone);
-
-                        if (personTime.isSame(startTime) ||
-                            personTime.isAfter(startTime)) {
-                            // For overnight slots, we're available after start
-                            // until midnight and into next day until end time
-                            isAvailableNow = true;
-                            break;
-                        }
-                    }
-                }
-            }
-
-            if(!hasTimeSlots) {
-                return isWithinDefault();
-            }
-
-            return isAvailableNow;
-        }
-    }
 
     function filterPersonsAvailability() {
         return new Promise(async (resolve, reject) => {
