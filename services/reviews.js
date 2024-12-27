@@ -24,6 +24,9 @@ function getReviews() {
 }
 
 module.exports = {
+    filters: {
+        default: 4.5
+    },
     data: null,
     getReviews
 };

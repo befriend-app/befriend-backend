@@ -1114,17 +1114,17 @@ function putReviewRating(req, res) {
                 await conn('persons_filters')
                     .where('id', existingFilter.id)
                     .update({
-                        filter_value: rating.toFixed(1),
+                        filter_value: parseFloat(rating.toFixed(1)),
                         updated: now,
                     });
 
-                existingFilter.filter_value = rating.toFixed(1);
+                existingFilter.filter_value = parseFloat(rating.toFixed(1));
                 existingFilter.updated = now;
             } else {
                 // Create new filter entry
                 const filterEntry = createFilterEntry(filter.id, {
                     person_id: person.id,
-                    filter_value: rating.toFixed(1),
+                    filter_value: parseFloat(rating.toFixed(1)),
                 });
 
                 const [id] = await conn('persons_filters').insert(filterEntry);

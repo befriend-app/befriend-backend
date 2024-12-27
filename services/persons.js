@@ -116,6 +116,16 @@ module.exports = {
                     }
                 }
 
+                //add reviews
+                person.reviews = {
+                    count: person.reviews_count || 0,
+                    safety: person.rating_safety,
+                    trust: person.rating_trust,
+                    timeliness: person.rating_timeliness,
+                    friendliness: person.rating_friendliness,
+                    fun: person.rating_fun
+                }
+
                 await cacheService.setCache(cache_key, person);
 
                 resolve(person);

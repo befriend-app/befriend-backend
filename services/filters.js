@@ -1,6 +1,8 @@
 const cacheService = require('./cache');
 const dbService = require('./db');
 
+const reviewsService = require('../services/reviews');
+
 const lifeStageService = require('./life_stages');
 const relationshipService = require('./relationships');
 const politicsService = require('./politics');
@@ -466,8 +468,6 @@ function getPersonFilters(person) {
     });
 }
 
-
-
 function updateGridSets(person, person_filters = null, filter_token, prev_grid_token = null) {
     let allNetworks, network_token, grid_token, keys_sets_add,keys_sets_del,
         keys_sorted_del, keys_sorted_add, rem_pipeline, add_pipeline;
@@ -613,6 +613,73 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                 }
             } catch(e) {
                 console.error(e);
+            }
+
+            resolve();
+        });
+    }
+
+    function updateReviews() {
+        return new Promise(async (resolve, reject) => {
+            let filter = person_filters.reviews;
+
+            const reviewTypes = [
+                'safety',
+                'trust',
+                'timeliness',
+                'friendliness',
+                'fun'
+            ];
+
+            if (prev_grid_token) {
+                for (let type of reviewTypes) {
+                    //own rating
+                    keys_sorted_del.add(cacheService.keys.persons_grid_sorted(prev_grid_token, `reviews:${type}`));
+
+                    //filters
+                    keys_sorted_del.add(cacheService.keys.persons_grid_send_receive(prev_grid_token, `reviews:${type}`, 'send'));
+                    keys_sorted_del.add(cacheService.keys.persons_grid_send_receive(prev_grid_token, `reviews:${type}`, 'receive'));
+                }
+            }
+
+            for(let type of reviewTypes) {
+                let rating = person.reviews?.[type];
+
+                //add own rating to cache
+                if(isNumeric(rating)) {
+                    keys_sorted_add.add({
+                        key: cacheService.keys.persons_grid_sorted(grid_token, `reviews:${type}`),
+                        score: rating.toString()
+                    });
+                }
+
+                if(!filter?.is_active) {
+                    continue;
+                }
+
+                let reviewTypeFilter = person_filters[`reviews_${type}`];
+
+                if(reviewTypeFilter?.is_active) {
+                    let value = reviewTypeFilter.filter_value;
+
+                    if(!isNumeric(value)) {
+                        continue;
+                    }
+
+                    if (reviewTypeFilter.is_send) {
+                        keys_sorted_add.add({
+                            key: cacheService.keys.persons_grid_send_receive(grid_token, `reviews:${type}`, 'send'),
+                            score: value.toString()
+                        });
+                    }
+
+                    if (reviewTypeFilter.is_receive) {
+                        keys_sorted_add.add({
+                            key: cacheService.keys.persons_grid_send_receive(grid_token, `reviews:${type}`, 'receive'),
+                            score: value.toString()
+                        });
+                    }
+                }
             }
 
             resolve();
@@ -1061,13 +1128,15 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
 
             await updateAvailability();
 
-            await updateNetworks();
-
             // location
             keys_sets_del.add(cacheService.keys.persons_grid_set(prev_grid_token, 'location'));
             keys_sets_add.add(cacheService.keys.persons_grid_set(grid_token, 'location'));
 
             await updateModes();
+
+            await updateNetworks();
+
+            await updateReviews();
 
             await updateVerifications();
             
@@ -1096,12 +1165,16 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                 await updateAvailability();
             }
 
+            if(filter_token === 'modes') {
+                await updateModes();
+            }
+
             if(filter_token === 'networks') {
                 await updateNetworks();
             }
 
-            if(filter_token === 'modes') {
-                await updateModes();
+            if(filter_token.startsWith('review')) {
+                await updateReviews();
             }
 
             if(filter_token === 'verifications') {
@@ -1150,6 +1223,14 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                 await cacheService.execPipeline(rem_pipeline);
             }
 
+            if(keys_sorted_del.size) {
+                for(let key of keys_sorted_del) {
+                    rem_pipeline.zRem(key, person.person_token);
+                }
+
+                await cacheService.execPipeline(rem_pipeline);
+            }
+
             if(keys_sets_add.size) {
                 for(let key of keys_sets_add) {
                     add_pipeline.sAdd(key, person.person_token);
@@ -1158,11 +1239,18 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                 await cacheService.execPipeline(add_pipeline);
             }
 
-            if(keys_sorted_del.size) {
-                for(let key of keys_sorted_del) {
-                    rem_pipeline.zRem(key, person.person_token);
+            if(keys_sorted_add.size) {
+                for(let data of keys_sorted_add) {
+                    add_pipeline.zAdd(data.key, {
+                        value: person.person_token,
+                        score: data.score
+                    });
                 }
+
+                await cacheService.execPipeline(add_pipeline);
             }
+
+
         } catch(e) {
             console.error(e);
         }

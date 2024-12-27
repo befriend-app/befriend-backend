@@ -12,6 +12,7 @@ const cacheService = require('../../services/cache');
 const { getPerson } = require('../../services/persons');
 const { updateGridSets } = require('../../services/filters');
 const { getReviews } = require('../../services/reviews');
+const { getObj } = require('../../services/cache');
 
 loadScriptEnv();
 
@@ -144,11 +145,11 @@ function updatePersonsCount() {
 
         let persons = await conn('persons')
             .whereNotNull('grid_id')
-            // .whereNull('rating_safety')
-            // .whereNull('rating_trust')
-            // .whereNull('rating_timeliness')
-            // .whereNull('rating_friendliness')
-            // .whereNull('rating_fun')
+            .whereNull('rating_safety')
+            .whereNull('rating_trust')
+            .whereNull('rating_timeliness')
+            .whereNull('rating_friendliness')
+            .whereNull('rating_fun')
             .select('id', 'person_token');
 
         // Rating fields to update
@@ -201,6 +202,23 @@ function updatePersonsCount() {
 
             if(hasUpdates) {
                 batch_update.push(update);
+
+                let person_cache = await getObj(cacheService.keys.person(person.person_token));
+
+                if(person_cache) {
+                    person_cache.reviews = {
+                        count: person_cache.count || 0,
+                        safety: update.rating_safety,
+                        trust: update.rating_trust,
+                        timeliness: update.rating_timeliness,
+                        friendliness: update.rating_friendliness,
+                        fun: update.rating_fun
+                    }
+
+                    await cacheService.setCache(cacheService.keys.person(person.person_token), JSON.stringify(person_cache));
+
+                    await updateGridSets(person_cache, null, 'reviews');
+                }
             }
         }
 
