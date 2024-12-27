@@ -12,7 +12,7 @@ const cacheService = require('../../services/cache');
 const { getPerson } = require('../../services/persons');
 const { updateGridSets } = require('../../services/filters');
 const { getReviews } = require('../../services/reviews');
-const { getObj } = require('../../services/cache');
+const { getObj, hGetAllObj } = require('../../services/cache');
 
 loadScriptEnv();
 
@@ -198,22 +198,20 @@ function updatePersonsCount() {
             if(hasUpdates) {
                 batch_update.push(update);
 
-                let person_cache = await getObj(cacheService.keys.person(person.person_token));
+                let person_obj = await hGetAllObj(cacheService.keys.person(person.person_token));
 
-                if(person_cache) {
-                    person_cache.reviews = {
-                        count: person_cache.count || 0,
-                        safety: update.rating_safety,
-                        trust: update.rating_trust,
-                        timeliness: update.rating_timeliness,
-                        friendliness: update.rating_friendliness,
-                        fun: update.rating_fun
-                    }
-
-                    await cacheService.setCache(cacheService.keys.person(person.person_token), JSON.stringify(person_cache));
-
-                    await updateGridSets(person_cache, null, 'reviews');
+                let reviews = {
+                    count: person_obj.count || 0,
+                    safety: update.rating_safety,
+                    trust: update.rating_trust,
+                    timeliness: update.rating_timeliness,
+                    friendliness: update.rating_friendliness,
+                    fun: update.rating_fun
                 }
+
+                await cacheService.hSet(cacheService.keys.person(person.person_token), 'reviews', reviews);
+
+                await updateGridSets(person_obj, null, 'reviews');
             }
         }
 
@@ -352,11 +350,11 @@ function updatePersonsCount() {
     }
 
     try {
-        // await addPersons();
-        // await mockGenders();
+        await addPersons();
+        await mockGenders();
         await mockReviews();
         // await updateAgeSets();
-        // await updatePersonsCount();
+        await updatePersonsCount();
     } catch(e) {
 
     }

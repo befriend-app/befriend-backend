@@ -9,7 +9,7 @@ loadScriptEnv();
         await require('./migrate').main();
 
         //add/update data
-        await require('./earth');
+        await require('./earth').main();
         await require('./modes').main();
         await require('./reviews').main();
         await require('./genders').main();

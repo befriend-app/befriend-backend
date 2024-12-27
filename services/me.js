@@ -1639,39 +1639,6 @@ function getActiveData(person, sections) {
     });
 }
 
-function dataForSchema(table_name, cache_key, filter, sort_by, sort_direction) {
-    return new Promise(async (resolve, reject) => {
-        try {
-            let cached_obj = await cacheService.getObj(cache_key);
-
-            if (cached_obj) {
-                return resolve(cached_obj);
-            }
-
-            let conn = await dbService.conn();
-
-            let qry = conn(table_name);
-
-            if (sort_by) {
-                qry = qry.orderBy(sort_by, sort_direction ? sort_direction : 'asc');
-            }
-
-            let data = await qry;
-
-            if (filter) {
-                data = data.filter((item) => item[filter]);
-            }
-
-            await cacheService.setCache(cache_key, data);
-
-            resolve(data);
-        } catch (e) {
-            console.error(e);
-            return reject();
-        }
-    });
-}
-
 function getDrinking(params = {}) {
     return new Promise(async (resolve, reject) => {
         try {
@@ -1764,13 +1731,15 @@ function getInstruments() {
                 return resolve(module.exports.cache.instruments_common);
             }
 
-            let options = await dataForSchema(
-                'instruments',
-                cacheService.keys.instruments_common,
-                'is_common',
-                'popularity',
-                'desc',
-            );
+            let options = await cacheService.getObj(cacheService.keys.instruments_common);
+
+            if(!options) {
+                let conn = await dbService.conn();
+
+                options = await conn('instruments')
+                    .where('is_common', true)
+                    .orderBy('popularity', 'desc');
+            }
 
             let section = sectionsData.instruments;
 
@@ -1812,24 +1781,33 @@ function allInstruments() {
         let cache_key = cacheService.keys.instruments;
 
         try {
-            let data = await cacheService.getObj(cache_key);
+            let data = await cacheService.hGetAllObj(cache_key);
 
             if (!data) {
                 let conn = await dbService.conn();
 
-                data = await conn('instruments').orderBy('popularity', 'desc');
+                let qry = await conn('instruments').orderBy('popularity', 'desc');
 
-                await cacheService.setCache(cache_key, data);
+                data = {};
+
+                for(let item of qry) {
+                    data[item.token] = item;
+                }
+
+                await cacheService.hSet(cache_key, data);
             }
 
-            let organized = data.reduce(
-                (acc, item) => {
-                    acc.byId[item.id] = item;
-                    acc.byToken[item.token] = item;
-                    return acc;
-                },
-                { byId: {}, byToken: {} },
-            );
+            let organized = {
+                byId: {},
+                byToken: {}
+            }
+
+            for(let token in data) {
+                let item = data[token];
+
+                organized.byId[item.id] = item;
+                organized.byToken[token] = item;
+            }
 
             module.exports.cache.instruments = organized;
 
@@ -2816,7 +2794,6 @@ module.exports = {
     getAllSections,
     getSections,
     getActiveData,
-    dataForSchema,
     selectSectionOptionItem,
     getInstruments,
     allInstruments,

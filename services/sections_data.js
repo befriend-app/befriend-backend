@@ -242,7 +242,6 @@ module.exports = {
                 {
                     name: 'Percussion',
                 },
-
                 {
                     name: 'Electronic',
                 },

@@ -1,4 +1,5 @@
 const redis = require('redis');
+const { IBM_LZ77 } = require('adm-zip/util/constants');
 
 const standardKeys = {
     networks: 'networks',
@@ -301,6 +302,18 @@ module.exports = {
             }
         });
     },
+    exists: function (key) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                 let exists = await module.exports.conn.exists(key);
+
+                 resolve(exists);
+            } catch(e) {
+                console.error(e);
+                return reject(e);
+            }
+        });
+    },
     hGetAllObj: function (key) {
         return new Promise(async (resolve, reject) => {
             //init conn in case first time
@@ -313,6 +326,12 @@ module.exports = {
             }
 
             try {
+                let exists = await module.exports.exists(key);
+
+                if(!exists) {
+                    return resolve(null);
+                }
+
                 let data = await module.exports.conn.hGetAll(key);
 
                 try {
@@ -358,22 +377,27 @@ module.exports = {
             }
 
             try {
-                if(typeof data === 'object') {
-                    for(let k in data) {
-                        let v = data[k];
-
-                        if(typeof v === 'object') {
-                            data[k] = JSON.stringify(v);
-                        }
-                    }
-                } else if(typeof data !== 'string') {
-                    data = data.toString();
-                }
+                data = structuredClone(data);
 
                 if(field) {
+                    if(typeof data === 'object') {
+                        data = JSON.stringify(data);
+                    } else if(typeof data !== 'string') {
+                        data = data.toString();
+                    }
                     await module.exports.conn.hSet(key, field, data);
                 } else {
-                    await module.exports.conn.hSet(key, data);
+                    const processedData = {};
+                    for (const [k, v] of Object.entries(data)) {
+                        if (v === null) {
+                            processedData[k] = '';  // Convert null to empty string
+                        } else if (typeof v === 'object') {
+                            processedData[k] = JSON.stringify(v);
+                        } else {
+                            processedData[k] = v.toString();
+                        }
+                    }
+                    await module.exports.conn.hSet(key, processedData);
                 }
 
                 resolve();

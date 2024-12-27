@@ -100,18 +100,13 @@ function indexInstruments() {
             let instruments_common = instruments.filter((item) => item.is_common);
 
             let instrumentsObj = {};
-            let instrumentsCommonObj = {};
 
             for(let instrument of instruments) {
                 instrumentsObj[instrument.token] = JSON.stringify(instrument);
             }
 
-            for(let instrument of instruments_common) {
-                instrumentsCommonObj[instrument.token] = JSON.stringify(instrument);
-            }
-
             await cacheService.hSet(cacheService.keys.instruments, null, instrumentsObj);
-            await cacheService.hSet(cacheService.keys.instruments_common, null, instrumentsCommonObj);
+            await cacheService.setCache(cacheService.keys.instruments_common, instruments_common);
 
             await cacheService.prefixIndexer(
                 instruments,
