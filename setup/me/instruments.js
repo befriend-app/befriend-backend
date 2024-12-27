@@ -91,10 +91,6 @@ function indexInstruments() {
         console.log('Index instruments');
 
         try {
-            //delete previous
-            let prev_keys = await getKeys(cacheService.keys.instrument('') + '*');
-            await deleteKeys(prev_keys);
-
             let conn = await dbService.conn();
 
             let instruments = await conn('instruments')
@@ -103,14 +99,24 @@ function indexInstruments() {
 
             let instruments_common = instruments.filter((item) => item.is_common);
 
-            await cacheService.setCache(cacheService.keys.instruments, instruments);
-            await cacheService.setCache(cacheService.keys.instruments_common, instruments_common);
+            let instrumentsObj = {};
+            let instrumentsCommonObj = {};
+
+            for(let instrument of instruments) {
+                instrumentsObj[instrument.token] = JSON.stringify(instrument);
+            }
+
+            for(let instrument of instruments_common) {
+                instrumentsCommonObj[instrument.token] = JSON.stringify(instrument);
+            }
+
+            await cacheService.hSet(cacheService.keys.instruments, null, instrumentsObj);
+            await cacheService.hSet(cacheService.keys.instruments_common, null, instrumentsCommonObj);
 
             await cacheService.prefixIndexer(
                 instruments,
                 'popularity',
                 {
-                    mainKey: cacheService.keys.instrument,
                     prefixKey: cacheService.keys.instruments_prefix,
                 },
                 1,

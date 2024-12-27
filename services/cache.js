@@ -80,10 +80,7 @@ const keyFunctions = {
     persons_grid_exclude: (gridToken, key, send_or_receive) => `persons:grid:${gridToken}:exclude:${key}`,
     persons_grid_exclude_send_receive: (gridToken, key, send_or_receive) => `persons:grid:${gridToken}:exclude:${key}:${send_or_receive}`,
     persons_grid_send_receive: (gridToken, key, send_or_receive) => `persons:grid:${gridToken}:${key}:${send_or_receive}`,
-
-    instrument: (token) => `instruments:${token}`,
     instruments_prefix: (prefix) => `instruments:prefix:${prefix}`,
-
     movies_prefix: (prefix) => `movies:prefix:${prefix}`,
     movies_prefix_top_1000: (prefix) => `movies:prefix:top:1000:${prefix}`,
     movies_genres_prefix: (prefix) => `movies:genres:prefix:${prefix}`,
@@ -362,7 +359,13 @@ module.exports = {
 
             try {
                 if(typeof data === 'object') {
-                    data = JSON.stringify(data);
+                    for(let k in data) {
+                        let v = data[k];
+
+                        if(typeof v === 'object') {
+                            data[k] = JSON.stringify(v);
+                        }
+                    }
                 } else if(typeof data !== 'string') {
                     data = data.toString();
                 }
@@ -720,7 +723,7 @@ module.exports = {
         });
     },
     prefixIndexer: function (items, score_key, keyGenerators, minPrefixLength = 2) {
-        const { mainKey, prefixKey } = keyGenerators;
+        const { prefixKey } = keyGenerators;
 
         let batchSize = 5000;
         let logFrequency = 1000;
@@ -751,10 +754,6 @@ module.exports = {
 
         function indexItem(item) {
             const nameLower = item.name?.toLowerCase() || '';
-
-            if (mainKey) {
-                pipeline.hSet(mainKey(getId(item)), item);
-            }
 
             // Index full name prefixes
             for (let i = 1; i <= nameLower.length; i++) {
