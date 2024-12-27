@@ -338,7 +338,7 @@ module.exports = {
             }
         });
     },
-    hSet: function (key, data) {
+    hSet: function (key, field, data) {
         return new Promise(async (resolve, reject) => {
             if (!module.exports.conn) {
                 try {
@@ -348,8 +348,30 @@ module.exports = {
                 }
             }
 
+            if(!key) {
+                return reject("Key required");
+            }
+
+            if(field && typeof field !== 'string') {
+                return reject("Field must be a string");
+            }
+
+            if(!data) {
+                return reject("Data required");
+            }
+
             try {
-                await module.exports.conn.hSet(key, data);
+                if(typeof data === 'object') {
+                    data = JSON.stringify(data);
+                } else if(typeof data !== 'string') {
+                    data = data.toString();
+                }
+
+                if(field) {
+                    await module.exports.conn.hSet(key, field, data);
+                } else {
+                    await module.exports.conn.hSet(key, data);
+                }
 
                 resolve();
             } catch (e) {
