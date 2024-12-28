@@ -14,7 +14,7 @@ const {
     getSchools,
 } = require('../services/me');
 const { saveAvailabilityData } = require('../services/availability');
-const { filterMappings, getFilters, getPersonFilters, updateGridSets } = require('../services/filters');
+const { filterMappings, getFilters, getPersonFilterForKey, getPersonFilters, updateGridSets } = require('../services/filters');
 const { getActivityTypesMapping } = require('../services/activities');
 const { getLifeStages } = require('../services/life_stages');
 const { getRelationshipStatus } = require('../services/relationships');
@@ -33,15 +33,15 @@ function createFilterEntry(filter_id, props = {}) {
     const now = timeNow();
 
     // If props contain a reference to an existing filter, inherit its states
-    const existingFilter = structuredClone(props.existingFilter);
-    if (existingFilter) {
-        delete props.existingFilter;
+    const filterData = props.filterData ? structuredClone(props.filterData) : null;
+    if (filterData) {
+        delete props.filterData;
 
         return {
             filter_id,
-            is_send: existingFilter.is_send,
-            is_receive: existingFilter.is_receive,
-            is_active: existingFilter.is_active,
+            is_send: filterData.is_send,
+            is_receive: filterData.is_receive,
+            is_active: filterData.is_active,
             is_negative: false,
             created: now,
             updated: now,
@@ -192,29 +192,26 @@ function handleFilterUpdate(req, res, filterType) {
 
             const conn = await dbService.conn();
             const cache_key = cacheService.keys.person_filters(person_token);
-            let person_filters = await getPersonFilters(person);
+            let filterData = await getPersonFilterForKey(person, filter.token);
             const now = timeNow();
 
-            let existingFilter = person_filters[filter.token];
-
             // Initialize filter structure if it doesn't exist
-            if (!existingFilter) {
+            if (!filterData) {
                 const baseEntry = createFilterEntry(filter.id, {
                     person_id: person.id,
                 });
 
-                existingFilter = {
+                filterData = {
                     ...baseEntry,
                     items: {},
                 };
-                person_filters[filter.token] = existingFilter;
-            } else if (!existingFilter.items) {
-                existingFilter.items = {};
+            } else if (!filterData.items) {
+                filterData.items = {};
             }
 
             if (token === 'any') {
                 // Handle 'any' selection - clear all existing filters
-                if (Object.keys(existingFilter.items).length)
+                if (Object.keys(filterData.items).length)
                     await conn('persons_filters')
                         .where('person_id', person.id)
                         .where('filter_id', filter.id)
@@ -225,20 +222,20 @@ function handleFilterUpdate(req, res, filterType) {
                         });
 
                 // Update cache
-                existingFilter.is_any = true;
+                filterData.is_any = true;
 
-                for (let id in existingFilter.items) {
-                    existingFilter.items[id].is_negative = false;
-                    existingFilter.items[id].updated = now;
-                    existingFilter.items[id].deleted = now;
+                for (let id in filterData.items) {
+                    filterData.items[id].is_negative = false;
+                    filterData.items[id].updated = now;
+                    filterData.items[id].deleted = now;
                 }
             } else {
-                existingFilter.is_any = false;
+                filterData.is_any = false;
 
                 // Handle specific selection
 
                 // Find existing item for option
-                const existingItem = Object.values(existingFilter.items).find(
+                const existingItem = Object.values(filterData.items).find(
                     (item) => item[mapping.column] === option.id,
                 );
 
@@ -270,7 +267,7 @@ function handleFilterUpdate(req, res, filterType) {
 
                     filterEntry.token = token;
 
-                    existingFilter.items[id] = {
+                    filterData.items[id] = {
                         ...filterEntry,
                         id,
                     };
@@ -278,9 +275,9 @@ function handleFilterUpdate(req, res, filterType) {
             }
 
             // Update cache and return
-            await cacheService.setCache(cache_key, person_filters);
+            await cacheService.hSet(cache_key, filter.token, filterData);
 
-            await updateGridSets(person, person_filters, filterType);
+            await updateGridSets(person, null, filterType);
 
             res.json({
                 id,
@@ -347,12 +344,10 @@ function putActive(req, res) {
             let conn = await dbService.conn();
 
             let person_filter_cache_key = cacheService.keys.person_filters(person_token);
-            let person_filters = await getPersonFilters(person);
+            let filterData = await getPersonFilterForKey(person, filter_token);
             let now = timeNow();
 
-            let existingFilter = person_filters[filter_token];
-
-            if (existingFilter) {
+            if (filterData) {
                 // Update all filter entries for this filter
                 await conn('persons_filters')
                     .where('person_id', person.id)
@@ -363,14 +358,8 @@ function putActive(req, res) {
                     });
 
                 // Update cache
-                existingFilter.is_active = active;
-                existingFilter.updated = now;
-
-                // if (existingFilter.items) {
-                //     for (let k in existingFilter.items) {
-                //         existingFilter.items[k].is_active = active;
-                //     }
-                // }
+                filterData.is_active = active;
+                filterData.updated = now;
             } else {
                 // Create new filter entry
                 const filterEntry = createFilterEntry(filter.id, {
@@ -380,7 +369,7 @@ function putActive(req, res) {
 
                 const [id] = await conn('persons_filters').insert(filterEntry);
 
-                person_filters[filter_token] = mapping.multi
+                filterData = mapping.multi
                     ? {
                           ...filterEntry,
                           id,
@@ -392,9 +381,9 @@ function putActive(req, res) {
                       };
             }
 
-            await updateFiltersCache(person_filter_cache_key, person_filters);
+            await cacheService.hSet(person_filter_cache_key, filter_token, filterData);
 
-            await updateGridSets(person, person_filters, filter_token);
+            await updateGridSets(person, null, filter_token);
 
             res.json('Updated');
         } catch (e) {
@@ -449,10 +438,10 @@ function putImportance(req, res) {
             let conn = await dbService.conn();
 
             let person_filter_cache_key = cacheService.keys.person_filters(person_token);
-            let person_filters = await getPersonFilters(person);
+            let filterData = await getPersonFilterForKey(person, section);
             let now = timeNow();
 
-            if (!person_filters?.[section]?.items?.[filter_item_id]) {
+            if (!filterData?.items?.[filter_item_id]) {
                 res.json(
                     {
                         message: 'Invalid filter item',
@@ -471,11 +460,11 @@ function putImportance(req, res) {
                     updated: now,
                 });
 
-            person_filters[section].items[filter_item_id].importance = importance;
+            filterData.items[filter_item_id].importance = importance;
 
-            await updateFiltersCache(person_filter_cache_key, person_filters);
+            await cacheService.hSet(person_filter_cache_key, section, filterData);
 
-            await updateGridSets(person, person_filters, section);
+            await updateGridSets(person, null, section);
 
             res.json('Updated');
         } catch (e) {
@@ -548,12 +537,10 @@ function putSendReceive(req, res) {
 
             let conn = await dbService.conn();
             let person_filter_cache_key = cacheService.keys.person_filters(person_token);
-            let person_filters = await getPersonFilters(person);
+            let filterData = await getPersonFilterForKey(person, filter_token);
             let now = timeNow();
 
-            let existingFilter = person_filters[filter_token];
-
-            if (existingFilter) {
+            if (filterData) {
                 let updateData = {
                     updated: now,
                 };
@@ -565,12 +552,12 @@ function putSendReceive(req, res) {
                     .update(updateData);
 
                 // Update cache
-                existingFilter[type === 'send' ? 'is_send' : 'is_receive'] = enabled;
-                existingFilter.updated = now;
+                filterData[type === 'send' ? 'is_send' : 'is_receive'] = enabled;
+                filterData.updated = now;
 
-                if (existingFilter.items) {
-                    for (let k in existingFilter.items) {
-                        existingFilter.items[k][type === 'send' ? 'is_send' : 'is_receive'] =
+                if (filterData.items) {
+                    for (let k in filterData.items) {
+                        filterData.items[k][type === 'send' ? 'is_send' : 'is_receive'] =
                             enabled;
                     }
                 }
@@ -583,7 +570,7 @@ function putSendReceive(req, res) {
 
                 const [id] = await conn('persons_filters').insert(filterEntry);
 
-                person_filters[filter_token] = mapping.multi
+                filterData = mapping.multi
                     ? {
                           ...filterEntry,
                           id,
@@ -595,9 +582,9 @@ function putSendReceive(req, res) {
                       };
             }
 
-            await updateFiltersCache(person_filter_cache_key, person_filters);
+            await cacheService.hSet(person_filter_cache_key, filter_token, filterData);
 
-            await updateGridSets(person, person_filters, filter_token);
+            await updateGridSets(person, null, filter_token);
 
             res.json({
                 success: true,
@@ -724,29 +711,25 @@ function putMode(req, res) {
             let now = timeNow();
 
             let person_filter_cache_key = cacheService.keys.person_filters(person_token);
-            let person_filters = await getPersonFilters(person);
+            let filterData = await getPersonFilterForKey(person, filter.token);
 
-            // Get or initialize existing filter
-            let existingFilter = person_filters[filter.token];
-
-            if (!existingFilter) {
+            if (!filterData) {
                 const baseEntry = createFilterEntry(filter.id, {
                     person_id: person.id,
                 });
 
                 const [id] = await conn('persons_filters').insert(baseEntry);
 
-                existingFilter = {
+                filterData = {
                     ...baseEntry,
                     id,
                     items: {},
                 };
-                person_filters[filter.token] = existingFilter;
-            } else if (!existingFilter.items) {
-                existingFilter.items = {};
+            } else if (!filterData.items) {
+                filterData.items = {};
             }
 
-            const filterItems = existingFilter.items;
+            const filterItems = filterData.items;
             const existingItem = Object.values(filterItems).find(
                 (item) => item[mapping.column] === mode.id,
             );
@@ -760,7 +743,7 @@ function putMode(req, res) {
                     person_id: person.id,
                     [mapping.column]: soloMode.id,
                     is_negative: false,
-                    existingFilter,
+                    filterData,
                 });
 
                 const [soloId] = await conn('persons_filters').insert(soloEntry);
@@ -814,7 +797,7 @@ function putMode(req, res) {
                     person_id: person.id,
                     [mapping.column]: mode.id,
                     is_negative: false,
-                    existingFilter, // Pass parent filter to inherit states
+                    filterData, // Pass parent filter to inherit states
                 });
 
                 const [id] = await conn('persons_filters').insert(filterEntry);
@@ -827,9 +810,9 @@ function putMode(req, res) {
             }
 
             // Update cache
-            await updateFiltersCache(person_filter_cache_key, person_filters);
+            await cacheService.hSet(person_filter_cache_key, filter.token, filterData);
 
-            await updateGridSets(person, person_filters, 'modes');
+            await updateGridSets(person, null, 'modes');
 
             res.json({
                 success: true,
@@ -910,13 +893,10 @@ function putNetworks(req, res) {
 
             let conn = await dbService.conn();
             let person_filter_cache_key = cacheService.keys.person_filters(person_token);
-            let person_filters = await getPersonFilters(person);
+            let filterData = await getPersonFilterForKey(person, filter.token);
             let now = timeNow();
 
-            // Get or initialize the filter entry
-            let existingFilter = person_filters[filter.token];
-
-            if (!existingFilter) {
+            if (!filterData) {
                 const baseEntry = createFilterEntry(filter.id, {
                     person_id: person.id,
                 });
@@ -927,31 +907,29 @@ function putNetworks(req, res) {
                     updated: now,
                 });
 
-                existingFilter = {
+                filterData = {
                     ...baseEntry,
                     id,
                     items: {},
                 };
-
-                person_filters[filter.token] = existingFilter;
-            } else if (!existingFilter.items) {
-                existingFilter.items = {};
+            } else if (!filterData.items) {
+                filterData.items = {};
             }
 
             // Handle any network
             if (typeof is_any_network === 'boolean') {
-                if (is_any_network !== existingFilter.is_any_network) {
-                    existingFilter.is_any_network = is_any_network;
-                    existingFilter.is_all_verified = is_any_network
+                if (is_any_network !== filterData.is_any_network) {
+                    filterData.is_any_network = is_any_network;
+                    filterData.is_all_verified = is_any_network
                         ? true
-                        : existingFilter.is_all_verified || false;
+                        : filterData.is_all_verified || false;
 
                     await conn(mapping.filters_table)
                         .where('person_id', person.id)
-                        .where('id', existingFilter.id)
+                        .where('id', filterData.id)
                         .update({
                             is_any_network: is_any_network,
-                            is_all_verified: existingFilter.is_all_verified,
+                            is_all_verified: filterData.is_all_verified,
                             updated: timeNow(),
                         });
                 }
@@ -959,14 +937,14 @@ function putNetworks(req, res) {
 
             // Handle verified networks
             if (typeof is_all_verified === 'boolean') {
-                if (is_all_verified !== existingFilter.is_all_verified) {
-                    existingFilter.is_all_verified = is_all_verified || false;
+                if (is_all_verified !== filterData.is_all_verified) {
+                    filterData.is_all_verified = is_all_verified || false;
 
                     await conn(mapping.filters_table)
                         .where('person_id', person.id)
-                        .where('id', existingFilter.id)
+                        .where('id', filterData.id)
                         .update({
-                            is_all_verified: existingFilter.is_all_verified,
+                            is_all_verified: filterData.is_all_verified,
                             updated: timeNow(),
                         });
                 }
@@ -997,7 +975,7 @@ function putNetworks(req, res) {
                     return resolve();
                 }
 
-                const existingItem = Object.values(existingFilter.items).find(
+                const existingItem = Object.values(filterData.items).find(
                     (item) => item.network_token === network_token,
                 );
 
@@ -1030,7 +1008,7 @@ function putNetworks(req, res) {
                         updated: timeNow(),
                     });
 
-                    existingFilter.items[id] = {
+                    filterData.items[id] = {
                         ...filterEntry,
                         id,
                     };
@@ -1038,11 +1016,11 @@ function putNetworks(req, res) {
             }
 
             // Update cache
-            await updateFiltersCache(person_filter_cache_key, person_filters);
+            await cacheService.hSet(person_filter_cache_key, filter.token, filterData);
 
-            await updateGridSets(person, person_filters, filter.token);
+            await updateGridSets(person, null, filter.token);
 
-            res.json(person_filters[filter.token]);
+            res.json(filterData);
         } catch (error) {
             console.error('Networks error:', error);
             res.json(
@@ -1103,23 +1081,20 @@ function putReviewRating(req, res) {
 
             let conn = await dbService.conn();
             let person_filter_cache_key = cacheService.keys.person_filters(person_token);
-            let person_filters = await getPersonFilters(person);
+            let filterData = await getPersonFilterForKey(person, filter_token);
             let now = timeNow();
 
-            // Get or create filter entry
-            let existingFilter = person_filters[filter_token];
-
-            if (existingFilter) {
+            if (filterData) {
                 // Update existing filter
                 await conn('persons_filters')
-                    .where('id', existingFilter.id)
+                    .where('id', filterData.id)
                     .update({
                         filter_value: parseFloat(rating.toFixed(1)),
                         updated: now,
                     });
 
-                existingFilter.filter_value = parseFloat(rating.toFixed(1));
-                existingFilter.updated = now;
+                filterData.filter_value = parseFloat(rating.toFixed(1));
+                filterData.updated = now;
             } else {
                 // Create new filter entry
                 const filterEntry = createFilterEntry(filter.id, {
@@ -1129,13 +1104,13 @@ function putReviewRating(req, res) {
 
                 const [id] = await conn('persons_filters').insert(filterEntry);
 
-                person_filters[filter_token] = {
+                filterData = {
                     ...filterEntry,
                     id,
                 };
             }
 
-            await updateFiltersCache(person_filter_cache_key, person_filters);
+            await cacheService.hSet(person_filter_cache_key, filter_token, filterData);
 
             res.json({
                 success: true,
@@ -1205,25 +1180,22 @@ function putAge(req, res) {
 
             let conn = await dbService.conn();
             let person_filter_cache_key = cacheService.keys.person_filters(person_token);
-            let person_filters = await getPersonFilters(person);
+            let filterData = await getPersonFilterForKey(person, filter.token);
             let now = timeNow();
-
-            // Get or create filter entry
-            let existingFilter = person_filters['ages'];
 
             let max_age_value = max_age !== 80 ? max_age : null;
 
-            if (existingFilter) {
+            if (filterData) {
                 // Update existing filter
-                await conn('persons_filters').where('id', existingFilter.id).update({
+                await conn('persons_filters').where('id', filterData.id).update({
                     filter_value_min: min_age.toString(),
                     filter_value_max: max_age_value,
                     updated: now,
                 });
 
-                existingFilter.filter_value_min = min_age.toString();
-                existingFilter.filter_value_max = max_age_value;
-                existingFilter.updated = now;
+                filterData.filter_value_min = min_age.toString();
+                filterData.filter_value_max = max_age_value;
+                filterData.updated = now;
             } else {
                 // Create new filter entry
                 const filterEntry = createFilterEntry(filter.id, {
@@ -1234,13 +1206,13 @@ function putAge(req, res) {
 
                 const [id] = await conn('persons_filters').insert(filterEntry);
 
-                person_filters['ages'] = {
+                filterData = {
                     ...filterEntry,
                     id,
                 };
             }
 
-            await updateFiltersCache(person_filter_cache_key, person_filters);
+            await cacheService.hSet(person_filter_cache_key, filter.token, filterData);
 
             res.json({
                 success: true,
@@ -1304,13 +1276,11 @@ function putGender(req, res) {
 
             let conn = await dbService.conn();
             let person_filter_cache_key = cacheService.keys.person_filters(person_token);
-            let person_filters = await getPersonFilters(person);
+            let filterData = await getPersonFilterForKey(person, filter.token);
             let now = timeNow();
 
-            let existingFilter = person_filters[filter.token];
-
             // Initialize filter structure if it doesn't exist
-            if (!existingFilter) {
+            if (!filterData) {
                 const baseEntry = createFilterEntry(filter.id, {
                     person_id: person.id,
                 });
@@ -1318,17 +1288,16 @@ function putGender(req, res) {
                 // Create base filter entry in database
                 const [id] = await conn('persons_filters').insert(baseEntry);
 
-                existingFilter = {
+                filterData = {
                     ...baseEntry,
                     id,
                     items: {},
                 };
-                person_filters[filter.token] = existingFilter;
-            } else if (!existingFilter.items) {
-                existingFilter.items = {};
+            } else if (!filterData.items) {
+                filterData.items = {};
             }
 
-            const filterItems = existingFilter.items;
+            const filterItems = filterData.items;
 
             // Get existing 'any' selection if it exists
             const existingAny = Object.values(filterItems).find(
@@ -1339,15 +1308,15 @@ function putGender(req, res) {
             if (gender_token === 'any' && active) {
                 // Mark all non-any items as negative
                 await conn('persons_filters')
-                    .whereIn('id', Object.keys(person_filters[filter.token].items))
+                    .whereIn('id', Object.keys(filterData.items))
                     .update({
                         is_negative: true,
                         updated: now,
                     });
 
-                for (let id in person_filters[filter.token].items) {
-                    person_filters[filter.token].items[id].is_negative = true;
-                    person_filters[filter.token].items[id].updated = now;
+                for (let id in filterData.items) {
+                    filterData.items[id].is_negative = true;
+                    filterData.items[id].updated = now;
                 }
 
                 // Create or update 'any' entry
@@ -1364,12 +1333,12 @@ function putGender(req, res) {
                         person_id: person.id,
                         [mapping.column]: anyOption.id,
                         is_negative: false,
-                        existingFilter,
+                        filterData,
                     });
 
                     const [id] = await conn('persons_filters').insert(anyEntry);
 
-                    person_filters[filter.token].items[id] = {
+                    filterData.items[id] = {
                         ...anyEntry,
                         id,
                     };
@@ -1402,7 +1371,7 @@ function putGender(req, res) {
                 }
 
                 // Check for existing selection
-                const existingItem = Object.values(person_filters[filter.token].items).find(
+                const existingItem = Object.values(filterData.items).find(
                     (item) => item[mapping.column] === gender.id,
                 );
 
@@ -1425,16 +1394,16 @@ function putGender(req, res) {
 
                     const [id] = await conn('persons_filters').insert(filterEntry);
 
-                    person_filters[filter.token].items[id] = {
+                    filterData.items[id] = {
                         ...filterEntry,
                         id,
                     };
                 }
             }
 
-            await updateFiltersCache(person_filter_cache_key, person_filters);
+            await cacheService.hSet(person_filter_cache_key, filter.token, filterData);
 
-            await updateGridSets(person, person_filters, 'genders');
+            await updateGridSets(person, null, 'genders');
 
             res.json({
                 success: true,
@@ -1497,21 +1466,18 @@ function putDistance(req, res) {
 
             let conn = await dbService.conn();
             let person_filter_cache_key = cacheService.keys.person_filters(person_token);
-            let person_filters = await getPersonFilters(person);
+            let filterData = await getPersonFilterForKey(person, filter.token);
             let now = timeNow();
 
-            // Get or create filter entry
-            let existingFilter = person_filters['distance'];
-
-            if (existingFilter) {
+            if (filterData) {
                 // Update existing filter
-                await conn('persons_filters').where('id', existingFilter.id).update({
+                await conn('persons_filters').where('id', filterData.id).update({
                     filter_value: distance.toString(),
                     updated: now,
                 });
 
-                existingFilter.filter_value = distance;
-                existingFilter.updated = now;
+                filterData.filter_value = distance;
+                filterData.updated = now;
             } else {
                 // Create new filter entry
                 const filterEntry = createFilterEntry(filter.id, {
@@ -1521,13 +1487,13 @@ function putDistance(req, res) {
 
                 const [id] = await conn('persons_filters').insert(filterEntry);
 
-                person_filters['distance'] = {
+                filterData = {
                     ...filterEntry,
                     id,
                 };
             }
 
-            await updateFiltersCache(person_filter_cache_key, person_filters);
+            await cacheService.hSet(person_filter_cache_key, filter.token, filterData);
 
             res.json({
                 success: true,
@@ -1594,20 +1560,17 @@ function putActivityTypes(req, res) {
 
             let activityTypes = await getActivityTypesMapping();
             let person_filter_cache_key = cacheService.keys.person_filters(person.person_token);
-            let person_filters = await getPersonFilters(person);
+            let filterData = await getPersonFilterForKey(person, filter.token);
 
-            // Get or initialize the filter entry
-            let existingFilter = person_filters[filterKey];
-            if (!existingFilter) {
+            if (!filterData) {
                 const baseEntry = createFilterEntry(filter.id, {
                     person_id: person.id,
                 });
 
-                existingFilter = {
+                filterData = {
                     ...baseEntry,
                     items: {},
                 };
-                person_filters[filterKey] = existingFilter;
             }
 
             // Prepare batch operations
@@ -1624,15 +1587,15 @@ function putActivityTypes(req, res) {
                 activityTypeId = parseInt(activityTypeId);
 
                 // Find existing item for this activity
-                const existingItem = Object.values(existingFilter.items).find(
+                const existingItem = Object.values(filterData.items).find(
                     (item) => item.activity_type_id === activityTypeId,
                 );
 
                 if (existingItem) {
                     // Update existing item
                     batchUpdateIds.push(existingItem.id);
-                    existingFilter.items[existingItem.id].is_negative = !active;
-                    existingFilter.items[existingItem.id].updated = now;
+                    filterData.items[existingItem.id].is_negative = !active;
+                    filterData.items[existingItem.id].updated = now;
                 } else {
                     if (active) {
                         continue;
@@ -1654,7 +1617,7 @@ function putActivityTypes(req, res) {
 
             // Handle 'all' token separately
             if ('all' in activities) {
-                if (Object.keys(existingFilter.items).length) {
+                if (Object.keys(filterData.items).length) {
                     await conn('persons_filters')
                         .where('person_id', person.id)
                         .where('filter_id', filter.id)
@@ -1664,9 +1627,9 @@ function putActivityTypes(req, res) {
                         });
 
                     // Update cache directly for all items
-                    for (let id in existingFilter.items) {
-                        existingFilter.items[id].is_negative = false;
-                        existingFilter.items[id].updated = now;
+                    for (let id in filterData.items) {
+                        filterData.items[id].is_negative = false;
+                        filterData.items[id].updated = now;
                     }
                 }
             } else {
@@ -1676,7 +1639,7 @@ function putActivityTypes(req, res) {
 
                     // Update cache with new items
                     for (let item of batchInserts) {
-                        existingFilter.items[item.id] = {
+                        filterData.items[item.id] = {
                             ...item,
                             id: item.id,
                         };
@@ -1695,9 +1658,9 @@ function putActivityTypes(req, res) {
             }
 
             // Update cache
-            await updateFiltersCache(person_filter_cache_key, person_filters);
+            await cacheService.hSet(person_filter_cache_key, filter.token, filterData);
 
-            res.json(person_filters[filterKey]);
+            res.json(filterData);
         } catch (error) {
             console.error('Activity types error:', error);
             res.json(
@@ -1813,29 +1776,26 @@ function putSchools(req, res) {
 
             let conn = await dbService.conn();
             let person_filter_cache_key = cacheService.keys.person_filters(person_token);
-            let person_filters = await getPersonFilters(person);
+            let filterData = await getPersonFilterForKey(person, filter.token);
             let now = timeNow();
 
-            let existingFilter = person_filters[filter.token];
-
             // Initialize filter structure if it doesn't exist
-            if (!existingFilter) {
+            if (!filterData) {
                 const baseEntry = createFilterEntry(filter.id, {
                     person_id: person.id,
                 });
 
-                existingFilter = {
+                filterData = {
                     ...baseEntry,
                     items: {},
                 };
-                person_filters[filter.token] = existingFilter;
-            } else if (!existingFilter.items) {
-                existingFilter.items = {};
+            } else if (!filterData.items) {
+                filterData.items = {};
             }
 
             if (token === 'any') {
                 // Handle 'any' selection - clear all existing filters
-                if (Object.keys(existingFilter.items).length)
+                if (Object.keys(filterData.items).length)
                     await conn('persons_filters')
                         .where('person_id', person.id)
                         .where('filter_id', filter.id)
@@ -1845,13 +1805,13 @@ function putSchools(req, res) {
                         });
 
                 // Update cache
-                for (let id in existingFilter.items) {
-                    existingFilter.items[id].is_active = false;
-                    existingFilter.items[id].updated = now;
+                for (let id in filterData.items) {
+                    filterData.items[id].is_active = false;
+                    filterData.items[id].updated = now;
                 }
             } else {
                 // Find existing item for option
-                const existingItem = Object.values(existingFilter.items).find(
+                const existingItem = Object.values(filterData.items).find(
                     (item) => item[mapping.column] === option.id,
                 );
 
@@ -1897,14 +1857,14 @@ function putSchools(req, res) {
                     filterEntry.token = token;
                     filterEntry.name = option.name;
 
-                    existingFilter.items[id] = {
+                    filterData.items[id] = {
                         ...filterEntry,
                         id,
                     };
                 }
             }
 
-            await updateFiltersCache(person_filter_cache_key, person_filters);
+            await cacheService.hSet(person_filter_cache_key, filter.token, filterData);
 
             res.json({
                 id: id,
@@ -2053,30 +2013,27 @@ function putMovies(req, res) {
 
             let conn = await dbService.conn();
             let person_filter_cache_key = cacheService.keys.person_filters(person_token);
-            let person_filters = await getPersonFilters(person);
+            let filterData = await getPersonFilterForKey(person, personFilterKey);
             let now = timeNow();
 
-            let existingFilter = person_filters[personFilterKey];
-
             // Initialize filter structure if it doesn't exist
-            if (!existingFilter) {
+            if (!filterData) {
                 const baseEntry = createFilterEntry(filter.id, {
                     person_id: person.id,
                 });
 
-                existingFilter = {
+                filterData = {
                     ...baseEntry,
                     items: {},
                 };
-                person_filters[personFilterKey] = existingFilter;
-            } else if (!existingFilter.items) {
-                existingFilter.items = {};
+            } else if (!filterData.items) {
+                filterData.items = {};
             }
 
             if (token === 'any') {
                 // Handle 'any' selection - clear all existing filters for table key
 
-                if (Object.keys(existingFilter.items).length)
+                if (Object.keys(filterData.items).length)
                     await conn('persons_filters')
                         .where('person_id', person.id)
                         .where('filter_id', filter.id)
@@ -2086,8 +2043,8 @@ function putMovies(req, res) {
                         });
 
                 // Update cache
-                for (let id in existingFilter.items) {
-                    let item = existingFilter.items[id];
+                for (let id in filterData.items) {
+                    let item = filterData.items[id];
 
                     if (item.table_key === table_key) {
                         item.is_active = false;
@@ -2096,7 +2053,7 @@ function putMovies(req, res) {
                 }
             } else {
                 // Find existing item for option
-                const existingItem = Object.values(existingFilter.items).find(
+                const existingItem = Object.values(filterData.items).find(
                     (item) => item[mapping.column] === option.id,
                 );
 
@@ -2143,15 +2100,14 @@ function putMovies(req, res) {
                     filterEntry.token = token;
                     filterEntry.name = option.name;
 
-                    existingFilter.items[id] = {
+                    filterData.items[id] = {
                         ...filterEntry,
                         id,
                     };
                 }
             }
 
-            await updateFiltersCache(person_filter_cache_key, person_filters);
-
+            await cacheService.hSet(person_filter_cache_key, personFilterKey, filterData);
             res.json({
                 id: id,
                 success: true,
@@ -2299,30 +2255,27 @@ function putTvShows(req, res) {
 
             let conn = await dbService.conn();
             let person_filter_cache_key = cacheService.keys.person_filters(person_token);
-            let person_filters = await getPersonFilters(person);
+            let filterData = await getPersonFilterForKey(person, personFilterKey);
             let now = timeNow();
 
-            let existingFilter = person_filters[personFilterKey];
-
             // Initialize filter structure if it doesn't exist
-            if (!existingFilter) {
+            if (!filterData) {
                 const baseEntry = createFilterEntry(filter.id, {
                     person_id: person.id,
                 });
 
-                existingFilter = {
+                filterData = {
                     ...baseEntry,
                     items: {},
                 };
-                person_filters[personFilterKey] = existingFilter;
-            } else if (!existingFilter.items) {
-                existingFilter.items = {};
+            } else if (!filterData.items) {
+                filterData.items = {};
             }
 
             if (token === 'any') {
                 // Handle 'any' selection - clear all existing filters for table key
 
-                if (Object.keys(existingFilter.items).length)
+                if (Object.keys(filterData.items).length)
                     await conn('persons_filters')
                         .where('person_id', person.id)
                         .where('filter_id', filter.id)
@@ -2332,8 +2285,8 @@ function putTvShows(req, res) {
                         });
 
                 // Update cache
-                for (let id in existingFilter.items) {
-                    let item = existingFilter.items[id];
+                for (let id in filterData.items) {
+                    let item = filterData.items[id];
 
                     if (item.table_key === table_key) {
                         item.is_active = false;
@@ -2342,7 +2295,7 @@ function putTvShows(req, res) {
                 }
             } else {
                 // Find existing item for option
-                const existingItem = Object.values(existingFilter.items).find(
+                const existingItem = Object.values(filterData.items).find(
                     (item) => item[mapping.column] === option.id,
                 );
 
@@ -2389,14 +2342,14 @@ function putTvShows(req, res) {
                     filterEntry.token = token;
                     filterEntry.name = option.name;
 
-                    existingFilter.items[id] = {
+                    filterData.items[id] = {
                         ...filterEntry,
                         id,
                     };
                 }
             }
 
-            await updateFiltersCache(person_filter_cache_key, person_filters);
+            await cacheService.hSet(person_filter_cache_key, personFilterKey, filterData);
 
             res.json({
                 id: id,
@@ -2531,29 +2484,26 @@ function putInstruments(req, res) {
 
             let conn = await dbService.conn();
             let person_filter_cache_key = cacheService.keys.person_filters(person_token);
-            let person_filters = await getPersonFilters(person);
+            let filterData = await getPersonFilterForKey(person, filter.token);
             let now = timeNow();
 
-            let existingFilter = person_filters[filter.token];
-
             // Initialize filter structure if it doesn't exist
-            if (!existingFilter) {
+            if (!filterData) {
                 const baseEntry = createFilterEntry(filter.id, {
                     person_id: person.id,
                 });
 
-                existingFilter = {
+                filterData = {
                     ...baseEntry,
                     items: {},
                 };
-                person_filters[filter.token] = existingFilter;
-            } else if (!existingFilter.items) {
-                existingFilter.items = {};
+            } else if (!filterData.items) {
+                filterData.items = {};
             }
 
             if (token === 'any') {
                 // Handle 'any' selection - clear all existing filters
-                if (Object.keys(existingFilter.items).length)
+                if (Object.keys(filterData.items).length)
                     await conn('persons_filters')
                         .where('person_id', person.id)
                         .where('filter_id', filter.id)
@@ -2563,13 +2513,13 @@ function putInstruments(req, res) {
                         });
 
                 // Update cache
-                for (let id in existingFilter.items) {
-                    existingFilter.items[id].is_active = false;
-                    existingFilter.items[id].updated = now;
+                for (let id in filterData.items) {
+                    filterData.items[id].is_active = false;
+                    filterData.items[id].updated = now;
                 }
             } else {
                 // Find existing item for option
-                const existingItem = Object.values(existingFilter.items).find(
+                const existingItem = Object.values(filterData.items).find(
                     (item) => item[mapping.column] === option.id,
                 );
 
@@ -2626,14 +2576,14 @@ function putInstruments(req, res) {
                     filterEntry.token = token;
                     filterEntry.name = option.name;
 
-                    existingFilter.items[id] = {
+                    filterData.items[id] = {
                         ...filterEntry,
                         id,
                     };
                 }
             }
 
-            await updateFiltersCache(person_filter_cache_key, person_filters);
+            await cacheService.hSet(person_filter_cache_key, filter.token, filterData);
 
             res.json({
                 id: id,
@@ -2765,30 +2715,27 @@ function putWork(req, res) {
 
             let conn = await dbService.conn();
             let person_filter_cache_key = cacheService.keys.person_filters(person_token);
-            let person_filters = await getPersonFilters(person);
+            let filterData = await getPersonFilterForKey(person, personFilterKey);
             let now = timeNow();
 
-            let existingFilter = person_filters[personFilterKey];
-
             // Initialize filter structure if it doesn't exist
-            if (!existingFilter) {
+            if (!filterData) {
                 const baseEntry = createFilterEntry(filter.id, {
                     person_id: person.id,
                 });
 
-                existingFilter = {
+                filterData = {
                     ...baseEntry,
                     items: {},
                 };
-                person_filters[personFilterKey] = existingFilter;
-            } else if (!existingFilter.items) {
-                existingFilter.items = {};
+            } else if (!filterData.items) {
+                filterData.items = {};
             }
 
             if (token === 'any') {
                 // Handle 'any' selection - clear all existing filters for table key
 
-                if (Object.keys(existingFilter.items).length)
+                if (Object.keys(filterData.items).length)
                     await conn('persons_filters')
                         .where('person_id', person.id)
                         .where('filter_id', filter.id)
@@ -2798,8 +2745,8 @@ function putWork(req, res) {
                         });
 
                 // Update cache
-                for (let id in existingFilter.items) {
-                    let item = existingFilter.items[id];
+                for (let id in filterData.items) {
+                    let item = filterData.items[id];
 
                     if (item.table_key === table_key) {
                         item.is_active = false;
@@ -2808,7 +2755,7 @@ function putWork(req, res) {
                 }
             } else {
                 // Find existing item for option
-                const existingItem = Object.values(existingFilter.items).find(
+                const existingItem = Object.values(filterData.items).find(
                     (item) => item[mapping.column] === option.id,
                 );
 
@@ -2855,14 +2802,14 @@ function putWork(req, res) {
                     filterEntry.token = token;
                     filterEntry.name = option.name;
 
-                    existingFilter.items[id] = {
+                    filterData.items[id] = {
                         ...filterEntry,
                         id,
                     };
                 }
             }
 
-            await updateFiltersCache(person_filter_cache_key, person_filters);
+            await cacheService.hSet(person_filter_cache_key, personFilterKey, filterData);
 
             res.json({
                 id: id,
@@ -3005,30 +2952,27 @@ function putMusic(req, res) {
 
             let conn = await dbService.conn();
             let person_filter_cache_key = cacheService.keys.person_filters(person_token);
-            let person_filters = await getPersonFilters(person);
+            let filterData = await getPersonFilterForKey(person, personFilterKey);
             let now = timeNow();
 
-            let existingFilter = person_filters[personFilterKey];
-
             // Initialize filter structure if it doesn't exist
-            if (!existingFilter) {
+            if (!filterData) {
                 const baseEntry = createFilterEntry(filter.id, {
                     person_id: person.id,
                 });
 
-                existingFilter = {
+                filterData = {
                     ...baseEntry,
                     items: {},
                 };
-                person_filters[personFilterKey] = existingFilter;
-            } else if (!existingFilter.items) {
-                existingFilter.items = {};
+            } else if (!filterData.items) {
+                filterData.items = {};
             }
 
             if (token === 'any') {
                 // Handle 'any' selection - clear all existing filters for table key
 
-                if (Object.keys(existingFilter.items).length)
+                if (Object.keys(filterData.items).length)
                     await conn('persons_filters')
                         .where('person_id', person.id)
                         .where('filter_id', filter.id)
@@ -3038,8 +2982,8 @@ function putMusic(req, res) {
                         });
 
                 // Update cache
-                for (let id in existingFilter.items) {
-                    let item = existingFilter.items[id];
+                for (let id in filterData.items) {
+                    let item = filterData.items[id];
 
                     if (item.table_key === table_key) {
                         item.is_active = false;
@@ -3048,7 +2992,7 @@ function putMusic(req, res) {
                 }
             } else {
                 // Find existing item for option
-                const existingItem = Object.values(existingFilter.items).find(
+                const existingItem = Object.values(filterData.items).find(
                     (item) => item[mapping.column] === option.id,
                 );
 
@@ -3095,14 +3039,14 @@ function putMusic(req, res) {
                     filterEntry.token = token;
                     filterEntry.name = option.name;
 
-                    existingFilter.items[id] = {
+                    filterData.items[id] = {
                         ...filterEntry,
                         id,
                     };
                 }
             }
 
-            await updateFiltersCache(person_filter_cache_key, person_filters);
+            await cacheService.hSet(person_filter_cache_key, personFilterKey, filterData);
 
             res.json({
                 id: id,
@@ -3255,30 +3199,27 @@ function putSports(req, res) {
 
             let conn = await dbService.conn();
             let person_filter_cache_key = cacheService.keys.person_filters(person_token);
-            let person_filters = await getPersonFilters(person);
+            let filterData = await getPersonFilterForKey(person, personFilterKey);
             let now = timeNow();
 
-            let existingFilter = person_filters[personFilterKey];
-
             // Initialize filter structure if it doesn't exist
-            if (!existingFilter) {
+            if (!filterData) {
                 const baseEntry = createFilterEntry(filter.id, {
                     person_id: person.id,
                 });
 
-                existingFilter = {
+                filterData = {
                     ...baseEntry,
                     items: {},
                 };
-                person_filters[personFilterKey] = existingFilter;
-            } else if (!existingFilter.items) {
-                existingFilter.items = {};
+            } else if (!filterData.items) {
+                filterData.items = {};
             }
 
             if (token === 'any') {
                 // Handle 'any' selection - clear all existing filters for table key
 
-                if (Object.keys(existingFilter.items).length)
+                if (Object.keys(filterData.items).length)
                     await conn('persons_filters')
                         .where('person_id', person.id)
                         .where('filter_id', filter.id)
@@ -3288,8 +3229,8 @@ function putSports(req, res) {
                         });
 
                 // Update cache
-                for (let id in existingFilter.items) {
-                    let item = existingFilter.items[id];
+                for (let id in filterData.items) {
+                    let item = filterData.items[id];
 
                     if (item.table_key === table_key) {
                         item.is_active = false;
@@ -3298,7 +3239,7 @@ function putSports(req, res) {
                 }
             } else {
                 // Find existing item for option
-                const existingItem = Object.values(existingFilter.items).find(
+                const existingItem = Object.values(filterData.items).find(
                     (item) => item[mapping.column] === option.id,
                 );
 
@@ -3356,14 +3297,14 @@ function putSports(req, res) {
                     filterEntry.token = token;
                     filterEntry.name = option.name;
 
-                    existingFilter.items[id] = {
+                    filterData.items[id] = {
                         ...filterEntry,
                         id,
                     };
                 }
             }
 
-            await updateFiltersCache(person_filter_cache_key, person_filters);
+            await cacheService.hSet(person_filter_cache_key, personFilterKey, filterData);
 
             res.json({
                 id: id,
@@ -3380,18 +3321,6 @@ function putSports(req, res) {
         }
 
         resolve();
-    });
-}
-
-function updateFiltersCache(key, filters_data) {
-    return new Promise(async (resolve, reject) => {
-        try {
-             await cacheService.setCache(key, filters_data);
-        } catch(e) {
-            console.error(e);
-        }
-
-         resolve();
     });
 }
 

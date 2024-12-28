@@ -1110,7 +1110,6 @@ async function processSmoking() {
     }
 
     await getPersonsLogins();
-    return;
 
     await processSections();
 

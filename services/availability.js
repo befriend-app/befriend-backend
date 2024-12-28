@@ -1,7 +1,7 @@
 let cacheService = require('../services/cache');
 let dbService = require('../services/db');
 const { timeNow, isNumeric } = require('./shared');
-const { getFilters, getPersonFilters, updateGridSets } = require('./filters');
+const { getFilters, getPersonFilters, updateGridSets, getPersonFilterForKey } = require('./filters');
 const dayjs = require('dayjs');
 
 const DEFAULT_START = '09:00:00';
@@ -28,8 +28,7 @@ function saveAvailabilityData(person, availabilityData) {
                 return reject('Invalid availability data format');
             }
 
-            const person_filters = await getPersonFilters(person);
-            const existingFilter = person_filters['availability'];
+            let existingFilter = await getPersonFilterForKey(person, 'availability');
             const existingRecords = existingFilter?.items || {};
 
             const recordsToUpdate = [];
@@ -218,8 +217,8 @@ function saveAvailabilityData(person, availabilityData) {
             const availabilityFilter = filters.byToken['availability'];
 
             if (availabilityFilter) {
-                if (!person_filters['availability']) {
-                    person_filters['availability'] = {
+                if(!existingFilter) {
+                    existingFilter = {
                         is_active: true,
                         created: now,
                         updated: now,
@@ -228,7 +227,7 @@ function saveAvailabilityData(person, availabilityData) {
                 }
 
                 // Start with existing records
-                const updatedItems = { ...person_filters['availability'].items };
+                const updatedItems = { ...existingFilter.items };
 
                 // Remove deleted records
                 for (let record of recordsToDelete) {
@@ -250,23 +249,24 @@ function saveAvailabilityData(person, availabilityData) {
                     };
                 }
 
-                person_filters['availability'].items = updatedItems;
-                person_filters['availability'].updated = now;
+                existingFilter.items = updatedItems;
+                existingFilter.updated = now;
 
                 const person_filter_cache_key = cacheService.keys.person_filters(
                     person.person_token,
                 );
-                await cacheService.setCache(person_filter_cache_key, person_filters);
+
+                await cacheService.hSet(person_filter_cache_key, 'availability', existingFilter);
             }
 
             // Map of frontend IDs to actual database IDs
             const idMapping = Object.fromEntries(newRecordIds);
 
-            await updateGridSets(person, person_filters, 'availability');
+            await updateGridSets(person, null, 'availability');
 
             resolve({
                 success: true,
-                data: person_filters,
+                data: existingFilter,
                 message: 'Availability updated successfully',
                 changed:
                     recordsToUpdate.length > 0 ||

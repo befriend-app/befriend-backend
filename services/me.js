@@ -845,6 +845,9 @@ function updateSectionItem(body) {
                                 const itemToken = targetItem.token;
                                 delete cache_data[itemToken];
                             } else {
+                                if (secondary !== undefined) {
+                                    data.secondary = secondary;
+                                }
                                 // For update, merge new data
                                 Object.assign(targetItem, data);
                             }
@@ -867,6 +870,10 @@ function updateSectionItem(body) {
                 : Object.values(cache_data).find((item) => item.id === id);
 
             if (targetItem) {
+                if (secondary !== undefined) {
+                    data.secondary = secondary;
+                }
+
                 Object.assign(targetItem, data);
             }
         };

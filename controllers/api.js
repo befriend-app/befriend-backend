@@ -1518,10 +1518,14 @@ module.exports = {
                 let pipeline = await cacheService.startPipeline();
 
                 for (let token in unique) {
-                    pipeline.hGetAll(cacheService.keys.instrument(token));
+                    pipeline.hGet(cacheService.keys.instruments, token);
                 }
 
                 let items = await cacheService.execMulti(pipeline);
+
+                for(let i = 0; i < items.length; i++) {
+                    items[i] = JSON.parse(items[i]);
+                }
 
                 res.json(
                     {

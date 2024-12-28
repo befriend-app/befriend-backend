@@ -353,114 +353,173 @@ function getFilters() {
     });
 }
 
-function getPersonFilters(person) {
+function processFilterRows(rows) {
     return new Promise(async (resolve, reject) => {
-        let cache_key = cacheService.keys.person_filters(person.person_token);
+         try {
+             let filters = await module.exports.getFilters();
+
+             let person_filters = {};
+             let groupedRows = {};
+
+             // Group rows by filter token
+             for (let row of rows) {
+                 let filter = filters.byId[row.filter_id];
+                 if (!filter) continue;
+
+                 if (!groupedRows[filter.token]) {
+                     groupedRows[filter.token] = [];
+                 }
+                 groupedRows[filter.token].push(row);
+             }
+
+             // Process each filter group
+             for (let filter_token in groupedRows) {
+                 const rows = groupedRows[filter_token];
+                 const mapping = filterMappings[filter_token];
+                 if (!mapping) continue;
+
+                 // Get base properties from first row
+                 const baseRow = rows[0];
+                 let filterEntry = {
+                     id: baseRow.id,
+                     filter_id: baseRow.filter_id,
+                     is_send: baseRow.is_send,
+                     is_receive: baseRow.is_receive,
+                     is_active: baseRow.is_active,
+                     created: baseRow.created,
+                     updated: baseRow.updated,
+                 };
+
+                 // Handle multi vs single filters
+                 if (mapping.multi) {
+                     person_filters[filter_token] = {
+                         ...filterEntry,
+                         items: {},
+                     };
+
+                     // Process each item
+                     for (let row of rows) {
+                         let itemEntry = {
+                             id: row.id,
+                             created: row.created,
+                             updated: row.updated,
+                         };
+
+                         // Add column-specific values
+                         if (mapping.column && row[mapping.column]) {
+                             itemEntry[mapping.token] = row[mapping.column];
+                         }
+
+                         // Add filter values
+                         if (row.filter_value !== null) {
+                             itemEntry.filter_value = row.filter_value;
+                         }
+                         if (row.filter_value_min !== null) {
+                             itemEntry.filter_value_min = row.filter_value_min;
+                         }
+                         if (row.filter_value_max !== null) {
+                             itemEntry.filter_value_max = row.filter_value_max;
+                         }
+                         if (row.secondary_level !== null) {
+                             itemEntry.secondary_level = row.secondary_level;
+                         }
+
+                         person_filters[filter_token].items[row.id] = itemEntry;
+                     }
+                 } else {
+                     if (baseRow.filter_value !== null) {
+                         filterEntry.filter_value = baseRow.filter_value;
+                     }
+                     if (baseRow.filter_value_min !== null) {
+                         filterEntry.filter_value_min = baseRow.filter_value_min;
+                     }
+                     if (baseRow.filter_value_max !== null) {
+                         filterEntry.filter_value_max = baseRow.filter_value_max;
+                     }
+                     if (baseRow.secondary_level !== null) {
+                         filterEntry.secondary_level = baseRow.secondary_level;
+                     }
+
+                     person_filters[filter_token] = filterEntry;
+                 }
+             }
+
+             resolve(person_filters);
+         } catch(e) {
+             console.error(e);
+             return reject(e);
+         }
+    });
+}
+
+function getPersonFilterForKey(person, filter_key) {
+    return new Promise(async (resolve, reject) => {
 
         try {
-            let person_filters = await cacheService.getObj(cache_key);
+            let cache_key = cacheService.keys.person_filters(person.person_token);
+
+            let filter = await cacheService.hGetItem(cache_key, filter_key);
+
+            if (filter) {
+                return resolve(filter);
+            }
+
+            // If not in cache, get all filters and filter by key
+            let filters = await module.exports.getFilters();
+            let filter_id = filters.byToken[filter_key]?.id;
+
+            if(!filter_id) {
+                return reject("Filter doesn't exist");
+            }
+
+            let conn = await dbService.conn();
+            let qry = await conn('persons_filters')
+                .where('person_id', person.id)
+                .where('filter_id', filter_id);
+
+            if (!qry.length) {
+                return resolve(null);
+            }
+
+            let person_filters = await processFilterRows(qry);
+            let filter_data = person_filters[filter_key] || null;
+
+            // Cache the individual filter
+            if (filter_data) {
+                await cacheService.hSet(cache_key, filter_key, filter_data);
+            }
+
+            resolve(filter_data);
+        } catch (e) {
+            console.error(e);
+            return reject(e);
+        }
+    });
+}
+
+function getPersonFilters(person) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let cache_key = cacheService.keys.person_filters(person.person_token);
+
+            let person_filters = await cacheService.hGetAllObj(cache_key);
 
             if (person_filters) {
                 return resolve(person_filters);
             }
 
-            let filters = await module.exports.getFilters();
-
+            // If not in cache, build from database
             let conn = await dbService.conn();
-
             let qry = await conn('persons_filters').where('person_id', person.id);
 
-            person_filters = {};
+            if(qry.length) {
+                person_filters = await processFilterRows(qry);
 
-            let groupedRows = {};
-
-            for (let row of qry) {
-                let filter = filters.byId[row.filter_id];
-                if (!filter) continue;
-
-                if (!groupedRows[filter.token]) {
-                    groupedRows[filter.token] = [];
-                }
-                groupedRows[filter.token].push(row);
+                // Update cache with active filters
+                await cacheService.hSet(cache_key, null, person_filters);
             }
 
-            for (let filter_token in groupedRows) {
-                const rows = groupedRows[filter_token];
-                const mapping = filterMappings[filter_token];
-                if (!mapping) continue;
-
-                // Get first row for base properties
-                const baseRow = rows[0];
-
-                // Create base filter entry
-                let filterEntry = {
-                    id: baseRow.id,
-                    filter_id: baseRow.filter_id,
-                    is_send: baseRow.is_send,
-                    is_receive: baseRow.is_receive,
-                    is_active: baseRow.is_active,
-                    created: baseRow.created,
-                    updated: baseRow.updated,
-                };
-
-                // Handle single vs multi filters differently
-                if (mapping.multi) {
-                    // Initialize multi filter with base properties and empty items
-                    person_filters[filter_token] = {
-                        ...filterEntry,
-                        items: {},
-                    };
-
-                    // Process each row as an item
-                    for (let row of rows) {
-                        let itemEntry = {
-                            id: row.id,
-                            created: row.created,
-                            updated: row.updated,
-                        };
-
-                        // Add column-specific values
-                        if (mapping.column && row[mapping.column]) {
-                            itemEntry[mapping.token] = row[mapping.column];
-                        }
-
-                        // Add any filter values
-                        if (row.filter_value !== null) {
-                            itemEntry.filter_value = row.filter_value;
-                        }
-                        if (row.filter_value_min !== null) {
-                            itemEntry.filter_value_min = row.filter_value_min;
-                        }
-                        if (row.filter_value_max !== null) {
-                            itemEntry.filter_value_max = row.filter_value_max;
-                        }
-                        if (row.secondary_level !== null) {
-                            itemEntry.secondary_level = row.secondary_level;
-                        }
-
-                        person_filters[filter_token].items[row.id] = itemEntry;
-                    }
-                } else {
-                    if (baseRow.filter_value !== null) {
-                        filterEntry.filter_value = baseRow.filter_value;
-                    }
-                    if (baseRow.filter_value_min !== null) {
-                        filterEntry.filter_value_min = baseRow.filter_value_min;
-                    }
-                    if (baseRow.filter_value_max !== null) {
-                        filterEntry.filter_value_max = baseRow.filter_value_max;
-                    }
-                    if (baseRow.secondary_level !== null) {
-                        filterEntry.secondary_level = baseRow.secondary_level;
-                    }
-
-                    person_filters[filter_token] = filterEntry;
-                }
-            }
-
-            //set cache if missed above
-            await cacheService.setCache(cache_key, person_filters);
-            resolve(person_filters);
+            resolve(person_filters || {});
         } catch (e) {
             console.error(e);
             return reject(e);
@@ -1085,6 +1144,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
     }
 
     return new Promise(async (resolve, reject) => {
+        return resolve();
         if(!person) {
             return reject();
         }
@@ -1264,5 +1324,6 @@ module.exports = {
     filterMappings,
     getFilters,
     getPersonFilters,
+    getPersonFilterForKey,
     updateGridSets
 };
