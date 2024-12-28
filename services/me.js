@@ -1572,7 +1572,7 @@ function mergeDataForActiveSections(person, sections) {
 
                 // Build section data
                 if (categoryOptions || categoryItems || filterList) {
-                    sections[section_key].data = {
+                    sections.active[section_key].data = {
                         myStr: section.myStr || null,
                         tabs: section.tabs || null,
                         options: categoryItems,
@@ -1604,11 +1604,11 @@ function mergeDataForActiveSections(person, sections) {
                         country_code: person.country_code,
                     });
 
-                    if(!(key in sections)) {
-                        sections[key] = {};
+                    if(!(key in sections.active)) {
+                        sections.active[key] = {};
                     }
 
-                    sections[key].data = data;
+                    sections.active[key].data = data;
                 }
             }
 
