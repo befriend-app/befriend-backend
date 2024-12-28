@@ -262,7 +262,9 @@ function saveAvailabilityData(person, availabilityData) {
             // Map of frontend IDs to actual database IDs
             const idMapping = Object.fromEntries(newRecordIds);
 
-            await updateGridSets(person, null, 'availability');
+            await updateGridSets(person, {
+                availability: existingFilter,
+            }, 'availability');
 
             resolve({
                 success: true,

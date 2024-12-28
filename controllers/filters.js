@@ -277,7 +277,9 @@ function handleFilterUpdate(req, res, filterType) {
             // Update cache and return
             await cacheService.hSet(cache_key, filter.token, filterData);
 
-            await updateGridSets(person, null, filterType);
+            await updateGridSets(person, {
+                [filter.token]: filterData
+            }, filterType);
 
             res.json({
                 id,
@@ -383,7 +385,9 @@ function putActive(req, res) {
 
             await cacheService.hSet(person_filter_cache_key, filter_token, filterData);
 
-            await updateGridSets(person, null, filter_token);
+            await updateGridSets(person, {
+                [filter_token]: filterData
+            }, filter_token);
 
             res.json('Updated');
         } catch (e) {
@@ -464,7 +468,9 @@ function putImportance(req, res) {
 
             await cacheService.hSet(person_filter_cache_key, section, filterData);
 
-            await updateGridSets(person, null, section);
+            await updateGridSets(person, {
+                [section]: filterData
+            }, section);
 
             res.json('Updated');
         } catch (e) {
@@ -584,7 +590,9 @@ function putSendReceive(req, res) {
 
             await cacheService.hSet(person_filter_cache_key, filter_token, filterData);
 
-            await updateGridSets(person, null, filter_token);
+            await updateGridSets(person, {
+                [filter_token]: filterData
+            }, filter_token);
 
             res.json({
                 success: true,
@@ -812,7 +820,9 @@ function putMode(req, res) {
             // Update cache
             await cacheService.hSet(person_filter_cache_key, filter.token, filterData);
 
-            await updateGridSets(person, null, 'modes');
+            await updateGridSets(person, {
+                [filter.token]: filterData
+            }, filter.token);
 
             res.json({
                 success: true,
@@ -1018,7 +1028,9 @@ function putNetworks(req, res) {
             // Update cache
             await cacheService.hSet(person_filter_cache_key, filter.token, filterData);
 
-            await updateGridSets(person, null, filter.token);
+            await updateGridSets(person, {
+                [filter.token]: filterData
+            }, filter.token);
 
             res.json(filterData);
         } catch (error) {
@@ -1403,7 +1415,9 @@ function putGender(req, res) {
 
             await cacheService.hSet(person_filter_cache_key, filter.token, filterData);
 
-            await updateGridSets(person, null, 'genders');
+            await updateGridSets(person, {
+                [filter.token]: filterData
+            }, filter.token);
 
             res.json({
                 success: true,

@@ -211,7 +211,9 @@ function updatePersonsCount() {
 
                 await cacheService.hSet(cacheService.keys.person(person.person_token), 'reviews', reviews);
 
-                await updateGridSets(person_obj, null, 'reviews');
+                await updateGridSets(person_obj, {
+                    reviews
+                }, 'reviews');
             }
         }
 
