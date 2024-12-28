@@ -944,6 +944,13 @@ function normalizePort(val) {
     return false;
 }
 
+function removeArrItem(arr, item) {
+    let index = arr.indexOf(item);
+    if (index > -1) {
+        arr.splice(index, 1);
+    }
+}
+
 function stringDistance(str1, str2) {
     const grid = [];
     for (let i = 0; i <= str1.length; i++) {
@@ -1237,6 +1244,7 @@ module.exports = {
     pathExists: pathExists,
     range: range,
     readFile: readFile,
+    removeArrItem: removeArrItem,
     sendEmail: sendEmail,
     shuffleFunc: shuffleFunc,
     slugName: slugName,
