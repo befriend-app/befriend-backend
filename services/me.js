@@ -113,7 +113,7 @@ function putPartner(person_token, gender_token, is_select) {
                 Object.assign(person.modes.partner, createData);
             }
 
-            await setCache(cache_key, person);
+            await cacheService.hSet(cache_key, 'modes', person.modes);
         } catch (e) {
             console.error(e);
             return reject(e);
@@ -166,7 +166,7 @@ function addKid(person_token) {
 
             person.modes.kids = cached_kids;
 
-            await cacheService.setCache(cache_key, person);
+            await cacheService.hSet(cache_key, 'modes', person.modes);
 
             resolve(kid);
         } catch (e) {
@@ -285,7 +285,7 @@ function updateKid(
 
                 person.modes.kids = cached_kids;
 
-                await cacheService.setCache(cache_key, person);
+                await cacheService.hSet(cache_key, 'modes', person.modes);
             }
         } catch (e) {
             return reject(e);
@@ -326,7 +326,7 @@ function removeKid(person_token, kid_token) {
             if (cached_kids) {
                 delete cached_kids[kid_token];
                 person.modes.kids = cached_kids;
-                await cacheService.setCache(cache_key, person);
+                await cacheService.hSet(cache_key, 'modes', person.modes);
             }
         } catch (e) {
             console.error(e);
@@ -1788,7 +1788,7 @@ function allInstruments() {
                     data[item.token] = item;
                 }
 
-                await cacheService.hSet(cache_key, data);
+                await cacheService.hSet(cache_key, null, data);
             }
 
             let organized = {

@@ -1110,14 +1110,10 @@ async function processSmoking() {
     }
 
     await getPersonsLogins();
-    return;
+
+    return await await processLocation();
     await processSections();
 
-    await processLifeStages();
-    await processRelationshipStatus();
-    return;
-
-    await processDrinking();
     await processModes();
     await processLocation();
     await processOnline();

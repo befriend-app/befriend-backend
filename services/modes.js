@@ -101,13 +101,13 @@ function getPersonExcludedModes(person, person_filters) {
             let hasValidPartner = false;
             let hasValidKid = false;
 
-            let soloModeItem = Object.values(modesFilter.items || {})
+            let soloModeItem = Object.values(modesFilter?.items || {})
                 .find(item => item.mode_token === 'mode-solo');
 
-            let partnerModeItem = Object.values(modesFilter.items || {})
+            let partnerModeItem = Object.values(modesFilter?.items || {})
                 .find(item => item.mode_token === 'mode-partner');
 
-            let kidsModeItem = Object.values(modesFilter.items || {})
+            let kidsModeItem = Object.values(modesFilter?.items || {})
                 .find(item => item.mode_token === 'mode-kids');
 
             let exclude_send = new Set();
@@ -118,12 +118,12 @@ function getPersonExcludedModes(person, person_filters) {
                 exclude_receive.add('mode-solo');
             } else {
                 if(!soloModeItem?.is_active || soloModeItem?.is_negative) {
-                    if(modesFilter.is_active) {
-                        if(modesFilter.is_send) {
+                    if(modesFilter?.is_active) {
+                        if(modesFilter?.is_send) {
                             exclude_send.add('mode-solo');
                         }
 
-                        if(modesFilter.is_receive) {
+                        if(modesFilter?.is_receive) {
                             exclude_receive.add('mode-solo');
                         }
                     }
@@ -144,12 +144,12 @@ function getPersonExcludedModes(person, person_filters) {
                 }
 
                 if(!partnerModeItem || !partnerModeItem.is_active || partnerModeItem.is_negative) {
-                    if(modesFilter.is_active) {
+                    if(modesFilter?.is_active) {
                         if(modesFilter.is_send) {
                             exclude_send.add('mode-partner');
                         }
 
-                        if(modesFilter.is_receive) {
+                        if(modesFilter?.is_receive) {
                             exclude_receive.add('mode-partner');
                         }
                     }
@@ -173,12 +173,12 @@ function getPersonExcludedModes(person, person_filters) {
                 }
 
                 if(!kidsModeItem || !kidsModeItem.is_active || kidsModeItem.is_negative) {
-                    if(modesFilter.is_active) {
-                        if(modesFilter.is_send) {
+                    if(modesFilter?.is_active) {
+                        if(modesFilter?.is_send) {
                             exclude_send.add('mode-kids');
                         }
 
-                        if(modesFilter.is_receive) {
+                        if(modesFilter?.is_receive) {
                             exclude_receive.add('mode-kids');
                         }
                     }

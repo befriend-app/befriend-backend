@@ -1,5 +1,6 @@
 const redis = require('redis');
 const { IBM_LZ77 } = require('adm-zip/util/constants');
+const { isNumeric } = require('./shared');
 
 const standardKeys = {
     networks: 'networks',
@@ -315,6 +316,32 @@ module.exports = {
         });
     },
     hGetAllObj: function (key) {
+        function parseData(data) {
+            if(typeof data !== 'object') {
+                return data;
+            }
+
+            for(let k in data) {
+                let v = data[k];
+
+                if(v === '') { //convert to null if empty string
+                    data[k] = null;
+                } else if (k.startsWith('is_') || ['active'].includes(k) && isNumeric(v)) { //convert to boolean
+                    data[k] = !!parseInt(v);
+                } else if(isNumeric(v)) { //convert back to int/float
+                    if(v.includes('.')) {
+                        data[k] = parseFloat(v);
+                    } else {
+                        data[k] = parseInt(v);
+                    }
+                } else if(v.startsWith('{')) { //convert to object
+                    data[k] = JSON.parse(v);
+                }
+            }
+
+            return data;
+        }
+
         return new Promise(async (resolve, reject) => {
             //init conn in case first time
             if (!module.exports.conn) {
@@ -335,18 +362,10 @@ module.exports = {
                 let data = await module.exports.conn.hGetAll(key);
 
                 try {
-                    if (typeof data === 'object') {
-                        for (let k in data) {
-                            let v = data[k];
-
-                            if (typeof v === 'string') {
-                                data[k] = JSON.parse(v);
-                            }
-                        }
-                    }
-
+                    data = parseData(data);
                     return resolve(data);
                 } catch (e) {
+                    console.error(e);
                     return resolve(null);
                 }
             } catch (e) {
@@ -388,15 +407,27 @@ module.exports = {
                     await module.exports.conn.hSet(key, field, data);
                 } else {
                     const processedData = {};
+
                     for (const [k, v] of Object.entries(data)) {
                         if (v === null) {
                             processedData[k] = '';  // Convert null to empty string
+                        } else if(typeof v === 'boolean') {
+                            if(v) {
+                                processedData[k] = '1';
+                            } else {
+                                processedData[k] = '0';
+                            }
                         } else if (typeof v === 'object') {
                             processedData[k] = JSON.stringify(v);
+
+                            if (v instanceof Date) {
+                                processedData[k] = processedData[k].replaceAll('"', '');
+                            }
                         } else {
                             processedData[k] = v.toString();
                         }
                     }
+
                     await module.exports.conn.hSet(key, processedData);
                 }
 

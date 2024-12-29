@@ -34,7 +34,7 @@ module.exports = {
                 //use cached data
                 let cache_key = cacheService.keys.person(person_token || email);
 
-                person = await cacheService.getObj(cache_key);
+                person = await cacheService.hGetAllObj(cache_key);
 
                 if (person) {
                     return resolve(person);
@@ -126,7 +126,7 @@ module.exports = {
                     fun: person.rating_fun
                 }
 
-                await cacheService.setCache(cache_key, person);
+                await module.exports.savePerson(person.person_token, person);
 
                 resolve(person);
             } catch (e) {
@@ -146,9 +146,6 @@ module.exports = {
                 if (!person) {
                     return reject('No person found');
                 }
-
-                //use cached data
-                let cache_key = cacheService.keys.person(person_token);
 
                 let conn = await dbService.conn();
 
@@ -197,7 +194,7 @@ module.exports = {
                     }
                 }
 
-                await cacheService.setCache(cache_key, person);
+                await module.exports.savePerson(person_token, person);
 
                 resolve(person);
             } catch (e) {
@@ -205,4 +202,18 @@ module.exports = {
             }
         });
     },
+    savePerson: function (person_token, data) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                 let key = cacheService.keys.person(person_token);
+
+                 await cacheService.hSet(key, null, data);
+
+                 resolve();
+            } catch(e) {
+                console.error(e);
+                return reject(e);
+            }
+        });
+    }
 };

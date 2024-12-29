@@ -98,11 +98,7 @@ function updatePersonsCount() {
 
                     cache_keys.add[person.grid_token].push(person);
 
-                    let personCache = await getPerson(person.person_token);
-
-                    personCache.age = age;
-
-                    pipeline.set(cacheService.keys.person(person.person_token), JSON.stringify(personCache));
+                    pipeline.hSet(cacheService.keys.person(person.person_token), 'age', age?.toString() || '');
                 }
             }
 
@@ -209,11 +205,11 @@ function updatePersonsCount() {
                     fun: update.rating_fun
                 }
 
+                person_obj.reviews = reviews;
+
                 await cacheService.hSet(cacheService.keys.person(person.person_token), 'reviews', reviews);
 
-                await updateGridSets(person_obj, {
-                    reviews
-                }, 'reviews');
+                await updateGridSets(person_obj, null, 'reviews');
             }
         }
 

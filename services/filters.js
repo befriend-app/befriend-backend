@@ -454,8 +454,10 @@ function processFilterRows(rows) {
 
 function getPersonFilterForKey(person, filter_key) {
     return new Promise(async (resolve, reject) => {
-
         try {
+            if(filter_key === null) {
+                return reject();
+            }
             let cache_key = cacheService.keys.person_filters(person.person_token);
 
             let filter = await cacheService.hGetItem(cache_key, filter_key);
@@ -528,7 +530,7 @@ function getPersonFilters(person) {
 }
 
 function updateGridSets(person, person_filters = null, filter_token, prev_grid_token = null) {
-    let allNetworks, network_token, grid_token, keysAddSet,keysDelSet,
+    let grid_token, keysAddSet,keysDelSet,
         keysDelSorted, keysAddSorted, pipelineRem, pipelineAdd;
 
     function updateOnline() {
@@ -591,6 +593,15 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
     function updateNetworks() {
         return new Promise(async (resolve, reject) => {
             try {
+                let allNetworks = await getNetworksForFilters();
+                let network_token = allNetworks.networks?.find(network=>network.id === person.network_id)?.network_token;
+
+                if(!network_token) {
+                    console.error("Network token not found");
+
+                    return resolve();
+                }
+
                 const networksFilter = person_filters.networks;
 
                 if (!networksFilter) {
@@ -1160,7 +1171,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                 if(prev_grid_token) {
                     person_filters = await getPersonFilters(person);    
                 } else {
-                    if(!['online'].includes(filter_token)) {
+                    if(!['online', 'location'].includes(filter_token)) {
                         let filter = await getPersonFilterForKey(person, filter_token);
 
                         person_filters = {
@@ -1168,15 +1179,6 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                         }
                     }
                 }
-            }
-
-            allNetworks = await getNetworksForFilters();
-            network_token = allNetworks.networks?.find(network=>network.id === person.network_id)?.network_token;
-
-            if(!network_token) {
-                console.error("Network token not found");
-
-                return resolve();
             }
         } catch(e) {
             console.error(e);

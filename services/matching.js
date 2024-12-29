@@ -1163,7 +1163,6 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
         });
     }
 
-
     function filterPersonsAvailability() {
         return new Promise(async (resolve, reject) => {
             try {

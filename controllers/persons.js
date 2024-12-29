@@ -4,7 +4,7 @@ const gridService = require('../services/grid');
 const matchingService = require('../services/matching');
 
 const { timeNow, generateToken, latLonLookup, getTimeZoneFromCoords, isLatValid, isLonValid } = require('../services/shared');
-const { getPerson, updatePerson } = require('../services/persons');
+const { getPerson, updatePerson, savePerson } = require('../services/persons');
 const { findMatches, notifyMatches, prepareActivity } = require('../services/activities');
 const { getCountryByCode } = require('../services/locations');
 const { getPersonFilters, updateGridSets } = require('../services/filters');
@@ -228,10 +228,10 @@ module.exports = {
                 }
 
                 //person obj
-                await cacheService.setCache(cacheService.keys.person(person_token), me);
+                await savePerson(person_token, me);
 
                 if (!prev_grid_token || prev_grid_token !== grid.token) {
-                    await updateGridSets(me, null, null, prev_grid_token);
+                    await updateGridSets(me, null, 'location', prev_grid_token);
                 }
 
                 res.json('Location updated successfully', 202);
