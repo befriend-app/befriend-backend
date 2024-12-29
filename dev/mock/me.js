@@ -288,7 +288,7 @@ async function processOnline() {
             chunk.map(async (person) => {
                 if (processed % 100 === 0) {
                     console.log({
-                        location: `${processed + 1}/${persons.length}`,
+                        online: `${processed + 1}/${persons.length}`,
                     });
                 }
 
@@ -1110,8 +1110,12 @@ async function processSmoking() {
     }
 
     await getPersonsLogins();
-
+    return;
     await processSections();
+
+    await processLifeStages();
+    await processRelationshipStatus();
+    return;
 
     await processDrinking();
     await processModes();

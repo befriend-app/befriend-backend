@@ -294,10 +294,10 @@ router.put('/filters/life-stages', function (req, res, next) {
     });
 });
 
-router.put('/filters/relationship', function (req, res, next) {
+router.put('/filters/relationships', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
-            await filtersController.handleFilterUpdate(req, res, 'relationship');
+            await filtersController.handleFilterUpdate(req, res, 'relationships');
         } catch (err) {
             console.log(err);
         }

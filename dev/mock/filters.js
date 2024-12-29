@@ -1826,7 +1826,7 @@ async function processRelationships() {
 
             for(let option of personOptions) {
                 try {
-                    await axios.put(joinPaths(process.env.APP_URL, '/filters/relationship'), {
+                    await axios.put(joinPaths(process.env.APP_URL, '/filters/relationships'), {
                         login_token: person.login_token,
                         person_token: person.person_token,
                         relationship_status_token: option.token,
@@ -1841,7 +1841,7 @@ async function processRelationships() {
             if (Math.random() <= 0.3) {
                 try {
                     await axios.put(
-                        joinPaths(process.env.APP_URL, '/filters/relationship'),
+                        joinPaths(process.env.APP_URL, '/filters/relationships'),
                         {
                             login_token: person.login_token,
                             person_token: person.person_token,
@@ -1857,7 +1857,7 @@ async function processRelationships() {
     });
 
     console.log({
-        relationship: timeNow() - ts,
+        relationships: timeNow() - ts,
     });
 }
 

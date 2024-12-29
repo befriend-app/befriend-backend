@@ -262,8 +262,8 @@ const filterMappings = {
         multi: true,
         importance: true
     },
-    relationship: {
-        token: 'relationship',
+    relationships: {
+        token: 'relationships',
         name: 'Relationship Status',
         table: 'relationship_status',
         column: 'relationship_status_id',
@@ -1160,10 +1160,12 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                 if(prev_grid_token) {
                     person_filters = await getPersonFilters(person);    
                 } else {
-                    let filter = await getPersonFilterForKey(person, filter_token);
-                    
-                    person_filters = {
-                        [filter_token]: filter
+                    if(!['online'].includes(filter_token)) {
+                        let filter = await getPersonFilterForKey(person, filter_token);
+
+                        person_filters = {
+                            [filter_token]: filter
+                        }
                     }
                 }
             }
@@ -1260,7 +1262,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                 await updateMultiFilter('life_stages', lifeStageService.getLifeStages, lifeStageService.importance.default);
             }
 
-            if(filter_token.startsWith('relationship')) {
+            if(filter_token.startsWith('relationships')) {
                 await updateMultiFilter('relationships', relationshipService.getRelationshipStatus, relationshipService.importance.default);
             }
 

@@ -1465,7 +1465,6 @@ function getSections(person) {
                 if(sectionActive && !sectionActive.deleted) {
                     organized.active[section.section_key] = {
                         ...sectionActive,
-                        data: person_sections[section.section_key]?.data || {},
                         items: person_sections[section.section_key]?.items || {},
                     }
 

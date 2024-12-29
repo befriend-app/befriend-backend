@@ -1212,6 +1212,9 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
                 organized.counts.excluded++;
             }
         }
+
+        //decrease exclude by one to not include self in count
+        organized.counts.excluded--;
     }
 
     return new Promise(async (resolve, reject) => {

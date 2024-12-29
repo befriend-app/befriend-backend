@@ -75,7 +75,7 @@ function getFiltersOptions(req, res) {
                 schools: null,
                 work: null,
                 life_stages: null,
-                relationship: null,
+                relationships: null,
                 languages: null,
                 politics: null,
                 religion: null,
@@ -97,7 +97,7 @@ function getFiltersOptions(req, res) {
             organized.schools = await getSchools();
             organized.work = await getWork();
             organized.life_stages = await getLifeStages();
-            organized.relationship = await getRelationshipStatus();
+            organized.relationships = await getRelationshipStatus();
             organized.languages = await getLanguagesCountry(person?.country_code);
             organized.politics = await getPolitics();
             organized.religion = await getReligions();
@@ -131,7 +131,7 @@ function handleFilterUpdate(req, res, filterType) {
 
     let filterFunctionMap = {
         life_stages: getLifeStages,
-        relationship: getRelationshipStatus,
+        relationships: getRelationshipStatus,
         languages: getLanguages,
         religion: getReligions,
         politics: getPolitics,
