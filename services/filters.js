@@ -758,27 +758,39 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                         keysAddSet.add(cacheService.keys.persons_grid_set(grid_token, `is_new_person`));
                     }
 
-                    //match with new
-                    keysDelSet.add(cacheService.keys.persons_grid_send_receive(prev_grid_token, `reviews:match_new`, 'send'));
-                    keysDelSet.add(cacheService.keys.persons_grid_send_receive(prev_grid_token, `reviews:match_new`, 'receive'));
+                    //excluded match with new
+                    keysDelSet.add(cacheService.keys.persons_grid_exclude_send_receive(prev_grid_token, `reviews:match_new`, 'send'));
+                    keysDelSet.add(cacheService.keys.persons_grid_exclude_send_receive(prev_grid_token, `reviews:match_new`, 'receive'));
 
                     for (let type of reviewTypes) {
                         //own rating
                         keysDelSorted.add(cacheService.keys.persons_grid_sorted(prev_grid_token, `reviews:${type}`));
 
                         //filters
-                        keysDelSorted.add(cacheService.keys.persons_grid_send_receive(prev_grid_token, `reviews:${type}`, 'send'));
-                        keysDelSorted.add(cacheService.keys.persons_grid_send_receive(prev_grid_token, `reviews:${type}`, 'receive'));
+                        keysDelSorted.add(cacheService.keys.persons_grid_exclude_send_receive(prev_grid_token, `reviews:${type}`, 'send'));
+                        keysDelSorted.add(cacheService.keys.persons_grid_exclude_send_receive(prev_grid_token, `reviews:${type}`, 'receive'));
                     }
                 }
 
-                if(reviews_filters.new?.is_active) {
-                    if(reviews_filters.new.is_send) {
-                        keysAddSet.add(cacheService.keys.persons_grid_send_receive(prev_grid_token, `reviews:match_new`, 'send'));
-                    }
+                //remove self from previous exclude keys
+                keysDelSet.add(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `reviews:match_new`, 'send'));
+                keysDelSet.add(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `reviews:match_new`, 'receive'));
 
-                    if(reviews_filters.new.is_receive) {
-                        keysAddSet.add(cacheService.keys.persons_grid_send_receive(prev_grid_token, `reviews:match_new`, 'receive'));
+                for(let type of reviewTypes) {
+                    keysDelSorted.add(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `reviews:${type}`, 'send'));
+                    keysDelSorted.add(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `reviews:${type}`, 'receive'));
+                }
+
+                //exclude matching with new members
+                if(reviews_filters.reviews?.is_active) {
+                    if(!reviews_filters.new?.is_active) {
+                        if(reviews_filters.new.is_send) {
+                            keysAddSet.add(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `reviews:match_new`, 'send'));
+                        }
+
+                        if(reviews_filters.new.is_receive) {
+                            keysAddSet.add(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `reviews:match_new`, 'receive'));
+                        }
                     }
                 }
 
@@ -800,7 +812,8 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                     }
 
                     if(filter?.is_active) {
-                        let value = filter.filter_value;
+                        //use custom filter value or default
+                        let value = filter.filter_value || reviewsService.filters.default;
 
                         if(!isNumeric(value)) {
                             continue;
@@ -808,14 +821,14 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
 
                         if (filter.is_send) {
                             keysAddSorted.add({
-                                key: cacheService.keys.persons_grid_send_receive(grid_token, `reviews:${type}`, 'send'),
+                                key: cacheService.keys.persons_grid_exclude_send_receive(grid_token, `reviews:${type}`, 'send'),
                                 score: value.toString()
                             });
                         }
 
                         if (filter.is_receive) {
                             keysAddSorted.add({
-                                key: cacheService.keys.persons_grid_send_receive(grid_token, `reviews:${type}`, 'receive'),
+                                key: cacheService.keys.persons_grid_exclude_send_receive(grid_token, `reviews:${type}`, 'receive'),
                                 score: value.toString()
                             });
                         }
