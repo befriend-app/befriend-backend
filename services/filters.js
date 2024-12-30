@@ -703,73 +703,130 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
 
     function updateReviews() {
         return new Promise(async (resolve, reject) => {
-            let filter = person_filters.reviews;
+            try {
+                const reviewTypes = [
+                    'safety',
+                    'trust',
+                    'timeliness',
+                    'friendliness',
+                    'fun'
+                ];
 
-            const reviewTypes = [
-                'safety',
-                'trust',
-                'timeliness',
-                'friendliness',
-                'fun'
-            ];
+                let reviews_filters = {
+                    reviews: null,
+                    new: null,
+                };
 
-            if (prev_grid_token) {
-                if(person.is_new) {
-                    keysDelSet.add(cacheService.keys.persons_grid_set(prev_grid_token, `is_new_person`));
-                    keysAddSet.add(cacheService.keys.persons_grid_set(grid_token, `is_new_person`));
+                for(let type of reviewTypes) {
+                    reviews_filters[type] = null;
                 }
 
-                for (let type of reviewTypes) {
-                    //own rating
-                    keysDelSorted.add(cacheService.keys.persons_grid_sorted(prev_grid_token, `reviews:${type}`));
+                let pipeline = cacheService.startPipeline();
 
-                    //filters
-                    keysDelSorted.add(cacheService.keys.persons_grid_send_receive(prev_grid_token, `reviews:${type}`, 'send'));
-                    keysDelSorted.add(cacheService.keys.persons_grid_send_receive(prev_grid_token, `reviews:${type}`, 'receive'));
-                }
-            }
+                let filter_key = cacheService.keys.person_filters(person.person_token);
 
-            for(let type of reviewTypes) {
-                let rating = person.reviews?.[type];
+                pipeline.hGet(filter_key, `reviews`);
+                pipeline.hGet(filter_key, `reviews_new`);
 
-                //add own rating to cache
-                if(isNumeric(rating)) {
-                    keysAddSorted.add({
-                        key: cacheService.keys.persons_grid_sorted(grid_token, `reviews:${type}`),
-                        score: rating.toString()
-                    });
+                for(let type of reviewTypes) {
+                    pipeline.hGet(filter_key, `reviews_${type}`);
                 }
 
-                if(!filter?.is_active) {
-                    continue;
+                let results = await cacheService.execPipeline(pipeline);
+
+                let idx = 0;
+
+                let reviews_filter = results[idx++];
+                let new_filter = results[idx++];
+
+                reviews_filters.reviews = reviews_filter ? JSON.parse(reviews_filter) : null;
+                reviews_filters.new = new_filter ? JSON.parse(new_filter) : null;
+
+                for(let type of reviewTypes) {
+                    let data = results[idx++];
+
+                    if(data) {
+                        reviews_filters[type] = JSON.parse(data);
+                    } else {
+                        reviews_filters[type] = null;
+                    }
                 }
 
-                let reviewTypeFilter = person_filters[`reviews_${type}`];
+                if (prev_grid_token) {
+                    if(person.is_new) {
+                        keysDelSet.add(cacheService.keys.persons_grid_set(prev_grid_token, `is_new_person`));
+                        keysAddSet.add(cacheService.keys.persons_grid_set(grid_token, `is_new_person`));
+                    }
 
-                if(reviewTypeFilter?.is_active) {
-                    let value = reviewTypeFilter.filter_value;
+                    //match with new
+                    keysDelSet.add(cacheService.keys.persons_grid_send_receive(prev_grid_token, `reviews:match_new`, 'send'));
+                    keysDelSet.add(cacheService.keys.persons_grid_send_receive(prev_grid_token, `reviews:match_new`, 'receive'));
 
-                    if(!isNumeric(value)) {
+                    for (let type of reviewTypes) {
+                        //own rating
+                        keysDelSorted.add(cacheService.keys.persons_grid_sorted(prev_grid_token, `reviews:${type}`));
+
+                        //filters
+                        keysDelSorted.add(cacheService.keys.persons_grid_send_receive(prev_grid_token, `reviews:${type}`, 'send'));
+                        keysDelSorted.add(cacheService.keys.persons_grid_send_receive(prev_grid_token, `reviews:${type}`, 'receive'));
+                    }
+                }
+
+                if(reviews_filters.new?.is_active) {
+                    if(reviews_filters.new.is_send) {
+                        keysAddSet.add(cacheService.keys.persons_grid_send_receive(prev_grid_token, `reviews:match_new`, 'send'));
+                    }
+
+                    if(reviews_filters.new.is_receive) {
+                        keysAddSet.add(cacheService.keys.persons_grid_send_receive(prev_grid_token, `reviews:match_new`, 'receive'));
+                    }
+                }
+
+                for(let type of reviewTypes) {
+                    let rating = person.reviews?.[type];
+                    let filter = reviews_filters[type];
+
+                    //add own rating
+                    if(isNumeric(rating)) {
+                        keysAddSorted.add({
+                            key: cacheService.keys.persons_grid_sorted(grid_token, `reviews:${type}`),
+                            score: rating.toString()
+                        });
+                    }
+
+                    //main reviews filter active state
+                    if(!reviews_filters.reviews?.is_active) {
                         continue;
                     }
 
-                    if (reviewTypeFilter.is_send) {
-                        keysAddSorted.add({
-                            key: cacheService.keys.persons_grid_send_receive(grid_token, `reviews:${type}`, 'send'),
-                            score: value.toString()
-                        });
-                    }
+                    if(filter?.is_active) {
+                        let value = filter.filter_value;
 
-                    if (reviewTypeFilter.is_receive) {
-                        keysAddSorted.add({
-                            key: cacheService.keys.persons_grid_send_receive(grid_token, `reviews:${type}`, 'receive'),
-                            score: value.toString()
-                        });
+                        if(!isNumeric(value)) {
+                            continue;
+                        }
+
+                        if (filter.is_send) {
+                            keysAddSorted.add({
+                                key: cacheService.keys.persons_grid_send_receive(grid_token, `reviews:${type}`, 'send'),
+                                score: value.toString()
+                            });
+                        }
+
+                        if (filter.is_receive) {
+                            keysAddSorted.add({
+                                key: cacheService.keys.persons_grid_send_receive(grid_token, `reviews:${type}`, 'receive'),
+                                score: value.toString()
+                            });
+                        }
                     }
                 }
-            }
 
-            resolve();
+                resolve();
+            } catch(e) {
+                console.error(e);
+                return reject(e);
+            }
         });
     }
 

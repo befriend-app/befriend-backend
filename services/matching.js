@@ -307,7 +307,19 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
             try {
                 let t = timeNow();
 
+                await filterReviews();
+
+                console.log({
+                    filter_reviews: timeNow() - t
+                });
+
+                t = timeNow();
+
                 await filterPersonsAvailability();
+
+                console.log({
+                    filter_availability: timeNow() - t
+                });
 
                 return resolve();
 
@@ -790,7 +802,7 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
                             } else {
                                 //send/receive from anybody
                             }
-                        } else {
+                        } else { //if I am not verified
                             //exclude from sending/receiving if person is verified and requires verification
                             if(token in verifiedPersons[type]) {
                                 if(token in receiveVerification[type]) {
@@ -969,6 +981,76 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
             } catch (e) {
                 console.error('Error in filterGenders:', e);
                 reject(e);
+            }
+        });
+    }
+
+    function filterReviews() {
+        return new Promise(async (resolve, reject) => {
+            let new_persons_tokens = {};
+
+            //new members
+            let pipeline = cacheService.startPipeline();
+
+            for (let grid_token of neighbor_grid_tokens) {
+                pipeline.sMembers(
+                    cacheService.keys.persons_grid_set(grid_token, 'is_new_person')
+                );
+            }
+
+            let results = await cacheService.execPipeline(pipeline);
+
+            for (let grid of results) {
+                for (let person_token of grid) {
+                    new_persons_tokens[person_token] = true;
+                }
+            }
+
+            resolve();
+        });
+    }
+
+    function filterPersonsAvailability() {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let pipeline = cacheService.startPipeline();
+
+                for (let person_token in persons_not_excluded_after_stage_1) {
+                    let person_key = cacheService.keys.person(person_token);
+                    let filter_key = cacheService.keys.person_filters(person_token);
+
+                    pipeline.hGet(person_key, 'timezone');
+                    pipeline.hGet(filter_key, 'availability');
+                }
+
+                let results = await cacheService.execPipeline(pipeline);
+
+                let idx = 0;
+
+                for (let person_token in persons_not_excluded_after_stage_1) {
+                    let timezone = results[idx++];
+                    let availability = results[idx++];
+
+                    try {
+                         availability = JSON.parse(availability);
+                    } catch(e) {
+                        console.error(e);
+                        continue;
+                    }
+
+                    let is_available = isPersonAvailable({
+                        timezone
+                    }, availability);
+
+                    if(!is_available) {
+                        exclude.send[person_token] = true;
+                    }
+                }
+
+                resolve();
+            } catch (error) {
+                console.error('Error in filterPersonsAvailability:', error);
+                reject(error);
             }
         });
     }
@@ -1160,51 +1242,6 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
             }
 
             resolve();
-        });
-    }
-
-    function filterPersonsAvailability() {
-        return new Promise(async (resolve, reject) => {
-            try {
-                let pipeline = cacheService.startPipeline();
-
-                for (let person_token in persons_not_excluded_after_stage_1) {
-                    let person_key = cacheService.keys.person(person_token);
-                    let filter_key = cacheService.keys.person_filters(person_token);
-
-                    pipeline.hGet(person_key, 'timezone');
-                    pipeline.hGet(filter_key, 'availability');
-                }
-
-                let results = await cacheService.execPipeline(pipeline);
-
-                let idx = 0;
-
-                for (let person_token in persons_not_excluded_after_stage_1) {
-                    let timezone = results[idx++];
-                    let availability = results[idx++];
-
-                    try {
-                         availability = JSON.parse(availability);
-                    } catch(e) {
-                        console.error(e);
-                        continue;
-                    }
-
-                    let is_available = isPersonAvailable({
-                        timezone
-                    }, availability);
-
-                    if(!is_available) {
-                        exclude.send[person_token] = true;
-                    }
-                }
-
-                resolve();
-            } catch (error) {
-                console.error('Error in filterPersonsAvailability:', error);
-                reject(error);
-            }
         });
     }
 
