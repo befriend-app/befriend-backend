@@ -304,9 +304,10 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
 
     function processStage2() {
         return new Promise(async (resolve, reject) => {
-
             try {
                 let t = timeNow();
+
+                await filterPersonsAvailability();
 
                 //get data for up to 1,000 not excluded persons
                 let pipeline = cacheService.startPipeline();
@@ -367,8 +368,6 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
                 });
 
                 let t3 = timeNow();
-
-                await filterPersonsAvailability();
 
                 console.log({
                     stage_2_availability: timeNow() - t3
@@ -1165,11 +1164,34 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
     function filterPersonsAvailability() {
         return new Promise(async (resolve, reject) => {
             try {
-                for (let person_token in selected_persons_data) {
-                    const person = selected_persons_data[person_token].data;
-                    const filters = selected_persons_data[person_token].filters;
+                let pipeline = cacheService.startPipeline();
 
-                    let is_available = isPersonAvailable(person, filters);
+                for (let person_token in persons_not_excluded_after_stage_1) {
+                    let person_key = cacheService.keys.person(person_token);
+                    let filter_key = cacheService.keys.person_filters(person_token);
+
+                    pipeline.hGet(person_key, 'timezone');
+                    pipeline.hGet(filter_key, 'availability');
+                }
+
+                let results = await cacheService.execPipeline(pipeline);
+
+                let idx = 0;
+
+                for (let person_token in persons_not_excluded_after_stage_1) {
+                    let timezone = results[idx++];
+                    let availability = results[idx++];
+
+                    try {
+                         availability = JSON.parse(availability);
+                    } catch(e) {
+                        console.error(e);
+                        continue;
+                    }
+
+                    let is_available = isPersonAvailable({
+                        timezone
+                    }, availability);
 
                     if(!is_available) {
                         exclude.send[person_token] = true;
