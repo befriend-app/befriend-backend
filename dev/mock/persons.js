@@ -9,7 +9,7 @@ const { loadScriptEnv, generateToken, timeNow, birthDatePure, calculateAge } = r
 
 const { batchInsert, batchUpdate } = require('../../services/db');
 const cacheService = require('../../services/cache');
-const { getPerson } = require('../../services/persons');
+const { getPerson, updatePerson } = require('../../services/persons');
 const { updateGridSets } = require('../../services/filters');
 const { getReviews } = require('../../services/reviews');
 const { getObj, hGetAllObj } = require('../../services/cache');
@@ -133,88 +133,6 @@ function updatePersonsCount() {
             }
         } catch(e) {
             console.error(e);
-        }
-    }
-
-    async function mockReviews() {
-        let conn = await dbService.conn();
-
-        let persons = await conn('persons')
-            .whereNotNull('grid_id')
-            .select('id', 'person_token');
-
-        // Rating fields to update
-        const ratingFields = [
-            'rating_safety',
-            'rating_trust',
-            'rating_timeliness',
-            'rating_friendliness',
-            'rating_fun'
-        ];
-
-        let batch_update = [];
-
-        for(let person of persons) {
-            let update = {
-                id: person.id,
-                updated: timeNow()
-            };
-
-            for(let k of ratingFields) {
-                update[k] = null;
-            }
-
-            let hasUpdates = false;
-
-            // Add ratings for this person
-            for(let field of ratingFields) {
-                if(Math.random() <= 0.7) {
-                    // Generate base rating biased towards 3.5-4.5 range
-                    let rating;
-
-                    if(Math.random() < 0.7) {
-                        // 70% chance of 3.5-4.5 rating
-                        rating = 3.5 + (Math.random() * 1.0);
-                    } else if(Math.random() < 0.7) {
-                        // 20% chance of 2.5-3.5 rating
-                        rating = 2.5 + (Math.random() * 1.0);
-                    } else {
-                        // 10% chance of 1-2.5 rating
-                        rating = 1.0 + (Math.random() * 1.5);
-                    }
-
-                    // Round to 1 decimal place
-                    rating = Math.round(rating * 10) / 10;
-
-                    update[field] = rating;
-                    hasUpdates = true;
-                }
-            }
-
-            if(hasUpdates) {
-                batch_update.push(update);
-
-                let person_obj = await hGetAllObj(cacheService.keys.person(person.person_token));
-
-                let reviews = {
-                    count: person_obj.count || 0,
-                    safety: update.rating_safety,
-                    trust: update.rating_trust,
-                    timeliness: update.rating_timeliness,
-                    friendliness: update.rating_friendliness,
-                    fun: update.rating_fun
-                }
-
-                person_obj.reviews = reviews;
-
-                await cacheService.hSet(cacheService.keys.person(person.person_token), 'reviews', reviews);
-
-                await updateGridSets(person_obj, null, 'reviews');
-            }
-        }
-
-        if(batch_update.length) {
-            await batchUpdate('persons', batch_update);
         }
     }
 
@@ -350,7 +268,6 @@ function updatePersonsCount() {
     try {
         await addPersons();
         await mockGenders();
-        await mockReviews();
         // await updateAgeSets();
         await updatePersonsCount();
     } catch(e) {
