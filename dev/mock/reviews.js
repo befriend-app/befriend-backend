@@ -87,55 +87,49 @@ if (args._ && args._.length) {
                 update[k] = null;
             }
 
-            let hasUpdates = false;
-
             // Add ratings for this person
+            let baseRating;
+
+            // Generate base rating biased towards 3.5-4.5 range
+            if(Math.random() < 0.8) {
+                // 80% chance of 4-5 rating
+                baseRating = 4 + (Math.random() * 1.0);
+            } else if(Math.random() < 0.5) {
+                // 10% chance of 2.5-3.5 rating
+                baseRating = 2.5 + (Math.random() * 1.0);
+            } else {
+                // 10% chance of 1-2.5 rating
+                baseRating = 1.0 + (Math.random() * 1.5);
+            }
+
             for(let field of ratingFields) {
-                if(Math.random() <= 0.7) {
-                    // Generate base rating biased towards 3.5-4.5 range
-                    let rating;
+                let ratingPercent = .8 + (Math.random() / 2);
+                ratingPercent = Math.min(ratingPercent, 1);
 
-                    if(Math.random() < 0.7) {
-                        // 70% chance of 3.5-4.5 rating
-                        rating = 3.5 + (Math.random() * 1.0);
-                    } else if(Math.random() < 0.7) {
-                        // 20% chance of 2.5-3.5 rating
-                        rating = 2.5 + (Math.random() * 1.0);
-                    } else {
-                        // 10% chance of 1-2.5 rating
-                        rating = 1.0 + (Math.random() * 1.5);
-                    }
-
-                    // Round to 1 decimal place
-                    rating = Math.round(rating * 10) / 10;
-
-                    update[field] = rating;
-                    hasUpdates = true;
-                }
+                // Round to 1 decimal place
+                update[field] = Math.round(baseRating * ratingPercent * 10) / 10;
             }
 
-            if(hasUpdates) {
-                batch_update.push(update);
+            batch_update.push(update);
 
-                let person_obj = await hGetAllObj(cacheService.keys.person(person.person_token));
+            let person_obj = await hGetAllObj(cacheService.keys.person(person.person_token));
 
-                let reviews_count = Math.floor(Math.random() * 10) + 1;
+            let reviews_count = Math.floor(Math.random() * 10) + 1;
 
-                let reviews = {
-                    count: reviews_count,
-                    safety: update.rating_safety,
-                    trust: update.rating_trust,
-                    timeliness: update.rating_timeliness,
-                    friendliness: update.rating_friendliness,
-                    fun: update.rating_fun
-                }
-
-                person_obj.reviews = reviews;
-
-                await cacheService.hSet(cacheService.keys.person(person.person_token), 'reviews', reviews);
-
-                await updateGridSets(person_obj, null, 'reviews');
+            let reviews = {
+                count: reviews_count,
+                safety: update.rating_safety,
+                trust: update.rating_trust,
+                timeliness: update.rating_timeliness,
+                friendliness: update.rating_friendliness,
+                fun: update.rating_fun
             }
+
+            person_obj.reviews = reviews;
+
+            await cacheService.hSet(cacheService.keys.person(person.person_token), 'reviews', reviews);
+
+            await updateGridSets(person_obj, null, 'reviews');
         }
 
         if(batch_update.length) {
