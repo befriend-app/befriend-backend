@@ -1111,11 +1111,11 @@ async function processSmoking() {
 
     await getPersonsLogins();
 
-    return await await processLocation();
     await processSections();
 
-    await processModes();
     await processLocation();
+
+    await processModes();
     await processOnline();
 
     await processMovies();

@@ -276,37 +276,36 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
         });
     }
 
-    function processStage2() {
-        return new Promise(async (resolve, reject) => {
-            function filterPersons() {
-                for(let person_token in person_tokens) {
-                    let included = false;
+    function filterPersonsAfterStage1() {
+        for(let person_token in person_tokens) {
+            let included = false;
 
-                    if(!(person_token in exclude.send)) {
-                        included = true;
-                    }
+            if(!(person_token in exclude.send)) {
+                included = true;
+            }
 
-                    //if I'm offline or unavailable, exclude receiving from all
-                    if(!am_online || !am_available) {
-                        exclude.receive[person_token] = true;
-                    } else {
-                        //allow receiving notifications if not excluded
-                        if(!(person_token in exclude.receive)) {
-                            included = true;
-                        }
-                    }
-
-                    if(included) {
-                        persons_not_excluded_after_stage_1[person_token] = true;
-                    } else {
-                        organized.counts.excluded++;
-                    }
+            //if I'm offline or unavailable, exclude receiving from all
+            if(!am_online || !am_available) {
+                exclude.receive[person_token] = true;
+            } else {
+                //allow receiving notifications if not excluded
+                if(!(person_token in exclude.receive)) {
+                    included = true;
                 }
             }
 
-            try {
-                filterPersons();
+            if(included) {
+                persons_not_excluded_after_stage_1[person_token] = true;
+            } else {
+                organized.counts.excluded++;
+            }
+        }
+    }
 
+    function processStage2() {
+        return new Promise(async (resolve, reject) => {
+
+            try {
                 let t = timeNow();
 
                 //get data for up to 1,000 not excluded persons
@@ -1213,7 +1212,9 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
         }
 
         //decrease exclude by one to not include self in count
-        organized.counts.excluded--;
+        if(my_token in exclude.send) {
+            organized.counts.excluded--;
+        }
     }
 
     return new Promise(async (resolve, reject) => {
@@ -1243,6 +1244,14 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
 
             console.log({
                 stage_1: timeNow() - t
+            });
+
+            t = timeNow();
+
+            filterPersonsAfterStage1();
+
+            console.log({
+                filter_persons: timeNow() - t
             });
 
             t = timeNow();

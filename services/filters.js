@@ -545,6 +545,18 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
         }
     }
 
+    function updateLocation() {
+        return new Promise(async (resolve, reject) => {
+            if(prev_grid_token) {
+                keysDelSet.add(cacheService.keys.persons_grid_set(prev_grid_token, 'location'));
+            }
+
+            keysAddSet.add(cacheService.keys.persons_grid_set(grid_token, 'location'));
+
+            resolve();
+        });
+    }
+
     function updateAvailability() {
         return new Promise(async (resolve, reject) => {
             let availabilityFilter = person_filters.availability;
@@ -1197,11 +1209,9 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
         if(prev_grid_token) {
             await updateOnline();
 
-            await updateAvailability();
+            await updateLocation();
 
-            // location
-            keysDelSet.add(cacheService.keys.persons_grid_set(prev_grid_token, 'location'));
-            keysAddSet.add(cacheService.keys.persons_grid_set(grid_token, 'location'));
+            await updateAvailability();
 
             await updateModes();
 
@@ -1230,6 +1240,10 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
         } else {
             if(filter_token === 'online') {
                 await updateOnline();
+            }
+
+            if(filter_token === 'location') {
+                await updateLocation();
             }
 
             if(filter_token === 'availability') {
@@ -1320,8 +1334,6 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
 
                 await cacheService.execPipeline(pipelineAdd);
             }
-
-
         } catch(e) {
             console.error(e);
         }
