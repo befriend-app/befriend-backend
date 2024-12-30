@@ -3,11 +3,11 @@ const dayjs = require('dayjs');
 let cacheService = require('../services/cache');
 let dbService = require('../services/db');
 
-let availabilityService = require('../services/availability');
 let gridService = require('../services/grid');
+let reviewService = require('../services/reviews');
 
 const { getPersonFilters } = require('./filters');
-const { kms_per_mile, timeNow, shuffleFunc } = require('./shared');
+const { kms_per_mile, timeNow, shuffleFunc, isNumeric } = require('./shared');
 const { getNetworksForFilters } = require('./network');
 const { getModes, getPersonExcludedModes } = require('./modes');
 const { getGendersLookup } = require('./genders');
@@ -24,7 +24,7 @@ const MAX_PERSONS_PROCESS = 1000;
 
 function getMatches(me, counts_only = false, location = null, activity = null) {
     let my_token, my_filters;
-    let am_online = me.is_online;
+    let am_online = me?.is_online;
     let am_available = false;
 
     let neighbor_grid_tokens = [];
@@ -91,19 +91,6 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
                 });
 
                 t = timeNow();
-
-                await filterAvailability();
-
-                console.log({
-                    availability: timeNow() - t
-                });
-
-                console.log({
-                    after_availability_excluded: {
-                        send: Object.keys(exclude.send).length,
-                        receive: Object.keys(exclude.receive).length,
-                    }
-                });
 
                 await filterNetworks();
 
@@ -321,6 +308,13 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
                     filter_availability: timeNow() - t
                 });
 
+                console.log({
+                    after_filter_availability_excluded: {
+                        send: Object.keys(exclude.send).length,
+                        receive: Object.keys(exclude.receive).length,
+                    }
+                });
+
                 return resolve();
 
                 //get data for up to 1,000 not excluded persons
@@ -489,46 +483,6 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
                 console.error(e);
                 reject(e);
             }
-        });
-    }
-
-    function filterAvailability() {
-        return new Promise(async (resolve, reject) => {
-            //todo day of week based on if activity date/start time provided
-
-            //filter send
-            let day_of_week = new Date().getDay();
-
-            let pipeline = cacheService.startPipeline();
-
-            for (let grid_token of neighbor_grid_tokens) {
-                pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(
-                    grid_token,
-                    `availability:day:${day_of_week}`,
-                    'receive'
-                ));
-            }
-
-            try {
-                let results = await cacheService.execPipeline(pipeline);
-
-                for(let persons of results) {
-                    for(let person_token of persons) {
-                        exclude.send[person_token] = true;
-                    }
-                }
-            } catch(e) {
-                console.error(e);
-            }
-
-            //filter receive
-            am_available = isPersonAvailable(me, my_filters.availability);
-
-            console.log({
-                am_available
-            });
-
-            resolve();
         });
     }
 
@@ -987,26 +941,242 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
 
     function filterReviews() {
         return new Promise(async (resolve, reject) => {
-            let new_persons_tokens = {};
+            try {
+                let myReviewsFilter = my_filters.reviews;
+                let myNewReviewsFilter = my_filters.reviews_new;
 
-            //new members
-            let pipeline = cacheService.startPipeline();
+                let me_exclude_send_new = myReviewsFilter.is_active && !myNewReviewsFilter.is_active && myNewReviewsFilter.is_send;
+                let me_exclude_receive_new = myReviewsFilter.is_active && !myNewReviewsFilter.is_active && myNewReviewsFilter.is_receive;
 
-            for (let grid_token of neighbor_grid_tokens) {
-                pipeline.sMembers(
-                    cacheService.keys.persons_grid_set(grid_token, 'is_new_person')
-                );
-            }
+                let myExclusions = {
+                    send: {},
+                    receive: {}
+                };
 
-            let results = await cacheService.execPipeline(pipeline);
+                const reviewTypes = ['safety', 'trust', 'timeliness', 'friendliness', 'fun'];
 
-            for (let grid of results) {
-                for (let person_token of grid) {
-                    new_persons_tokens[person_token] = true;
+                for(let type of reviewTypes) {
+                    let filter = my_filters[`reviews_${type}`];
+
+                    if(myReviewsFilter.is_active && filter.is_active) {
+                        //use custom filter value or default
+                        let value = filter.filter_value || reviewService.filters.default;
+
+                        if(filter.is_send) {
+                            myExclusions.send[type] = value;
+                        }
+
+                        if(filter.is_receive) {
+                            myExclusions.receive[type] = value;
+                        }
+                    }
                 }
-            }
 
-            resolve();
+                let new_persons_tokens = {};
+                let persons_ratings = {};
+
+                let exclude_match_new = {
+                    send: {},
+                    receive: {}
+                }
+                
+                let exclude_settings = {
+                    send: {},
+                    receive: {}
+                };
+
+                // Get new members data
+                let pipeline = cacheService.startPipeline();
+
+                for (let grid_token of neighbor_grid_tokens) {
+                    pipeline.sMembers(cacheService.keys.persons_grid_set(grid_token, 'is_new_person'));
+                }
+
+                let results = await cacheService.execPipeline(pipeline);
+                
+                for (let grid of results) {
+                    for (let person_token of grid) {
+                        new_persons_tokens[person_token] = true;
+                    }
+                }
+
+                // Reviews ratings and filter settings
+                pipeline = cacheService.startPipeline();
+
+                for (let grid_token of neighbor_grid_tokens) {
+                    // Persons who excluded match with new
+                    pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(grid_token, 'reviews:match_new', 'send'));
+                    pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(grid_token, 'reviews:match_new', 'receive'));
+
+                    for (let type of reviewTypes) {
+                        // Ratings for each person
+                        pipeline.zRangeWithScores(cacheService.keys.persons_grid_sorted(grid_token, `reviews:${type}`), 0, -1);
+
+                        // Exclude filter settings for each person
+                        pipeline.zRangeWithScores(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `reviews:${type}`, 'send'), 0, -1);
+                        pipeline.zRangeWithScores(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `reviews:${type}`, 'receive'), 0, -1);
+                    }
+                }
+
+                results = await cacheService.execPipeline(pipeline);
+
+                let idx = 0;
+                
+                // Process match new preferences
+                for (let grid_token of neighbor_grid_tokens) {
+                    let exclude_send_new = results[idx++];
+                    let exclude_receive_new = results[idx++];
+
+                    for (let token of exclude_send_new) {
+                        exclude_match_new.send[token] = true;
+                    }
+
+                    for (let token of exclude_receive_new) {
+                        exclude_match_new.receive[token] = true;
+                    }
+
+                    // Process ratings for each review type
+                    for (let type of reviewTypes) {
+                        // Get person ratings
+                        let ratings = results[idx++];
+                        
+                        for (let person of ratings) {
+                            let person_token = person.value;
+                            
+                            if (!persons_ratings[person_token]) {
+                                persons_ratings[person_token] = {};
+                            }
+                            persons_ratings[person_token][type] = person.score;
+                        }
+
+                        // Get send settings
+                        let exclude_send = results[idx++];
+                        
+                        for (let person of exclude_send) {
+                            let person_token = person.value;
+                            
+                            if (!exclude_settings.send[person_token]) {
+                                exclude_settings.send[person_token] = {};
+                            }
+
+                            exclude_settings.send[person_token][type] = person.score;
+                        }
+
+                        // Get receive settings
+                        let exclude_receive = results[idx++];
+
+                        for (let person of exclude_receive) {
+                            let person_token = person.value;
+
+                            if (!exclude_settings.receive[person_token]) {
+                                exclude_settings.receive[person_token] = {};
+                            }
+
+                            exclude_settings.receive[person_token][type] = person.score;
+                        }
+                    }
+                }
+
+                // Apply review filters
+                for (let token in persons_not_excluded_after_stage_1) {
+                    let auto_include = {
+                        send: false,
+                        receive: false
+                    }
+
+                    // Handle new member matching
+                    if (new_persons_tokens[token]) {
+                        if(me.is_new) {
+                            if(!me_exclude_send_new && !(token in exclude_match_new.receive)) {
+                                auto_include.send = true;
+                            }
+
+                            if(!me_exclude_receive_new && !(token in exclude_match_new.send)) {
+                                auto_include.receive = true;
+                            }
+                        } else {
+                            if(!(me_exclude_send_new)) {
+                                auto_include.send = true;
+                            }
+
+                            if(!(me_exclude_receive_new)) {
+                                auto_include.receive = true;
+                            }
+                        }
+                    }
+
+                    // Check review settings
+                    let exclude_send = false;
+                    let exclude_receive = false;
+
+                    let myRatings = me.reviews;
+                    let personRatings = persons_ratings[token];
+
+                    // Bi-directional send/receive filter settings
+                    if(!auto_include.send) {
+                        for (let type of reviewTypes) {
+                            let my_threshold = myExclusions.send[type];
+                            let their_threshold = exclude_settings.receive[token]?.[type];
+
+                            if(!my_threshold && !their_threshold) {
+                                continue;
+                            }
+
+                            if ((my_threshold && !isNumeric(personRatings[type])) || (my_threshold && personRatings[type] < my_threshold)) {
+                                exclude_send = true;
+                                break;
+                            }
+
+                            if((their_threshold && !isNumeric(myRatings[type]) )|| (their_threshold && myRatings[type] < their_threshold)) {
+                                if(me.is_new && !(token in exclude_match_new.receive)) {
+                                    continue;
+                                }
+
+                                exclude_send = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if(!auto_include.receive) {
+                        for (let type of reviewTypes) {
+                            let my_threshold = myExclusions.receive[type];
+                            let their_threshold = exclude_settings.send[token]?.[type];
+
+                            if(!my_threshold && !their_threshold) {
+                                continue;
+                            }
+
+                            if ((my_threshold && !isNumeric(personRatings[type])) || (my_threshold && personRatings[type] < my_threshold)) {
+                                exclude_receive = true;
+                                break;
+                            }
+
+                            if((their_threshold && !isNumeric(myRatings[type]) )|| (their_threshold && myRatings[type] < their_threshold)) {
+                                if(me.is_new && !(token in exclude_match_new.send)) {
+                                    continue;
+                                }
+
+                                exclude_receive = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (exclude_send) {
+                        exclude.send[token] = true;
+                    }
+
+                    if (exclude_receive) {
+                        exclude.receive[token] = true;
+                    }
+                }
+
+                resolve();
+            } catch (e) {
+                console.error('Error in filterReviews:', e);
+                reject(e);
+            }
         });
     }
 
@@ -1246,10 +1416,16 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
     }
 
     function organizeFinal() {
+        let not_excluded = {
+            send: {},
+            receive: {}
+        }
+
         for(let person_token in persons_not_excluded_after_stage_1) {
             let included = false;
 
             if(!(person_token in exclude.send)) {
+                not_excluded.send[person_token] = true;
                 organized.counts.send++;
                 included = true;
             }
@@ -1260,6 +1436,7 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
             } else {
                 //allow receiving notifications if not excluded
                 if(!(person_token in exclude.receive)) {
+                    not_excluded.receive[person_token] = true;
                     organized.counts.receive++;
                     included = true;
                 }
@@ -1297,6 +1474,8 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
 
             my_filters = await getPersonFilters(me);
 
+            am_available = isPersonAvailable(me, my_filters.availability);
+
             console.log({
                 my_filters: timeNow() - t
             });
@@ -1310,6 +1489,13 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
             t = timeNow();
 
             filterPersonsAfterStage1();
+
+            console.log({
+                after_filter_stage_1_excluded: {
+                    send: Object.keys(exclude.send).length,
+                    receive: Object.keys(exclude.receive).length,
+                }
+            });
 
             console.log({
                 filter_persons: timeNow() - t
