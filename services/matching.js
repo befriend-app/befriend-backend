@@ -309,6 +309,8 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
 
                 await filterPersonsAvailability();
 
+                return resolve();
+
                 //get data for up to 1,000 not excluded persons
                 let pipeline = cacheService.startPipeline();
 

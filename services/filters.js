@@ -714,6 +714,11 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
             ];
 
             if (prev_grid_token) {
+                if(person.is_new) {
+                    keysDelSet.add(cacheService.keys.persons_grid_set(prev_grid_token, `is_new_person`));
+                    keysAddSet.add(cacheService.keys.persons_grid_set(grid_token, `is_new_person`));
+                }
+
                 for (let type of reviewTypes) {
                     //own rating
                     keysDelSorted.add(cacheService.keys.persons_grid_sorted(prev_grid_token, `reviews:${type}`));

@@ -24,8 +24,6 @@ if (args._ && args._.length) {
     num_persons = args._[0];
 }
 
-let max_request_count = 1000;
-
 (async function () {
     async function mockIsNewPerson() {
         try {
@@ -36,7 +34,7 @@ let max_request_count = 1000;
             let persons_qry = await conn('persons AS p')
                 .join('earth_grid AS eg', 'eg.id', '=', 'p.grid_id')
                 .orderBy('p.id')
-                .select('p.id', 'person_token', 'eg.token')
+                .select('p.id', 'person_token', 'eg.token AS grid_token')
                 .limit(num_persons);
 
             if(!persons_qry.length) {
@@ -51,7 +49,7 @@ let max_request_count = 1000;
                     is_new: true,
                 });
 
-                let key = cacheService.keys.persons_grid_set(p.token, 'is_new_person');
+                let key = cacheService.keys.persons_grid_set(p.grid_token, 'is_new_person');
                 pipeline.sAdd(key, p.person_token);
             }
 
@@ -121,8 +119,10 @@ let max_request_count = 1000;
 
                 let person_obj = await hGetAllObj(cacheService.keys.person(person.person_token));
 
+                let reviews_count = Math.floor(Math.random() * 10) + 1;
+
                 let reviews = {
-                    count: person_obj.count || 0,
+                    count: reviews_count,
                     safety: update.rating_safety,
                     trust: update.rating_trust,
                     timeliness: update.rating_timeliness,
