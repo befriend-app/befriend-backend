@@ -1486,6 +1486,7 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                         }
 
                         let members = results[idx++];
+
                         for (let member of members) {
                             optionSets[option.token][member] = true;
                         }
