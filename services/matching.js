@@ -18,6 +18,7 @@ const { getRelationshipStatus } = require('./relationships');
 const { getPolitics } = require('./politics');
 const { getReligions } = require('./religion');
 const { isPersonAvailable } = require('./availability');
+const { minAge, maxAge } = require('./persons');
 
 const DEFAULT_DISTANCE_MILES = 20;
 const MAX_PERSONS_PROCESS = 1000;
@@ -1119,17 +1120,15 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
 
                     // Check my age preferences
                     if (my_age_filter?.is_active) {
-                        let my_min_age = parseInt(my_age_filter.filter_value_min) || 18;
-                        let my_max_age = parseInt(my_age_filter.filter_value_max) || 80;
+                        let my_min_age = parseInt(my_age_filter.filter_value_min) || minAge;
+                        let my_max_age = parseInt(my_age_filter.filter_value_max) || maxAge;
 
-                        if (my_age_filter.is_send && their_age) {
-                            if (their_age < my_min_age || their_age > my_max_age) {
+                        if (their_age < my_min_age || their_age > my_max_age) {
+                            if(my_age_filter.is_send) {
                                 should_exclude_send = true;
                             }
-                        }
 
-                        if (my_age_filter.is_receive && me.age) {
-                            if (me.age < my_min_age || me.age > my_max_age) {
+                            if(my_age_filter.is_receive) {
                                 should_exclude_receive = true;
                             }
                         }
@@ -1137,18 +1136,16 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
 
                     // Check their age preferences
                     if (their_age_filter?.is_active) {
-                        let their_min_age = parseInt(their_age_filter.filter_value_min) || 18;
-                        let their_max_age = parseInt(their_age_filter.filter_value_max) || 80;
+                        let their_min_age = parseInt(their_age_filter.filter_value_min) || minAge;
+                        let their_max_age = parseInt(their_age_filter.filter_value_max) || maxAge;
 
-                        if (their_age_filter.is_send && me.age) {
-                            if (me.age < their_min_age || me.age > their_max_age) {
-                                should_exclude_receive = true;
-                            }
-                        }
-
-                        if (their_age_filter.is_receive && their_age) {
-                            if (their_age < their_min_age || their_age > their_max_age) {
+                        if(me.age < their_min_age || me.age > their_max_age) {
+                            if(their_age_filter.is_receive) {
                                 should_exclude_send = true;
+                            }
+
+                            if(their_age_filter.is_send) {
+                                should_exclude_receive = true;
                             }
                         }
                     }

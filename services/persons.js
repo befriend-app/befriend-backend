@@ -4,6 +4,8 @@ const { timeNow } = require('../services/shared');
 const { updateGridSets } = require('../services/filters');
 
 module.exports = {
+    minAge: 18,
+    maxAge: 80, //if max filter age is set at 80, we include all ages above
     isAuthenticated: function (person_token, login_token) {
         return new Promise(async (resolve, reject) => {
             try {

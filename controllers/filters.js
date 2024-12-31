@@ -1,6 +1,6 @@
 const cacheService = require('../services/cache');
 const dbService = require('../services/db');
-const { getPerson } = require('../services/persons');
+const { getPerson, minAge, maxAge } = require('../services/persons');
 const { timeNow } = require('../services/shared');
 const {
     getGenders,
@@ -1151,13 +1151,13 @@ function putAge(req, res) {
             if (
                 typeof min_age !== 'number' ||
                 typeof max_age !== 'number' ||
-                min_age < 18 ||
-                max_age > 80 ||
+                min_age < minAge ||
+                max_age > maxAge ||
                 min_age > max_age
             ) {
                 res.json(
                     {
-                        message: 'Valid age range required (18-80)',
+                        message: `Valid age range required (${minAge}-${maxAge})`,
                     },
                     400,
                 );
@@ -1195,7 +1195,7 @@ function putAge(req, res) {
             let filterData = await getPersonFilterForKey(person, filter.token);
             let now = timeNow();
 
-            let max_age_value = max_age !== 80 ? max_age : null;
+            let max_age_value = max_age !== maxAge ? max_age : null;
 
             if (filterData) {
                 // Update existing filter
