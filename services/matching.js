@@ -351,6 +351,26 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
     }
 
     function filterInterests() {
+        // priority
+        // (1) bi-directional filter + item match
+        // (2) bi-directional filter match
+        // (3) bi-directional item match
+        // (4) my filter->their item match
+        // (5) their filter->my item match
+
+        // multipliers
+        // (a) favorite position/is_favorite
+        // (b) filter importance
+        // (c) secondary match
+
+        const baseScores = {
+            biDirectionalBoth: 10, // Priority 1
+            biDirectionalFilter: 8,        // Priority 2
+            biDirectionalItem: 7,          // Priority 3
+            myFilterTheirItem: 6,          // Priority 4
+            theirFilterMyItem: 5           // Priority 5
+        };
+
         let myInterests = {
             filters: {},
             sections: {}
@@ -369,110 +389,153 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
             let totalScore = 0;
             let matchCount = 0;
 
-            for (let interestKey of interests_sections) {
-                let myItems = myInterests.sections[interestKey] || {};
-                let myFilters = myInterests.filters[interestKey]?.items || {};
-                let theirItems = otherPersonInterests.sections[interestKey] || {};
-                let theirFilters = otherPersonInterests.filters[interestKey]?.items || {};
+            let myMergedItems = {};
+            let theirMergedItems = {};
 
-                // 1. Both have same section item and filter
-                for (let myItemKey in myItems) {
-                    let myItem = myItems[myItemKey];
-                    for (let theirItemKey in theirItems) {
-                        let theirItem = theirItems[theirItemKey];
-                        if (myItem.token === theirItem.token) {
-                            let itemScore = scores.sameItemAndFilter;
+            for (let section of interests_sections) {
+                myMergedItems[section] = {};
+                theirMergedItems[section] = {};
 
-                            // Check if either has it as favorite
-                            if (myItem.is_favorite || theirItem.is_favorite) {
-                                let favPos = Math.min(
-                                    myItem.favorite_position || 999,
-                                    theirItem.favorite_position || 999
-                                );
-                                itemScore *= (1 + (10 - Math.min(favPos, 9)) / 10);
-                            }
+                let myItems = myInterests.sections[section] || {};
+                let myFilter = myInterests.filters[section] || {}
+                let theirItems = otherPersonInterests.sections[section] || {};
+                let theirFilter = otherPersonInterests.filters[section] || {};
 
-                            // Check for matching filters
-                            let myFilter = myFilters[myItem.token];
-                            let theirFilter = theirFilters[theirItem.token];
+                //see if both our filters are enabled
+                let myFilterEnabled = myFilter?.is_active && myFilter.is_send;
+                let theirFilterEnabled = theirFilter?.is_active && theirFilter.is_receive;
 
-                            if (myFilter && theirFilter) {
-                                // Apply importance multiplier if available
-                                let importanceMultiplier = 1;
-                                if (myFilter.importance && theirFilter.importance) {
-                                    importanceMultiplier = (myFilter.importance + theirFilter.importance) / 20;
-                                }
-                                itemScore *= importanceMultiplier;
+                //merge my personal/filter items
+                for(let token in myItems) {
+                    if(!(token in myMergedItems[section])) {
+                        myMergedItems[section][token] = {
+                            personal: null,
+                            filter: null
+                        }
+                    }
 
-                                totalScore += itemScore;
-                                matchCount++;
+                    myMergedItems[section][token].personal = myItems[token];
+                }
+
+                if(myFilter.items) {
+                    for(let k in myFilter.items) {
+                        let item = myFilter.items[k];
+
+                        if(!(item.token in myMergedItems[section])) {
+                            myMergedItems[section][item.token] = {
+                                personal: null,
+                                filter: null
                             }
                         }
+
+                        myMergedItems[section][item.token].filter = item;
                     }
                 }
 
-                // 2. I have filter for their item
-                for (let myFilterKey in myFilters) {
-                    let myFilter = myFilters[myFilterKey];
-                    for (let theirItemKey in theirItems) {
-                        let theirItem = theirItems[theirItemKey];
-                        if (myFilter.token === theirItem.token) {
-                            let itemScore = scores.myFilterTheirItem;
-
-                            if (theirItem.is_favorite) {
-                                itemScore *= (1 + (10 - Math.min(theirItem.favorite_position || 9, 9)) / 10);
-                            }
-
-                            if (myFilter.importance) {
-                                itemScore *= myFilter.importance / 10;
-                            }
-
-                            totalScore += itemScore;
-                            matchCount++;
+                //merge their personal/filter items
+                for(let token in theirItems) {
+                    if(!(token in theirMergedItems[section])) {
+                        theirMergedItems[section][token] = {
+                            personal: null,
+                            filter: null
                         }
+                    }
+
+                    theirMergedItems[section][token].personal = theirItems[token];
+                }
+
+                if(theirFilter.items) {
+                    for(let k in theirFilter.items) {
+                        let item = theirFilter.items[k];
+
+                        if(!(item.token in theirMergedItems[section])) {
+                            theirMergedItems[section][item.token] = {
+                                personal: null,
+                                filter: null
+                            }
+                        }
+
+                        theirMergedItems[section][item.token].filter = item;
                     }
                 }
 
-                // 3. I have item they filter for
-                for (let myItemKey in myItems) {
-                    let myItem = myItems[myItemKey];
-                    for (let theirFilterKey in theirFilters) {
-                        let theirFilter = theirFilters[theirFilterKey];
-                        if (myItem.token === theirFilter.token) {
-                            let itemScore = scores.myItemTheirFilter;
+                for(let k in myMergedItems[section]) {
+                    let myItem = myMergedItems[section][k];
+                    let theirItem = theirMergedItems[section][k];
 
-                            if (myItem.is_favorite) {
-                                itemScore *= (1 + (10 - Math.min(myItem.favorite_position || 9, 9)) / 10);
+                    let is_bi_both = false;
+
+                    if(myItem?.personal && theirItem?.personal && myItem?.filter && theirItem?.filter) {
+                        if(myFilterEnabled && theirFilterEnabled) {
+                            if(
+                                !myItem.personal.deleted && !theirItem.personal.deleted
+                                && myItem.filter.is_active && !myItem.filter.is_negative && !myItem.filter.deleted
+                                && theirItem.filter.is_active && !theirItem.filter.is_negative && !theirItem.filter.deleted
+                            ) {
+                               is_bi_both = true;
                             }
-
-                            if (theirFilter.importance) {
-                                itemScore *= theirFilter.importance / 10;
-                            }
-
-                            totalScore += itemScore;
-                            matchCount++;
                         }
                     }
-                }
 
-                // 4. Same section item only
-                for (let myItemKey in myItems) {
-                    let myItem = myItems[myItemKey];
-                    for (let theirItemKey in theirItems) {
-                        let theirItem = theirItems[theirItemKey];
-                        if (myItem.token === theirItem.token) {
-                            let itemScore = scores.sameItem;
+                    if(is_bi_both) {
+                        continue;
+                    }
 
-                            if (myItem.is_favorite || theirItem.is_favorite) {
-                                let favPos = Math.min(
-                                    myItem.favorite_position || 999,
-                                    theirItem.favorite_position || 999
-                                );
-                                itemScore *= (1 + (10 - Math.min(favPos, 9)) / 10);
+                    let is_bi_filter = false;
+
+                    if(myItem?.filter && theirItem?.filter) {
+                        if(myFilterEnabled && theirFilterEnabled) {
+                            if(myItem.filter.is_active && !myItem.filter.is_negative && !myItem.filter.deleted
+                                && theirItem.filter.is_active && !theirItem.filter.is_negative && !theirItem.filter.deleted
+                            ) {
+                                is_bi_filter = true;
                             }
+                        }
+                    }
 
-                            totalScore += itemScore;
-                            matchCount++;
+                    if(is_bi_filter) {
+                        continue;
+                    }
+
+                    let is_bi_item = false;
+
+                    if(myItem?.personal && theirItem?.personal) {
+                        if(!myItem.personal.deleted && !theirItem.personal.deleted) {
+                            is_bi_item = true;
+                        }
+                    }
+
+                    if(is_bi_item) {
+                        continue;
+                    }
+
+                    let is_my_filter = false;
+
+                    if(myItem?.filter && theirItem?.personal) {
+                        if(myFilterEnabled) {
+                            if(
+                                myItem.filter.is_active && !myItem.filter.is_negative && !myItem.filter.deleted
+                                && !theirItem.personal.deleted
+                            ) {
+                                is_my_filter = true;
+                            }
+                        }
+                    }
+
+                    if(is_my_filter) {
+                        continue;
+                    }
+
+                    let is_their_filter = false;
+
+                    if(myItem?.personal && theirItem?.filter) {
+                        if(theirFilterEnabled) {
+                            if(
+                                !myItem.personal.deleted
+                                && theirItem.filter.is_active && !theirItem.filter.is_negative && !theirItem.filter.deleted
+                            ) {
+                                is_their_filter = true;
+                            }
                         }
                     }
                 }
@@ -512,7 +575,11 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                     personsInterests[person_token] = {
                         sections: {},
                         filters: {},
-                        matches: {}
+                        matches: {
+                            items: {},
+                            count: 0,
+                            score: 0
+                        }
                     };
                 }
 
