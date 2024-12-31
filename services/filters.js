@@ -982,8 +982,8 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
         return new Promise(async (resolve, reject) => {
             try {
                 let section_options = await getOptions();
-                let section_key = cacheService.keys.persons_section_data(person.person_token, sectionKey);
-                let section_data = (await cacheService.getObj(section_key)) || {};
+                let cache_key = cacheService.keys.person_sections(person.person_token);
+                let section_data = (await cacheService.hGetItem(cache_key, sectionKey)) || {};
 
                 let filter = person_filters[sectionKey];
 
@@ -1070,8 +1070,8 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
         return new Promise(async (resolve, reject) => {
             try {
                 let section_options = await getOptions();
-                let section_key = cacheService.keys.persons_section_data(person.person_token, filter_token);
-                let section_data = (await cacheService.getObj(section_key)) || {};
+                let cache_key = cacheService.keys.person_sections(person.person_token);
+                let section_data = (await cacheService.hGetItem(cache_key, sectionKey)) || {};
 
                 let filter = person_filters[sectionKey];
 

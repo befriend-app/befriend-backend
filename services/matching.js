@@ -58,6 +58,8 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
         }
     };
 
+    let interests_sections = ['movies', 'tv_shows', 'sports', 'music', 'instruments'];
+
     function processStage1() {
         return new Promise(async (resolve, reject) => {
             try {
@@ -285,7 +287,7 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
             try {
                 let t = timeNow();
 
-                // await filterDistance();
+                await filterDistance();
 
                 console.log({
                     after_filter_distance_excluded: {
@@ -339,78 +341,44 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                     filter_availability: timeNow() - t
                 });
 
-                return resolve();
-
-                //get data for up to 1,000 not excluded persons
-                let pipeline = cacheService.startPipeline();
-
-                let persons_keys = Object.keys(persons_not_excluded_after_stage_1);
-
-                if(persons_keys.length > MAX_PERSONS_PROCESS) {
-                    persons_keys = shuffleFunc(persons_keys);
-                    persons_keys = persons_keys.slice(0, MAX_PERSONS_PROCESS);
-                }
-
-                for(let person_token of persons_keys) {
-                    let person_key = cacheService.keys.person(person_token);
-                    let person_filters_key = cacheService.keys.person_filters(person_token);
-
-                    pipeline.get(person_key);
-                    pipeline.get(person_filters_key);
-                }
-
-                let results = await cacheService.execPipeline(pipeline);
-
-                console.log({
-                    stage_2_pipeline: timeNow() - t
-                });
-
-                let t2 = timeNow();
-
-                let idx = 0;
-
-                for(let i = 0; i < persons_keys.length; i++) {
-                    let person_token = persons_keys[i];
-
-                    try {
-                        let data = results[idx++];
-
-                        if(data) {
-                            data = JSON.parse(data);
-                        }
-
-                        let filters = results[idx++];
-
-                        if(filters) {
-                            filters = JSON.parse(filters);
-                        }
-
-                        selected_persons_data[person_token] = {
-                            data: data,
-                            filters: filters,
-                            sections: null
-                        }
-                    } catch(e) {
-                        console.error(e);
-                    }
-                }
-
-                console.log({
-                    stage_2_parse: timeNow() - t2
-                });
-
-                let t3 = timeNow();
-
-                console.log({
-                    stage_2_availability: timeNow() - t3
-                });
-
-                results = null;
+                t = timeNow();
             } catch(e) {
                 console.error(e);
             }
 
             resolve();
+        });
+    }
+
+    function filterInterests() {
+        return new Promise(async (resolve, reject) => {
+            try {
+                //filter remaining person tokens for retrieval of person/filter data
+                let interests_person_tokens = {};
+
+                for(let person_token in persons_not_excluded_after_stage_1) {
+                    if(person_token in exclude.send || person_token in exclude.receive) {
+                        continue;
+                    }
+
+                    interests_person_tokens[person_token] = true;
+                }
+
+                let pipeline = cacheService.startPipeline();
+
+                for(let person_token in interests_person_tokens) {
+                    let person_section_key = cacheService.keys.person_sections(person_token);
+
+                    for(let section of interests_sections) {
+                        pipeline.hGet(person_section_key, section);
+                    }
+                }
+
+                resolve();
+            } catch(e) {
+                console.error(e);
+                return reject(e);
+            }
         });
     }
 
@@ -1457,8 +1425,8 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
         return new Promise(async (resolve, reject) => {
             try {
                 let options = await getOptions();
-                let sectionDataKey = cacheService.keys.persons_section_data(my_token, sectionKey);
-                let sectionData = (await cacheService.getObj(sectionDataKey)) || {};
+                let cache_key = cacheService.keys.person_sections(my_token);
+                let sectionData = (await cacheService.hGetItem(cache_key, sectionKey)) || {};
 
                 // Build sets for my selected options
                 let myOptionTokens = new Set();
@@ -1739,6 +1707,14 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
 
             console.log({
                 stage_2: timeNow() - t
+            });
+
+            t = timeNow();
+
+            await filterInterests();
+
+            console.log({
+                filter_interests: timeNow() - t
             });
 
             t = timeNow();
