@@ -351,28 +351,205 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
     }
 
     function filterInterests() {
+        let myInterests = {
+            filters: {},
+            sections: {}
+        };
+
+        let personsInterests = {};
+
+        function calculateInterestMatches(otherPersonInterests) {
+            const scores = {
+                sameItemAndFilter: 10,
+                myFilterTheirItem: 8,
+                myItemTheirFilter: 8,
+                sameItem: 5
+            };
+
+            let totalScore = 0;
+            let matchCount = 0;
+
+            for (let interestKey of interests_sections) {
+                let myItems = myInterests.sections[interestKey] || {};
+                let myFilters = myInterests.filters[interestKey]?.items || {};
+                let theirItems = otherPersonInterests.sections[interestKey] || {};
+                let theirFilters = otherPersonInterests.filters[interestKey]?.items || {};
+
+                // 1. Both have same section item and filter
+                for (let myItemKey in myItems) {
+                    let myItem = myItems[myItemKey];
+                    for (let theirItemKey in theirItems) {
+                        let theirItem = theirItems[theirItemKey];
+                        if (myItem.token === theirItem.token) {
+                            let itemScore = scores.sameItemAndFilter;
+
+                            // Check if either has it as favorite
+                            if (myItem.is_favorite || theirItem.is_favorite) {
+                                let favPos = Math.min(
+                                    myItem.favorite_position || 999,
+                                    theirItem.favorite_position || 999
+                                );
+                                itemScore *= (1 + (10 - Math.min(favPos, 9)) / 10);
+                            }
+
+                            // Check for matching filters
+                            let myFilter = myFilters[myItem.token];
+                            let theirFilter = theirFilters[theirItem.token];
+
+                            if (myFilter && theirFilter) {
+                                // Apply importance multiplier if available
+                                let importanceMultiplier = 1;
+                                if (myFilter.importance && theirFilter.importance) {
+                                    importanceMultiplier = (myFilter.importance + theirFilter.importance) / 20;
+                                }
+                                itemScore *= importanceMultiplier;
+
+                                totalScore += itemScore;
+                                matchCount++;
+                            }
+                        }
+                    }
+                }
+
+                // 2. I have filter for their item
+                for (let myFilterKey in myFilters) {
+                    let myFilter = myFilters[myFilterKey];
+                    for (let theirItemKey in theirItems) {
+                        let theirItem = theirItems[theirItemKey];
+                        if (myFilter.token === theirItem.token) {
+                            let itemScore = scores.myFilterTheirItem;
+
+                            if (theirItem.is_favorite) {
+                                itemScore *= (1 + (10 - Math.min(theirItem.favorite_position || 9, 9)) / 10);
+                            }
+
+                            if (myFilter.importance) {
+                                itemScore *= myFilter.importance / 10;
+                            }
+
+                            totalScore += itemScore;
+                            matchCount++;
+                        }
+                    }
+                }
+
+                // 3. I have item they filter for
+                for (let myItemKey in myItems) {
+                    let myItem = myItems[myItemKey];
+                    for (let theirFilterKey in theirFilters) {
+                        let theirFilter = theirFilters[theirFilterKey];
+                        if (myItem.token === theirFilter.token) {
+                            let itemScore = scores.myItemTheirFilter;
+
+                            if (myItem.is_favorite) {
+                                itemScore *= (1 + (10 - Math.min(myItem.favorite_position || 9, 9)) / 10);
+                            }
+
+                            if (theirFilter.importance) {
+                                itemScore *= theirFilter.importance / 10;
+                            }
+
+                            totalScore += itemScore;
+                            matchCount++;
+                        }
+                    }
+                }
+
+                // 4. Same section item only
+                for (let myItemKey in myItems) {
+                    let myItem = myItems[myItemKey];
+                    for (let theirItemKey in theirItems) {
+                        let theirItem = theirItems[theirItemKey];
+                        if (myItem.token === theirItem.token) {
+                            let itemScore = scores.sameItem;
+
+                            if (myItem.is_favorite || theirItem.is_favorite) {
+                                let favPos = Math.min(
+                                    myItem.favorite_position || 999,
+                                    theirItem.favorite_position || 999
+                                );
+                                itemScore *= (1 + (10 - Math.min(favPos, 9)) / 10);
+                            }
+
+                            totalScore += itemScore;
+                            matchCount++;
+                        }
+                    }
+                }
+            }
+
+            return {
+                score: totalScore,
+                matches: matchCount
+            };
+        }
+
         return new Promise(async (resolve, reject) => {
             try {
-                //filter remaining person tokens for retrieval of person/filter data
-                let interests_person_tokens = {};
+                // Build my interests object
+                let my_pipeline = cacheService.startPipeline();
+                
+                for (let section of interests_sections) {
+                    myInterests.filters[section] = my_filters[section] || {};
+                    
+                    my_pipeline.hGet(cacheService.keys.person_sections(my_token), section);
+                }
+                
+                let my_results = await cacheService.execMulti(my_pipeline);
+                
+                let my_idx = 0;
+                
+                for(let section of interests_sections) {
+                    myInterests.sections[section] = JSON.parse(my_results[my_idx++]);
+                }
 
+                //filter remaining person tokens for retrieval of person/filter data
                 for(let person_token in persons_not_excluded_after_stage_1) {
-                    if(person_token in exclude.send || person_token in exclude.receive) {
+                    if(person_token in exclude.send && person_token in exclude.receive) {
                         continue;
                     }
 
-                    interests_person_tokens[person_token] = true;
+                    personsInterests[person_token] = {
+                        sections: {},
+                        filters: {},
+                        matches: {}
+                    };
                 }
 
                 let pipeline = cacheService.startPipeline();
 
-                for(let person_token in interests_person_tokens) {
+                for(let person_token in personsInterests) {
                     let person_section_key = cacheService.keys.person_sections(person_token);
+                    let person_filters_key = cacheService.keys.person_filters(person_token);
 
                     for(let section of interests_sections) {
                         pipeline.hGet(person_section_key, section);
+                        pipeline.hGet(person_filters_key, section);
                     }
                 }
+
+                let results = await cacheService.execPipeline(pipeline);
+
+                let idx = 0;
+
+                let t = timeNow();
+
+                for(let person_token in personsInterests) {
+                    for(let section of interests_sections) {
+                        try {
+                            personsInterests[person_token].sections[section] = JSON.parse(results[idx++]);
+                            personsInterests[person_token].filters[section] = JSON.parse(results[idx++]);
+                        } catch(e) {
+                            console.error(e);
+                        }
+                    }
+
+                    calculateInterestMatches(personsInterests[person_token]);
+                }
+
+                console.log({
+                    filter: timeNow() - t,
+                });
 
                 resolve();
             } catch(e) {
