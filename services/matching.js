@@ -19,6 +19,7 @@ const { getPolitics } = require('./politics');
 const { getReligions } = require('./religion');
 const { isPersonAvailable } = require('./availability');
 const { minAge, maxAge } = require('./persons');
+const { token } = require('morgan');
 
 const DEFAULT_DISTANCE_MILES = 20;
 const MAX_PERSONS_PROCESS = 1000;
@@ -350,7 +351,7 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
         });
     }
 
-    function filterInterests() {
+    function matchInterests() {
         // priority
         // (1) bi-directional filter + item match
         // (2) bi-directional filter match
@@ -364,11 +365,11 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
         // (c) secondary match
 
         const baseScores = {
-            biDirectionalBoth: 10, // Priority 1
-            biDirectionalFilter: 8,        // Priority 2
-            biDirectionalItem: 7,          // Priority 3
-            myFilterTheirItem: 6,          // Priority 4
-            theirFilterMyItem: 5           // Priority 5
+            biDirectionalBoth: 10,   // Priority 1
+            biDirectionalFilter: 8,  // Priority 2
+            biDirectionalItem: 7,    // Priority 3
+            myFilterTheirItem: 6,    // Priority 4
+            theirFilterMyItem: 5     // Priority 5
         };
 
         let myInterests = {
@@ -379,12 +380,33 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
         let personsInterests = {};
 
         function calculateInterestMatches(otherPersonInterests) {
-            const scores = {
-                sameItemAndFilter: 10,
-                myFilterTheirItem: 8,
-                myItemTheirFilter: 8,
-                sameItem: 5
-            };
+            function setMatchData(section, item_token, category, match_type, table_key = null, name, favorite_position, secondary, importance, totals) {
+                otherPersonInterests.matches.items[item_token] = {
+                    section: section,
+                    token: item_token,
+                    table_key: table_key,
+                    name: name,
+                    totals: totals,
+                    match: {
+                        category: category,
+                        [match_type]: true,
+                        mine: {
+                            favorite: {
+                                position: favorite_position?.mine || null
+                            },
+                            secondary: secondary?.mine || null,
+                            importance: importance?.mine || null,
+                        },
+                        theirs: {
+                            favorite: {
+                                position: favorite_position?.theirs || null
+                            },
+                            secondary: secondary?.theirs || null,
+                            importance: importance?.theirs || null,
+                        }
+                    }
+                };
+            }
 
             let totalScore = 0;
             let matchCount = 0;
@@ -393,6 +415,25 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
             let theirMergedItems = {};
 
             for (let section of interests_sections) {
+                function calcPersonalTotals(myItem, theirItem) {
+                    //calc total number of items/favorited
+                    if(myItem && !myItem.deleted) {
+                        totals.mine.all++;
+
+                        if(myItem.is_favorite) {
+                            totals.mine.favorite++;
+                        }
+                    }
+
+                    if(theirItem && !theirItem.deleted) {
+                        totals.theirs.all++;
+
+                        if(theirItem.is_favorite) {
+                            totals.theirs.favorite++;
+                        }
+                    }
+                }
+
                 myMergedItems[section] = {};
                 theirMergedItems[section] = {};
 
@@ -404,6 +445,17 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                 //see if both our filters are enabled
                 let myFilterEnabled = myFilter?.is_active && myFilter.is_send;
                 let theirFilterEnabled = theirFilter?.is_active && theirFilter.is_receive;
+
+                let totals = {
+                    mine: {
+                        all: 0,
+                        favorite: 0
+                    },
+                    theirs: {
+                        all: 0,
+                        favorite: 0
+                    }
+                };
 
                 //merge my personal/filter items
                 for(let token in myItems) {
@@ -459,9 +511,19 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                     }
                 }
 
-                for(let k in myMergedItems[section]) {
-                    let myItem = myMergedItems[section][k];
-                    let theirItem = theirMergedItems[section][k];
+                for(let item_token in myMergedItems[section]) {
+                    let myItem = myMergedItems[section][item_token];
+                    calcPersonalTotals(myItem?.personal);
+                }
+
+                for(let item_token in theirMergedItems[section]) {
+                    let theirItem = theirMergedItems[section][item_token];
+                    calcPersonalTotals(null, theirItem?.personal);
+                }
+
+                for(let item_token in myMergedItems[section]) {
+                    let myItem = myMergedItems[section][item_token];
+                    let theirItem = theirMergedItems[section][item_token];
 
                     let is_bi_both = false;
 
@@ -473,6 +535,34 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                                 && theirItem.filter.is_active && !theirItem.filter.is_negative && !theirItem.filter.deleted
                             ) {
                                is_bi_both = true;
+
+                                setMatchData(
+                                    section,
+                                    item_token,
+                                    'ultra',
+                                    'is_bi_both',
+                                    myItem.personal.table_key,
+                                    myItem.personal.name,
+                                    {
+                                        mine: myItem.personal.favorite_position,
+                                        theirs: theirItem.personal.favorite_position
+                                    },
+                                    {
+                                        mine: {
+                                            item: myItem.personal.secondary || null,
+                                            filter: myItem.filter.secondary || null
+                                        },
+                                        theirs: {
+                                            item: theirItem.personal.secondary || null,
+                                            filter: theirItem.filter.secondary || null
+                                        }
+                                    },
+                                    {
+                                        mine: myItem.filter.importance,
+                                        theirs: theirItem.filter.importance
+                                    },
+                                    totals
+                                );
                             }
                         }
                     }
@@ -489,6 +579,29 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                                 && theirItem.filter.is_active && !theirItem.filter.is_negative && !theirItem.filter.deleted
                             ) {
                                 is_bi_filter = true;
+
+                                setMatchData(
+                                    section,
+                                    item_token,
+                                    'super',
+                                    'is_bi_filter',
+                                    myItem.filter.table_key,
+                                    myItem.filter.name,
+                                    null,
+                                    {
+                                        mine: {
+                                            filter: myItem.filter.secondary || null,
+                                        },
+                                        theirs: {
+                                            filter: theirItem.filter.secondary || null,
+                                        }
+                                    },
+                                    {
+                                        mine: myItem.filter.importance,
+                                        theirs: theirItem.filter.importance
+                                    },
+                                    totals
+                                );
                             }
                         }
                     }
@@ -502,6 +615,29 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                     if(myItem?.personal && theirItem?.personal) {
                         if(!myItem.personal.deleted && !theirItem.personal.deleted) {
                             is_bi_item = true;
+
+                            setMatchData(
+                                section,
+                                item_token,
+                                'super',
+                                'is_bi_item',
+                                myItem.personal.table_key,
+                                myItem.personal.name,
+                                {
+                                    mine: myItem.personal.favorite_position,
+                                    theirs: theirItem.personal.favorite_position
+                                },
+                                {
+                                    mine: {
+                                        item: myItem.personal.secondary || null,
+                                    },
+                                    theirs: {
+                                        item: theirItem.personal.secondary || null,
+                                    }
+                                },
+                                null,
+                                totals
+                            );
                         }
                     }
 
@@ -518,6 +654,30 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                                 && !theirItem.personal.deleted
                             ) {
                                 is_my_filter = true;
+
+                                setMatchData(
+                                    section,
+                                    item_token,
+                                    'regular',
+                                    'is_my_filter',
+                                    myItem.filter.table_key || theirItem.personal.table_key,
+                                    myItem.filter.name || theirItem.personal.name,
+                                    {
+                                        theirs: theirItem.personal.favorite_position
+                                    },
+                                    {
+                                        mine: {
+                                            filter: myItem.filter.secondary || null,
+                                        },
+                                        theirs: {
+                                            item: theirItem.personal.secondary || null,
+                                        }
+                                    },
+                                    {
+                                        mine: myItem.filter.importance
+                                    },
+                                    totals
+                                );
                             }
                         }
                     }
@@ -535,6 +695,30 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                                 && theirItem.filter.is_active && !theirItem.filter.is_negative && !theirItem.filter.deleted
                             ) {
                                 is_their_filter = true;
+
+                                setMatchData(
+                                    section,
+                                    item_token,
+                                    'regular',
+                                    'is_their_filter',
+                                    myItem.personal.table_key || theirItem.filter.table_key,
+                                    myItem.personal.name || theirItem.filter.name,
+                                    {
+                                        mine: myItem.personal.favorite_position
+                                    },
+                                    {
+                                        mine: {
+                                            item: myItem.personal.secondary || null,
+                                        },
+                                        theirs: {
+                                            filter: theirItem.filter.secondary || null,
+                                        }
+                                    },
+                                    {
+                                        theirs: theirItem.filter.importance
+                                    },
+                                    totals
+                                );
                             }
                         }
                     }
@@ -1956,7 +2140,7 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
 
             t = timeNow();
 
-            await filterInterests();
+            await matchInterests();
 
             console.log({
                 filter_interests: timeNow() - t
