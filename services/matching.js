@@ -142,21 +142,6 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
 
                 t = timeNow();
 
-                await filterAge();
-
-                console.log({
-                    after_age_excluded: {
-                        send: Object.keys(exclude.send).length,
-                        receive: Object.keys(exclude.receive).length,
-                    }
-                });
-
-                console.log({
-                    age: timeNow() - t
-                });
-
-                t = timeNow();
-
                 await filterGenders();
 
                 console.log({
@@ -299,7 +284,7 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
             try {
                 let t = timeNow();
 
-                await filterDistance();
+                // await filterDistance();
 
                 console.log({
                     after_filter_distance_excluded: {
@@ -311,6 +296,19 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                 console.log({
                     filter_distance: timeNow() - t
                 });
+
+                t = timeNow();
+
+                await filterAges();
+
+                console.log({
+                    after_filter_ages_excluded: {
+                        send: Object.keys(exclude.send).length,
+                        receive: Object.keys(exclude.receive).length,
+                    }
+                });
+
+                t = timeNow();
 
                 await filterReviews();
 
@@ -806,28 +804,6 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
         });
     }
 
-    function filterAge() {
-        return new Promise(async (resolve, reject) => {
-            try {
-                let pipeline = cacheService.startPipeline();
-
-                for(let grid_token of neighbor_grid_tokens) {
-                    pipeline.sMembers(cacheService.keys.persons_grid_send_receive(grid_token, `age`, 'send'));
-                    pipeline.sMembers(cacheService.keys.persons_grid_send_receive(grid_token, `age`, 'receive'));
-                }
-
-                let results = await cacheService.execPipeline(pipeline);
-
-                let idx = 0;
-
-                resolve();
-            } catch (e) {
-                console.error('Error in filterVerifications:', e);
-                reject(e);
-            }
-        });
-    }
-
     function filterGenders() {
         return new Promise(async (resolve, reject) => {
             //bi-directional gender filtering
@@ -1098,6 +1074,97 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                 resolve();
             } catch(e) {
                 console.error(e);
+                return reject(e);
+            }
+        });
+    }
+
+    function filterAges() {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let my_age_filter = my_filters.ages;
+
+                let pipeline = cacheService.startPipeline();
+
+                for (let person_token in persons_not_excluded_after_stage_1) {
+                    let person_key = cacheService.keys.person(person_token);
+                    let filter_key = cacheService.keys.person_filters(person_token);
+
+                    pipeline.hGet(person_key, 'age');
+                    pipeline.hGet(filter_key, 'ages');
+                }
+
+                let results = await cacheService.execPipeline(pipeline);
+                let idx = 0;
+
+                for (let person_token in persons_not_excluded_after_stage_1) {
+                    let their_age = results[idx++];
+                    let their_age_filter = results[idx++];
+
+                    try {
+                        if (their_age_filter) {
+                            their_age_filter = JSON.parse(their_age_filter);
+                        }
+
+                        if (their_age) {
+                            their_age = parseInt(their_age);
+                        }
+                    } catch (e) {
+                        console.error('Error parsing age results:', e);
+                        continue;
+                    }
+
+                    let should_exclude_send = false;
+                    let should_exclude_receive = false;
+
+                    // Check my age preferences
+                    if (my_age_filter?.is_active) {
+                        let my_min_age = parseInt(my_age_filter.filter_value_min) || 18;
+                        let my_max_age = parseInt(my_age_filter.filter_value_max) || 80;
+
+                        if (my_age_filter.is_send && their_age) {
+                            if (their_age < my_min_age || their_age > my_max_age) {
+                                should_exclude_send = true;
+                            }
+                        }
+
+                        if (my_age_filter.is_receive && me.age) {
+                            if (me.age < my_min_age || me.age > my_max_age) {
+                                should_exclude_receive = true;
+                            }
+                        }
+                    }
+
+                    // Check their age preferences
+                    if (their_age_filter?.is_active) {
+                        let their_min_age = parseInt(their_age_filter.filter_value_min) || 18;
+                        let their_max_age = parseInt(their_age_filter.filter_value_max) || 80;
+
+                        if (their_age_filter.is_send && me.age) {
+                            if (me.age < their_min_age || me.age > their_max_age) {
+                                should_exclude_receive = true;
+                            }
+                        }
+
+                        if (their_age_filter.is_receive && their_age) {
+                            if (their_age < their_min_age || their_age > their_max_age) {
+                                should_exclude_send = true;
+                            }
+                        }
+                    }
+
+                    if (should_exclude_send) {
+                        exclude.send[person_token] = true;
+                    }
+
+                    if (should_exclude_receive) {
+                        exclude.receive[person_token] = true;
+                    }
+                }
+
+                resolve();
+            } catch (e) {
+                console.error('Error in filterAges:', e);
                 return reject(e);
             }
         });

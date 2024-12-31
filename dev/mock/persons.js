@@ -53,83 +53,22 @@ function updatePersonsCount() {
 }
 
 (async function () {
-    async function updateAgeSets() {
+    async function updateAge() {
         try {
             await cacheService.init();
-
-            let pipeline = cacheService.startPipeline();
 
             let conn = await dbService.conn();
 
             let persons = await conn('persons')
-                .join('earth_grid as eg', 'eg.id', '=', 'persons.grid_id')
-                .select('eg.token AS grid_token', 'persons.id', 'persons.person_token', 'persons.age', 'persons.birth_date');
-
-            let batch_update = [];
-
-            let cache_keys = {
-                add: {},
-                del: {},
-            }
+                .whereNull('age')
+                .select('persons.id', 'persons.person_token', 'persons.age', 'persons.birth_date');
 
             for(let person of persons) {
-                let prev_age = person.age;
                 let age = calculateAge(person.birth_date);
 
-                if(prev_age !== age || age === null) {
-                    batch_update.push({
-                        id: person.id,
-                        age
-                    });
-
-                    person.age = age;
-
-                    if(prev_age !== null) {
-                        if(!cache_keys.del[person.grid_token]) {
-                            cache_keys.del[person.grid_token] = []
-                        }
-
-                        cache_keys.del[person.grid_token].push(person);
-                    }
-
-                    if(!cache_keys.add[person.grid_token]) {
-                        cache_keys.add[person.grid_token] = [];
-                    }
-
-                    cache_keys.add[person.grid_token].push(person);
-
-                    pipeline.hSet(cacheService.keys.person(person.person_token), 'age', age?.toString() || '');
-                }
-            }
-
-            for(let grid_token in cache_keys.del) {
-                let grid_persons = cache_keys.del[grid_token];
-
-                for(let person of grid_persons) {
-                    let key = cacheService.keys.persons_grid_set(grid_token, 'age');
-                    pipeline.zRem(key, person.person_token);
-                }
-            }
-
-            for(let grid_token in cache_keys.add) {
-                let grid_persons = cache_keys.add[grid_token];
-
-                for(let person of grid_persons) {
-                    let key = cacheService.keys.persons_grid_set(grid_token, 'age');
-
-                    pipeline.zAdd(key, [
-                        {
-                            value: person.person_token,
-                            score: person.age,
-                        },
-                    ],);
-                }
-            }
-
-            await cacheService.execPipeline(pipeline);
-
-            if(batch_update.length) {
-                await batchUpdate('persons', batch_update);
+                await updatePerson(person.person_token, {
+                    age
+                });
             }
         } catch(e) {
             console.error(e);
@@ -217,7 +156,7 @@ function updatePersonsCount() {
                         location_lat_1000: Math.floor(parseFloat(lat) * 1000),
                         location_lon: lon,
                         location_lon_1000: Math.floor(parseFloat(lon) * 1000),
-                        age: null, //todo
+                        age: calculateAge(birthDatePure(person.dob.date)),
                         birth_date: birthDatePure(person.dob.date),
                         created: timeNow(),
                         updated: timeNow(),
@@ -268,10 +207,10 @@ function updatePersonsCount() {
     try {
         await addPersons();
         await mockGenders();
-        // await updateAgeSets();
+        await updateAge();
         await updatePersonsCount();
     } catch(e) {
-
+        console.error(e);
     }
 
     process.exit();

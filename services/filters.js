@@ -906,49 +906,6 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
         });
     }
     
-    function updateAge() {
-        return;
-        let agesFilter = person_filters.ages;
-
-        const sendKey = cacheService.keys.persons_grid_send_receive(grid_token, 'ages', 'send');
-        const receiveKey = cacheService.keys.persons_grid_send_receive(grid_token, 'ages', 'receive');
-
-        if(person.age) {
-            pipelineAdd.zAdd(cacheService.keys.persons_grid_set(grid_token, 'age'), {
-                value: person.person_token,
-                score: person.age
-            });
-        } else {
-            keysDelSorted.add(cacheService.keys.persons_grid_set(grid_token, 'age'), {})
-        }
-
-        if (prev_grid_token) {
-           keysDelSorted.add(cacheService.keys.persons_grid_set(prev_grid_token, 'age'));
-            keysDelSet.add(cacheService.keys.persons_grid_send_receive(prev_grid_token, `ages`, 'send'));
-           keysDelSet.add(cacheService.keys.persons_grid_send_receive(prev_grid_token, `ages`, 'receive'));
-
-           //delete hash key
-            pipelineRem.hDel(cacheService.keys.persons_grid_hash(grid_token, 'age_prefs'), person.person_token);
-        }
-
-        if(agesFilter?.is_active) {
-            if(agesFilter.is_send) {
-                keysAddSet.add(sendKey);
-            } else {
-                keysDelSet.add(sendKey);
-            }
-
-            if(agesFilter.is_receive) {
-                keysAddSet.add(receiveKey);
-            } else {
-                keysDelSet.add(receiveKey);
-            }
-        } else {
-            keysDelSet.add(sendKey);
-            keysDelSet.add(receiveKey);
-        }
-    }
-
     function updateGenders() {
         return new Promise(async (resolve, reject) => {
             try {
@@ -1249,8 +1206,6 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
 
             await updateVerifications();
             
-            await updateAge();
-
             await updateGenders();
 
             //personal
@@ -1290,10 +1245,6 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                 await updateVerifications();
             }
             
-            if(filter_token === 'ages') {
-                await updateAge();
-            }
-
             if(filter_token === 'genders') {
                 await updateGenders();
             }

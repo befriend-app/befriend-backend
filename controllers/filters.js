@@ -1200,19 +1200,19 @@ function putAge(req, res) {
             if (filterData) {
                 // Update existing filter
                 await conn('persons_filters').where('id', filterData.id).update({
-                    filter_value_min: min_age.toString(),
+                    filter_value_min: min_age,
                     filter_value_max: max_age_value,
                     updated: now,
                 });
 
-                filterData.filter_value_min = min_age.toString();
+                filterData.filter_value_min = min_age;
                 filterData.filter_value_max = max_age_value;
                 filterData.updated = now;
             } else {
                 // Create new filter entry
                 const filterEntry = createFilterEntry(filter.id, {
                     person_id: person.id,
-                    filter_value_min: min_age.toString(),
+                    filter_value_min: min_age,
                     filter_value_max: max_age_value,
                 });
 
