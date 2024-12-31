@@ -557,51 +557,6 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
         });
     }
 
-    function updateAvailability() {
-        return new Promise(async (resolve, reject) => {
-            let availabilityFilter = person_filters.availability;
-
-            if(!availabilityFilter) {
-                return resolve();
-            }
-
-            for(let k in availabilityFilter.items) {
-                let item = availabilityFilter.items[k];
-
-                if(item.is_day) {
-                    keysDelSet.add(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `availability:day:${item.day_of_week}`, 'receive'));
-
-                    if(prev_grid_token) {
-                        keysDelSet.add(cacheService.keys.persons_grid_exclude_send_receive(prev_grid_token, `availability:day:${item.day_of_week}`, 'receive'));
-                    }
-
-                    if(!availabilityFilter.is_active) {
-                        continue;
-                    }
-
-                    //add to exclude receive if day is disabled and previous day does not have an overnight time slot
-                    if(!item.is_active) {
-                        // Check if previous day has any overnight time slots
-                        const prevDayIndex = (item.day_of_week - 1 + 7) % 7; //Sunday to Saturday
-                        const hasPrevDayOvernightSlot = Object.values(availabilityFilter.items).some(
-                            slot => slot.is_time &&
-                                slot.day_of_week === prevDayIndex &&
-                                slot.is_overnight &&
-                                slot.is_active &&
-                                !slot.is_deleted
-                        );
-
-                        if(!hasPrevDayOvernightSlot) {
-                            keysAddSet.add(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `availability:day:${item.day_of_week}`, 'receive'));
-                        }
-                    }
-                }
-            }
-
-            resolve();
-        });
-    }
-
     function updateNetworks() {
         return new Promise(async (resolve, reject) => {
             try {
@@ -1286,8 +1241,6 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
 
             await updateLocation();
 
-            await updateAvailability();
-
             await updateModes();
 
             await updateNetworks();
@@ -1319,10 +1272,6 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
 
             if(filter_token === 'location') {
                 await updateLocation();
-            }
-
-            if(filter_token === 'availability') {
-                await updateAvailability();
             }
 
             if(filter_token === 'modes') {

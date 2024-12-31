@@ -218,6 +218,12 @@ module.exports = {
                     }
                 }
 
+                me.location = {
+                    lat: parseFloat(lat.toFixed(4)),
+                    lon: parseFloat(lon.toFixed(4)),
+                    timezone: dbUpdate.timezone
+                }
+
                 //person grid data/sets
                 if (!prev_grid_token || prev_grid_token !== grid.token) {
                     // update grid data on main person object

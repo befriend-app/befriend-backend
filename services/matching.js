@@ -7,7 +7,7 @@ let gridService = require('../services/grid');
 let reviewService = require('../services/reviews');
 
 const { getPersonFilters } = require('./filters');
-const { kms_per_mile, timeNow, shuffleFunc, isNumeric } = require('./shared');
+const { kms_per_mile, timeNow, shuffleFunc, isNumeric, calculateDistanceMeters } = require('./shared');
 const { getNetworksForFilters } = require('./network');
 const { getModes, getPersonExcludedModes } = require('./modes');
 const { getGendersLookup } = require('./genders');
@@ -22,14 +22,19 @@ const { isPersonAvailable } = require('./availability');
 const DEFAULT_DISTANCE_MILES = 20;
 const MAX_PERSONS_PROCESS = 1000;
 
-function getMatches(me, counts_only = false, location = null, activity = null) {
+function getMatches(me, counts_only = false, future_location = null, activity = null) {
     let my_token, my_filters;
     let am_online = me?.is_online;
     let am_available = false;
 
     let neighbor_grid_tokens = [];
+
     let person_tokens = {};
     let selected_persons_data = {};
+
+    let gridsLookup = {
+        byId: {}
+    };
 
     let exclude = {
         send: {},
@@ -294,7 +299,27 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
             try {
                 let t = timeNow();
 
+                await filterDistance();
+
+                console.log({
+                    after_filter_distance_excluded: {
+                        send: Object.keys(exclude.send).length,
+                        receive: Object.keys(exclude.receive).length,
+                    }
+                });
+
+                console.log({
+                    filter_distance: timeNow() - t
+                });
+
                 await filterReviews();
+
+                console.log({
+                    after_filter_reviews_excluded: {
+                        send: Object.keys(exclude.send).length,
+                        receive: Object.keys(exclude.receive).length,
+                    }
+                });
 
                 console.log({
                     filter_reviews: timeNow() - t
@@ -305,14 +330,14 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
                 await filterPersonsAvailability();
 
                 console.log({
-                    filter_availability: timeNow() - t
-                });
-
-                console.log({
                     after_filter_availability_excluded: {
                         send: Object.keys(exclude.send).length,
                         receive: Object.keys(exclude.receive).length,
                     }
+                });
+
+                console.log({
+                    filter_availability: timeNow() - t
                 });
 
                 return resolve();
@@ -418,6 +443,8 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
                 let grids = await gridService.findNearby(me.location_lat, me.location_lon, max_distance);
 
                 for(let grid of grids) {
+                    gridsLookup.byId[grid.id] = grid;
+
                     if (!neighbor_grid_tokens.includes(grid.token)) {
                         neighbor_grid_tokens.push(grid.token);
                     }
@@ -935,6 +962,143 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
             } catch (e) {
                 console.error('Error in filterGenders:', e);
                 reject(e);
+            }
+        });
+    }
+
+    function filterDistance() {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let my_location = me.location;
+                let my_grid = me.grid;
+                let filter = my_filters.distance;
+
+                let me_exclude_send = filter?.is_active && filter?.is_send;
+                let me_exclude_receive = filter?.is_active && filter?.is_receive;
+                let my_max_distance = filter?.filter_value || DEFAULT_DISTANCE_MILES;
+
+                let pipeline = cacheService.startPipeline();
+
+                for(let person_token in persons_not_excluded_after_stage_1) {
+                    let person_key = cacheService.keys.person(person_token);
+                    let filter_key = cacheService.keys.person_filters(person_token);
+
+                    pipeline.hGet(person_key, 'location');
+                    pipeline.hGet(person_key, 'grid');
+                    pipeline.hGet(filter_key, 'distance');
+                }
+
+                let results = await cacheService.execPipeline(pipeline);
+                let idx = 0;
+
+                for(let person_token in persons_not_excluded_after_stage_1) {
+                    let their_location = results[idx++];
+                    let their_grid = results[idx++];
+                    let their_distance_filter = results[idx++];
+
+                    try {
+                        if(their_location) {
+                            their_location = JSON.parse(their_location);
+                        }
+
+                        if(their_grid) {
+                            their_grid = JSON.parse(their_grid);
+                        }
+
+                        if(their_distance_filter) {
+                            their_distance_filter = JSON.parse(their_distance_filter);
+                        }
+                    } catch(e) {
+                        console.error('Error parsing results:', e);
+                    }
+
+                    let should_exclude_send = false;
+                    let should_exclude_receive = false;
+
+                    // Calculate distance between persons
+                    let distance_km = null;
+
+                    if(my_location && their_location) {
+                        // Calculate using lat/lon
+                        distance_km = calculateDistanceMeters(
+                            {
+                                lat: my_location.lat,
+                                lon: my_location.lon,
+                            }, {
+                                lat: their_location.lat,
+                                lon: their_location.lon
+                            },
+                            true
+                        );
+                    } else if(my_grid && their_grid) {
+                        //we'll later call the host network to help us filter distance without revealing actual location
+                        if(my_grid.id === their_grid.id) {
+                            distance_km = 0;
+                        } else {
+                            // Use grid center points
+                            try {
+                                distance_km = calculateDistanceMeters(
+                                    {
+                                        lat: gridsLookup.byId[my_grid.id].center_lat,
+                                        lon: gridsLookup.byId[my_grid.id].center_lon,
+                                    }, {
+                                        lat: gridsLookup.byId[their_grid.id].center_lat,
+                                        lon: gridsLookup.byId[their_grid.id].center_lon
+                                    },
+                                    true
+                                );
+
+                                //do a rough estimate of distance between two different grids
+                                distance_km = distance_km / 3;
+                            } catch(e) {
+                                console.error(e);
+                            }
+                        }
+                    }
+
+                    let compare_distance = distance_km * kms_per_mile;
+
+                    if(distance_km === null) {
+                        exclude.send[person_token] = true;
+                        exclude.receive[person_token] = true;
+                        continue;
+                    }
+
+                    // Check if I should exclude sending/receiving to/from them
+                    if(me_exclude_send && compare_distance > my_max_distance) {
+                        should_exclude_send = true;
+                    }
+
+                    if(me_exclude_receive && compare_distance > my_max_distance) {
+                        should_exclude_receive = true;
+                    }
+
+                    // Check their distance preferences
+                    if(their_distance_filter?.is_active) {
+                        let their_max_distance = their_distance_filter.filter_value || DEFAULT_DISTANCE_MILES;
+
+                        if(their_distance_filter.is_send && compare_distance > their_max_distance) {
+                            should_exclude_receive = true;
+                        }
+
+                        if(their_distance_filter.is_receive && compare_distance > their_max_distance) {
+                            should_exclude_send = true;
+                        }
+                    }
+
+                    if(should_exclude_send) {
+                        exclude.send[person_token] = true;
+                    }
+
+                    if(should_exclude_receive) {
+                        exclude.receive[person_token] = true;
+                    }
+                }
+
+                resolve();
+            } catch(e) {
+                console.error(e);
+                return reject(e);
             }
         });
     }
@@ -1489,6 +1653,10 @@ function getMatches(me, counts_only = false, location = null, activity = null) {
             t = timeNow();
 
             filterPersonsAfterStage1();
+
+            console.log({
+                persons_after_stage_1: Object.keys(persons_not_excluded_after_stage_1).length
+            });
 
             console.log({
                 after_filter_stage_1_excluded: {
