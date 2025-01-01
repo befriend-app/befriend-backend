@@ -307,6 +307,10 @@ module.exports = {
                 return resolve(places);
             }
 
+            //use fsq's sorting
+            //possible todo - custom sorting
+            return resolve(places);
+
             if (!places || typeof radius_meters === 'undefined') {
                 return reject('Invalid sort places params');
             }
