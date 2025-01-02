@@ -228,8 +228,16 @@ module.exports = {
                 try {
                     let modes = await getModes();
 
-                    if(!modes?.byToken[activity.person.mode]) {
+                    let mode = modes?.byToken[activity.person.mode];
+
+                    if(!mode) {
                         errors.push('Invalid mode provided');
+                    } else {
+                        activity.mode = {
+                            id: mode.id,
+                            token: mode.token,
+                            name: mode.name
+                        }
                     }
                 } catch(e) {
                     console.error(e);
