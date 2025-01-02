@@ -524,6 +524,7 @@ module.exports = {
                 let insert_activity = {
                     activity_token: activity_token,
                     activity_type_id: activity.activity.data.id,
+                    mode_id: activity.mode.id,
                     person_id: person.id,
                     persons_qty: activity.friends.qty,
 

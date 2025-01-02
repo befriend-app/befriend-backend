@@ -3,6 +3,7 @@ const dbService = require('../services/db');
 const notificationService = require('../services/notifications');
 
 const { getOptionDateTime } = require('./shared');
+const { getModes } = require('./modes');
 
 module.exports = {
     types: null,
@@ -12,8 +13,8 @@ module.exports = {
         min: 10,
         max: 360,
         options: [
-            10, 15, 20, 30, 40, 45, 50, 60, 70, 80, 90, 100, 110, 120, 150, 180, 210, 240, 270, 300,
-            330, 360,
+            10, 15, 20, 30, 40, 45, 50, 60, 70, 80, 90, 100, 110, 120,
+            150, 180, 210, 240, 270, 300, 330, 360,
         ],
     },
     thresholds: {
@@ -211,7 +212,6 @@ module.exports = {
     prepareActivity: function (person, activity) {
         return new Promise(async (resolve, reject) => {
             //validation
-
             let errors = [];
 
             if (!person) {
@@ -220,6 +220,20 @@ module.exports = {
 
             if (!activity) {
                 return reject('Activity data required');
+            }
+
+            if(!activity.person?.mode) {
+                errors.push('Mode required');
+            } else {
+                try {
+                    let modes = await getModes();
+
+                    if(!modes?.byToken[activity.person.mode]) {
+                        errors.push('Invalid mode provided');
+                    }
+                } catch(e) {
+                    console.error(e);
+                }
             }
 
             //activity type/name
@@ -239,6 +253,7 @@ module.exports = {
                         }
                     } catch (e) {
                         console.error(e);
+                        errors.push('Activity type error');
                     }
                 } else {
                     let default_activity = await module.exports.getDefaultActivity();
@@ -247,6 +262,7 @@ module.exports = {
                         activity.activity.data = default_activity;
                     } catch (e) {
                         console.error(e);
+                        errors.push('Default activity type error');
                     }
                 }
             }
@@ -281,6 +297,7 @@ module.exports = {
                         );
                     } catch (e) {
                         console.error(e);
+                        errors.push('Place address error');
                     }
                 } else {
                     try {
@@ -289,6 +306,7 @@ module.exports = {
                         );
                     } catch (e) {
                         console.error(e);
+                        errors.push('Place data error');
                     }
                 }
 
@@ -330,6 +348,7 @@ module.exports = {
                     }
                 } catch (e) {
                     console.error(e);
+                    errors.push('Travel data error');
                 }
             }
 
@@ -416,22 +435,22 @@ module.exports = {
                                 time.start,
                             );
                         })
-                            .orWhere(function () {
-                                // New activity ends during an existing activity
-                                this.where('activity_start', '<', time.end).where(
-                                    'activity_end',
-                                    '>=',
-                                    time.end,
-                                );
-                            })
-                            .orWhere(function () {
-                                // New activity completely contains an existing activity
-                                this.where('activity_start', '>=', time.start).where(
-                                    'activity_end',
-                                    '<=',
-                                    time.end,
-                                );
-                            });
+                        .orWhere(function () {
+                            // New activity ends during an existing activity
+                            this.where('activity_start', '<', time.end).where(
+                                'activity_end',
+                                '>=',
+                                time.end,
+                            );
+                        })
+                        .orWhere(function () {
+                            // New activity completely contains an existing activity
+                            this.where('activity_start', '>=', time.start).where(
+                                'activity_end',
+                                '<=',
+                                time.end,
+                            );
+                        });
                     });
 
                 if (overlapping.length) {
