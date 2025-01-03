@@ -38,7 +38,7 @@ module.exports = {
 
                 person = await cacheService.hGetAllObj(cache_key);
 
-                if (person) {
+                if (0 && person) {
                     return resolve(person);
                 }
 
@@ -55,6 +55,10 @@ module.exports = {
                     return resolve(null);
                 }
 
+                //devices
+                person.devices = await conn('persons_devices').where('person_id', person.id);
+
+                //modes
                 let modes = [];
 
                 try {

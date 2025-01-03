@@ -515,7 +515,7 @@ module.exports = {
                 }
 
                 // unique across systems
-                let activity_token = generateToken();
+                let activity_token = generateToken(20);
 
                 activity.activity_token = activity_token;
 
@@ -667,9 +667,7 @@ module.exports = {
                     const [id] = await conn('persons_devices').insert(newDevice);
                     newDevice.id = id;
 
-                    await cacheService.setCache(cacheService.keys.person_devices(person_token), [
-                        newDevice,
-                    ]);
+                    await cacheService.hSet(cacheService.keys.person(person_token), 'devices', [newDevice]);
 
                     res.status(201).json({ message: 'Added successfully' });
                     return resolve();
@@ -719,8 +717,9 @@ module.exports = {
                     updated: timestamp,
                 }));
 
-                await cacheService.setCache(
-                    cacheService.keys.person_devices(person_token),
+                await cacheService.hSet(
+                    cacheService.keys.person(person_token),
+                    'devices',
                     updatedDevices,
                 );
 

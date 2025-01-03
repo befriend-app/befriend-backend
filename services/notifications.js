@@ -1,7 +1,7 @@
 const http2 = require('http2');
 const fs = require('fs');
 const jwt = require('jsonwebtoken');
-const { joinPaths, getRepoRoot, timeNow } = require('./shared');
+const { timeNow } = require('./shared');
 
 let provider = null;
 
@@ -122,16 +122,16 @@ function createTokenManager(keyId, teamId, privateKey) {
 function createAPNSProvider(options) {
     return new Promise(async (resolve, reject) => {
         try {
-            const privateKey = await fs.promises.readFile(options.token.key);
             const baseURL = options.production
                 ? 'https://api.push.apple.com'
                 : 'https://api.development.push.apple.com';
 
             const connection = await createAPNSConnection(baseURL);
+
             const tokenManager = createTokenManager(
                 options.token.keyId,
                 options.token.teamId,
-                privateKey,
+                options.token.key
             );
 
             const getErrorReason = (status) => {

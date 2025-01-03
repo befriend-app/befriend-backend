@@ -533,6 +533,7 @@ module.exports = {
             }
 
             if (activity.place.is_address) {
+                //
             } else {
                 if (activity.activity.data.activity_emoji) {
                     emoji_str = activity.activity.data.activity_emoji + ' ';
@@ -557,22 +558,34 @@ module.exports = {
                 ios: [],
             };
 
+            let device_pipeline = cacheService.startPipeline();
+            let results = [];
+            let idx = 0;
+
             for (let match of matches) {
+                device_pipeline.hGet(cacheService.keys.person(match.person_token), 'devices');
+            }
+
+            try {
+                results = await cacheService.execPipeline(device_pipeline);
+            } catch(e) {
+                console.error(e);
+            }
+
+            for(let match of matches) {
                 try {
-                    let personDevices = await cacheService.getObj(
-                        cacheService.keys.person_devices(match.person_token),
-                    );
+                    let personDevices = JSON.parse(results[idx++]);
 
                     if (!personDevices || !personDevices.length) {
                         continue;
                     }
 
-                    let currentDevice = personDevices.find((device) => device.is_current);
+                    let currentDevice = personDevices.find(device => device.is_current);
 
                     if (currentDevice && currentDevice.platform === 'ios') {
                         tokens.ios.push(currentDevice.token);
                     }
-                } catch (e) {
+                } catch(e) {
                     console.error(e);
                 }
             }

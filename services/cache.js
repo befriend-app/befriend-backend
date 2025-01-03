@@ -73,7 +73,6 @@ const keyFunctions = {
 
     person: (tokenOrEmail = '') => `persons:${tokenOrEmail.toLowerCase()}`,
     person_login_tokens: (person_token = '') => `persons:${person_token.toLowerCase()}:login_tokens`,
-    person_devices: (person_token) => `persons:devices:${person_token}`,
     person_filters: (person_token) => `persons:filters:${person_token}`,
     person_sections: (person_token) => `persons:me:sections:${person_token}`,
     persons_grid_set: (gridToken, key) => `persons:grid:${gridToken}:set:${key}`,
