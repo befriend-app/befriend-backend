@@ -32,7 +32,7 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
     let neighbor_grid_tokens = [];
 
     let person_tokens = {};
-    let selected_persons_data = {};
+    let personsInterests = {};
 
     let gridsLookup = {
         byId: {}
@@ -44,6 +44,7 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
     };
     
     let persons_not_excluded_after_stage_1 = {};
+
     let persons_not_excluded_final = {};
 
     let organized = {
@@ -377,9 +378,7 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
             sections: {}
         };
 
-        let personsInterests = {};
-
-        function calculateInterestMatches(otherPersonInterests) {
+        function organizePersonInterests(otherPersonInterests) {
             function setMatchData(section, item_token, category, match_type, table_key = null, name, favorite_position, secondary, importance, totals) {
                 otherPersonInterests.matches.items[item_token] = {
                     section: section,
@@ -731,6 +730,14 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
             };
         }
 
+        function calculateInterestScores() {
+            for(let person_token in personsInterests) {
+                let person = personsInterests[person_token];
+
+                person.matches.count = Object.keys(person.matches.items).length;
+            }
+        }
+
         return new Promise(async (resolve, reject) => {
             try {
                 // Build my interests object
@@ -795,8 +802,10 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                         }
                     }
 
-                    calculateInterestMatches(personsInterests[person_token]);
+                    organizePersonInterests(personsInterests[person_token]);
                 }
+
+                calculateInterestScores();
 
                 console.log({
                     filter: timeNow() - t,
@@ -2069,6 +2078,10 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
 
             if(included) {
                 persons_not_excluded_final[person_token] = true;
+
+                if(person_token in personsInterests && personsInterests[person_token].matches?.count > 0) {
+                    organized.counts.interests++;
+                }
             } else {
                 organized.counts.excluded++;
             }
@@ -2167,7 +2180,6 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
 
             neighbor_grid_tokens = null;
             person_tokens = null;
-            selected_persons_data = null;
 
             exclude = null;
             persons_not_excluded_after_stage_1 = null;
