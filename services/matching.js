@@ -5,6 +5,7 @@ let dbService = require('../services/db');
 
 let gridService = require('../services/grid');
 let reviewService = require('../services/reviews');
+let sectionsData = require('../services/sections_data');
 
 const { getPersonFilters } = require('./filters');
 const { kms_per_mile, timeNow, shuffleFunc, isNumeric, calculateDistanceMeters } = require('./shared');
@@ -380,7 +381,7 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
 
         function organizePersonInterests(otherPersonInterests) {
             function setMatchData(section, item_token, category, match_type, table_key = null, name, favorite_position, secondary, importance, totals) {
-                otherPersonInterests.matches.items[item_token] = {
+                let matchItem = otherPersonInterests.matches.items[item_token] = {
                     section: section,
                     token: item_token,
                     table_key: table_key,
@@ -731,11 +732,256 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
         }
 
         function calculateInterestScores() {
+            function getBaseScore(item) {
+                let baseScore = 0;
+
+                if(item.match.category === 'ultra') {
+                    if(item.match.is_bi_both) {
+                        baseScore = 40;
+                    }
+                } else if(item.match.category === 'super') {
+                    if(item.match.is_bi_filter) {
+                        baseScore = 25;
+                    } else if(item.match.is_bi_item) {
+                        baseScore = 15;
+                    }
+                } else if(item.match.category === 'regular') {
+                    if(item.match.is_my_filter) {
+                        baseScore = 10;
+                    } else if(item.match.is_their_filter) {
+                        baseScore = 10;
+                    }
+                }
+
+                return baseScore;
+            }
+
+            function getImportanceMultiplier(item) {
+                let importanceMultiplier = 1.0;
+                let myImportance = item.match.mine?.importance;
+                let theirImportance = item.match.theirs?.importance;
+
+                if (myImportance && theirImportance) {
+                    let avgImportance = (myImportance + theirImportance) / 2;
+                    let base = 3;
+
+                    if (avgImportance >= 6 && avgImportance < 8) {
+                        base = 3.5;
+                    } else if (avgImportance >= 8 && avgImportance < 9) {
+                        base = 4;
+                    } else if (avgImportance >= 9 && avgImportance < 10) {
+                        base = 5.5;
+                    } else if (avgImportance >= 10) {
+                        base = 7;
+                    }
+
+                    importanceMultiplier = base;
+                } else if (myImportance || theirImportance) {
+                    let importanceVal = myImportance || theirImportance;
+                    let base = 1;
+
+                    if (importanceVal >= 6 && importanceVal < 8) {
+                        base = 1.2;
+                    } else if (importanceVal >= 8 && importanceVal < 9) {
+                        base = 1.5;
+                    } else if (importanceVal >= 9 && importanceVal < 10) {
+                        base = 1.8;
+                    } else if (importanceVal >= 10) {
+                        base = 2.2;
+                    }
+
+                    importanceMultiplier = base;
+                }
+
+                return importanceMultiplier;
+            }
+
+            function getFavoriteMultiplier(item) {
+                // Optimize matches based on total section items and favorite position
+                let favoriteMultiplier = 1.0;
+
+                let myFavoritePosition = item.match.mine?.favorite?.position;
+                let theirFavoritePosition = item.match.theirs?.favorite?.position;
+
+                if (myFavoritePosition !== null || theirFavoritePosition !== null) {
+                    let myTotal = item.totals.mine.all || 1;
+                    let theirTotal = item.totals.theirs.all || 1;
+                    let myFavorites = item.totals.mine.favorite || 0;
+                    let theirFavorites = item.totals.theirs.favorite || 0;
+                    let myPositionScore = myFavoritePosition ? (myTotal - myFavoritePosition + 1) / myTotal : 0;
+                    let theirPositionScore = theirFavoritePosition ? (theirTotal - theirFavoritePosition + 1) / theirTotal : 0;
+
+                    // Scale based on total items (more items = more significant favorites)
+                    let totalItemsMultiplier = 1;
+
+                    if (myPositionScore && theirPositionScore) {
+                        // Both have favorites - highest boost
+                        favoriteMultiplier = 4 * (myPositionScore + theirPositionScore);
+                        totalItemsMultiplier = Math.min((myTotal + theirTotal) / 4, 1);
+                    } else {
+                        // Single favorite - moderate boost
+                        favoriteMultiplier = 1.5 * (myPositionScore || theirPositionScore);
+
+                        if(myPositionScore) {
+                            totalItemsMultiplier = Math.min((myTotal) / 6, 1);
+                        } else {
+                            totalItemsMultiplier = Math.min((theirTotal) / 6, 1);
+                        }
+                    }
+
+                    favoriteMultiplier *= totalItemsMultiplier;
+                }
+
+                return favoriteMultiplier;
+            }
+
+            function getSecondaryMultiplier(item) {
+                let secondaryMultiplier = 1.0;
+
+                let itemSecondaryOptions = sectionsData?.[item.section]?.secondary?.[item.table_key]?.options || [];
+
+                let myItemIndex = null;
+                let theirItemIndex = null;
+                let filterIncludesMe = false;
+                let filterIncludesThem = false;
+
+                if(itemSecondaryOptions) {
+                    if(item.match.mine?.secondary?.item) {
+                        myItemIndex = itemSecondaryOptions.indexOf(item.match.mine.secondary?.item);
+                    }
+
+                    if(item.match.theirs?.secondary?.item) {
+                        theirItemIndex = itemSecondaryOptions.indexOf(item.match.theirs.secondary?.item);
+                    }
+                }
+
+                if(item.match.theirs?.secondary?.filter && item.match.mine?.secondary?.item) {
+                    filterIncludesMe = item.match.theirs.secondary.filter.includes(item.match.mine.secondary.item);
+                }
+
+                if(item.match.mine?.secondary?.filter && item.match.theirs?.secondary?.item) {
+                    filterIncludesThem = item.match.mine.secondary.filter.includes(item.match.theirs.secondary.item);
+                }
+
+                if(item.match.mine?.secondary?.item && item.match.theirs?.secondary?.item) {
+                    let indexDiff = 0;
+
+                    if(isNumeric(myItemIndex) && isNumeric(theirItemIndex)) {
+                        indexDiff = Math.abs(myItemIndex - theirItemIndex);
+                        secondaryMultiplier = 1 + itemSecondaryOptions.length / (indexDiff * itemSecondaryOptions.length + 1);
+                    }
+
+                    if(item.match.mine?.secondary?.filter && item.match.theirs?.secondary?.filter) {
+                        // Both item and filter
+                        if(filterIncludesMe && filterIncludesThem) {
+                            secondaryMultiplier *= 10;
+                        } else if(filterIncludesMe || filterIncludesThem) {
+                            secondaryMultiplier *= 5;
+                        } else {
+                            secondaryMultiplier *= 3;
+                        }
+                    } else if(item.match.mine?.secondary?.filter) {
+                        // Both items, my filter
+                        if(filterIncludesThem) {
+                            secondaryMultiplier *= 3;
+                        } else {
+                            secondaryMultiplier *= 1.5;
+                        }
+                    } else if(item.match.theirs?.secondary?.filter) {
+                        // Both items, their filter
+
+                        if(filterIncludesMe) {
+                            secondaryMultiplier *= 3;
+                        } else {
+                            secondaryMultiplier *= 1.5;
+                        }
+                    } else {
+                        secondaryMultiplier *= 1.2;
+                    }
+                } else if(item.match.mine?.secondary?.item) {
+                    if(item.match.mine?.secondary?.filter && item.match.theirs?.secondary?.filter) {
+                        //Only my item, both filters
+                        if(filterIncludesMe) {
+                            secondaryMultiplier *= 5;
+                        } else {
+                            secondaryMultiplier *= 2;
+                        }
+                    } else if(item.match.mine?.secondary?.filter) {
+                        // My item, my filter
+                        secondaryMultiplier *= 1.5;
+                    } else if(item.match.theirs?.secondary?.filter) {
+                        // My item, their filter
+
+                        if(filterIncludesMe) {
+                            secondaryMultiplier *= 4;
+                        } else {
+                            secondaryMultiplier *= 1.5;
+                        }
+                    } else {
+                        // My item only
+
+                        secondaryMultiplier *= 1.2;
+                    }
+                } else if(item.match.theirs?.secondary?.item) {
+                    if(item.match.mine?.secondary?.filter && item.match.theirs?.secondary?.filter) {
+                        // Their item, both filters
+                        if(filterIncludesThem) {
+                            secondaryMultiplier *= 5;
+                        } else {
+                            secondaryMultiplier *= 2;
+                        }
+                    } else if(item.match.mine?.secondary?.filter) {
+                        // Their item, my filter
+                        if(filterIncludesThem) {
+                            secondaryMultiplier *= 4;
+                        } else {
+                            secondaryMultiplier *= 1.5;
+                        }
+                    } else if(item.match.theirs?.secondary?.filter) {
+                        // Only their item, their filter
+                        secondaryMultiplier *= 1.5;
+                    } else {
+                        secondaryMultiplier *= 1.2;
+                    }
+                } else {
+                    if(item.match.mine?.secondary?.filter && item.match.theirs?.secondary?.filter) {
+                        // No items exist, both filters
+                        secondaryMultiplier *= 1.3;
+                    } else if(item.match.mine?.secondary?.filter) {
+                        // No items, my filter
+                        secondaryMultiplier *= 1.1;
+                    } else if(item.match.theirs?.secondary?.filter) {
+                        // No items, their filter
+                        secondaryMultiplier *= 1.1;
+                    } else {
+                        secondaryMultiplier *= 1.0;
+                    }
+                }
+
+                return secondaryMultiplier;
+            }
+
             for(let person_token in personsInterests) {
                 let person = personsInterests[person_token];
+                let totalScore = 0;
 
+                for (let item of Object.values(person.matches.items)) {
+                    let score = getBaseScore(item);
+
+                    let importanceMultiplier = getImportanceMultiplier(item);
+                    let favoriteMultiplier = getFavoriteMultiplier(item);
+                    let secondaryMultiplier = getSecondaryMultiplier(item);
+
+                    let weightedScore = score * importanceMultiplier * favoriteMultiplier * secondaryMultiplier;
+
+                    totalScore += weightedScore;
+                }
+
+                person.matches.score = totalScore;
                 person.matches.count = Object.keys(person.matches.items).length;
             }
+
+            console.log();
         }
 
         return new Promise(async (resolve, reject) => {
@@ -745,7 +991,6 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                 
                 for (let section of interests_sections) {
                     myInterests.filters[section] = my_filters[section] || {};
-                    
                     my_pipeline.hGet(cacheService.keys.person_sections(my_token), section);
                 }
                 
