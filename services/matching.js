@@ -52,7 +52,12 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
         counts: {
             send: 0,
             receive: 0,
-            interests: 0,
+            interests: {
+                total: 0,
+                ultra: 0,
+                super: 0,
+                regular: 0
+            },
             excluded: 0
         },
         matches: {
@@ -62,6 +67,11 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
     };
 
     let interests_sections = ['movies', 'tv_shows', 'sports', 'music', 'instruments'];
+
+    let interestScoreThresholds = {
+        ultra: 200,
+        super: 50
+    };
 
     function processStage1() {
         return new Promise(async (resolve, reject) => {
@@ -366,29 +376,20 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
         // (b) filter importance
         // (c) secondary match
 
-        const baseScores = {
-            biDirectionalBoth: 10,   // Priority 1
-            biDirectionalFilter: 8,  // Priority 2
-            biDirectionalItem: 7,    // Priority 3
-            myFilterTheirItem: 6,    // Priority 4
-            theirFilterMyItem: 5     // Priority 5
-        };
-
         let myInterests = {
             filters: {},
             sections: {}
         };
 
         function organizePersonInterests(otherPersonInterests) {
-            function setMatchData(section, item_token, category, match_type, table_key = null, name, favorite_position, secondary, importance, totals) {
-                let matchItem = otherPersonInterests.matches.items[item_token] = {
+            function setMatchData(section, item_token, match_type, table_key = null, name, favorite_position, secondary, importance, totals) {
+                otherPersonInterests.matches.items[item_token] = {
                     section: section,
                     token: item_token,
                     table_key: table_key,
                     name: name,
                     totals: totals,
                     match: {
-                        category: category,
                         [match_type]: true,
                         mine: {
                             favorite: {
@@ -407,9 +408,6 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                     }
                 };
             }
-
-            let totalScore = 0;
-            let matchCount = 0;
 
             let myMergedItems = {};
             let theirMergedItems = {};
@@ -539,7 +537,6 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                                 setMatchData(
                                     section,
                                     item_token,
-                                    'ultra',
                                     'is_bi_both',
                                     myItem.personal.table_key,
                                     myItem.personal.name,
@@ -583,7 +580,6 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                                 setMatchData(
                                     section,
                                     item_token,
-                                    'super',
                                     'is_bi_filter',
                                     myItem.filter.table_key,
                                     myItem.filter.name,
@@ -619,7 +615,6 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                             setMatchData(
                                 section,
                                 item_token,
-                                'super',
                                 'is_bi_item',
                                 myItem.personal.table_key,
                                 myItem.personal.name,
@@ -658,7 +653,6 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                                 setMatchData(
                                     section,
                                     item_token,
-                                    'regular',
                                     'is_my_filter',
                                     myItem.filter.table_key || theirItem.personal.table_key,
                                     myItem.filter.name || theirItem.personal.name,
@@ -699,7 +693,6 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                                 setMatchData(
                                     section,
                                     item_token,
-                                    'regular',
                                     'is_their_filter',
                                     myItem.personal.table_key || theirItem.filter.table_key,
                                     myItem.personal.name || theirItem.filter.name,
@@ -724,33 +717,22 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                     }
                 }
             }
-
-            return {
-                score: totalScore,
-                matches: matchCount
-            };
         }
 
         function calculateInterestScores() {
             function getBaseScore(item) {
                 let baseScore = 0;
 
-                if(item.match.category === 'ultra') {
-                    if(item.match.is_bi_both) {
-                        baseScore = 40;
-                    }
-                } else if(item.match.category === 'super') {
-                    if(item.match.is_bi_filter) {
-                        baseScore = 25;
-                    } else if(item.match.is_bi_item) {
-                        baseScore = 15;
-                    }
-                } else if(item.match.category === 'regular') {
-                    if(item.match.is_my_filter) {
-                        baseScore = 10;
-                    } else if(item.match.is_their_filter) {
-                        baseScore = 10;
-                    }
+                if(item.match.is_bi_both) {
+                    baseScore = 40;
+                } else if(item.match.is_bi_filter) {
+                    baseScore = 25;
+                } else if(item.match.is_bi_item) {
+                    baseScore = 15;
+                } else if(item.match.is_my_filter) {
+                    baseScore = 10;
+                } else if(item.match.is_their_filter) {
+                    baseScore = 10;
                 }
 
                 return baseScore;
@@ -980,8 +962,6 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                 person.matches.score = totalScore;
                 person.matches.count = Object.keys(person.matches.items).length;
             }
-
-            console.log();
         }
 
         return new Promise(async (resolve, reject) => {
@@ -2324,8 +2304,20 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
             if(included) {
                 persons_not_excluded_final[person_token] = true;
 
-                if(person_token in personsInterests && personsInterests[person_token].matches?.count > 0) {
-                    organized.counts.interests++;
+                let personInterests = personsInterests[person_token];
+
+                if(personInterests) {
+                    if(personInterests.matches?.count > 0) {
+                        organized.counts.interests.total++;
+
+                        if(personInterests.matches.score >= interestScoreThresholds.ultra) {
+                            organized.counts.interests.ultra++;
+                        } else if(personInterests.matches.score >= interestScoreThresholds.super) {
+                            organized.counts.interests.super++;
+                        } else {
+                            organized.counts.interests.regular++;
+                        }
+                    }
                 }
             } else {
                 organized.counts.excluded++;
