@@ -266,6 +266,7 @@ function handleFilterUpdate(req, res, filterType) {
                     [id] = await conn('persons_filters').insert(filterEntry);
 
                     filterEntry.token = token;
+                    filterEntry.name = option.name;
 
                     filterData.items[id] = {
                         ...filterEntry,
@@ -283,6 +284,7 @@ function handleFilterUpdate(req, res, filterType) {
 
             res.json({
                 id,
+                data: filterData,
                 success: true,
             });
         } catch (error) {
@@ -2123,8 +2125,10 @@ function putMovies(req, res) {
             }
 
             await cacheService.hSet(person_filter_cache_key, personFilterKey, filterData);
+
             res.json({
                 id: id,
+                data: filterData,
                 success: true,
             });
         } catch (e) {
