@@ -1801,6 +1801,11 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
         return new Promise(async (resolve, reject) => {
             try {
                 let myReviewsFilter = my_filters.reviews;
+
+                if(!myReviewsFilter) {
+                    return resolve();
+                }
+
                 let myNewReviewsFilter = my_filters.reviews_new;
 
                 let me_exclude_send_new = myReviewsFilter.is_active && !myNewReviewsFilter.is_active && myNewReviewsFilter.is_send;

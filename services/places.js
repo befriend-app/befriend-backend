@@ -26,6 +26,9 @@ const { batchInsert, batchUpdate } = require('./db');
 const axios = require('axios');
 
 module.exports = {
+    autoComplete: {
+        minChars: 2
+    },
     refresh_data: 30, //days
     cache_distance: 0.5, //mi/km
     default: {

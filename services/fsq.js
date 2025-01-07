@@ -138,6 +138,7 @@ module.exports = {
                         types: search_type,
                         query: search,
                         radius: radius,
+                        limit: 20
                     },
                 });
 

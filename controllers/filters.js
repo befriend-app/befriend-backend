@@ -1420,6 +1420,7 @@ function putGender(req, res) {
             }, filter.token);
 
             res.json({
+                data: filterData,
                 success: true,
             });
         } catch (e) {

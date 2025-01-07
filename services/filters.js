@@ -475,6 +475,7 @@ function getPersonFilterForKey(person, filter_key) {
             }
 
             let conn = await dbService.conn();
+
             let qry = await conn('persons_filters')
                 .where('person_id', person.id)
                 .where('filter_id', filter_id);

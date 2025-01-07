@@ -1,6 +1,7 @@
 const axios = require('axios');
 const tldts = require('tldts');
 const activitiesService = require('../services/activities');
+const placesService = require('../services/places');
 const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 const encryptionService = require('../services/encryption');
@@ -1314,10 +1315,10 @@ module.exports = {
                     return resolve();
                 }
 
-                if (!search || search.length < 3) {
+                if (!search || search.length < placesService.autoComplete.minChars) {
                     res.json(
                         {
-                            message: 'Search string must be at least 3 characters',
+                            message: `Search string must be at least ${placesService.autoComplete.minChars} characters`,
                         },
                         400,
                     );
