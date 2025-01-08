@@ -284,20 +284,15 @@ function saveAvailabilityData(person, availabilityData) {
 }
 
 function isPersonAvailable(person, filter, activity = null) {
-    function isWithinDefault() {
-        const currentDate = personTime.format('YYYY-MM-DD');
+    function isWithinDefault(startTime, endTime) {
+        const currentDate = startTime.format('YYYY-MM-DD');
         const start = dayjs.tz(`${currentDate} ${DEFAULT_START}`, person.timezone);
         const end = dayjs.tz(`${currentDate} ${DEFAULT_END}`, person.timezone);
 
-        if (personTime.isSame(start) ||
-            (personTime.isAfter(start) && personTime.isBefore(end))) {
-            return true;
-        } else {
-            return false;
-        }
+        return (startTime.isAfter(start) || startTime.isSame(start)) &&
+            (endTime.isBefore(end) || endTime.isSame(end));
     }
 
-    //todo compare against activity date/time and duration
     const currentUTC = dayjs().utc();
 
     let timezone = person.timezone;
@@ -316,12 +311,23 @@ function isPersonAvailable(person, filter, activity = null) {
 
     // Convert current UTC time to person's timezone
     const personTime = currentUTC.tz(person.timezone);
+    let activityStartTime = personTime;
+    let activityEndTime = personTime;
+
+    //set activity start time if provided
+    if(activity?.when?.in_mins) {
+        activityStartTime = currentUTC.tz(timezone).add(activity.when.in_mins, 'minutes');
+        activityEndTime = activityStartTime.add(activity.duration, 'minutes');
+    } else {
+        activityEndTime = activityStartTime.add(60, 'minutes');
+    }
+
     const currentDayOfWeek = personTime.day();
     const prevDayIndex = (currentDayOfWeek - 1 + 7) % 7;
 
     // Handle default availability if filter is disabled or not present
     if (!filter || !filter.is_active) {
-        return isWithinDefault();
+        return isWithinDefault(activityStartTime, activityEndTime);
     }
 
     const availabilityItems = filter.items;
@@ -351,6 +357,7 @@ function isPersonAvailable(person, filter, activity = null) {
     if (prevDaySlot && prevDaySlot.is_active) {
         for (let id in availabilityItems) {
             const slot = availabilityItems[id];
+
             if (slot.day_of_week === prevDayIndex &&
                 slot.is_time &&
                 slot.is_overnight &&
@@ -359,12 +366,19 @@ function isPersonAvailable(person, filter, activity = null) {
 
                 // Handle end times > 24:00:00
                 const [endHour] = slot.end_time.split(':').map(Number);
+
                 if (endHour >= 24) {
                     const adjustedEndTime = slot.end_time.replace(
                         /^\d+/,
                         String(endHour - 24).padStart(2, '0')
                     );
-                    const endTime = dayjs.tz(`${personTime.format('YYYY-MM-DD')} ${adjustedEndTime}`, person.timezone);
+
+                    let endTime = dayjs.tz(`${activityStartTime.format('YYYY-MM-DD')} ${adjustedEndTime}`, timezone);
+
+                    if(activity?.duration) {
+                        endTime.add(activity.duration, 'minutes');
+                    }
+
                     if (personTime.isBefore(endTime)) {
                         isAvailableNow = true;
                         break;
@@ -402,7 +416,7 @@ function isPersonAvailable(person, filter, activity = null) {
 
             hasTimeSlots = true;
 
-            const currentDate = personTime.format('YYYY-MM-DD');
+            const currentDate = activityStartTime.format('YYYY-MM-DD');
             const startTime = dayjs.tz(`${currentDate} ${slot.start_time}`, person.timezone);
 
             // Parse end time hours
@@ -411,8 +425,9 @@ function isPersonAvailable(person, filter, activity = null) {
             if (endHour < 24) {
                 // Regular time slot ending same day
                 const endTime = dayjs.tz(`${currentDate} ${slot.end_time}`, person.timezone);
-                if (personTime.isSame(startTime) ||
-                    (personTime.isAfter(startTime) && personTime.isBefore(endTime))) {
+
+                if (activityStartTime.isSame(startTime) ||
+                    (activityStartTime.isAfter(startTime) && activityEndTime.isBefore(endTime))) {
                     isAvailableNow = true;
                     break;
                 }
@@ -425,8 +440,8 @@ function isPersonAvailable(person, filter, activity = null) {
                 );
                 const endTime = dayjs.tz(`${nextDate} ${adjustedEndTime}`, person.timezone);
 
-                if (personTime.isSame(startTime) ||
-                    personTime.isAfter(startTime)) {
+                if (activityStartTime.isSame(startTime) ||
+                    activityStartTime.isAfter(startTime)) {
                     // For overnight slots, we're available after start
                     // until midnight and into next day until end time
                     isAvailableNow = true;
@@ -437,7 +452,7 @@ function isPersonAvailable(person, filter, activity = null) {
     }
 
     if(!hasTimeSlots) {
-        return isWithinDefault();
+        return isWithinDefault(activityStartTime, activityEndTime);
     }
 
     return isAvailableNow;
