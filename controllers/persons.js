@@ -128,24 +128,6 @@ module.exports = {
             }
         });
     },
-    getMatches: function (req, res) {
-        return new Promise(async (resolve, reject) => {
-            try {
-                let person = await getPerson(req.query.person_token);
-                let matches = await matchingService.getMatches(person);
-
-                res.json(matches);
-            } catch(e) {
-                console.error(e);
-
-                res.json({
-                    message: 'Error getting matches',
-                }, 400);
-            }
-
-            resolve();
-        });
-    },
     updateLocation: function (req, res) {
         return new Promise(async (resolve, reject) => {
             try {
@@ -576,7 +558,6 @@ module.exports = {
                     console.error(e);
                 }
 
-                //todo: algorithm/logic to select persons to send this activity to
                 try {
                     matches = await findMatches(person, activity);
                 } catch (e) {

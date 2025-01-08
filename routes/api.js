@@ -42,10 +42,10 @@ router.put('/location', function (req, res, next) {
     });
 });
 
-router.get('/matches', function (req, res, next) {
+router.get('/filters/matches', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
-            await personsController.getMatches(req, res);
+            await filtersController.getMatches(req, res);
         } catch (err) {
             console.log(err);
         }

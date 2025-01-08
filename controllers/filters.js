@@ -27,6 +27,7 @@ const { getReligions } = require('../services/religion');
 let sectionsData = require('../services/sections_data');
 const { getNetworksForFilters } = require('../services/network');
 const { getModes } = require('../services/modes');
+const matchingService = require('../services/matching');
 
 
 function createFilterEntry(filter_id, props = {}) {
@@ -108,6 +109,28 @@ function getFiltersOptions(req, res) {
         } catch (e) {
             console.error(e);
             res.json('Error getting filter options', 400);
+        }
+
+        resolve();
+    });
+}
+
+function getMatches(req, res) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let person = await getPerson(req.query.person_token);
+
+            let matches = await matchingService.getMatches(person, {
+                counts_only: true
+            });
+
+            res.json(matches);
+        } catch(e) {
+            console.error(e);
+
+            res.json({
+                message: 'Error getting matches',
+            }, 400);
         }
 
         resolve();
@@ -3345,6 +3368,7 @@ function putSports(req, res) {
 
 module.exports = {
     getFiltersOptions,
+    getMatches,
     putActive,
     putImportance,
     putSendReceive,
