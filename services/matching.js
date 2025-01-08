@@ -25,7 +25,9 @@ const { token } = require('morgan');
 const DEFAULT_DISTANCE_MILES = 20;
 const MAX_PERSONS_PROCESS = 1000;
 
-function getMatches(me, counts_only = false, future_location = null, activity = null) {
+function getMatches(me, params = {}) {
+    let {activity, location, send_only, counts_only} = params;
+
     let my_token, my_filters;
     let am_online = me?.is_online;
     let am_available = false;
@@ -279,7 +281,9 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
 
             //if I'm offline or unavailable, exclude receiving from all
             if(!am_online || !am_available) {
-                exclude.receive[person_token] = true;
+                if(!send_only) {
+                    exclude.receive[person_token] = true;
+                }
             } else {
                 //allow receiving notifications if not excluded
                 if(!(person_token in exclude.receive)) {
@@ -1130,7 +1134,10 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                 for (let grid of results_offline) {
                     for (let token of grid) {
                         exclude.send[token] = true;
-                        exclude.receive[token] = true;
+
+                        if(!send_only) {
+                            exclude.receive[token] = true;
+                        }
                     }
                 }
 
@@ -1191,7 +1198,9 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                 let pipeline = cacheService.startPipeline();
 
                 for (let grid_token of neighbor_grid_tokens) {
-                    pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `networks:${network_token}`, 'send'));
+                    if(!send_only) {
+                        pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `networks:${network_token}`, 'send'));
+                    }
 
                     pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `networks:${network_token}`, 'receive'));
                 }
@@ -1201,12 +1210,15 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                 let idx = 0;
 
                 for(let grid_token of neighbor_grid_tokens) {
-                    let personsExcludeSend = results[idx++];
-                    let personsExcludeReceive = results[idx++];
+                    if(!send_only) {
+                        let personsExcludeSend = results[idx++];
 
-                    for(let token of personsExcludeSend) {
-                        exclude.receive[token] = true;
+                        for(let token of personsExcludeSend) {
+                            exclude.receive[token] = true;
+                        }
                     }
+
+                    let personsExcludeReceive = results[idx++];
 
                     for(let token of personsExcludeReceive) {
                         exclude.send[token] = true;
@@ -1244,14 +1256,16 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
 
                 let pipeline = cacheService.startPipeline();
 
-                // Check all modes for send
-                for(let mode of modeTypes) {
-                    for (let grid_token of neighbor_grid_tokens) {
-                        pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(
-                            grid_token,
-                            `modes:${mode.token}`,
-                            'send'
-                        ));
+                if(!send_only) {
+                    // Check all modes for send
+                    for(let mode of modeTypes) {
+                        for (let grid_token of neighbor_grid_tokens) {
+                            pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(
+                                grid_token,
+                                `modes:${mode.token}`,
+                                'send'
+                            ));
+                        }
                     }
                 }
 
@@ -1274,14 +1288,16 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                 let personsExcludeModesReceive = {};
 
                 // Process send results
-                for(let mode of modeTypes) {
-                    personsExcludeModesSend[mode.token] = {};
+                if(!send_only) {
+                    for(let mode of modeTypes) {
+                        personsExcludeModesSend[mode.token] = {};
 
-                    for (let grid_token of neighbor_grid_tokens) {
-                        let excludeSend = results[idx++];
+                        for (let grid_token of neighbor_grid_tokens) {
+                            let excludeSend = results[idx++];
 
-                        for (let token of excludeSend) {
-                            personsExcludeModesSend[mode.token][token] = true;
+                            for (let token of excludeSend) {
+                                personsExcludeModesSend[mode.token][token] = true;
+                            }
                         }
                     }
                 }
@@ -1316,18 +1332,20 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                     }
 
                     //receive
-                    let hasReceiveModeMatch = false;
+                    if(!send_only) {
+                        let hasReceiveModeMatch = false;
 
-                    for(let includedMode of included_modes.receive) {
-                        // If not excluded from sending
-                        if(!(token in personsExcludeModesSend[includedMode])) {
-                            hasReceiveModeMatch = true;
-                            break;
+                        for(let includedMode of included_modes.receive) {
+                            // If not excluded from sending
+                            if(!(token in personsExcludeModesSend[includedMode])) {
+                                hasReceiveModeMatch = true;
+                                break;
+                            }
                         }
-                    }
 
-                    if(!hasReceiveModeMatch) {
-                        exclude.receive[token] = true;
+                        if(!hasReceiveModeMatch) {
+                            exclude.receive[token] = true;
+                        }
                     }
                 }
 
@@ -1353,7 +1371,10 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                         pipeline.sMembers(cacheService.keys.persons_grid_set(grid_token, `verified:${type}`));
 
                         // Get send/receive filter states
-                        pipeline.sMembers(cacheService.keys.persons_grid_send_receive(grid_token, `verifications:${type}`, 'send'));
+                        if(!send_only) {
+                            pipeline.sMembers(cacheService.keys.persons_grid_send_receive(grid_token, `verifications:${type}`, 'send'));
+                        }
+
                         pipeline.sMembers(cacheService.keys.persons_grid_send_receive(grid_token, `verifications:${type}`, 'receive'));
                     }
                 }
@@ -1372,18 +1393,27 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                     receiveVerification[type] = {};
 
                     for (let grid_token of neighbor_grid_tokens) {
+                        let send_tokens;
                         let verified_tokens = results[idx++];
-                        let send_tokens = results[idx++];
+
+                        if(!send_only) {
+                            send_tokens = results[idx++];
+                        }
+
                         let receive_tokens = results[idx++];
 
                         // Track verified persons
                         for (let token of verified_tokens) {
                             verifiedPersons[type][token] = true;
                         }
-                        // Track send filter states
-                        for (let token of send_tokens) {
-                            sendVerification[type][token] = true;
+
+                        if(!send_only) {
+                            // Track send filter states
+                            for (let token of send_tokens) {
+                                sendVerification[type][token] = true;
+                            }
                         }
+
                         // Track receive filter states
                         for (let token of receive_tokens) {
                             receiveVerification[type][token] = true;
@@ -1403,7 +1433,7 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                                     }
                                 }
 
-                                if(my_filters[`verification_${type}`].is_receive) {
+                                if(my_filters[`verification_${type}`].is_receive && !send_only) {
                                     //receive from verified only
                                     if(!verifiedPersons[type][token]) {
                                         exclude.receive[token] = true;
@@ -1419,8 +1449,10 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                                     exclude.send[token] = true;
                                 }
 
-                                if(token in sendVerification[type]) {
-                                    exclude.receive[token] = true;
+                                if(!send_only) {
+                                    if(token in sendVerification[type]) {
+                                        exclude.receive[token] = true;
+                                    }
                                 }
                             }
                         }
@@ -1458,11 +1490,14 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
 
                     for (let token in gendersLookup.byToken) {
                         if (token !== 'any') {
-                            pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(
-                                grid_token,
-                                `genders:${token}`,
-                                'send'
-                            ));
+                            if(!send_only) {
+                                pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(
+                                    grid_token,
+                                    `genders:${token}`,
+                                    'send'
+                                ));
+                            }
+
                             pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(
                                 grid_token,
                                 `genders:${token}`,
@@ -1506,11 +1541,13 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                                 personsExcludeReceive[gender_token] = {};
                             }
 
-                            // Send exclusions
-                            let sendExclusions = results[idx++];
+                            if(!send_only) {
+                                // Send exclusions
+                                let sendExclusions = results[idx++];
 
-                            for (let token of sendExclusions) {
-                                personsExcludeSend[gender_token][token] = true;
+                                for (let token of sendExclusions) {
+                                    personsExcludeSend[gender_token][token] = true;
+                                }
                             }
 
                             // Receive exclusions
@@ -1533,11 +1570,13 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                         }
                     }
 
-                    for(let gender_token in personsExcludeSend) {
-                        let tokens = personsExcludeSend[gender_token];
+                    if(!send_only) {
+                        for(let gender_token in personsExcludeSend) {
+                            let tokens = personsExcludeSend[gender_token];
 
-                        for(let token in tokens) {
-                            exclude.receive[token] = true;
+                            for(let token in tokens) {
+                                exclude.receive[token] = true;
+                            }
                         }
                     }
                 } else {
@@ -1558,9 +1597,11 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                             exclude.send[token] = true;
                         }
 
-                        // Exclude receive if person has excluded my gender or I have excluded the person's gender
-                        if (token in personsExcludeSend[myGender] || my_token in personsExcludeReceive[personGender]) {
-                            exclude.receive[token] = true;
+                        if(!send_only) {
+                            // Exclude receive if person has excluded my gender or I have excluded the person's gender
+                            if (token in personsExcludeSend[myGender] || my_token in personsExcludeReceive[personGender]) {
+                                exclude.receive[token] = true;
+                            }
                         }
                     }
                 }
@@ -1667,7 +1708,11 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
 
                     if(distance_km === null) {
                         exclude.send[person_token] = true;
-                        exclude.receive[person_token] = true;
+
+                        if(!send_only) {
+                            exclude.receive[person_token] = true;
+                        }
+
                         continue;
                     }
 
@@ -1697,7 +1742,7 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                         exclude.send[person_token] = true;
                     }
 
-                    if(should_exclude_receive) {
+                    if(should_exclude_receive && !send_only) {
                         exclude.receive[person_token] = true;
                     }
                 }
@@ -1784,7 +1829,7 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                         exclude.send[person_token] = true;
                     }
 
-                    if (should_exclude_receive) {
+                    if (should_exclude_receive && !send_only) {
                         exclude.receive[person_token] = true;
                     }
                 }
@@ -1868,7 +1913,10 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
 
                 for (let grid_token of neighbor_grid_tokens) {
                     // Persons who excluded match with new
-                    pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(grid_token, 'reviews:match_new', 'send'));
+                    if(!send_only) {
+                        pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(grid_token, 'reviews:match_new', 'send'));
+                    }
+
                     pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(grid_token, 'reviews:match_new', 'receive'));
 
                     for (let type of reviewTypes) {
@@ -1876,7 +1924,10 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                         pipeline.zRangeWithScores(cacheService.keys.persons_grid_sorted(grid_token, `reviews:${type}`), 0, -1);
 
                         // Exclude filter settings for each person
-                        pipeline.zRangeWithScores(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `reviews:${type}`, 'send'), 0, -1);
+                        if(!send_only) {
+                            pipeline.zRangeWithScores(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `reviews:${type}`, 'send'), 0, -1);
+                        }
+
                         pipeline.zRangeWithScores(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `reviews:${type}`, 'receive'), 0, -1);
                     }
                 }
@@ -1887,12 +1938,15 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                 
                 // Process match new preferences
                 for (let grid_token of neighbor_grid_tokens) {
-                    let exclude_send_new = results[idx++];
-                    let exclude_receive_new = results[idx++];
+                    if(!send_only) {
+                        let exclude_send_new = results[idx++];
 
-                    for (let token of exclude_send_new) {
-                        exclude_match_new.send[token] = true;
+                        for (let token of exclude_send_new) {
+                            exclude_match_new.send[token] = true;
+                        }
                     }
+
+                    let exclude_receive_new = results[idx++];
 
                     for (let token of exclude_receive_new) {
                         exclude_match_new.receive[token] = true;
@@ -1912,17 +1966,19 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                             persons_ratings[person_token][type] = person.score;
                         }
 
-                        // Get send settings
-                        let exclude_send = results[idx++];
-                        
-                        for (let person of exclude_send) {
-                            let person_token = person.value;
-                            
-                            if (!exclude_settings.send[person_token]) {
-                                exclude_settings.send[person_token] = {};
-                            }
+                        if(!send_only) {
+                            // Get send settings
+                            let exclude_send = results[idx++];
 
-                            exclude_settings.send[person_token][type] = person.score;
+                            for (let person of exclude_send) {
+                                let person_token = person.value;
+
+                                if (!exclude_settings.send[person_token]) {
+                                    exclude_settings.send[person_token] = {};
+                                }
+
+                                exclude_settings.send[person_token][type] = person.score;
+                            }
                         }
 
                         // Get receive settings
@@ -1954,7 +2010,7 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                                 auto_include.send = true;
                             }
 
-                            if(!me_exclude_receive_new && !(token in exclude_match_new.send)) {
+                            if(!me_exclude_receive_new && !(token in exclude_match_new.send) && !send_only) {
                                 auto_include.receive = true;
                             }
                         } else {
@@ -1962,7 +2018,7 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                                 auto_include.send = true;
                             }
 
-                            if(!(me_exclude_receive_new)) {
+                            if(!(me_exclude_receive_new) && !send_only) {
                                 auto_include.receive = true;
                             }
                         }
@@ -2001,7 +2057,7 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                         }
                     }
 
-                    if(!auto_include.receive) {
+                    if(!auto_include.receive && !send_only) {
                         for (let type of reviewTypes) {
                             let my_threshold = myExclusions.receive[type];
                             let their_threshold = exclude_settings.send[token]?.[type];
@@ -2030,7 +2086,7 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                         exclude.send[token] = true;
                     }
 
-                    if (exclude_receive) {
+                    if (exclude_receive && !send_only) {
                         exclude.receive[token] = true;
                     }
                 }
@@ -2123,11 +2179,13 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
 
                     // Get excluded send/receive states
                     for (let option of options) {
-                        pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(
-                            grid_token,
-                            `${sectionKey}:${option.token}`,
-                            'send'
-                        ));
+                        if(!send_only) {
+                            pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(
+                                grid_token,
+                                `${sectionKey}:${option.token}`,
+                                'send'
+                            ));
+                        }
 
                         pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(
                             grid_token,
@@ -2168,10 +2226,13 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                             excludeReceive[option.token] = {};
                         }
 
-                        // Send exclusions
-                        let sendExclusions = results[idx++];
-                        for (let token of sendExclusions) {
-                            excludeSend[option.token][token] = true;
+                        if(!send_only) {
+                            // Send exclusions
+                            let sendExclusions = results[idx++];
+
+                            for (let token of sendExclusions) {
+                                excludeSend[option.token][token] = true;
+                            }
                         }
 
                         // Receive exclusions
@@ -2190,9 +2251,11 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                         }
                     }
 
-                    for (let optionToken in excludeSend) {
-                        for (let token in excludeSend[optionToken]) {
-                            exclude.receive[token] = true;
+                    if(!send_only) {
+                        for (let optionToken in excludeSend) {
+                            for (let token in excludeSend[optionToken]) {
+                                exclude.receive[token] = true;
+                            }
                         }
                     }
 
@@ -2219,10 +2282,12 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                             }
                         }
 
-                        for (let k in excludeReceive) {
-                            if (my_token in excludeReceive[k]) {
-                                exclude.receive[token] = true;
-                                break;
+                        if(!send_only) {
+                            for (let k in excludeReceive) {
+                                if (my_token in excludeReceive[k]) {
+                                    exclude.receive[token] = true;
+                                    break;
+                                }
                             }
                         }
                     } else if (isMultiSelect) {
@@ -2240,9 +2305,11 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                                     shouldExcludeSend = false;
                                 }
 
-                                if (!(token in excludeSend[myOption]) &&
-                                    !(my_token in excludeReceive[theirOption])) {
-                                    shouldExcludeReceive = false;
+                                if(!send_only) {
+                                    if (!(token in excludeSend[myOption]) &&
+                                        !(my_token in excludeReceive[theirOption])) {
+                                        shouldExcludeReceive = false;
+                                    }
                                 }
                             }
                         }
@@ -2250,7 +2317,8 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                         if (shouldExcludeSend) {
                             exclude.send[token] = true;
                         }
-                        if (shouldExcludeReceive) {
+
+                        if (shouldExcludeReceive && !send_only) {
                             exclude.receive[token] = true;
                         }
                     } else {
@@ -2264,9 +2332,11 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
                             exclude.send[token] = true;
                         }
 
-                        if (token in excludeSend[myOption] ||
-                            my_token in excludeReceive[personOption]) {
-                            exclude.receive[token] = true;
+                        if(!send_only) {
+                            if (token in excludeSend[myOption] ||
+                                my_token in excludeReceive[personOption]) {
+                                exclude.receive[token] = true;
+                            }
                         }
                     }
                 }
@@ -2295,14 +2365,16 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
             }
 
             //if my online status is set to offline, exclude receiving from all
-            if(!me.is_online) {
+            if(!me.is_online && !send_only) {
                 exclude.receive[person_token] = true;
             } else {
-                //allow receiving notifications if not excluded
-                if(!(person_token in exclude.receive)) {
-                    not_excluded.receive[person_token] = true;
-                    organized.counts.receive++;
-                    included = true;
+                if(!send_only) {
+                    //allow receiving notifications if not excluded
+                    if(!(person_token in exclude.receive)) {
+                        not_excluded.receive[person_token] = true;
+                        organized.counts.receive++;
+                        included = true;
+                    }
                 }
             }
 
@@ -2348,7 +2420,10 @@ function getMatches(me, counts_only = false, future_location = null, activity = 
 
             //exclude sending/receiving to/from self
             exclude.send[my_token] = true;
-            exclude.receive[my_token] = true;
+
+            if(!send_only) {
+                exclude.receive[my_token] = true;
+            }
 
             let t = timeNow();
 
