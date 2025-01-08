@@ -2178,7 +2178,7 @@ function getMatches(me, params = {}) {
 
                     let is_available = isPersonAvailable({
                         timezone
-                    }, availability);
+                    }, availability, activity);
 
                     if(!is_available) {
                         exclude.send[person_token] = true;

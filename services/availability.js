@@ -1,6 +1,6 @@
 let cacheService = require('../services/cache');
 let dbService = require('../services/db');
-const { timeNow, isNumeric } = require('./shared');
+const { timeNow, isNumeric, getTimeZoneFromCoords } = require('./shared');
 const { getFilters, getPersonFilters, updateGridSets, getPersonFilterForKey } = require('./filters');
 const dayjs = require('dayjs');
 
@@ -300,8 +300,18 @@ function isPersonAvailable(person, filter, activity = null) {
     //todo compare against activity date/time and duration
     const currentUTC = dayjs().utc();
 
-    if (!person.timezone) {
-        return false;
+    let timezone = person.timezone;
+
+    if(activity?.place?.data) {
+        if(activity.place.data.timezone) {
+            timezone = activity.place.data.timezone;
+        } else {
+            timezone = getTimeZoneFromCoords(activity.place.data.location_lat, activity.place.data.location_lon);
+        }
+    }
+
+    if (!timezone) {
+        throw new Error('Timezone required');
     }
 
     // Convert current UTC time to person's timezone

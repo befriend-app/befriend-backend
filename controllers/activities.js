@@ -1,10 +1,12 @@
+const activitiesService = require('../services/activities');
 const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 const matchingService = require('../services/matching');
 
-const { timeNow, generateToken, formatObjectTypes } = require('../services/shared');
+const { timeNow, generateToken, formatObjectTypes, isNumeric } = require('../services/shared');
 const { getPerson } = require('../services/persons');
-const { findMatches, notifyMatches, prepareActivity } = require('../services/activities');
+
+const { getModes } = require('../services/modes');
 
 function createActivity(req, res) {
     return new Promise(async (resolve, reject) => {
@@ -31,7 +33,7 @@ function createActivity(req, res) {
 
             //throws rejection if invalid
             try {
-                await prepareActivity(person, activity);
+                await activitiesService.prepareActivity(person, activity);
             } catch (errs) {
                 res.json(
                     {
@@ -105,7 +107,7 @@ function createActivity(req, res) {
             }
 
             try {
-                matches = await findMatches(person, activity);
+                matches = await activitiesService.findMatches(person, activity);
             } catch (e) {
                 console.error(e);
             }
@@ -113,7 +115,7 @@ function createActivity(req, res) {
             //todo: send notifications to matches
             if (matches && matches.length) {
                 try {
-                    await notifyMatches(person, activity, matches);
+                    await activitiesService.notifyMatches(person, activity, matches);
                 } catch (e) {
                     console.error(e);
                     res.json(
@@ -154,7 +156,58 @@ function getMatches(req, res) {
 
             let activity = formatObjectTypes(req.query.activity);
 
-            //need location
+            if(!activity || typeof activity !== 'object') {
+                res.json({
+                    message: 'Invalid mode',
+                }, 400);
+
+                return resolve();
+            }
+
+            //validate
+
+            //modes
+            let modes = await getModes();
+            let mode = modes?.byToken[activity.person.mode];
+
+            if(!mode) {
+                res.json({
+                    message: 'Invalid mode',
+                }, 400);
+
+                return resolve();
+            }
+
+            //duration
+            if (!activity.duration || !activitiesService.durations.options.includes(activity.duration)) {
+                res.json({
+                    message: 'Invalid duration',
+                }, 400);
+
+                return resolve();
+            }
+
+            //place
+            if(!activity.place?.id) {
+                res.json({
+                    message: 'Invalid place',
+                }, 400);
+
+                return resolve();
+            }
+
+            let when_option = activity.when ? activitiesService.when.options[activity.when.id] : null;
+
+            if(!when_option) {
+                res.json({
+                    message: 'Invalid when',
+                }, 400);
+
+                return resolve();
+            }
+
+            activity.when = when_option;
+
             let matches = await matchingService.getMatches(person, {
                 activity: activity,
                 send_only: true,
