@@ -1,6 +1,7 @@
 let express = require('express');
 let router = express.Router();
 let apiController = require('../controllers/api');
+let activitiesController = require('../controllers/activities');
 let filtersController = require('../controllers/filters');
 let personsController = require('../controllers/persons');
 
@@ -508,10 +509,22 @@ router.put('/me/sections/items', function (req, res, next) {
     });
 });
 
+router.get('/activities/matches', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await activitiesController.getMatches(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
 router.post('/activities', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
-            await personsController.createActivity(req, res);
+            await activitiesController.createActivity(req, res);
         } catch (err) {
             console.log(err);
         }
