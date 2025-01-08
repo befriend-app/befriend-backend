@@ -1,9 +1,11 @@
 const cacheService = require('../services/cache');
 const dbService = require('../services/db');
+const matchingService = require('../services/matching');
 const notificationService = require('../services/notifications');
 
 const { getOptionDateTime, isNumeric } = require('./shared');
 const { getModes } = require('./modes');
+const { getActivityPlace } = require('./places');
 
 module.exports = {
     types: null,
@@ -298,24 +300,11 @@ module.exports = {
             } else {
                 let place;
 
-                if (activity.place.is_address) {
-                    try {
-                        place = await cacheService.getObj(
-                            cacheService.keys.address_geo(activity.place.id),
-                        );
-                    } catch (e) {
-                        console.error(e);
-                        errors.push('Place address error');
-                    }
-                } else {
-                    try {
-                        place = await cacheService.getObj(
-                            cacheService.keys.place_fsq(activity.place.id),
-                        );
-                    } catch (e) {
-                        console.error(e);
-                        errors.push('Place data error');
-                    }
+                try {
+                    place = await getActivityPlace(activity);
+                } catch (e) {
+                    console.error(e);
+                    errors.push('Place address error');
                 }
 
                 if (!place) {
@@ -427,13 +416,12 @@ module.exports = {
             }
 
             try {
-                let conn = await dbService.conn();
-
                 let time = activity.when.data;
 
                 let overlaps = await module.exports.doesActivityOverlap(person.person_token, time);
 
-                if (overlaps) {
+                //todo remove
+                if (0 && overlaps) {
                     return reject(['Activity time overlaps with current activity'])
                 }
             } catch (e) {
@@ -517,9 +505,9 @@ module.exports = {
     findMatches: function (person, activity) {
         return new Promise(async (resolve, reject) => {
             try {
-                let conn = await dbService.conn();
-
-                let matches = await conn('persons').where('id', '<>', person.id).limit(2);
+                let matches = await matchingService.getMatches(person, {
+                    activity
+                });
 
                 resolve(matches);
             } catch (e) {

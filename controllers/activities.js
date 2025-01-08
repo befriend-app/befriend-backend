@@ -2,7 +2,7 @@ const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 const matchingService = require('../services/matching');
 
-const { timeNow, generateToken } = require('../services/shared');
+const { timeNow, generateToken, formatObjectTypes } = require('../services/shared');
 const { getPerson } = require('../services/persons');
 const { findMatches, notifyMatches, prepareActivity } = require('../services/activities');
 
@@ -152,8 +152,11 @@ function getMatches(req, res) {
         try {
             let person = await getPerson(req.query.person_token);
 
+            let activity = formatObjectTypes(req.query.activity);
+
             //need location
             let matches = await matchingService.getMatches(person, {
+                activity: activity,
                 send_only: true,
                 counts_only: true
             });

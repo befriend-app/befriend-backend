@@ -21,12 +21,13 @@ const { getReligions } = require('./religion');
 const { isPersonAvailable } = require('./availability');
 const { minAge, maxAge } = require('./persons');
 const { token } = require('morgan');
+const { getActivityPlace } = require('./places');
 
 const DEFAULT_DISTANCE_MILES = 20;
 const MAX_PERSONS_PROCESS = 1000;
 
 function getMatches(me, params = {}) {
-    let {activity, location, send_only, counts_only} = params;
+    let {activity, send_only, counts_only} = params;
 
     let my_token, my_filters;
     let am_online = me?.is_online;
@@ -1057,7 +1058,28 @@ function getMatches(me, params = {}) {
                     return reject('Grid token required');
                 }
 
-                neighbor_grid_tokens.push(my_grid_token);
+                // choose location for grid tokens based on if we have a location provided
+
+                // default to user's current location
+                let location = {
+                    lat: me.location_lat,
+                    lon: me.location_lon
+                }
+
+                if(activity?.place) {
+                    // use activity place lat/lon
+                    if(activity.place?.data?.location_lat) {
+                        location.lat = activity.place.data.location_lat;
+                        location.lon = activity.place.data.location_lon;
+                    } else {
+                        let place = await getActivityPlace(activity);
+
+                        activity.place.data = place;
+
+                        location.lat = place.location_lat;
+                        location.lon = place.location_lon;
+                    }
+                }
 
                 let max_distance = DEFAULT_DISTANCE_MILES;
 
@@ -1073,14 +1095,12 @@ function getMatches(me, params = {}) {
 
                 max_distance *= kms_per_mile;
 
-                let grids = await gridService.findNearby(me.location_lat, me.location_lon, max_distance);
+                let grids = await gridService.findNearby(location.lat, location.lon, max_distance);
 
                 for(let grid of grids) {
                     gridsLookup.byId[grid.id] = grid;
 
-                    if (!neighbor_grid_tokens.includes(grid.token)) {
-                        neighbor_grid_tokens.push(grid.token);
-                    }
+                    neighbor_grid_tokens.push(grid.token);
                 }
 
                 resolve();
@@ -1617,13 +1637,33 @@ function getMatches(me, params = {}) {
     function filterDistance() {
         return new Promise(async (resolve, reject) => {
             try {
-                let my_location = me.location;
+                //default to current location
+                let my_location = {
+                    lat: me.location_lat,
+                    lon: me.location_lon
+                }
+
+                //activity place location
+                if(activity?.place?.data?.location_lat) {
+                    my_location.lat = activity.place.data.location_lat;
+                    my_location.lon = activity.place.data.location_lon;
+                }
+
                 let my_grid = me.grid;
                 let filter = my_filters.distance;
 
-                let me_exclude_send = filter?.is_active && filter?.is_send;
-                let me_exclude_receive = filter?.is_active && filter?.is_receive;
-                let my_max_distance = filter?.filter_value || DEFAULT_DISTANCE_MILES;
+                let my_exclude_send_distance = DEFAULT_DISTANCE_MILES;
+                let my_exclude_receive_distance = DEFAULT_DISTANCE_MILES;
+
+                if(filter?.is_active && filter.filter_value) {
+                    if(filter.is_send) {
+                        my_exclude_send_distance = filter.filter_value;
+                    }
+
+                    if(filter.is_receive) {
+                        my_exclude_receive_distance = filter.filter_value;
+                    }
+                }
 
                 let pipeline = cacheService.startPipeline();
 
@@ -1704,7 +1744,7 @@ function getMatches(me, params = {}) {
                         }
                     }
 
-                    let compare_distance = distance_km * kms_per_mile;
+                    let compare_distance = distance_km / kms_per_mile;
 
                     if(distance_km === null) {
                         exclude.send[person_token] = true;
@@ -1717,25 +1757,34 @@ function getMatches(me, params = {}) {
                     }
 
                     // Check if I should exclude sending/receiving to/from them
-                    if(me_exclude_send && compare_distance > my_max_distance) {
+                    if(compare_distance > my_exclude_send_distance) {
                         should_exclude_send = true;
                     }
 
-                    if(me_exclude_receive && compare_distance > my_max_distance) {
+                    if(compare_distance > my_exclude_receive_distance) {
                         should_exclude_receive = true;
                     }
 
                     // Check their distance preferences
-                    if(their_distance_filter?.is_active) {
-                        let their_max_distance = their_distance_filter.filter_value || DEFAULT_DISTANCE_MILES;
+                    let their_exclude_send_distance = DEFAULT_DISTANCE_MILES;
+                    let their_exclude_receive_distance = DEFAULT_DISTANCE_MILES;
 
-                        if(their_distance_filter.is_send && compare_distance > their_max_distance) {
-                            should_exclude_receive = true;
+                    if(their_distance_filter?.is_active && filter.filter_value) {
+                        if(their_distance_filter.is_send) {
+                            their_exclude_send_distance = filter.filter_value;
                         }
 
-                        if(their_distance_filter.is_receive && compare_distance > their_max_distance) {
-                            should_exclude_send = true;
+                        if(their_distance_filter.is_receive) {
+                            their_exclude_receive_distance = filter.filter_value;
                         }
+                    }
+
+                    if(compare_distance > their_exclude_send_distance) {
+                        should_exclude_receive = true;
+                    }
+
+                    if(compare_distance > their_exclude_receive_distance) {
+                        should_exclude_send = true;
                     }
 
                     if(should_exclude_send) {
@@ -2356,6 +2405,10 @@ function getMatches(me, params = {}) {
         }
 
         for(let person_token in persons_not_excluded_after_stage_1) {
+            if(person_token === my_token) {
+                continue;
+            }
+
             let included = false;
 
             if(!(person_token in exclude.send)) {
@@ -2399,11 +2452,6 @@ function getMatches(me, params = {}) {
             } else {
                 organized.counts.excluded++;
             }
-        }
-
-        //decrease exclude by one to not include self in count
-        if(my_token in exclude.send) {
-            organized.counts.excluded--;
         }
     }
 

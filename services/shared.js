@@ -303,6 +303,54 @@ function formatNumberLength(num, length) {
     return r;
 }
 
+function formatObjectTypes(obj) {
+    function convertValue(value) {
+        // Handle non-strings
+        if (typeof value !== 'string') {
+            return value;
+        }
+
+        // Handle empty strings
+        if (value.trim() === '') {
+            return value;
+        }
+
+        // Handle boolean values
+        if (value.toLowerCase() === 'true') {
+            return true;
+        }
+
+        if (value.toLowerCase() === 'false') {
+            return false;
+        }
+
+        // Handle numeric values
+        if (/^-?\d*\.?\d+$/.test(value)) {
+            const num = Number(value);
+            return Number.isFinite(num) ? num : value;
+        }
+
+        return value;
+    }
+
+    if (Array.isArray(obj)) {
+        return obj.map(item => formatObjectTypes(item));
+    }
+
+    // Handle null or non-objects
+    if (obj === null || typeof obj !== 'object') {
+        return convertValue(obj);
+    }
+
+    // Process object properties
+    const result = {};
+
+    for (const [key, value] of Object.entries(obj)) {
+        result[key] = formatObjectTypes(value);
+    }
+    return result;
+}
+
 function generateToken(length) {
     if (!length) {
         length = 16;
@@ -1198,6 +1246,7 @@ module.exports = {
     deleteFile: deleteFile,
     downloadURL: downloadURL,
     formatNumberLength: formatNumberLength,
+    formatObjectTypes: formatObjectTypes,
     generateToken: generateToken,
     getBicyclingTime: getBicyclingTime,
     getCityState: getCityState,

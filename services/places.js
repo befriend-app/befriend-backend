@@ -1169,4 +1169,32 @@ module.exports = {
             }
         });
     },
+    getActivityPlace: function (activity) {
+        return new Promise(async (resolve, reject) => {
+            if(!activity?.place?.id) {
+                return resolve("No place id");
+            }
+
+            let place;
+
+            try {
+                if (activity.place?.is_address) {
+                    place = await cacheService.getObj(
+                        cacheService.keys.address_geo(activity.place.id),
+                    );
+                } else {
+                    place = await cacheService.getObj(
+                        cacheService.keys.place_fsq(activity.place.id),
+                    );
+                }
+
+            } catch (e) {
+                console.error(e);
+                return reject();
+            }
+
+
+            resolve(place);
+        });
+    }
 };
