@@ -56,7 +56,6 @@ const keyFunctions = {
     session: (session) => `session:api:${session}`,
     exchange_keys: (token) => `networks:keys:exchange:${token}`,
 
-    activity: (token) => `activities:${token}`,
     activity_type: (token) => `activity_types:${token}`,
     activity_type_venue_categories: (token) => `activity_types:venue_categories:${token}`,
 
@@ -73,6 +72,7 @@ const keyFunctions = {
 
     person: (tokenOrEmail = '') => `persons:${tokenOrEmail.toLowerCase()}`,
     person_login_tokens: (person_token = '') => `persons:${person_token.toLowerCase()}:login_tokens`,
+    persons_activities: (person_token) => `persons:activities:${person_token}`,
     person_filters: (person_token) => `persons:filters:${person_token}`,
     person_sections: (person_token) => `persons:me:sections:${person_token}`,
     persons_grid_set: (gridToken, key) => `persons:grid:${gridToken}:set:${key}`,

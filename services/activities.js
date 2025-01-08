@@ -2,7 +2,7 @@ const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 const notificationService = require('../services/notifications');
 
-const { getOptionDateTime } = require('./shared');
+const { getOptionDateTime, isNumeric } = require('./shared');
 const { getModes } = require('./modes');
 
 module.exports = {
@@ -348,7 +348,7 @@ module.exports = {
                         let travel_time = travel.modes[activity.travel.mode];
 
                         if (
-                            travel_time.total >
+                            !when_option || travel_time.total >
                             when_option.in_mins + module.exports.thresholds.startTimeTravelTime
                         ) {
                             errors.push('Update your location or activity time');
@@ -368,7 +368,7 @@ module.exports = {
             ) {
                 errors.push('Invalid activity start time');
             } else if (!duration_valid) {
-                //do nothing
+                //do nothing, handled above
             } else {
                 let date;
 
@@ -415,7 +415,7 @@ module.exports = {
             }
 
             //number_persons
-            if (!activity.friends || !activity.friends.qty || activity.friends.qty < 1) {
+            if (!activity.friends || !isNumeric(activity.friends?.qty) ||  activity.friends.qty < 1) {
                 errors.push('Friends qty required');
             } else if (activity.friends.qty > module.exports.friends.max) {
                 errors.push(`Max friends: ${module.exports.friends.max}`);
@@ -431,39 +431,10 @@ module.exports = {
 
                 let time = activity.when.data;
 
-                const overlapping = await conn('activities')
-                    .where('person_id', person.id)
-                    .where('is_cancelled', false)
-                    .where(function () {
-                        this.where(function () {
-                            // New activity starts during an existing activity
-                            this.where('activity_start', '<=', time.start).where(
-                                'activity_end',
-                                '>',
-                                time.start,
-                            );
-                        })
-                        .orWhere(function () {
-                            // New activity ends during an existing activity
-                            this.where('activity_start', '<', time.end).where(
-                                'activity_end',
-                                '>=',
-                                time.end,
-                            );
-                        })
-                        .orWhere(function () {
-                            // New activity completely contains an existing activity
-                            this.where('activity_start', '>=', time.start).where(
-                                'activity_end',
-                                '<=',
-                                time.end,
-                            );
-                        });
-                    });
+                let overlaps = await module.exports.doesActivityOverlap(person.person_token, time);
 
-                if (overlapping.length) {
-                    //todo
-                    // return reject(['New activity would overlap with existing activity'])
+                if (overlaps) {
+                    return reject(['Activity time overlaps with current activity'])
                 }
             } catch (e) {
                 console.error(e);
@@ -471,6 +442,49 @@ module.exports = {
             }
 
             return resolve(true);
+        });
+    },
+    doesActivityOverlap: function(person_token, time) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let cache_key = cacheService.keys.persons_activities(person_token);
+
+                let data = await cacheService.hGetAllObj(cache_key);
+
+                if(!data) {
+                    return resolve(false);
+                }
+
+                let overlaps = false;
+
+                for(let k in data) {
+                    let activity = data[k];
+
+                    if(activity.is_cancelled) {
+                        continue;
+                    }
+
+                    if(activity.activity_start <= time.start && activity.activity_end > time.start) {
+                        overlaps = true;
+                        break;
+                    }
+
+                    if(activity.activity_start < time.end && activity.activity_end >= time.end) {
+                        overlaps = true;
+                        break;
+                    }
+
+                    if(activity.activity_start >= time.start && activity.activity_end <= time.end) {
+                        overlaps = true;
+                        break;
+                    }
+                }
+
+                resolve(overlaps);
+            } catch(e) {
+                console.error(e);
+                return reject(e);
+            }
         });
     },
     getDefaultActivity: function () {
@@ -502,7 +516,6 @@ module.exports = {
     },
     findMatches: function (person, activity) {
         return new Promise(async (resolve, reject) => {
-            //tmp
             try {
                 let conn = await dbService.conn();
 

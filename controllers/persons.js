@@ -568,10 +568,10 @@ module.exports = {
                 insert_activity.id = id;
 
                 //save to cache
-                let cache_key = cacheService.keys.activity(activity_token);
+                let cache_key = cacheService.keys.persons_activities(person_token);
 
                 try {
-                    await cacheService.setCache(cache_key, insert_activity);
+                    await cacheService.hSet(cache_key, activity_token, insert_activity);
                 } catch (e) {
                     console.error(e);
                 }
