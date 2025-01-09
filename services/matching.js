@@ -109,171 +109,28 @@ function getMatches(me, params = {}) {
                     person_tokens: timeNow() - t
                 });
 
-                t = timeNow();
-
                 await filterOnlineStatus();
-
-                console.log({
-                    after_online_excluded: {
-                        send: Object.keys(exclude.send).length,
-                        receive: Object.keys(exclude.receive).length,
-                    }
-                });
-
-                console.log({
-                    online: timeNow() - t
-                });
-
-                t = timeNow();
 
                 await filterNetworks();
 
-                console.log({
-                    after_networks_excluded: {
-                        send: Object.keys(exclude.send).length,
-                        receive: Object.keys(exclude.receive).length,
-                    }
-                });
-
-                console.log({
-                    networks: timeNow() - t
-                });
-
-                t = timeNow();
-
                 await filterModes();
-
-                console.log({
-                    after_modes_excluded: {
-                        send: Object.keys(exclude.send).length,
-                        receive: Object.keys(exclude.receive).length,
-                    }
-                });
-
-                console.log({
-                    modes: timeNow() - t
-                });
-
-                t = timeNow();
 
                 await filterVerifications();
 
-                console.log({
-                    after_verifications_excluded: {
-                        send: Object.keys(exclude.send).length,
-                        receive: Object.keys(exclude.receive).length,
-                    }
-                });
-
-                console.log({
-                    verifications: timeNow() - t
-                });
-
-                t = timeNow();
-
                 await filterGenders();
-
-                console.log({
-                    after_genders_excluded: {
-                        send: Object.keys(exclude.send).length,
-                        receive: Object.keys(exclude.receive).length,
-                    }
-                });
-
-                console.log({
-                    genders: timeNow() - t
-                });
-
-                t = timeNow();
 
                 await filterSection('life_stages', getLifeStages, true);
 
-                console.log({
-                    after_life_excluded: {
-                        send: Object.keys(exclude.send).length,
-                        receive: Object.keys(exclude.receive).length,
-                    }
-                });
-
-                console.log({
-                    life: timeNow() - t
-                });
-
-                t = timeNow();
-
                 await filterSection('relationships', getRelationshipStatus, true);
-
-                console.log({
-                    after_relationships_excluded: {
-                        send: Object.keys(exclude.send).length,
-                        receive: Object.keys(exclude.receive).length,
-                    }
-                });
-
-                console.log({
-                    relationships: timeNow() - t
-                });
-
-                t = timeNow();
 
                 await filterSection('politics', getPolitics, false);
 
-                console.log({
-                    after_politics_excluded: {
-                        send: Object.keys(exclude.send).length,
-                        receive: Object.keys(exclude.receive).length,
-                    }
-                });
-
-                console.log({
-                    politics: timeNow() - t
-                });
-
-                t = timeNow();
-
                 await filterSection('religion', getReligions, true);
-
-                console.log({
-                    after_religions_excluded: {
-                        send: Object.keys(exclude.send).length,
-                        receive: Object.keys(exclude.receive).length,
-                    }
-                });
-
-                console.log({
-                    religions: timeNow() - t
-                });
-
-                t = timeNow();
 
                 await filterSection('drinking', getDrinking, false);
 
-                console.log({
-                    drinking: timeNow() - t
-                });
-
-                console.log({
-                    after_drinking_excluded: {
-                        send: Object.keys(exclude.send).length,
-                        receive: Object.keys(exclude.receive).length,
-                    }
-                });
-
-                t = timeNow();
-
                 await filterSection('smoking', getSmoking, false);
 
-                console.log({
-                    smoking: timeNow() - t
-                });
-
-                console.log({
-                    after_smoking_excluded: {
-                        send: Object.keys(exclude.send).length,
-                        receive: Object.keys(exclude.receive).length,
-                    }
-                });    
-                
                 return resolve();
             } catch(e) {
                 console.error(e);
@@ -317,59 +174,11 @@ function getMatches(me, params = {}) {
 
                 await filterDistance();
 
-                console.log({
-                    after_filter_distance_excluded: {
-                        send: Object.keys(exclude.send).length,
-                        receive: Object.keys(exclude.receive).length,
-                    }
-                });
-
-                console.log({
-                    filter_distance: timeNow() - t
-                });
-
-                t = timeNow();
-
                 await filterAges();
-
-                console.log({
-                    after_filter_ages_excluded: {
-                        send: Object.keys(exclude.send).length,
-                        receive: Object.keys(exclude.receive).length,
-                    }
-                });
-
-                t = timeNow();
 
                 await filterReviews();
 
-                console.log({
-                    after_filter_reviews_excluded: {
-                        send: Object.keys(exclude.send).length,
-                        receive: Object.keys(exclude.receive).length,
-                    }
-                });
-
-                console.log({
-                    filter_reviews: timeNow() - t
-                });
-
-                t = timeNow();
-
                 await filterPersonsAvailability();
-
-                console.log({
-                    after_filter_availability_excluded: {
-                        send: Object.keys(exclude.send).length,
-                        receive: Object.keys(exclude.receive).length,
-                    }
-                });
-
-                console.log({
-                    filter_availability: timeNow() - t
-                });
-
-                t = timeNow();
             } catch(e) {
                 console.error(e);
             }
@@ -610,6 +419,13 @@ function getMatches(me, params = {}) {
                     }
                 }
 
+                console.log({
+                    after_online_excluded: {
+                        send: Object.keys(exclude.send).length,
+                        receive: Object.keys(exclude.receive).length,
+                    }
+                });
+
                 resolve();
             } catch (e) {
                 console.error(e);
@@ -693,6 +509,13 @@ function getMatches(me, params = {}) {
                         exclude.send[token] = true;
                     }
                 }
+
+                console.log({
+                    after_networks_excluded: {
+                        send: Object.keys(exclude.send).length,
+                        receive: Object.keys(exclude.receive).length,
+                    }
+                });
 
                 resolve();
             } catch (e) {
@@ -819,6 +642,13 @@ function getMatches(me, params = {}) {
                     }
                 }
 
+                console.log({
+                    after_modes_excluded: {
+                        send: Object.keys(exclude.send).length,
+                        receive: Object.keys(exclude.receive).length,
+                    }
+                });
+
                 resolve();
             } catch (e) {
                 console.error('Error in filterModes:', e);
@@ -928,6 +758,13 @@ function getMatches(me, params = {}) {
                         }
                     }
                 }
+
+                console.log({
+                    after_verifications_excluded: {
+                        send: Object.keys(exclude.send).length,
+                        receive: Object.keys(exclude.receive).length,
+                    }
+                });
 
                 resolve();
             } catch (e) {
@@ -1075,6 +912,13 @@ function getMatches(me, params = {}) {
                         }
                     }
                 }
+
+                console.log({
+                    after_genders_excluded: {
+                        send: Object.keys(exclude.send).length,
+                        receive: Object.keys(exclude.receive).length,
+                    }
+                });
 
                 resolve();
             } catch (e) {
@@ -1246,6 +1090,13 @@ function getMatches(me, params = {}) {
                     }
                 }
 
+                console.log({
+                    after_filter_distance_excluded: {
+                        send: Object.keys(exclude.send).length,
+                        receive: Object.keys(exclude.receive).length,
+                    }
+                });
+
                 resolve();
             } catch(e) {
                 console.error(e);
@@ -1332,6 +1183,13 @@ function getMatches(me, params = {}) {
                         exclude.receive[person_token] = true;
                     }
                 }
+
+                console.log({
+                    after_filter_ages_excluded: {
+                        send: Object.keys(exclude.send).length,
+                        receive: Object.keys(exclude.receive).length,
+                    }
+                });
 
                 resolve();
             } catch (e) {
@@ -1590,6 +1448,13 @@ function getMatches(me, params = {}) {
                     }
                 }
 
+                console.log({
+                    after_filter_reviews_excluded: {
+                        send: Object.keys(exclude.send).length,
+                        receive: Object.keys(exclude.receive).length,
+                    }
+                });
+
                 resolve();
             } catch (e) {
                 console.error('Error in filterReviews:', e);
@@ -1634,6 +1499,13 @@ function getMatches(me, params = {}) {
                         exclude.send[person_token] = true;
                     }
                 }
+
+                console.log({
+                    after_filter_availability_excluded: {
+                        send: Object.keys(exclude.send).length,
+                        receive: Object.keys(exclude.receive).length,
+                    }
+                });
 
                 resolve();
             } catch (error) {
@@ -1736,6 +1608,7 @@ function getMatches(me, params = {}) {
 
                         // Receive exclusions
                         let receiveExclusions = results[idx++];
+
                         for (let token of receiveExclusions) {
                             excludeReceive[option.token][token] = true;
                         }
@@ -1757,6 +1630,13 @@ function getMatches(me, params = {}) {
                             }
                         }
                     }
+
+                    console.log({
+                        [`after_${sectionKey}_excluded`]: {
+                            send: Object.keys(exclude.send).length,
+                            receive: Object.keys(exclude.receive).length,
+                        }
+                    });
 
                     return resolve();
                 }
@@ -1794,7 +1674,7 @@ function getMatches(me, params = {}) {
                         let shouldExcludeSend = true;
                         let shouldExcludeReceive = true;
 
-                        // For each of my options
+                        // For each of my selected options
                         for (let myOption of myOptionTokens) {
                             // For each of their options
                             for (let theirOption of personOptionTokens) {
@@ -1843,6 +1723,13 @@ function getMatches(me, params = {}) {
                 console.error(`Error in filterSection for ${sectionKey}:`, e);
                 return reject(e);
             }
+
+            console.log({
+                [`after_${sectionKey}_excluded`]: {
+                    send: Object.keys(exclude.send).length,
+                    receive: Object.keys(exclude.receive).length,
+                }
+            });
 
             resolve();
         });
@@ -1992,10 +1879,6 @@ function getMatches(me, params = {}) {
             t = timeNow();
 
             organizeFinal();
-
-            console.log({
-                not_excluded: timeNow() - t
-            });
 
             let memory_end = process.memoryUsage().heapTotal / 1024 / 1024;
 

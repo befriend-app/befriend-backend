@@ -591,11 +591,31 @@ module.exports = {
         }
 
         function sendGroupNotifications(group, delay) {
+            let cache_key = cacheService.keys.persons_activities(person.person_token);
+
             setTimeout(async function() {
+                //check if activity has already been fulfilled
+                if(isActivityFulfilled) {
+                    return;
+                }
+
+                if(delay > 0) {
+                    let cache_data = (await cacheService.hGetItem(cache_key, 'persons')) || {};
+
+                    for(let k in cache_data) {
+                        let v = cache_data[k];
+                    }
+                }
+
                 let tokens = {
                     ios: [],
                     android: []
                 };
+
+                //1. send notifications
+                //2. add to db
+                //3. add to notifications cache
+
                 // if (tokens.ios.length) {
                 //     try {
                 //         let results = await notificationService.ios.sendBatch(tokens.ios, payload, true);

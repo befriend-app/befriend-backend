@@ -259,10 +259,10 @@ module.exports = {
             }
         });
     },
-    hGetItem: function (key, item_id) {
+    hGetItem: function (key, item_key) {
         return new Promise(async (resolve, reject) => {
             try {
-                let data = await module.exports.conn.hGet(key, item_id);
+                let data = await module.exports.conn.hGet(key, item_key);
 
                 if (typeof data === 'string') {
                     data = JSON.parse(data);

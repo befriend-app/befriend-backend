@@ -1008,6 +1008,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                 // Add person's section items to grid sets
                 for (let key in section_data) {
                     let item = section_data[key];
+
                     if (!item.deleted) {
                         keysAddSet.add(cacheService.keys.persons_grid_set(grid_token, `${sectionKey}:${item.token}`));
                     }
@@ -1022,6 +1023,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
 
                 // Check selected filters for importance
                 let filterItems = Object.values(filter.items);
+
                 for (let item of filterItems) {
                     if (item.is_active && !item.is_negative && !item.deleted) {
                         added_tokens.push(item.token);
