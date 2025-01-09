@@ -669,11 +669,11 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                 ];
 
                 let reviews_filters = {
-                    reviews: null,
-                    new: null,
+                    reviews: null, // top-level
+                    new: null, // new matches
                 };
 
-                for(let type of reviewTypes) {
+                for(let type of reviewTypes) { //review types
                     reviews_filters[type] = null;
                 }
 
@@ -739,7 +739,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
 
                 //exclude matching with new members
                 if(reviews_filters.reviews?.is_active) {
-                    if(!reviews_filters.new?.is_active) {
+                    if(reviews_filters.new && !reviews_filters.new.is_active) {
                         if(reviews_filters.new.is_send) {
                             keysAddSet.add(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `reviews:match_new`, 'send'));
                         }
