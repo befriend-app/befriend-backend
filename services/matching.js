@@ -76,6 +76,16 @@ function getMatches(me, params = {}) {
         super: 50
     };
 
+    function sortMatches() {
+        organized.matches.send.sort(function(a, b) {
+            if (b.matches.score !== a.matches.score) {
+                return b.matches.score - a.matches.score;
+            }
+
+            return b.matches.count - a.matches.count;
+        });
+    }
+
     function processStage1() {
         return new Promise(async (resolve, reject) => {
             try {
@@ -1259,6 +1269,7 @@ function getMatches(me, params = {}) {
                 // Get all modes, not just excluded ones
                 let modeTypes = Object.values((await getModes())?.byId);
                 let excluded_modes = await getPersonExcludedModes(me, my_filters);
+
                 let included_modes = {
                     send: [],
                     receive: []
@@ -2404,17 +2415,26 @@ function getMatches(me, params = {}) {
             receive: {}
         }
 
-        for(let person_token in persons_not_excluded_after_stage_1) {
-            if(person_token === my_token) {
-                continue;
-            }
+        delete persons_not_excluded_after_stage_1[my_token];
 
+        for(let person_token in persons_not_excluded_after_stage_1) {
             let included = false;
 
             if(!(person_token in exclude.send)) {
                 not_excluded.send[person_token] = true;
                 organized.counts.send++;
                 included = true;
+
+                //add to send matches if preparing notifications
+                if(!counts_only) {
+                    let personInterests = personsInterests[person_token];
+
+                    if(!personInterests) {
+                        console.error("Unexpectedly missing interests data for included send token");
+                    } else {
+                        organized.matches.send.push(personInterests);
+                    }
+                }
             }
 
             //if my online status is set to offline, exclude receiving from all
@@ -2553,6 +2573,8 @@ function getMatches(me, params = {}) {
             if(counts_only) {
                 return resolve(organized);
             }
+
+            sortMatches();
 
             resolve(organized);
         } catch (e) {

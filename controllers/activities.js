@@ -65,7 +65,6 @@ function createActivity(req, res) {
                 human_date: activity.when.data.human.datetime,
                 is_now: activity.when.data.is_now,
                 is_schedule: activity.when.data.is_schedule,
-
                 is_public: true, // Default unless specified otherwise
                 is_new_friends: !!(
                     activity.friends.type.is_new || activity.friends.type.is_both
@@ -73,7 +72,6 @@ function createActivity(req, res) {
                 is_existing_friends: !!(
                     activity.friends.type.is_existing || activity.friends.type.is_both
                 ),
-
                 location_lat: activity.place.data.location_lat,
                 location_lon: activity.place.data.location_lon,
                 location_name: activity.place.data.name,

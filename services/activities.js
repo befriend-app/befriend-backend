@@ -506,7 +506,8 @@ module.exports = {
         return new Promise(async (resolve, reject) => {
             try {
                 let matches = await matchingService.getMatches(person, {
-                    activity
+                    activity,
+                    send_only: true
                 });
 
                 resolve(matches);
