@@ -1868,11 +1868,17 @@ function getMatches(me, params = {}) {
                 if(!counts_only) {
                     let personInterests = personsInterests[person_token];
 
+                    personInterests.person_token = person_token;
+
                     if(!personInterests) {
                         console.error("Unexpectedly missing interests data for included send token");
                     } else {
                         organized.matches.send.push(personInterests);
                     }
+
+                    //delete un-needed data
+                    delete personInterests.sections;
+                    delete personInterests.filters;
                 }
             }
 

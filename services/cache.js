@@ -56,6 +56,7 @@ const keyFunctions = {
     session: (session) => `session:api:${session}`,
     exchange_keys: (token) => `networks:keys:exchange:${token}`,
 
+    activities_notifications: (activity_token) => `activities:${activity_token}:notifications`,
     activity_type: (token) => `activity_types:${token}`,
     activity_type_venue_categories: (token) => `activity_types:venue_categories:${token}`,
 

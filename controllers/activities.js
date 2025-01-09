@@ -110,30 +110,32 @@ function createActivity(req, res) {
                 console.error(e);
             }
 
-            //todo: send notifications to matches
             if (matches && matches.length) {
                 try {
                     await activitiesService.notifyMatches(person, activity, matches);
-                } catch (e) {
-                    console.error(e);
+
                     res.json(
                         {
-                            message: 'Error notifying matches',
+                            activity_token: activity_token,
                         },
-                        400,
+                        201
+                    );
+                } catch (e) {
+                    console.error(e);
+
+                    let error_message = e?.message ? e.message : 'Error notifying matches';
+
+                    res.json(
+                        {
+                            error: error_message,
+                        },
+                        400
                     );
                 }
-
-                res.json(
-                    {
-                        activity_token: activity_token,
-                    },
-                    201,
-                );
             } else {
                 res.json(
                     {
-                        message:
+                        error:
                             'No persons found. Please check your filters or try again later.',
                     },
                     400,

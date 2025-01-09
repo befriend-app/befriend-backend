@@ -6,6 +6,8 @@ const notificationService = require('../services/notifications');
 const { getOptionDateTime, isNumeric } = require('./shared');
 const { getModes } = require('./modes');
 const { getActivityPlace } = require('./places');
+const { getNetworkSelf } = require('./network');
+const { hGetAllObj } = require('./cache');
 
 module.exports = {
     types: null,
@@ -50,6 +52,34 @@ module.exports = {
             450: { id: 450, value: '7.5', unit: 'hrs', in_mins: 450 },
             480: { id: 480, value: '8', unit: 'hrs', in_mins: 480 },
         },
+    },
+    notifications: {
+        groups: {
+            group_1: {
+                size: 1,
+                delay: 0
+            },
+            group_2: {
+                size: 3,
+                delay: 5000,
+            },
+            group_3: {
+                size: 5,
+                delay: 10000
+            },
+            group_4: {
+                size: 10,
+                delay: 15000
+            },
+            group_5: {
+                size: 20,
+                delay: 30000
+            },
+            group_6: {
+                size: 40,
+                delay: 60000
+            }
+        }
     },
     getActivityTypes: function () {
         function createActivityObject(activity) {
@@ -510,7 +540,7 @@ module.exports = {
                     send_only: true
                 });
 
-                resolve(matches);
+                resolve(matches?.matches?.send || []);
             } catch (e) {
                 console.error(e);
                 return reject(e);
@@ -518,8 +548,10 @@ module.exports = {
         });
     },
     notifyMatches: function (person, activity, matches) {
-        return new Promise(async (resolve, reject) => {
-            //title, body, data
+        let conn, payload, network;
+        let isActivityFulfilled = false;
+
+        function getPayload() {
             let title_arr = [];
             let plus_str = '';
             let emoji_str = '';
@@ -548,18 +580,47 @@ module.exports = {
                 title_arr.push(`at ${time_str}`);
             }
 
-            let payload = {
+            return {
                 title: `${emoji_str}Invite: ${title_arr.join(' ')}`,
                 body: `Join ${person.first_name}${plus_str} ${place_str}`,
                 data: {
                     activity_token: activity.activity_token,
-                },
+                    network_token: network.network_token
+                }
             };
+        }
 
-            let tokens = {
-                ios: [],
-            };
+        function sendGroupNotifications(group, delay) {
+            setTimeout(async function() {
+                let tokens = {
+                    ios: [],
+                    android: []
+                };
+                // if (tokens.ios.length) {
+                //     try {
+                //         let results = await notificationService.ios.sendBatch(tokens.ios, payload, true);
+                //
+                //         console.log(results);
+                //     } catch (e) {
+                //         console.error(e);
+                //     }
+                // }
+            }, delay);
+        }
 
+        return new Promise(async (resolve, reject) => {
+            try {
+                conn = await dbService.conn();
+
+                network = await getNetworkSelf();
+
+                payload = getPayload();
+            } catch(e) {
+                console.error(e);
+                return reject(e);
+            }
+
+            //get devices for matches
             let device_pipeline = cacheService.startPipeline();
             let results = [];
             let idx = 0;
@@ -574,6 +635,16 @@ module.exports = {
                 console.error(e);
             }
 
+            let activity_notification_key = cacheService.keys.activities_notifications(activity.activity_token);
+
+            let prev_notifications_persons = {};
+
+            try {
+                 prev_notifications_persons = (await hGetAllObj(activity_notification_key)) || {};
+            } catch(e) {
+                console.error(e);
+            }
+
             for(let match of matches) {
                 try {
                     let personDevices = JSON.parse(results[idx++]);
@@ -582,22 +653,58 @@ module.exports = {
                         continue;
                     }
 
-                    let currentDevice = personDevices.find(device => device.is_current);
+                    let currentDevice = personDevices?.find(device => device.is_current);
 
-                    if (currentDevice && currentDevice.platform === 'ios') {
-                        tokens.ios.push(currentDevice.token);
+                    if (currentDevice) {
+                        match.device = {
+                            platform: currentDevice.platform,
+                            token: currentDevice.token,
+                        }
                     }
                 } catch(e) {
                     console.error(e);
                 }
             }
 
-            if (tokens.ios.length) {
-                try {
-                    await notificationService.ios.sendBatch(tokens.ios, payload, true);
-                } catch (e) {
-                    console.error(e);
+            //organize into groups
+            let filtered_matches = matches.filter(match =>
+                match.device?.platform &&
+                match.device?.token &&
+                !(match.person_token in prev_notifications_persons)
+            );
+
+            if(!filtered_matches.length) {
+                return reject("No persons available to notify")
+            }
+
+            let groups_organized = {};
+            let group_keys = Object.keys(module.exports.notifications.groups);
+            let persons_multiplier = Math.max(activity?.friends?.qty, 1);
+
+            let currentIndex = 0;
+
+            for(let i = 0; i < group_keys.length; i++ ) {
+                let group_key = group_keys[i];
+                let group_size = module.exports.notifications.groups[group_key].size;
+                let total_group_size = group_size * persons_multiplier;
+
+                groups_organized[group_key] = {
+                    persons: filtered_matches.slice(currentIndex, currentIndex + total_group_size)
                 }
+
+                currentIndex += total_group_size;
+
+                if (currentIndex >= filtered_matches.length) {
+                    break;
+                }
+            }
+
+            for(let group_key in groups_organized) {
+                let group_matches = groups_organized[group_key].persons;
+
+                let group_delay = module.exports.notifications.groups[group_key];
+
+                sendGroupNotifications(group_matches, group_delay);
             }
 
             resolve();

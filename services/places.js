@@ -825,6 +825,11 @@ module.exports = {
                         console.error(e);
                     }
 
+                    //todo remove
+                    if(!fsq_id) {
+                        debugger;
+                    }
+
                     let place_data = {
                         fsq_place_id: fsq_id,
                         name: data.name,
