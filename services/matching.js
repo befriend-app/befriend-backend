@@ -1,5 +1,3 @@
-const dayjs = require('dayjs');
-
 let cacheService = require('../services/cache');
 let dbService = require('../services/db');
 
@@ -8,7 +6,7 @@ let reviewService = require('../services/reviews');
 let sectionsData = require('../services/sections_data');
 
 const { getPersonFilters } = require('./filters');
-const { kms_per_mile, timeNow, shuffleFunc, isNumeric, calculateDistanceMeters } = require('./shared');
+const { kms_per_mile, timeNow, isNumeric, calculateDistanceMeters } = require('./shared');
 const { getNetworksForFilters } = require('./network');
 const { getModes, getPersonExcludedModes } = require('./modes');
 const { getGendersLookup } = require('./genders');

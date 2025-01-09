@@ -110,7 +110,7 @@ function createActivity(req, res) {
                 console.error(e);
             }
 
-            if (matches && matches.length) {
+            if (matches?.length) {
                 try {
                     await activitiesService.notifyMatches(person, activity, matches);
 
@@ -168,7 +168,7 @@ function getMatches(req, res) {
 
             //modes
             let modes = await getModes();
-            let mode = modes?.byToken[activity.person.mode];
+            let mode = modes?.byToken[activity.person?.mode];
 
             if(!mode) {
                 res.json({
