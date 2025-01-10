@@ -93,7 +93,10 @@ function createActivity(req, res) {
 
             id = id[0];
 
-            insert_activity.id = id;
+            activity.activity_id = id;
+
+            insert_activity.activity_id = id;
+            insert_activity.activity_token = activity_token;
 
             //save to cache
             let cache_key = cacheService.keys.persons_activities(person_token);
