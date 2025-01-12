@@ -16,6 +16,19 @@ const appModes = [
     },
 ];
 
+function getModeById(id) {
+    return new Promise(async (resolve, reject) => {
+        try {
+             let modes = await getModes();
+
+             resolve(modes.byId[id]);
+        } catch(e) {
+            console.error(e);
+            return reject(e);
+        }
+    });
+}
+
 function getModes() {
     return new Promise(async (resolve, reject) => {
         if (module.exports.modes.lookup) {
@@ -202,6 +215,7 @@ module.exports = {
         lookup: null,
     },
     kidAgeOptions: null,
+    getModeById,
     getModes,
     getKidAgeOptions,
     getPersonExcludedModes

@@ -2,6 +2,7 @@ const dbService = require('../services/db');
 const cacheService = require('../services/cache');
 
 module.exports = {
+    data: null,
     cache_key: 'genders',
     getGender: function (gender_id) {
         return new Promise(async (resolve, reject) => {
@@ -42,10 +43,16 @@ module.exports = {
     getAllGenders: function () {
         return new Promise(async (resolve, reject) => {
             try {
+                if(module.exports.data) {
+                    return resolve(module.exports.data);
+                }
+
                 //from cache first
                 let genders = await cacheService.getObj(module.exports.cache_key);
 
                 if (genders) {
+                    module.exports.data = genders;
+
                     return resolve(genders);
                 }
 
@@ -56,6 +63,8 @@ module.exports = {
 
                 //save to cache
                 await cacheService.setCache(module.exports.cache_key, genders);
+
+                module.exports.data = genders;
 
                 resolve(genders);
             } catch (e) {

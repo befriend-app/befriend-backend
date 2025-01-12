@@ -6,7 +6,10 @@ const matchingService = require('../services/matching');
 const { timeNow, generateToken, formatObjectTypes, isNumeric } = require('../services/shared');
 const { getPerson } = require('../services/persons');
 
-const { getModes } = require('../services/modes');
+const { getModes, getModeById } = require('../services/modes');
+const { personToPersonInterests } = require('../services/matching');
+const { getActivityType } = require('../services/activities');
+const { getGender } = require('../services/genders');
 
 function createActivity(req, res) {
     return new Promise(async (resolve, reject) => {
@@ -97,6 +100,7 @@ function createActivity(req, res) {
 
             insert_activity.activity_id = id;
             insert_activity.activity_token = activity_token;
+            insert_activity.activity_type_token = activity.activity.token;
 
             //save to cache
             let cache_key = cacheService.keys.persons_activities(person_token);
@@ -149,6 +153,96 @@ function createActivity(req, res) {
         } catch (e) {
             reject(e);
         }
+    });
+}
+
+function getActivity(req, res) {
+    return new Promise(async (resolve, reject) => {
+        let activity_token = req.params.activity_token;
+        let person_token = req.query.person_token;
+        let network_token = req.query.network_token;
+
+        try {
+            if(!activity_token || !network_token) {
+                res.json(
+                    {
+                        message: 'Activity and network token required',
+                    },
+                    400,
+                );
+
+                return resolve();
+            }
+
+            let me = await getPerson(person_token);
+
+            if (!me) {
+                res.json(
+                    {
+                        message: 'person token not found',
+                    },
+                    400,
+                );
+
+                return resolve();
+            }
+
+            //validate network token
+
+            //ensure person exists on activity invite
+            let notification = await cacheService.hGetItem(cacheService.keys.activities_notifications(activity_token), person_token);
+
+            if(!notification) {
+                res.json(
+                    {
+                        message: 'Activity does not include person',
+                    },
+                    400,
+                );
+
+                return resolve();
+            }
+
+            let cache_key = cacheService.keys.persons_activities(notification.person_from_token);
+
+            let activity = await cacheService.hGetItem(cache_key, activity_token);
+
+            if(!activity) {
+                res.json({
+                    error: 'Activity not found',
+                }, 400);
+
+                return resolve();
+            }
+
+            activity.activity_type = await getActivityType(activity.activity_type_token);
+            activity.mode = await getModeById(activity.mode_id);
+
+            let person_from = await getPerson(notification.person_from_token);
+            let gender = await getGender(person_from.gender_id);
+
+            let matching = await personToPersonInterests(me, person_from);
+
+            res.json({
+                activity,
+                matching,
+                person: {
+                    gender,
+                    first_name: person_from.first_name,
+                    image_url: person_from.image_url,
+                    age: person_from.age,
+                    reviews: person_from.reviews
+                }
+            });
+        } catch(e) {
+            console.error(e);
+
+            res.json({
+                error: 'Error getting activity',
+            }, 400);
+        }
+
+        resolve();
     });
 }
 
@@ -232,5 +326,6 @@ function getMatches(req, res) {
 
 module.exports = {
     createActivity,
+    getActivity,
     getMatches
 };

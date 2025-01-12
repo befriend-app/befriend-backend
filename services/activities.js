@@ -13,6 +13,7 @@ const { batchInsert } = require('./db');
 module.exports = {
     types: null,
     activityTypesMapping: null,
+    lookup: {},
     maxPerHour: 2,
     durations: {
         min: 10,
@@ -215,11 +216,16 @@ module.exports = {
     getActivityType: function (activity_type_token) {
         return new Promise(async (resolve, reject) => {
             try {
+                if(module.exports.lookup[activity_type_token]) {
+                    return resolve(module.exports.lookup[activity_type_token]);
+                }
+
                 let cache_key = cacheService.keys.activity_type(activity_type_token);
 
                 let cached_data = await cacheService.getObj(cache_key);
 
                 if (cached_data) {
+                    module.exports.lookup[activity_type_token] = cached_data;
                     return resolve(cached_data);
                 }
 
@@ -232,6 +238,8 @@ module.exports = {
                 if (!qry) {
                     return resolve(null);
                 }
+
+                module.exports.lookup[activity_type_token] = qry;
 
                 await cacheService.setCache(cache_key, qry);
 
@@ -405,9 +413,9 @@ module.exports = {
                     start: date.unix(),
                     end: date.add(activity.duration, 'minutes').unix(),
                     human: {
-                        time: date.tz(activity.travel.data.to.tz).format(`h:mm a`),
+                        time: date.tz(activity.travel?.data?.to.tz).format(`h:mm a`),
                         datetime: date
-                            .tz(activity.travel.data.to.tz)
+                            .tz(activity.travel?.data?.to.tz)
                             .format(`YYYY-MM-DD HH:mm:ssZ`),
                     },
                 };
@@ -552,7 +560,27 @@ module.exports = {
         let conn, payload, network;
         let isActivityFulfilled = false;
 
-        let _tmp_int = 0;
+        let _tmp_person_int = 0;
+        let _tmp_device_int = 0;
+
+        async function getTmpPersonToken() {
+            let conn = await dbService.conn();
+
+            let persons = await conn('persons')
+                .where('id', '>', 1)
+                .orderBy('id')
+                .limit(3);
+
+            let token = persons[_tmp_person_int].person_token;
+
+            _tmp_person_int++;
+
+            if(_tmp_person_int >= persons.length) {
+                _tmp_person_int = 0;
+            }
+
+            return token;
+        }
 
         async function getTmpDeviceToken() {
             let conn = await dbService.conn();
@@ -562,12 +590,12 @@ module.exports = {
                 .orderBy('person_id')
                 .limit(3);
 
-            let token = devices[_tmp_int].token;
+            let token = devices[_tmp_device_int].token;
 
-            _tmp_int++;
+            _tmp_device_int++;
 
-            if(_tmp_int >= devices.length) {
-                _tmp_int = 0;
+            if(_tmp_device_int >= devices.length) {
+                _tmp_device_int = 0;
             }
 
             return token;
@@ -717,10 +745,13 @@ module.exports = {
                                 insert.is_failed = true;
                             }
 
+                            let cache_data = structuredClone(insert);
+                            cache_data.person_from_token = person.person_token
+
                             pipeline.hSet(
                                 cache_key,
                                 to_person.person_token,
-                                JSON.stringify(insert)
+                                JSON.stringify(cache_data)
                             )
 
                             batch_insert.push(insert);
@@ -778,6 +809,9 @@ module.exports = {
             let idx = 0;
 
             for (let match of matches) {
+                //tmp person token - todo remove
+                match.person_token = await getTmpPersonToken();
+
                 pipeline.hmGet(cacheService.keys.person(match.person_token), ['id', 'network_id', 'devices']);
                 pipeline.hGet(cacheService.keys.person_filters(match.person_token), 'activity_types');
             }
@@ -811,7 +845,7 @@ module.exports = {
                         excluded_by_activity_type[match.person_token] = true;
                     }
 
-                    if (!personDevices || !personDevices.length) {
+                    if (!personDevices?.length) {
                         continue;
                     }
 
