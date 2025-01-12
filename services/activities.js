@@ -552,6 +552,27 @@ module.exports = {
         let conn, payload, network;
         let isActivityFulfilled = false;
 
+        let _tmp_int = 0;
+
+        async function getTmpDeviceToken() {
+            let conn = await dbService.conn();
+
+            let devices = await conn('persons_devices')
+                .where('id', '>', 1)
+                .orderBy('person_id')
+                .limit(3);
+
+            let token = devices[_tmp_int].token;
+
+            _tmp_int++;
+
+            if(_tmp_int >= devices.length) {
+                _tmp_int = 0;
+            }
+
+            return token;
+        }
+
         function getPayload() {
             let title_arr = [];
             let plus_str = '';
@@ -721,7 +742,25 @@ module.exports = {
             }, delay);
         }
 
+        function isActivityTypeExcluded(filter) {
+            if(!filter?.is_active) {
+                return false;
+            }
+
+            let filtered_activity = Object.values(filter.items || {})
+                .find(item => item.activity_type_id === activity.activity?.data?.id);
+
+            if(!filtered_activity) {
+                return false;
+            }
+
+            return filtered_activity.is_negative;
+        }
+
         return new Promise(async (resolve, reject) => {
+            let prev_notifications_persons = {};
+            let excluded_by_activity_type = {};
+
             try {
                 conn = await dbService.conn();
 
@@ -740,6 +779,7 @@ module.exports = {
 
             for (let match of matches) {
                 pipeline.hmGet(cacheService.keys.person(match.person_token), ['id', 'network_id', 'devices']);
+                pipeline.hGet(cacheService.keys.person_filters(match.person_token), 'activity_types');
             }
 
             try {
@@ -749,8 +789,6 @@ module.exports = {
             }
 
             let activity_notification_key = cacheService.keys.activities_notifications(activity.activity_token);
-
-            let prev_notifications_persons = {};
 
             try {
                  prev_notifications_persons = (await hGetAllObj(activity_notification_key)) || {};
@@ -764,6 +802,14 @@ module.exports = {
                     match.person_id = parseInt(person[0]);
                     match.network_id = parseInt(person[1]);
                     let personDevices = JSON.parse(person[2]);
+
+                    let activities_filter = JSON.parse(results[idx++]);
+
+                    let is_activity_excluded = isActivityTypeExcluded(activities_filter);
+
+                    if(is_activity_excluded) {
+                        excluded_by_activity_type[match.person_token] = true;
+                    }
 
                     if (!personDevices || !personDevices.length) {
                         continue;
@@ -786,18 +832,26 @@ module.exports = {
             let filtered_matches = [];
 
             for(let match of matches) {
-                if(match.person_token in prev_notifications_persons) {
+                if(
+                    match.person_token in prev_notifications_persons ||
+                    match.person_token in excluded_by_activity_type) {
                     continue;
                 }
 
                 if(match.network_id === network.id) {
                     if(match.device?.platform && match.device.token) {
+                        //tmp fixed devices - todo remove
+                        match.device.token = await getTmpDeviceToken();
+
                         filtered_matches.push(match);
                     }
                 } else {
                     filtered_matches.push(match);
                 }
             }
+
+            //tmp limit - todo remove
+            filtered_matches = filtered_matches.splice(0, 3);
 
             if(!filtered_matches.length) {
                 return reject("No persons available to notify")
