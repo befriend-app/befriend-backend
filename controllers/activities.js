@@ -10,6 +10,7 @@ const { getModes, getModeById } = require('../services/modes');
 const { personToPersonInterests } = require('../services/matching');
 const { getActivityType } = require('../services/activities');
 const { getGender } = require('../services/genders');
+const { getPlaceFSQ } = require('../services/places');
 
 function createActivity(req, res) {
     return new Promise(async (resolve, reject) => {
@@ -57,6 +58,7 @@ function createActivity(req, res) {
             let insert_activity = {
                 activity_token: activity_token,
                 activity_type_id: activity.activity.data.id,
+                fsq_place_id: activity.place?.id || null,
                 mode_id: activity.mode.id,
                 person_id: person.id,
                 persons_qty: activity.friends.qty,
@@ -215,6 +217,7 @@ function getActivity(req, res) {
                 return resolve();
             }
 
+            activity.place = await getPlaceFSQ(activity.fsq_place_id);
             activity.activity_type = await getActivityType(activity.activity_type_token);
             activity.mode = await getModeById(activity.mode_id);
 
@@ -228,6 +231,7 @@ function getActivity(req, res) {
                 matching,
                 person: {
                     gender,
+                    is_new: person_from.is_new,
                     first_name: person_from.first_name,
                     image_url: person_from.image_url,
                     age: person_from.age,
