@@ -231,8 +231,10 @@ function getMatches(me, params = {}) {
             try {
                 // Build my interests object
                 let my_pipeline = cacheService.startPipeline();
-                
-                for (let section of interests_sections) {
+
+                let sections = interests_sections.concat(schools_work_sections).concat(personal_sections);
+
+                for (let section of sections) {
                     myInterests.filters[section.token] = my_filters[section.token] || {};
                     my_pipeline.hGet(cacheService.keys.person_sections(my_token), section.token);
                 }
@@ -241,7 +243,7 @@ function getMatches(me, params = {}) {
                 
                 let my_idx = 0;
                 
-                for(let section of interests_sections) {
+                for(let section of sections) {
                     myInterests.sections[section.token] = JSON.parse(my_results[my_idx++]);
                 }
 
@@ -268,7 +270,7 @@ function getMatches(me, params = {}) {
                     let person_section_key = cacheService.keys.person_sections(person_token);
                     let person_filters_key = cacheService.keys.person_filters(person_token);
 
-                    for(let section of interests_sections) {
+                    for(let section of sections) {
                         pipeline.hGet(person_section_key, section.token);
                         pipeline.hGet(person_filters_key, section.token);
                     }
@@ -281,7 +283,7 @@ function getMatches(me, params = {}) {
                 let t = timeNow();
 
                 for(let person_token in personsInterests) {
-                    for(let section of interests_sections) {
+                    for(let section of sections) {
                         try {
                             personsInterests[person_token].sections[section.token] = JSON.parse(results[idx++]);
                             personsInterests[person_token].filters[section.token] = JSON.parse(results[idx++]);
@@ -290,7 +292,7 @@ function getMatches(me, params = {}) {
                         }
                     }
 
-                    organizePersonInterests(myInterests, personsInterests[person_token]);
+                    organizePersonInterests(sections, myInterests, personsInterests[person_token]);
                 }
 
                 calculateInterestScores();
@@ -1912,7 +1914,7 @@ function getMatches(me, params = {}) {
     });
 }
 
-function organizePersonInterests(myInterests, otherPersonInterests) {
+function organizePersonInterests(sections, myInterests, otherPersonInterests) {
     function setMatchData(section, item_token, match_type, table_key = null, name, favorite_position, secondary, importance, totals) {
         otherPersonInterests.matches.items[item_token] = {
             section: section.token,
@@ -1943,7 +1945,7 @@ function organizePersonInterests(myInterests, otherPersonInterests) {
     let myMergedItems = {};
     let theirMergedItems = {};
 
-    for (let section of interests_sections) {
+    for (let section of sections) {
         function calcPersonalTotals(myItem, theirItem) {
             //calc total number of items/favorited
             if(myItem && !myItem.deleted) {
@@ -2495,11 +2497,13 @@ function personToPersonInterests(person_1, person_2) {
             let person_tokens = [person_1.person_token, person_2.person_token];
             let pipeline = cacheService.startPipeline();
 
+            let sections = interests_sections.concat(schools_work_sections).concat(personal_sections);
+
             for(let person_token of person_tokens) {
                 let person_section_key = cacheService.keys.person_sections(person_token);
                 let person_filters_key = cacheService.keys.person_filters(person_token);
 
-                for(let section of interests_sections) {
+                for(let section of sections) {
                     pipeline.hGet(person_section_key, section.token);
                     pipeline.hGet(person_filters_key, section.token);
                 }
@@ -2510,7 +2514,7 @@ function personToPersonInterests(person_1, person_2) {
             let idx = 0;
 
             for(let i = 1; i <= 2; i++) {
-                for(let section of interests_sections) {
+                for(let section of sections) {
                     try {
                         personsInterests[`person_${i}`].sections[section.token] = JSON.parse(results[idx++]);
                         personsInterests[`person_${i}`].filters[section.token] = JSON.parse(results[idx++]);
@@ -2520,7 +2524,7 @@ function personToPersonInterests(person_1, person_2) {
                 }
             }
 
-            organizePersonInterests(personsInterests.person_1, personsInterests.person_2);
+            organizePersonInterests(sections, personsInterests.person_1, personsInterests.person_2);
 
             let totalScore = 0;
 
