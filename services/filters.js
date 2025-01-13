@@ -314,7 +314,7 @@ const filterMappings = {
     },
     life_stages: {
         token: 'life_stages',
-        name: 'Life Stage',
+        name: 'Life Stages',
         table: 'life_stages',
         column: 'life_stage_id',
         multi: true,
@@ -323,7 +323,7 @@ const filterMappings = {
     },
     relationships: {
         token: 'relationships',
-        name: 'Relationship Status',
+        name: 'Relationships',
         table: 'relationship_status',
         column: 'relationship_status_id',
         multi: true,
