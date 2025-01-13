@@ -810,7 +810,7 @@ module.exports = {
 
             for (let match of matches) {
                 //tmp person token - todo remove
-                match.person_token = await getTmpPersonToken();
+                // match.person_token = await getTmpPersonToken();
 
                 pipeline.hmGet(cacheService.keys.person(match.person_token), ['id', 'network_id', 'devices']);
                 pipeline.hGet(cacheService.keys.person_filters(match.person_token), 'activity_types');
