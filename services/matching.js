@@ -30,7 +30,7 @@ let personal_sections = getPersonalSections();
 
 let interestScoreThresholds = {
     ultra: 200,
-    super: 50
+    super: 100
 };
 
 function getMatches(me, params = {}) {
@@ -78,8 +78,8 @@ function getMatches(me, params = {}) {
 
     function sortMatches() {
         organized.matches.send.sort(function(a, b) {
-            if (b.matches.score !== a.matches.score) {
-                return b.matches.score - a.matches.score;
+            if (b.matches.total_score !== a.matches.total_score) {
+                return b.matches.total_score - a.matches.total_score;
             }
 
             return b.matches.count - a.matches.count;
@@ -208,21 +208,8 @@ function getMatches(me, params = {}) {
         function calculateInterestScores() {
             for(let person_token in personsInterests) {
                 let person = personsInterests[person_token];
-                let totalScore = 0;
 
-                for (let item of Object.values(person.matches.items)) {
-                    let score = getBaseScore(item);
-
-                    let importanceMultiplier = getImportanceMultiplier(item);
-                    let favoriteMultiplier = getFavoriteMultiplier(item);
-                    let secondaryMultiplier = getSecondaryMultiplier(item);
-
-                    let weightedScore = score * importanceMultiplier * favoriteMultiplier * secondaryMultiplier;
-
-                    totalScore += weightedScore;
-                }
-
-                person.matches.score = totalScore;
+                person.matches.total_score = calculateTotalScore(Object.values(person.matches.items));
                 person.matches.count = Object.keys(person.matches.items).length;
             }
         }
@@ -259,7 +246,7 @@ function getMatches(me, params = {}) {
                         matches: {
                             items: {},
                             count: 0,
-                            score: 0
+                            total_score: 0
                         }
                     };
                 }
@@ -1794,9 +1781,9 @@ function getMatches(me, params = {}) {
                     if(personInterests.matches?.count > 0) {
                         organized.counts.interests.total++;
 
-                        if(personInterests.matches.score >= interestScoreThresholds.ultra) {
+                        if(personInterests.matches.total_score >= interestScoreThresholds.ultra) {
                             organized.counts.interests.ultra++;
-                        } else if(personInterests.matches.score >= interestScoreThresholds.super) {
+                        } else if(personInterests.matches.total_score >= interestScoreThresholds.super) {
                             organized.counts.interests.super++;
                         } else {
                             organized.counts.interests.regular++;
@@ -1915,7 +1902,7 @@ function getMatches(me, params = {}) {
 }
 
 function organizePersonInterests(sections, myInterests, otherPersonInterests) {
-    function setMatchData(section, item_token, match_type, table_key = null, name, favorite_position, secondary, importance, totals) {
+    function setMatchData(section, item_token, match_types, table_key = null, name, favorite_position, secondary, importance, totals) {
         otherPersonInterests.matches.items[item_token] = {
             section: section.token,
             token: item_token,
@@ -1923,7 +1910,7 @@ function organizePersonInterests(sections, myInterests, otherPersonInterests) {
             name: name,
             totals: totals,
             match: {
-                [match_type]: true,
+                types: match_types,
                 mine: {
                     favorite: {
                         position: favorite_position?.mine || null
@@ -2056,218 +2043,122 @@ function organizePersonInterests(sections, myInterests, otherPersonInterests) {
             let myItem = myMergedItems[section.token][item_token];
             let theirItem = theirMergedItems[section.token][item_token];
 
-            let is_bi_both = false;
+            let isMyItem = myItem?.personal && !myItem.personal.deleted;
+            let isTheirItem = theirItem?.personal && !theirItem.personal.deleted;
+            let isMyFilter = myFilterEnabled && myItem?.filter && myItem.filter.is_active && !myItem.filter.is_negative && !myItem.filter.deleted;
+            let isTheirFilter = theirFilterEnabled && theirItem?.filter && theirItem.filter.is_active && !theirItem.filter.is_negative && !theirItem.filter.deleted;
 
-            if(myItem?.personal && theirItem?.personal && myItem?.filter && theirItem?.filter) {
-                if(myFilterEnabled && theirFilterEnabled) {
-                    if(
-                        !myItem.personal.deleted && !theirItem.personal.deleted
-                        && myItem.filter.is_active && !myItem.filter.is_negative && !myItem.filter.deleted
-                        && theirItem.filter.is_active && !theirItem.filter.is_negative && !theirItem.filter.deleted
-                    ) {
-                        is_bi_both = true;
-
-                        setMatchData(
-                            section,
-                            item_token,
-                            'is_bi_both',
-                            myItem.personal.table_key,
-                            myItem.personal.name,
-                            {
-                                mine: myItem.personal.favorite_position,
-                                theirs: theirItem.personal.favorite_position
-                            },
-                            {
-                                mine: {
-                                    item: myItem.personal.secondary || null,
-                                    filter: myItem.filter.secondary || null
-                                },
-                                theirs: {
-                                    item: theirItem.personal.secondary || null,
-                                    filter: theirItem.filter.secondary || null
-                                }
-                            },
-                            {
-                                mine: myItem.filter.importance,
-                                theirs: theirItem.filter.importance
-                            },
-                            section_totals
-                        );
-                    }
-                }
-            }
-
-            if(is_bi_both) {
+            // Only proceed if there's at least one type of match
+            if (!(isMyItem || isTheirItem || isMyFilter || isTheirFilter)) {
                 continue;
             }
 
-            let is_bi_filter = false;
+            let matchTypes = {};
 
-            if(myItem?.filter && theirItem?.filter) {
-                if(myFilterEnabled && theirFilterEnabled) {
-                    if(myItem.filter.is_active && !myItem.filter.is_negative && !myItem.filter.deleted
-                        && theirItem.filter.is_active && !theirItem.filter.is_negative && !theirItem.filter.deleted
-                    ) {
-                        is_bi_filter = true;
-
-                        setMatchData(
-                            section,
-                            item_token,
-                            'is_bi_filter',
-                            myItem.filter.table_key,
-                            myItem.filter.name,
-                            null,
-                            {
-                                mine: {
-                                    filter: myItem.filter.secondary || null,
-                                },
-                                theirs: {
-                                    filter: theirItem.filter.secondary || null,
-                                }
-                            },
-                            {
-                                mine: myItem.filter.importance,
-                                theirs: theirItem.filter.importance
-                            },
-                            section_totals
-                        );
-                    }
-                }
+            if(isMyFilter) {
+                matchTypes.my_filter = true;
             }
 
-            if(is_bi_filter) {
-                continue;
+            if(isTheirFilter) {
+                matchTypes.their_filter = true;
             }
 
-            let is_bi_item = false;
+            if(isMyItem) {
+                matchTypes.my_item = true;
+            }
 
-            if(myItem?.personal && theirItem?.personal) {
-                if(!myItem.personal.deleted && !theirItem.personal.deleted) {
-                    is_bi_item = true;
+            if(isTheirItem) {
+                matchTypes.their_item = true;
+            }
 
-                    setMatchData(
-                        section,
-                        item_token,
-                        'is_bi_item',
-                        myItem.personal.table_key,
-                        myItem.personal.name,
-                        {
-                            mine: myItem.personal.favorite_position,
-                            theirs: theirItem.personal.favorite_position
+            let table_key = myItem?.personal?.table_key || theirItem?.personal?.table_key || myItem?.filter?.table_key || theirItem?.filter?.table_key;
+            let item_name = myItem?.personal?.name || theirItem?.personal?.name || myItem?.filter?.name || theirItem?.filter?.name;
+
+            if (Object.keys(matchTypes).length > 0 &&
+                ((isMyItem && isTheirItem) ||
+                    (isMyFilter && isTheirItem) ||
+                    (isTheirFilter && isMyItem) ||
+                    (isMyFilter && isTheirFilter))) {
+
+                setMatchData(
+                    section,
+                    item_token,
+                    matchTypes,
+                    table_key,
+                    item_name,
+                    {
+                        mine: matchTypes.my_item ? myItem.personal.favorite_position : null,
+                        theirs: matchTypes.their_item ? theirItem.personal.favorite_position : null
+                    },
+                    {
+                        mine: {
+                            item: matchTypes.my_item ? myItem.personal.secondary || null : null,
+                            filter: matchTypes.my_filter ? myItem.filter.secondary || null : null
                         },
-                        {
-                            mine: {
-                                item: myItem.personal.secondary || null,
-                            },
-                            theirs: {
-                                item: theirItem.personal.secondary || null,
-                            }
-                        },
-                        null,
-                        section_totals
-                    );
-                }
-            }
-
-            if(is_bi_item) {
-                continue;
-            }
-
-            let is_my_filter = false;
-
-            if(myItem?.filter && theirItem?.personal) {
-                if(myFilterEnabled) {
-                    if(
-                        myItem.filter.is_active && !myItem.filter.is_negative && !myItem.filter.deleted
-                        && !theirItem.personal.deleted
-                    ) {
-                        is_my_filter = true;
-
-                        setMatchData(
-                            section,
-                            item_token,
-                            'is_my_filter',
-                            myItem.filter.table_key || theirItem.personal.table_key,
-                            myItem.filter.name || theirItem.personal.name,
-                            {
-                                theirs: theirItem.personal.favorite_position
-                            },
-                            {
-                                mine: {
-                                    filter: myItem.filter.secondary || null,
-                                },
-                                theirs: {
-                                    item: theirItem.personal.secondary || null,
-                                }
-                            },
-                            {
-                                mine: myItem.filter.importance
-                            },
-                            section_totals
-                        );
-                    }
-                }
-            }
-
-            if(is_my_filter) {
-                continue;
-            }
-
-            let is_their_filter = false;
-
-            if(myItem?.personal && theirItem?.filter) {
-                if(theirFilterEnabled) {
-                    if(
-                        !myItem.personal.deleted
-                        && theirItem.filter.is_active && !theirItem.filter.is_negative && !theirItem.filter.deleted
-                    ) {
-                        is_their_filter = true;
-
-                        setMatchData(
-                            section,
-                            item_token,
-                            'is_their_filter',
-                            myItem.personal.table_key || theirItem.filter.table_key,
-                            myItem.personal.name || theirItem.filter.name,
-                            {
-                                mine: myItem.personal.favorite_position
-                            },
-                            {
-                                mine: {
-                                    item: myItem.personal.secondary || null,
-                                },
-                                theirs: {
-                                    filter: theirItem.filter.secondary || null,
-                                }
-                            },
-                            {
-                                theirs: theirItem.filter.importance
-                            },
-                            section_totals
-                        );
-                    }
-                }
+                        theirs: {
+                            item: matchTypes.their_item ? theirItem.personal.secondary || null : null,
+                            filter: matchTypes.their_filter ? theirItem.filter.secondary || null : null
+                        }
+                    },
+                    {
+                        mine: matchTypes.my_filter ? myItem.filter.importance : null,
+                        theirs: matchTypes.their_filter ? theirItem.filter.importance : null
+                    },
+                    section_totals
+                );
             }
         }
     }
 }
 
-function getBaseScore(item) {
-    let baseScore = 0;
+function calculateTotalScore(items) {
+    let totalScore = 0;
 
-    if(item.match.is_bi_both) {
-        baseScore = 40;
-    } else if(item.match.is_bi_filter) {
-        baseScore = 25;
-    } else if(item.match.is_bi_item) {
-        baseScore = 15;
-    } else if(item.match.is_my_filter) {
-        baseScore = 10;
-    } else if(item.match.is_their_filter) {
-        baseScore = 10;
+    for (let item of items) {
+        let score = getBaseScore(item);
+
+        let importanceMultiplier = getImportanceMultiplier(item);
+        let favoriteMultiplier = getFavoriteMultiplier(item);
+        let secondaryMultiplier = getSecondaryMultiplier(item);
+
+        let weightedScore = score * importanceMultiplier * favoriteMultiplier * secondaryMultiplier;
+
+        item.score = weightedScore;
+
+        totalScore += weightedScore;
     }
 
-    return baseScore;
+    return totalScore;
+}
+
+function getBaseScore(item) {
+    let matchTypes = item.match.types;
+
+    if (matchTypes.my_item && matchTypes.their_item && matchTypes.my_filter && matchTypes.their_filter) {
+        return 50;
+    }
+
+    if (matchTypes.my_item && matchTypes.their_item) {
+        if (matchTypes.my_filter || matchTypes.their_filter) {
+            return 30;
+        }
+
+        return 15;
+    }
+
+    if (matchTypes.my_filter && matchTypes.their_item) {
+        return 20;
+    }
+
+    if (matchTypes.their_filter && matchTypes.my_item) {
+        return 15;
+    }
+
+    if (matchTypes.my_filter || matchTypes.their_filter) {
+        return 10;
+    }
+
+    return 0;
 }
 
 function getImportanceMultiplier(item) {
@@ -2488,7 +2379,7 @@ function personToPersonInterests(person_1, person_2) {
                 matches: {
                     items: {},
                     count: 0,
-                    score: 0
+                    total_score: 0
                 }
             }
         }
@@ -2526,21 +2417,7 @@ function personToPersonInterests(person_1, person_2) {
 
             organizePersonInterests(sections, personsInterests.person_1, personsInterests.person_2);
 
-            let totalScore = 0;
-
-            for (let item of Object.values(personsInterests.person_2.matches.items)) {
-                let score = getBaseScore(item);
-
-                let importanceMultiplier = getImportanceMultiplier(item);
-                let favoriteMultiplier = getFavoriteMultiplier(item);
-                let secondaryMultiplier = getSecondaryMultiplier(item);
-
-                let weightedScore = score * importanceMultiplier * favoriteMultiplier * secondaryMultiplier;
-
-                totalScore += weightedScore;
-            }
-
-            personsInterests.person_2.matches.score = totalScore;
+            personsInterests.person_2.matches.total_score = calculateTotalScore(Object.values(personsInterests.person_2.matches.items));
             personsInterests.person_2.matches.count = Object.keys(personsInterests.person_2.matches.items).length;
         } catch(e) {
             console.error(e);
