@@ -158,7 +158,7 @@ function createActivity(req, res) {
     });
 }
 
-function getActivity(req, res) {
+function getActivityNotification(req, res) {
     return new Promise(async (resolve, reject) => {
         let activity_token = req.params.activity_token;
         let person_token = req.query.person_token;
@@ -330,6 +330,6 @@ function getMatches(req, res) {
 
 module.exports = {
     createActivity,
-    getActivity,
+    getActivityNotification,
     getMatches
 };

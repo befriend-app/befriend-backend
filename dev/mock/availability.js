@@ -3,7 +3,7 @@ const yargs = require('yargs');
 
 const dbService = require('../../services/db');
 const { getNetworkSelf } = require('../../services/network');
-const { loadScriptEnv, timeNow, joinPaths, shuffleFunc } = require('../../services/shared');
+const { loadScriptEnv, timeNow, joinPaths } = require('../../services/shared');
 
 loadScriptEnv();
 
