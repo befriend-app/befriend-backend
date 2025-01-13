@@ -5,7 +5,7 @@ let gridService = require('../services/grid');
 let reviewService = require('../services/reviews');
 let sectionsData = require('../services/sections_data');
 
-const { getPersonFilters } = require('./filters');
+const { filterMappings, getPersonFilters, getInterestSections, getSchoolsWorkSections, getPersonalSections } = require('./filters');
 const { kms_per_mile, timeNow, isNumeric, calculateDistanceMeters } = require('./shared');
 const { getNetworksForFilters } = require('./network');
 const { getModes, getPersonExcludedModes } = require('./modes');
@@ -24,7 +24,9 @@ const { getActivityPlace } = require('./places');
 const DEFAULT_DISTANCE_MILES = 20;
 const MAX_PERSONS_PROCESS = 1000;
 
-let interests_sections = ['movies', 'tv_shows', 'sports', 'music', 'instruments'];
+let interests_sections = getInterestSections();
+let schools_work_sections = getSchoolsWorkSections();
+let personal_sections = getPersonalSections();
 
 let interestScoreThresholds = {
     ultra: 200,
@@ -231,8 +233,8 @@ function getMatches(me, params = {}) {
                 let my_pipeline = cacheService.startPipeline();
                 
                 for (let section of interests_sections) {
-                    myInterests.filters[section] = my_filters[section] || {};
-                    my_pipeline.hGet(cacheService.keys.person_sections(my_token), section);
+                    myInterests.filters[section.token] = my_filters[section.token] || {};
+                    my_pipeline.hGet(cacheService.keys.person_sections(my_token), section.token);
                 }
                 
                 let my_results = await cacheService.execMulti(my_pipeline);
@@ -240,7 +242,7 @@ function getMatches(me, params = {}) {
                 let my_idx = 0;
                 
                 for(let section of interests_sections) {
-                    myInterests.sections[section] = JSON.parse(my_results[my_idx++]);
+                    myInterests.sections[section.token] = JSON.parse(my_results[my_idx++]);
                 }
 
                 //filter remaining person tokens for retrieval of person/filter data
@@ -267,8 +269,8 @@ function getMatches(me, params = {}) {
                     let person_filters_key = cacheService.keys.person_filters(person_token);
 
                     for(let section of interests_sections) {
-                        pipeline.hGet(person_section_key, section);
-                        pipeline.hGet(person_filters_key, section);
+                        pipeline.hGet(person_section_key, section.token);
+                        pipeline.hGet(person_filters_key, section.token);
                     }
                 }
 
@@ -281,8 +283,8 @@ function getMatches(me, params = {}) {
                 for(let person_token in personsInterests) {
                     for(let section of interests_sections) {
                         try {
-                            personsInterests[person_token].sections[section] = JSON.parse(results[idx++]);
-                            personsInterests[person_token].filters[section] = JSON.parse(results[idx++]);
+                            personsInterests[person_token].sections[section.token] = JSON.parse(results[idx++]);
+                            personsInterests[person_token].filters[section.token] = JSON.parse(results[idx++]);
                         } catch(e) {
                             console.error(e);
                         }
@@ -1913,7 +1915,7 @@ function getMatches(me, params = {}) {
 function organizePersonInterests(myInterests, otherPersonInterests) {
     function setMatchData(section, item_token, match_type, table_key = null, name, favorite_position, secondary, importance, totals) {
         otherPersonInterests.matches.items[item_token] = {
-            section: section,
+            section: section.token,
             token: item_token,
             table_key: table_key,
             name: name,
@@ -1961,13 +1963,13 @@ function organizePersonInterests(myInterests, otherPersonInterests) {
             }
         }
 
-        myMergedItems[section] = {};
-        theirMergedItems[section] = {};
+        myMergedItems[section.token] = {};
+        theirMergedItems[section.token] = {};
 
-        let myItems = myInterests.sections[section] || {};
-        let myFilter = myInterests.filters[section] || {}
-        let theirItems = otherPersonInterests.sections[section] || {};
-        let theirFilter = otherPersonInterests.filters[section] || {};
+        let myItems = myInterests.sections[section.token] || {};
+        let myFilter = myInterests.filters[section.token] || {}
+        let theirItems = otherPersonInterests.sections[section.token] || {};
+        let theirFilter = otherPersonInterests.filters[section.token] || {};
 
         //see if both our filters are enabled
         let myFilterEnabled = myFilter?.is_active && myFilter.is_send;
@@ -1986,71 +1988,71 @@ function organizePersonInterests(myInterests, otherPersonInterests) {
 
         //merge my personal/filter items
         for(let token in myItems) {
-            if(!(token in myMergedItems[section])) {
-                myMergedItems[section][token] = {
+            if(!(token in myMergedItems[section.token])) {
+                myMergedItems[section.token][token] = {
                     personal: null,
                     filter: null
                 }
             }
 
-            myMergedItems[section][token].personal = myItems[token];
+            myMergedItems[section.token][token].personal = myItems[token];
         }
 
         if(myFilter.items) {
             for(let k in myFilter.items) {
                 let item = myFilter.items[k];
 
-                if(!(item.token in myMergedItems[section])) {
-                    myMergedItems[section][item.token] = {
+                if(!(item.token in myMergedItems[section.token])) {
+                    myMergedItems[section.token][item.token] = {
                         personal: null,
                         filter: null
                     }
                 }
 
-                myMergedItems[section][item.token].filter = item;
+                myMergedItems[section.token][item.token].filter = item;
             }
         }
 
         //merge their personal/filter items
         for(let token in theirItems) {
-            if(!(token in theirMergedItems[section])) {
-                theirMergedItems[section][token] = {
+            if(!(token in theirMergedItems[section.token])) {
+                theirMergedItems[section.token][token] = {
                     personal: null,
                     filter: null
                 }
             }
 
-            theirMergedItems[section][token].personal = theirItems[token];
+            theirMergedItems[section.token][token].personal = theirItems[token];
         }
 
         if(theirFilter.items) {
             for(let k in theirFilter.items) {
                 let item = theirFilter.items[k];
 
-                if(!(item.token in theirMergedItems[section])) {
-                    theirMergedItems[section][item.token] = {
+                if(!(item.token in theirMergedItems[section.token])) {
+                    theirMergedItems[section.token][item.token] = {
                         personal: null,
                         filter: null
                     }
                 }
 
-                theirMergedItems[section][item.token].filter = item;
+                theirMergedItems[section.token][item.token].filter = item;
             }
         }
 
-        for(let item_token in myMergedItems[section]) {
-            let myItem = myMergedItems[section][item_token];
+        for(let item_token in myMergedItems[section.token]) {
+            let myItem = myMergedItems[section.token][item_token];
             calcPersonalTotals(myItem?.personal);
         }
 
-        for(let item_token in theirMergedItems[section]) {
-            let theirItem = theirMergedItems[section][item_token];
+        for(let item_token in theirMergedItems[section.token]) {
+            let theirItem = theirMergedItems[section.token][item_token];
             calcPersonalTotals(null, theirItem?.personal);
         }
 
-        for(let item_token in myMergedItems[section]) {
-            let myItem = myMergedItems[section][item_token];
-            let theirItem = theirMergedItems[section][item_token];
+        for(let item_token in myMergedItems[section.token]) {
+            let myItem = myMergedItems[section.token][item_token];
+            let theirItem = theirMergedItems[section.token][item_token];
 
             let is_bi_both = false;
 
@@ -2498,8 +2500,8 @@ function personToPersonInterests(person_1, person_2) {
                 let person_filters_key = cacheService.keys.person_filters(person_token);
 
                 for(let section of interests_sections) {
-                    pipeline.hGet(person_section_key, section);
-                    pipeline.hGet(person_filters_key, section);
+                    pipeline.hGet(person_section_key, section.token);
+                    pipeline.hGet(person_filters_key, section.token);
                 }
             }
 
@@ -2507,11 +2509,11 @@ function personToPersonInterests(person_1, person_2) {
 
             let idx = 0;
 
-            for(let i = 1; i < 2; i++) {
+            for(let i = 1; i <= 2; i++) {
                 for(let section of interests_sections) {
                     try {
-                        personsInterests[`person_${i}`].sections[section] = JSON.parse(results[idx++]);
-                        personsInterests[`person_${i}`].filters[section] = JSON.parse(results[idx++]);
+                        personsInterests[`person_${i}`].sections[section.token] = JSON.parse(results[idx++]);
+                        personsInterests[`person_${i}`].filters[section.token] = JSON.parse(results[idx++]);
                     } catch(e) {
                         console.error(e);
                     }
@@ -2541,7 +2543,10 @@ function personToPersonInterests(person_1, person_2) {
             return reject(e);
         }
 
-        resolve(personsInterests.person_2.matches);
+        resolve({
+            ...personsInterests.person_2.matches,
+            thresholds: interestScoreThresholds
+        });
     });
 }
 

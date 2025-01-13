@@ -22,6 +22,7 @@ const filterMappings = {
         name: 'Availability',
         table: 'persons_availability',
         multi: true,
+        is_notifications: true
     },
     activity_types: {
         token: 'activity_types',
@@ -29,6 +30,7 @@ const filterMappings = {
         table: 'activity_types',
         column: 'activity_type_id',
         multi: true,
+        is_notifications: true
     },
     modes: {
         token: 'modes',
@@ -36,6 +38,7 @@ const filterMappings = {
         table: 'modes',
         column: 'mode_id',
         multi: true,
+        is_notifications: true
     },
     networks: {
         token: 'networks',
@@ -44,86 +47,115 @@ const filterMappings = {
         column: 'network_id',
         filters_table: 'persons_filters_networks',
         multi: true,
+        is_notifications: true
     },
     reviews: {
         token: 'reviews',
         name: 'Reviews',
         single: true,
+        is_notifications: true
     },
     reviews_new: {
         token: 'reviews_new',
         name: 'New',
         single: true,
+        is_notifications: true,
+        is_sub: true
     },
     reviews_safety: {
         token: 'reviews_safety',
         name: 'Safety',
         single: true,
+        is_notifications: true,
+        is_sub: true
     },
     reviews_trust: {
         token: 'reviews_trust',
         name: 'Trust',
         single: true,
+        is_notifications: true,
+        is_sub: true
     },
     reviews_timeliness: {
         token: 'reviews_timeliness',
         name: 'Timeliness',
         single: true,
+        is_notifications: true,
+        is_sub: true
     },
     reviews_friendliness: {
         token: 'reviews_friendliness',
         name: 'Friendliness',
         single: true,
+        is_notifications: true,
+        is_sub: true
     },
     reviews_fun: {
         token: 'reviews_fun',
         name: 'Fun',
         single: true,
+        is_notifications: true,
+        is_sub: true
     },
     verifications: {
         token: 'verifications',
         name: 'Verifications',
         single: true,
+        is_notifications: true
     },
     verification_in_person: {
         token: 'verification_in_person',
         name: 'In-Person',
         single: true,
+        is_notifications: true,
+        is_sub: true
     },
     verification_linkedin: {
         token: 'verification_linkedin',
         name: 'LinkedIn',
         single: true,
+        is_notifications: true,
+        is_sub: true
     },
     verification_dl: {
         token: 'verification_dl',
         name: "Driver's License",
         single: true,
+        is_notifications: true,
+        is_sub: true
     },
     verification_cc: {
         token: 'verification_cc',
         name: 'Credit Card',
         single: true,
+        is_notifications: true,
+        is_sub: true
     },
     verification_video: {
         token: 'verification_video',
         name: 'Video',
         single: true,
+        is_notifications: true,
+        is_sub: true
     },
     verification_mailer: {
         token: 'verification_mailer',
         name: 'Mail',
         single: true,
+        is_notifications: true,
+        is_sub: true
     },
     distance: {
         token: 'distance',
         name: 'Distance',
         single: true,
+        is_general: true
     },
     ages: {
         token: 'ages',
         name: 'Age',
         single: true,
+        is_general: true
     },
     genders: {
         token: 'genders',
@@ -131,6 +163,7 @@ const filterMappings = {
         column: 'gender_id',
         table: 'genders',
         multi: true,
+        is_general: true
     },
     movies: {
         token: 'movies',
@@ -138,7 +171,8 @@ const filterMappings = {
         table: 'movies',
         column: 'movie_id',
         multi: true,
-        importance: true
+        importance: true,
+        is_interests: true
     },
     movie_genres: {
         token: 'movie_genres',
@@ -146,7 +180,9 @@ const filterMappings = {
         table: 'movie_genres',
         column: 'movie_genre_id',
         multi: true,
-        importance: true
+        importance: true,
+        is_interests: true,
+        is_sub: true
     },
     tv_shows: {
         token: 'tv_shows',
@@ -154,7 +190,8 @@ const filterMappings = {
         table: 'tv_shows',
         column: 'tv_show_id',
         multi: true,
-        importance: true
+        importance: true,
+        is_interests: true,
     },
     tv_show_genres: {
         token: 'tv_show_genres',
@@ -162,13 +199,16 @@ const filterMappings = {
         table: 'tv_genres',
         column: 'tv_show_genre_id',
         multi: true,
-        importance: true
+        importance: true,
+        is_interests: true,
+        is_sub: true
     },
     sports: {
         token: 'sports',
         name: 'Sports',
         multi: true,
-        importance: true
+        importance: true,
+        is_interests: true
     },
     sports_play: {
         token: 'sports_play',
@@ -176,7 +216,9 @@ const filterMappings = {
         table: 'sports',
         column: 'sport_play_id',
         multi: true,
-        importance: true
+        importance: true,
+        is_interests: true,
+        is_sub: true
     },
     sports_leagues: {
         token: 'sports_league',
@@ -184,7 +226,9 @@ const filterMappings = {
         table: 'sports_leagues',
         column: 'sport_league_id',
         multi: true,
-        importance: true
+        importance: true,
+        is_interests: true,
+        is_sub: true
     },
     sports_teams: {
         token: 'sport_team',
@@ -192,13 +236,16 @@ const filterMappings = {
         table: 'sports_teams',
         column: 'sport_team_id',
         multi: true,
-        importance: true
+        importance: true,
+        is_interests: true,
+        is_sub: true
     },
     music: {
         token: 'music',
         name: 'Music',
         multi: true,
-        importance: true
+        importance: true,
+        is_interests: true
     },
     music_artists: {
         token: 'music_artists',
@@ -206,7 +253,9 @@ const filterMappings = {
         table: 'music_artists',
         column: 'music_artist_id',
         multi: true,
-        importance: true
+        importance: true,
+        is_interests: true,
+        is_sub: true
     },
     music_genres: {
         token: 'music_genres',
@@ -214,7 +263,9 @@ const filterMappings = {
         table: 'music_genres',
         column: 'music_genre_id',
         multi: true,
-        importance: true
+        importance: true,
+        is_interests: true,
+        is_sub: true
     },
     instruments: {
         token: 'instruments',
@@ -222,7 +273,8 @@ const filterMappings = {
         table: 'instruments',
         column: 'instrument_id',
         multi: true,
-        importance: true
+        importance: true,
+        is_interests: true
     },
     schools: {
         token: 'schools',
@@ -230,13 +282,15 @@ const filterMappings = {
         table: 'schools',
         column: 'school_id',
         multi: true,
-        importance: true
+        importance: true,
+        is_school_work: true
     },
     work: {
         token: 'work',
         name: 'Work',
         multi: true,
-        importance: true
+        importance: true,
+        is_school_work: true
     },
     work_industries: {
         token: 'work_industries',
@@ -244,7 +298,9 @@ const filterMappings = {
         table: 'work_industries',
         column: 'work_industry_id',
         multi: true,
-        importance: true
+        importance: true,
+        is_school_work: true,
+        is_sub: true
     },
     work_roles: {
         token: 'work_roles',
@@ -252,7 +308,9 @@ const filterMappings = {
         table: 'work_roles',
         column: 'work_role_id',
         multi: true,
-        importance: true
+        importance: true,
+        is_school_work: true,
+        is_sub: true
     },
     life_stages: {
         token: 'life_stages',
@@ -260,7 +318,8 @@ const filterMappings = {
         table: 'life_stages',
         column: 'life_stage_id',
         multi: true,
-        importance: true
+        importance: true,
+        is_personal: true
     },
     relationships: {
         token: 'relationships',
@@ -268,7 +327,8 @@ const filterMappings = {
         table: 'relationship_status',
         column: 'relationship_status_id',
         multi: true,
-        importance: true
+        importance: true,
+        is_personal: true
     },
     languages: {
         token: 'languages',
@@ -276,7 +336,8 @@ const filterMappings = {
         table: 'languages',
         column: 'language_id',
         multi: true,
-        importance: true
+        importance: true,
+        is_personal: true
     },
     politics: {
         token: 'politics',
@@ -284,7 +345,8 @@ const filterMappings = {
         table: 'politics',
         column: 'politics_id',
         multi: true,
-        importance: true
+        importance: true,
+        is_personal: true
     },
     religion: {
         token: 'religion',
@@ -292,7 +354,8 @@ const filterMappings = {
         table: 'religions',
         column: 'religion_id',
         multi: true,
-        importance: true
+        importance: true,
+        is_personal: true
     },
     drinking: {
         token: 'drinking',
@@ -300,7 +363,8 @@ const filterMappings = {
         table: 'drinking',
         column: 'drinking_id',
         multi: true,
-        importance: true
+        importance: true,
+        is_personal: true
     },
     smoking: {
         token: 'smoking',
@@ -308,7 +372,8 @@ const filterMappings = {
         table: 'smoking',
         column: 'smoking_id',
         multi: true,
-        importance: true
+        importance: true,
+        is_personal: true
     },
 };
 
@@ -1320,11 +1385,28 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
     });
 }
 
+function getInterestSections() {
+    return Object.values(filterMappings)
+        .filter(section => section.is_interests && !section.is_sub);
+
+}
+
+function getSchoolsWorkSections() {
+    return Object.values(filterMappings).filter(section => section.is_school_work && !section.is_sub);
+}
+
+function getPersonalSections() {
+    return Object.values(filterMappings).filter(section => section.is_personal && !section.is_sub);
+}
+
 module.exports = {
     filters: null,
     filterMappings,
     getFilters,
     getPersonFilters,
     getPersonFilterForKey,
-    updateGridSets
+    updateGridSets,
+    getInterestSections,
+    getSchoolsWorkSections,
+    getPersonalSections
 };
