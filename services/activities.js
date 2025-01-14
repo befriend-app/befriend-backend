@@ -127,7 +127,86 @@ function createActivity(person, activity) {
 
 function acceptNotification(person, activity_token) {
     return new Promise(async (resolve, reject) => {
+        let notification_cache_key = cacheService.keys.activities_notifications(activity_token);
+        let person_activity_cache_key = cacheService.keys.persons_activities(person.person_token);
 
+        try {
+            //ensure person exists on activity invite
+            let notification = await cacheService.hGetItem(notification_cache_key, person.person_token);
+
+            if (!notification) {
+                return reject('Activity does not include person');
+            }
+
+            if (notification.declined_at) {
+                return reject('Activity cannot be accepted');
+            }
+
+            if (notification.accepted_at) {
+                return reject('Activity already accepted');
+            }
+
+            let available_spots = await availableSpots(activity_token);
+
+            if (available_spots <= 0) {
+                return resolve({
+                    error: 'Unavailable: max spots reached'
+                });
+            }
+
+            let conn = await dbService.conn();
+
+            let network_self = await getNetworkSelf();
+
+            //own network
+            if (network_self.id === notification.person_to_network_id) {
+                let update = {
+                    accepted_at: timeNow(),
+                    updated: timeNow(),
+                };
+
+                notification = {
+                    ...notification,
+                    ...update,
+                };
+
+                await cacheService.hSet(notification_cache_key, person.person_token, notification);
+
+                await conn('activities_notifications').where('id', notification.id).update(update);
+
+                //add to own activities list
+                let person_activity_insert = {
+                    activity_id: notification.activity_id,
+                    person_id: person.id,
+                    is_creator: false,
+                    created: timeNow(),
+                    updated: timeNow()
+                };
+
+                let person_activity_id = await conn('activities_persons')
+                    .insert(person_activity_insert);
+
+                person_activity_id = person_activity_id[0];
+                person_activity_insert.id = person_activity_id;
+                person_activity_insert.person_from_token = notification.person_from_token;
+
+                await cacheService.hSet(person_activity_cache_key, activity_token, person_activity_insert);
+
+                //update ws
+
+                resolve({
+                    success: true,
+                    message: 'Notification accepted successfully',
+                });
+            } else {
+                //3rd party network
+                //todo
+                resolve();
+            }
+        } catch(e) {
+            console.error(e);
+            return reject("Error accepting activity")
+        }
     });
 }
 

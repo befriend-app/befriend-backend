@@ -8,7 +8,7 @@ const { getPerson } = require('../services/persons');
 
 const { getModes, getModeById } = require('../services/modes');
 const { personToPersonInterests } = require('../services/matching');
-const { getActivityType, availableSpots, declineNotification } = require('../services/activities');
+const { getActivityType, availableSpots, declineNotification, acceptNotification } = require('../services/activities');
 const { getGender } = require('../services/genders');
 const { getPlaceFSQ } = require('../services/places');
 const { getNetworkSelf } = require('../services/network');
@@ -178,8 +178,6 @@ function putAcceptNotification(req, res) {
                 return resolve();
             }
 
-            let cache_key = cacheService.keys.activities_notifications(activity_token);
-
             let me = await getPerson(person_token);
 
             if (!me) {
@@ -193,80 +191,17 @@ function putAcceptNotification(req, res) {
                 return resolve();
             }
 
-            //ensure person exists on activity invite
-            let notification = await cacheService.hGetItem(cache_key, person_token);
+            try {
+                let result = await acceptNotification(me, activity_token);
 
-            if (!notification) {
+                res.json(result);
+            } catch(e) {
                 res.json(
                     {
-                        message: 'Activity does not include person',
+                        error: e
                     },
-                    400,
+                    400
                 );
-
-                return resolve();
-            }
-
-            if (notification.declined_at) {
-                res.json(
-                    {
-                        error: 'Activity cannot be accepted',
-                    },
-                    400,
-                );
-                return resolve();
-            }
-
-            if (notification.accepted_at) {
-                res.json(
-                    {
-                        error: 'Activity already accepted',
-                    },
-                    400,
-                );
-                return resolve();
-            }
-
-            let available_spots = await availableSpots(activity_token);
-
-            if (available_spots <= 0) {
-                res.json(
-                    {
-                        error: `Unavailable: max spots reached`,
-                    },
-                    200,
-                );
-            }
-
-            let conn = await dbService.conn();
-
-            let network_self = await getNetworkSelf();
-
-            //own network
-            if (network_self.id === notification.person_to_network_id) {
-                let update = {
-                    accepted_at: timeNow(),
-                    updated: timeNow(),
-                };
-
-                notification = {
-                    ...notification,
-                    ...update,
-                };
-
-                await cacheService.hSet(cache_key, person_token, notification);
-
-                await conn('activities_notifications').where('id', notification.id).update(update);
-
-                //add to own activities list
-
-                res.json({
-                    success: true,
-                    message: 'Notification accepted successfully',
-                });
-            } else {
-                //3rd party network
-                //todo
             }
         } catch (e) {
             console.error(e);
