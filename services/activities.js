@@ -197,6 +197,7 @@ function acceptNotification(person, activity_token) {
                 resolve({
                     success: true,
                     message: 'Notification accepted successfully',
+                    spots: --available_spots
                 });
             } else {
                 //3rd party network
