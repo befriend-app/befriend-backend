@@ -15,6 +15,9 @@ function createActivity(person, activity) {
     return new Promise(async (resolve, reject) => {
         let matches;
 
+        let activity_cache_key = cacheService.keys.activities(person.person_token);
+        let person_activity_cache_key = cacheService.keys.persons_activities(person.person_token);
+
         //throws rejection if invalid
         try {
             await prepareActivity(person, activity);
@@ -23,6 +26,7 @@ function createActivity(person, activity) {
         }
 
         try {
+            //activity
             // unique across systems
             let activity_token = generateToken(20);
 
@@ -30,7 +34,7 @@ function createActivity(person, activity) {
 
             let conn = await dbService.conn();
 
-            let insert_activity = {
+            let activity_insert = {
                 activity_token: activity_token,
                 activity_type_id: activity.activity.data.id,
                 fsq_place_id: activity.place?.id || null,
@@ -66,22 +70,36 @@ function createActivity(person, activity) {
                 updated: timeNow(),
             };
 
-            let id = await conn('activities').insert(insert_activity);
+            let activity_id = await conn('activities').insert(activity_insert);
 
-            id = id[0];
+            activity_id = activity_id[0];
 
-            activity.activity_id = id;
+            activity.activity_id = activity_id;
 
-            insert_activity.activity_id = id;
-            insert_activity.activity_token = activity_token;
-            insert_activity.activity_type_token = activity.activity.token;
-            insert_activity.person_token = person.person_token;
+            activity_insert.activity_id = activity_id;
+            activity_insert.activity_token = activity_token;
+            activity_insert.activity_type_token = activity.activity.token;
+            activity_insert.person_token = person.person_token;
+
+            //person activity
+            let person_activity_insert = {
+                activity_id: activity_id,
+                person_id: person.id,
+                is_creator: true,
+                created: timeNow(),
+                updated: timeNow()
+            };
+
+            let person_activity_id = await conn('activities_persons')
+                .insert(person_activity_insert);
+
+            person_activity_id = person_activity_id[0];
+            person_activity_insert.id = person_activity_id;
 
             //save to cache
-            let cache_key = cacheService.keys.activities(person.person_token);
-
             try {
-                await cacheService.hSet(cache_key, activity_token, insert_activity);
+                await cacheService.hSet(activity_cache_key, activity_token, activity_insert);
+                await cacheService.hSet(person_activity_cache_key, activity_token, person_activity_insert);
             } catch (e) {
                 console.error(e);
             }
