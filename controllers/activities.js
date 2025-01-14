@@ -8,7 +8,7 @@ const { getPerson } = require('../services/persons');
 
 const { getModes, getModeById } = require('../services/modes');
 const { personToPersonInterests } = require('../services/matching');
-const { getActivityType, availableSpots, declineNotification, acceptNotification } = require('../services/activities');
+const { getActivityType, declineNotification, acceptNotification } = require('../services/activities');
 const { getGender } = require('../services/genders');
 const { getPlaceFSQ } = require('../services/places');
 const { getNetworkSelf } = require('../services/network');

@@ -9,7 +9,6 @@ const { getActivityPlace } = require('./places');
 const { getNetworkSelf } = require('./network');
 const { hGetAllObj } = require('./cache');
 const { batchInsert } = require('./db');
-const e = require('express');
 
 function createActivity(person, activity) {
     return new Promise(async (resolve, reject) => {
@@ -146,9 +145,9 @@ function acceptNotification(person, activity_token) {
                 return reject('Activity already accepted');
             }
 
-            let available_spots = await availableSpots(activity_token);
+            let spots = await getActivitySpots(activity_token);
 
-            if (available_spots <= 0) {
+            if (spots.available <= 0) {
                 return resolve({
                     error: 'Unavailable: max spots reached'
                 });
@@ -192,12 +191,14 @@ function acceptNotification(person, activity_token) {
 
                 await cacheService.hSet(person_activity_cache_key, activity_token, person_activity_insert);
 
+                --spots.available;
+
                 //update ws
 
                 resolve({
                     success: true,
                     message: 'Notification accepted successfully',
-                    spots: --available_spots
+                    spots
                 });
             } else {
                 //3rd party network
@@ -845,9 +846,9 @@ function notifyMatches(person, activity, matches) {
             }
 
             if (delay > 0) {
-                let spots = await availableSpots(activity.activity_token);
+                let spots = await getActivitySpots(activity.activity_token);
 
-                if (spots <= 0) {
+                if (spots.available <= 0) {
                     isFulfilled = true;
                     return;
                 }
@@ -1115,7 +1116,7 @@ function notifyMatches(person, activity, matches) {
     });
 }
 
-function availableSpots(activity_token) {
+function getActivitySpots(activity_token) {
     return new Promise(async (resolve, reject) => {
         try {
             let notification_key = cacheService.keys.activities_notifications(activity_token);
@@ -1141,7 +1142,10 @@ function availableSpots(activity_token) {
                 }
             }
 
-            return resolve(friends_qty - persons_accepted);
+            return resolve({
+                accepted: persons_accepted,
+                available: friends_qty - persons_accepted
+            });
         } catch (e) {
             console.error(e);
             return reject(e);
@@ -1233,5 +1237,5 @@ module.exports = {
     getDefaultActivity,
     findMatches,
     notifyMatches,
-    availableSpots,
+    getActivitySpots,
 };
