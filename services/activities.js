@@ -125,6 +125,68 @@ function createActivity(person, activity) {
     });
 }
 
+function acceptNotification(person, activity_token) {
+    return new Promise(async (resolve, reject) => {
+
+    });
+}
+
+function declineNotification(person, activity_token) {
+    return new Promise(async (resolve, reject) => {
+        let cache_key = cacheService.keys.activities_notifications(activity_token);
+
+        try {
+            //ensure person exists on activity invite
+            let notification = await cacheService.hGetItem(cache_key, person.person_token);
+
+            if (!notification) {
+                return reject('Activity does not include person');
+            }
+
+            if (notification.accepted_at) {
+                return reject('Activity cannot be declined');
+            }
+
+            if (notification.declined_at) {
+                return reject('Activity already declined');
+            }
+
+            let conn = await dbService.conn();
+
+            let network_self = await getNetworkSelf();
+
+            //own network
+            if (network_self.id === notification.person_to_network_id) {
+                let update = {
+                    declined_at: timeNow(),
+                    updated: timeNow(),
+                };
+
+                notification = {
+                    ...notification,
+                    ...update,
+                };
+
+                await cacheService.hSet(cache_key, person.person_token, notification);
+
+                await conn('activities_notifications').where('id', notification.id).update(update);
+
+                resolve({
+                    success: true,
+                    message: 'Notification declined successfully',
+                });
+            } else {
+                //3rd party network
+                //todo
+                resolve();
+            }
+        } catch(e) {
+            console.error(e);
+            return reject("Error declining activity")
+        }
+    });
+}
+
 function getActivityTypes() {
     function organizeActivityType(activity) {
         let data = {
@@ -1081,6 +1143,8 @@ module.exports = {
         },
     },
     createActivity,
+    acceptNotification,
+    declineNotification,
     getActivityTypes,
     getActivityTypesMapping,
     getActivityType,

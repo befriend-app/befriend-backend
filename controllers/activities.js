@@ -8,7 +8,7 @@ const { getPerson } = require('../services/persons');
 
 const { getModes, getModeById } = require('../services/modes');
 const { personToPersonInterests } = require('../services/matching');
-const { getActivityType, availableSpots } = require('../services/activities');
+const { getActivityType, availableSpots, declineNotification } = require('../services/activities');
 const { getGender } = require('../services/genders');
 const { getPlaceFSQ } = require('../services/places');
 const { getNetworkSelf } = require('../services/network');
@@ -300,8 +300,6 @@ function putDeclineNotification(req, res) {
                 return resolve();
             }
 
-            let cache_key = cacheService.keys.activities_notifications(activity_token);
-
             let me = await getPerson(person_token);
 
             if (!me) {
@@ -315,67 +313,17 @@ function putDeclineNotification(req, res) {
                 return resolve();
             }
 
-            //ensure person exists on activity invite
-            let notification = await cacheService.hGetItem(cache_key, person_token);
+            try {
+                let result = await declineNotification(me, activity_token);
 
-            if (!notification) {
+                res.json(result);
+            } catch(e) {
                 res.json(
                     {
-                        message: 'Activity does not include person',
+                        error: e
                     },
-                    400,
+                    400
                 );
-
-                return resolve();
-            }
-
-            if (notification.accepted_at) {
-                res.json(
-                    {
-                        error: 'Activity cannot be declined',
-                    },
-                    400,
-                );
-                return resolve();
-            }
-
-            if (notification.declined_at) {
-                res.json(
-                    {
-                        error: 'Activity already declined',
-                    },
-                    400,
-                );
-                return resolve();
-            }
-
-            let conn = await dbService.conn();
-
-            let network_self = await getNetworkSelf();
-
-            //own network
-            if (network_self.id === notification.person_to_network_id) {
-                let update = {
-                    declined_at: timeNow(),
-                    updated: timeNow(),
-                };
-
-                notification = {
-                    ...notification,
-                    ...update,
-                };
-
-                await cacheService.hSet(cache_key, person_token, notification);
-
-                await conn('activities_notifications').where('id', notification.id).update(update);
-
-                res.json({
-                    success: true,
-                    message: 'Notification declined successfully',
-                });
-            } else {
-                //3rd party network
-                //todo
             }
         } catch (e) {
             console.error(e);
