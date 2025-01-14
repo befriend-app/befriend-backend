@@ -55,10 +55,10 @@ const sportsKeys = {
 const keyFunctions = {
     session: (session) => `session:api:${session}`,
     exchange_keys: (token) => `networks:keys:exchange:${token}`,
+    activities: (person_token) => `activities:persons:${person_token}`, //lookup of activity is by hash field of activity_token by person who created activity
     activities_notifications: (activity_token) => `activities:${activity_token}:notifications`,
     activity_type: (token) => `activity_types:${token}`,
     activity_type_venue_categories: (token) => `activity_types:venue_categories:${token}`,
-
     place_fsq: (fsqId) => `places:fsq:${fsqId}`,
     city: (id) => `cities:${id}`,
     cities_country: (code) => `cities:countries:${code}`,
@@ -66,15 +66,11 @@ const keyFunctions = {
     state: (id) => `states:${id}`,
     country: (id) => `countries:${id}`,
     city_country_prefix: (countryCode, prefix) => `cities:country:${countryCode}:${prefix}`,
-
     address_geo: (addressId) => `address:geo:${addressId}`,
     travel_times: (token) => `activities:travel:${token}`,
-
     person: (tokenOrEmail = '') => `persons:${tokenOrEmail.toLowerCase()}`,
-    person_login_tokens: (person_token = '') =>
-        `persons:${person_token.toLowerCase()}:login_tokens`,
+    person_login_tokens: (person_token = '') => `persons:${person_token.toLowerCase()}:login_tokens`,
     persons_activities: (person_token) => `persons:activities:${person_token}`,
-
     person_filters: (person_token) => `persons:filters:${person_token}`,
     person_sections: (person_token) => `persons:me:sections:${person_token}`,
     persons_grid_set: (gridToken, key) => `persons:grid:${gridToken}:set:${key}`,

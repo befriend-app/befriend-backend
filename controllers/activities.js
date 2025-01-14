@@ -102,9 +102,10 @@ function createActivity(req, res) {
             insert_activity.activity_id = id;
             insert_activity.activity_token = activity_token;
             insert_activity.activity_type_token = activity.activity.token;
+            insert_activity.person_token = person.person_token;
 
             //save to cache
-            let cache_key = cacheService.keys.persons_activities(person_token);
+            let cache_key = cacheService.keys.activities(person_token);
 
             try {
                 await cacheService.hSet(cache_key, activity_token, insert_activity);
@@ -206,7 +207,7 @@ function getActivityNotification(req, res) {
                 return resolve();
             }
 
-            let cache_key = cacheService.keys.persons_activities(notification.person_from_token);
+            let cache_key = cacheService.keys.activities(notification.person_from_token);
 
             let activity = await cacheService.hGetItem(cache_key, activity_token);
 
@@ -354,6 +355,8 @@ function putAcceptNotification(req, res) {
                 await cacheService.hSet(cache_key, person_token, notification);
 
                 await conn('activities_notifications').where('id', notification.id).update(update);
+
+                //add to own activities list
 
                 res.json({
                     success: true,

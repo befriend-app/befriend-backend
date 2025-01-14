@@ -401,7 +401,7 @@ function prepareActivity(person, activity) {
 function doesActivityOverlap(person_token, time) {
     return new Promise(async (resolve, reject) => {
         try {
-            let cache_key = cacheService.keys.persons_activities(person_token);
+            let cache_key = cacheService.keys.activities(person_token);
 
             let data = await cacheService.hGetAllObj(cache_key);
 
