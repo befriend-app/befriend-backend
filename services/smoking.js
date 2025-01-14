@@ -3,7 +3,7 @@ const dbService = require('./db');
 
 module.exports = {
     importance: {
-        default: 8
+        default: 8,
     },
     data: null,
     getSmoking: function () {

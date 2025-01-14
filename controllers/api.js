@@ -1524,7 +1524,7 @@ module.exports = {
 
                 let items = await cacheService.execMulti(pipeline);
 
-                for(let i = 0; i < items.length; i++) {
+                for (let i = 0; i < items.length; i++) {
                     items[i] = JSON.parse(items[i]);
                 }
 

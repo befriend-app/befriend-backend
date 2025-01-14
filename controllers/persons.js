@@ -3,7 +3,14 @@ const dbService = require('../services/db');
 const gridService = require('../services/grid');
 const matchingService = require('../services/matching');
 
-const { timeNow, generateToken, latLonLookup, getTimeZoneFromCoords, isLatValid, isLonValid } = require('../services/shared');
+const {
+    timeNow,
+    generateToken,
+    latLonLookup,
+    getTimeZoneFromCoords,
+    isLatValid,
+    isLonValid,
+} = require('../services/shared');
 const { getPerson, updatePerson, savePerson } = require('../services/persons');
 const { findMatches, notifyMatches, prepareActivity } = require('../services/activities');
 const { getCountryByCode } = require('../services/locations');
@@ -26,7 +33,6 @@ const {
 } = require('../services/me');
 
 const { getKidAgeOptions } = require('../services/modes');
-
 
 module.exports = {
     getMe: function (req, res) {
@@ -72,9 +78,9 @@ module.exports = {
                     sections,
                     modes: {
                         kids: {
-                            options: kidAgeOptions
-                        }
-                    }
+                            options: kidAgeOptions,
+                        },
+                    },
                 });
 
                 resolve();
@@ -116,7 +122,7 @@ module.exports = {
 
                 //update db
                 await updatePerson(person_token, {
-                    is_online: online
+                    is_online: online,
                 });
 
                 res.json('Online status updated successfully', 202);
@@ -203,8 +209,8 @@ module.exports = {
                 me.location = {
                     lat: parseFloat(lat.toFixed(4)),
                     lon: parseFloat(lon.toFixed(4)),
-                    timezone: dbUpdate.timezone
-                }
+                    timezone: dbUpdate.timezone,
+                };
 
                 //person grid data/sets
                 if (!prev_grid_token || prev_grid_token !== grid.token) {
@@ -508,7 +514,9 @@ module.exports = {
                     const [id] = await conn('persons_devices').insert(newDevice);
                     newDevice.id = id;
 
-                    await cacheService.hSet(cacheService.keys.person(person_token), 'devices', [newDevice]);
+                    await cacheService.hSet(cacheService.keys.person(person_token), 'devices', [
+                        newDevice,
+                    ]);
 
                     res.status(201).json({ message: 'Added successfully' });
                     return resolve();

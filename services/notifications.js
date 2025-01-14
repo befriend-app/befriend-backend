@@ -131,7 +131,7 @@ function createAPNSProvider(options) {
             const tokenManager = createTokenManager(
                 options.token.keyId,
                 options.token.teamId,
-                options.token.key
+                options.token.key,
             );
 
             const getErrorReason = (status) => {

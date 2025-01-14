@@ -5,7 +5,13 @@ const dbService = require('../../services/db');
 const encryptionService = require('../../services/encryption');
 const { getNetworkSelf } = require('../../services/network');
 
-const { loadScriptEnv, generateToken, timeNow, birthDatePure, calculateAge } = require('../../services/shared');
+const {
+    loadScriptEnv,
+    generateToken,
+    timeNow,
+    birthDatePure,
+    calculateAge,
+} = require('../../services/shared');
 
 const { batchInsert, batchUpdate } = require('../../services/db');
 const cacheService = require('../../services/cache');
@@ -43,7 +49,10 @@ function updatePersonsCount() {
                 updated: timeNow(),
             });
 
-            await cacheService.deleteKeys([cacheService.keys.networks, cacheService.keys.networks_filters]);
+            await cacheService.deleteKeys([
+                cacheService.keys.networks,
+                cacheService.keys.networks_filters,
+            ]);
         } catch (e) {
             console.error(e);
         }
@@ -63,14 +72,14 @@ function updatePersonsCount() {
                 .whereNull('age')
                 .select('persons.id', 'persons.person_token', 'persons.age', 'persons.birth_date');
 
-            for(let person of persons) {
+            for (let person of persons) {
                 let age = calculateAge(person.birth_date);
 
                 await updatePerson(person.person_token, {
-                    age
+                    age,
                 });
             }
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
     }
@@ -81,11 +90,9 @@ function updatePersonsCount() {
 
             let conn = await dbService.conn();
 
-            let persons_qry = await conn('persons')
-                .orderBy('id')
-                .select('id', 'person_token');
+            let persons_qry = await conn('persons').orderBy('id').select('id', 'person_token');
 
-            for(let p of persons_qry) {
+            for (let p of persons_qry) {
                 let person = await getPerson(p.person_token);
 
                 await updateGridSets(person, null, 'genders');
@@ -209,7 +216,7 @@ function updatePersonsCount() {
         await mockGenders();
         await updateAge();
         await updatePersonsCount();
-    } catch(e) {
+    } catch (e) {
         console.error(e);
     }
 

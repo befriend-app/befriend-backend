@@ -8,18 +8,18 @@ const COORD_PRECISION = 1000;
 const DEFAULT_RADIUS_KM = 30;
 
 let gridStructure = {
-    lat: {}
+    lat: {},
 };
 
 let gridInitialization = {
     initialized: false,
-    in_progress: false
+    in_progress: false,
 };
 
 function isInitialized() {
     return new Promise(async (resolve, reject) => {
-        let int = setInterval(function() {
-            if(gridInitialization.initialized) {
+        let int = setInterval(function () {
+            if (gridInitialization.initialized) {
                 clearInterval(int);
                 resolve();
             }
@@ -30,7 +30,7 @@ function isInitialized() {
 function initialize() {
     let wait_for_initialized = gridInitialization.in_progress;
 
-    if(!gridInitialization.in_progress) {
+    if (!gridInitialization.in_progress) {
         gridInitialization.in_progress = true;
         console.log('Initializing grid service...');
     }
@@ -39,7 +39,7 @@ function initialize() {
 
     return new Promise(async (resolve, reject) => {
         try {
-            if(wait_for_initialized) {
+            if (wait_for_initialized) {
                 await isInitialized();
                 return resolve();
             }

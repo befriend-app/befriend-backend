@@ -39,7 +39,7 @@ function main() {
             for (let table of tables) {
                 try {
                     await knex(table).delete();
-                } catch(e) {
+                } catch (e) {
                     console.error(e);
                 }
             }

@@ -3,7 +3,7 @@ const dbService = require('./db');
 
 module.exports = {
     importance: {
-        default: 6
+        default: 6,
     },
     data: null,
     getPolitics: function () {

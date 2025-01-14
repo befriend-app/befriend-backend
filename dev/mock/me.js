@@ -301,7 +301,7 @@ async function processOnline() {
                     let r = await axios.put(joinPaths(process.env.APP_URL, '/online'), {
                         login_token: person.login_token,
                         person_token: person.person_token,
-                        online: online
+                        online: online,
                     });
                 } catch (error) {
                     console.error(
@@ -404,13 +404,13 @@ async function processModes() {
                     //select 1-3 modes
                     const newModes = shuffleFunc(modesArray)
                         .slice(0, Math.floor(Math.random() * 3) + 1)
-                        .map(mode => mode.token);
+                        .map((mode) => mode.token);
 
                     // Update person's mode
                     await axios.put(joinPaths(process.env.APP_URL, '/me/modes'), {
                         login_token: person.login_token,
                         person_token: person.person_token,
-                        modes: newModes
+                        modes: newModes,
                     });
 
                     // Randomly decide if we should add partner

@@ -22,7 +22,7 @@ function processUpdate() {
             let hasMorePersons = true;
             let offset = 0;
 
-            while(hasMorePersons) {
+            while (hasMorePersons) {
                 try {
                     let persons = await conn('persons')
                         .where('network_id', my_network.id)
@@ -31,7 +31,7 @@ function processUpdate() {
                         .offset(offset)
                         .limit(BATCH_SIZE);
 
-                    if(!persons.length) {
+                    if (!persons.length) {
                         hasMorePersons = false;
                     }
 
@@ -40,34 +40,38 @@ function processUpdate() {
                     let batch_update = [];
                     let pipeline = cacheService.startPipeline();
 
-                    for(let person of persons) {
+                    for (let person of persons) {
                         let new_age = calculateAge(person.birth_date);
 
-                        if(person.age !== new_age) {
+                        if (person.age !== new_age) {
                             batch_update.push({
                                 id: person.id,
                                 age: new_age,
-                                updated: timeNow()
+                                updated: timeNow(),
                             });
                         }
 
-                        pipeline.hSet(cacheService.keys.person(person.person_token), 'age', new_age.toString());
+                        pipeline.hSet(
+                            cacheService.keys.person(person.person_token),
+                            'age',
+                            new_age.toString(),
+                        );
                     }
 
-                    if(batch_update.length) {
+                    if (batch_update.length) {
                         await batchUpdate('persons', batch_update);
                         await cacheService.execPipeline(pipeline);
                     }
-                } catch(e) {
+                } catch (e) {
                     console.error(e);
                     hasMorePersons = false;
                 }
             }
 
             console.log({
-                total_time: timeNow() - t
+                total_time: timeNow() - t,
             });
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
 

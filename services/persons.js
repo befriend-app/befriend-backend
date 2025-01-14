@@ -88,13 +88,7 @@ module.exports = {
                 const kids = await conn('persons_kids')
                     .where('person_id', person.id)
                     .whereNull('deleted')
-                    .select(
-                        'id',
-                        'token',
-                        'age_id',
-                        'gender_id',
-                        'is_active'
-                    );
+                    .select('id', 'token', 'age_id', 'gender_id', 'is_active');
 
                 // Convert kids array to object with token keys
                 const kids_dict = {};
@@ -129,8 +123,8 @@ module.exports = {
                     trust: person.rating_trust,
                     timeliness: person.rating_timeliness,
                     friendliness: person.rating_friendliness,
-                    fun: person.rating_fun
-                }
+                    fun: person.rating_fun,
+                };
 
                 await module.exports.savePerson(person.person_token, person);
 
@@ -156,10 +150,12 @@ module.exports = {
                 let conn = await dbService.conn();
 
                 if ('modes' in data) {
-                    await conn('persons').where('id', person.id).update({
-                        modes: JSON.stringify(data.modes),
-                        updated: timeNow(),
-                    });
+                    await conn('persons')
+                        .where('id', person.id)
+                        .update({
+                            modes: JSON.stringify(data.modes),
+                            updated: timeNow(),
+                        });
 
                     if (!('modes' in person) || person.modes === null) {
                         person.modes = {};
@@ -171,18 +167,24 @@ module.exports = {
 
                     await updateGridSets(person, null, 'modes');
 
-                    let new_modes = data.modes.filter(mode => !prev_modes.includes(mode));
-                    let deselected_mode = prev_modes.find(mode => !data.modes.includes(mode));
+                    let new_modes = data.modes.filter((mode) => !prev_modes.includes(mode));
+                    let deselected_mode = prev_modes.find((mode) => !data.modes.includes(mode));
 
                     //update grid cache sets
-                    if(person.grid?.token) {
-                        if(new_modes?.length) {
-                            for(let new_mode of new_modes) {
-                                let cache_key = cacheService.keys.persons_grid_set(person.grid.token, new_mode);
+                    if (person.grid?.token) {
+                        if (new_modes?.length) {
+                            for (let new_mode of new_modes) {
+                                let cache_key = cacheService.keys.persons_grid_set(
+                                    person.grid.token,
+                                    new_mode,
+                                );
                                 await cacheService.addItemToSet(cache_key, person.person_token);
                             }
-                        } else if(deselected_mode) {
-                            let cache_key = cacheService.keys.persons_grid_set(person.grid.token, deselected_mode);
+                        } else if (deselected_mode) {
+                            let cache_key = cacheService.keys.persons_grid_set(
+                                person.grid.token,
+                                deselected_mode,
+                            );
                             await cacheService.removeMemberFromSet(cache_key, person.person_token);
                         }
                     }
@@ -195,7 +197,7 @@ module.exports = {
                     //merge updated data for cache
                     Object.assign(person, data);
 
-                    if('is_online' in data) {
+                    if ('is_online' in data) {
                         await updateGridSets(person, null, 'online');
                     }
                 }
@@ -211,15 +213,15 @@ module.exports = {
     savePerson: function (person_token, data) {
         return new Promise(async (resolve, reject) => {
             try {
-                 let key = cacheService.keys.person(person_token);
+                let key = cacheService.keys.person(person_token);
 
-                 await cacheService.hSet(key, null, data);
+                await cacheService.hSet(key, null, data);
 
-                 resolve();
-            } catch(e) {
+                resolve();
+            } catch (e) {
                 console.error(e);
                 return reject(e);
             }
         });
-    }
+    },
 };

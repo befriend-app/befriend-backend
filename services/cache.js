@@ -71,7 +71,8 @@ const keyFunctions = {
     travel_times: (token) => `activities:travel:${token}`,
 
     person: (tokenOrEmail = '') => `persons:${tokenOrEmail.toLowerCase()}`,
-    person_login_tokens: (person_token = '') => `persons:${person_token.toLowerCase()}:login_tokens`,
+    person_login_tokens: (person_token = '') =>
+        `persons:${person_token.toLowerCase()}:login_tokens`,
     persons_activities: (person_token) => `persons:activities:${person_token}`,
 
     person_filters: (person_token) => `persons:filters:${person_token}`,
@@ -79,8 +80,10 @@ const keyFunctions = {
     persons_grid_set: (gridToken, key) => `persons:grid:${gridToken}:set:${key}`,
     persons_grid_sorted: (gridToken, key) => `persons:grid:${gridToken}:sorted:${key}`,
     persons_grid_exclude: (gridToken, key) => `persons:grid:${gridToken}:exclude:${key}`,
-    persons_grid_exclude_send_receive: (gridToken, key, send_or_receive) => `persons:grid:${gridToken}:exclude:${key}:${send_or_receive}`,
-    persons_grid_send_receive: (gridToken, key, send_or_receive) => `persons:grid:${gridToken}:${key}:${send_or_receive}`,
+    persons_grid_exclude_send_receive: (gridToken, key, send_or_receive) =>
+        `persons:grid:${gridToken}:exclude:${key}:${send_or_receive}`,
+    persons_grid_send_receive: (gridToken, key, send_or_receive) =>
+        `persons:grid:${gridToken}:${key}:${send_or_receive}`,
     instruments_prefix: (prefix) => `instruments:prefix:${prefix}`,
     movies_prefix: (prefix) => `movies:prefix:${prefix}`,
     movies_prefix_top_1000: (prefix) => `movies:prefix:top:1000:${prefix}`,
@@ -129,7 +132,7 @@ module.exports = {
         sectionKeys,
         mediaKeys,
         sportsKeys,
-        keyFunctions
+        keyFunctions,
     },
     init: function () {
         return new Promise(async (resolve, reject) => {
@@ -305,10 +308,10 @@ module.exports = {
     exists: function (key) {
         return new Promise(async (resolve, reject) => {
             try {
-                 let exists = await module.exports.conn.exists(key);
+                let exists = await module.exports.conn.exists(key);
 
-                 resolve(exists);
-            } catch(e) {
+                resolve(exists);
+            } catch (e) {
                 console.error(e);
                 return reject(e);
             }
@@ -316,24 +319,28 @@ module.exports = {
     },
     hGetAllObj: function (key) {
         function parseData(data) {
-            if(typeof data !== 'object') {
+            if (typeof data !== 'object') {
                 return data;
             }
 
-            for(let k in data) {
+            for (let k in data) {
                 let v = data[k];
 
-                if(v === '') { //convert to null if empty string
+                if (v === '') {
+                    //convert to null if empty string
                     data[k] = null;
-                } else if (k.startsWith('is_') || ['active'].includes(k) && isNumeric(v)) { //convert to boolean
+                } else if (k.startsWith('is_') || (['active'].includes(k) && isNumeric(v))) {
+                    //convert to boolean
                     data[k] = !!parseInt(v);
-                } else if(isNumeric(v)) { //convert back to int/float
-                    if(v.includes('.')) {
+                } else if (isNumeric(v)) {
+                    //convert back to int/float
+                    if (v.includes('.')) {
                         data[k] = parseFloat(v);
                     } else {
                         data[k] = parseInt(v);
                     }
-                } else if(v.startsWith('{')) { //convert to object
+                } else if (v.startsWith('{')) {
+                    //convert to object
                     data[k] = JSON.parse(v);
                 }
             }
@@ -354,7 +361,7 @@ module.exports = {
             try {
                 let exists = await module.exports.exists(key);
 
-                if(!exists) {
+                if (!exists) {
                     return resolve(null);
                 }
 
@@ -382,25 +389,25 @@ module.exports = {
                 }
             }
 
-            if(!key) {
-                return reject("Key required");
+            if (!key) {
+                return reject('Key required');
             }
 
-            if(field && typeof field !== 'string') {
-                return reject("Field must be a string");
+            if (field && typeof field !== 'string') {
+                return reject('Field must be a string');
             }
 
-            if(!data) {
-                return reject("Data required");
+            if (!data) {
+                return reject('Data required');
             }
 
             try {
                 data = structuredClone(data);
 
-                if(field) {
-                    if(typeof data === 'object') {
+                if (field) {
+                    if (typeof data === 'object') {
                         data = JSON.stringify(data);
-                    } else if(typeof data !== 'string') {
+                    } else if (typeof data !== 'string') {
                         data = data.toString();
                     }
                     await module.exports.conn.hSet(key, field, data);
@@ -409,9 +416,9 @@ module.exports = {
 
                     for (const [k, v] of Object.entries(data)) {
                         if (v === null) {
-                            processedData[k] = '';  // Convert null to empty string
-                        } else if(typeof v === 'boolean') {
-                            if(v) {
+                            processedData[k] = ''; // Convert null to empty string
+                        } else if (typeof v === 'boolean') {
+                            if (v) {
                                 processedData[k] = '1';
                             } else {
                                 processedData[k] = '0';
@@ -607,10 +614,10 @@ module.exports = {
     getSetIntersection: function (key, keys) {
         return new Promise(async (resolve, reject) => {
             try {
-                 let results = await module.exports.conn.sInter(key, keys);
+                let results = await module.exports.conn.sInter(key, keys);
 
-                 resolve(results);
-            } catch(e) {
+                resolve(results);
+            } catch (e) {
                 console.error(e);
                 return reject(e);
             }
@@ -626,7 +633,7 @@ module.exports = {
             }
         });
     },
-    getSetDiff: function(key, keys) {
+    getSetDiff: function (key, keys) {
         return new Promise(async (resolve, reject) => {
             try {
                 let data = await module.exports.conn.sDiff(key, keys);

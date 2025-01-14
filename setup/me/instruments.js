@@ -101,7 +101,7 @@ function indexInstruments() {
 
             let instrumentsObj = {};
 
-            for(let instrument of instruments) {
+            for (let instrument of instruments) {
                 instrumentsObj[instrument.token] = JSON.stringify(instrument);
             }
 

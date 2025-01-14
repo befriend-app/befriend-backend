@@ -5,7 +5,13 @@ let gridService = require('../services/grid');
 let reviewService = require('../services/reviews');
 let sectionsData = require('../services/sections_data');
 
-const { filterMappings, getPersonFilters, getInterestSections, getSchoolsWorkSections, getPersonalSections } = require('./filters');
+const {
+    filterMappings,
+    getPersonFilters,
+    getInterestSections,
+    getSchoolsWorkSections,
+    getPersonalSections,
+} = require('./filters');
 const { kms_per_mile, timeNow, isNumeric, calculateDistanceMeters } = require('./shared');
 const { getNetworksForFilters } = require('./network');
 const { getModes, getPersonExcludedModes } = require('./modes');
@@ -30,11 +36,11 @@ let personal_sections = getPersonalSections();
 
 let interestScoreThresholds = {
     ultra: 200,
-    super: 100
+    super: 100,
 };
 
 function getMatches(me, params = {}) {
-    let {activity, send_only, counts_only} = params;
+    let { activity, send_only, counts_only } = params;
 
     let my_token, my_filters;
     let am_online = me?.is_online;
@@ -46,14 +52,14 @@ function getMatches(me, params = {}) {
     let personsInterests = {};
 
     let gridsLookup = {
-        byId: {}
+        byId: {},
     };
 
     let exclude = {
         send: {},
-        receive: {}
+        receive: {},
     };
-    
+
     let persons_not_excluded_after_stage_1 = {};
 
     let persons_not_excluded_final = {};
@@ -66,18 +72,18 @@ function getMatches(me, params = {}) {
                 total: 0,
                 ultra: 0,
                 super: 0,
-                regular: 0
+                regular: 0,
             },
-            excluded: 0
+            excluded: 0,
         },
         matches: {
             send: [],
-            receive: []
-        }
+            receive: [],
+        },
     };
 
     function sortMatches() {
-        organized.matches.send.sort(function(a, b) {
+        organized.matches.send.sort(function (a, b) {
             if (b.matches.total_score !== a.matches.total_score) {
                 return b.matches.total_score - a.matches.total_score;
             }
@@ -94,7 +100,7 @@ function getMatches(me, params = {}) {
                 await getGridTokens();
 
                 console.log({
-                    grid_tokens: timeNow() - t
+                    grid_tokens: timeNow() - t,
                 });
 
                 t = timeNow();
@@ -102,11 +108,11 @@ function getMatches(me, params = {}) {
                 await getGridPersonTokens();
 
                 console.log({
-                    total_initial_persons: Object.keys(person_tokens).length
+                    total_initial_persons: Object.keys(person_tokens).length,
                 });
 
                 console.log({
-                    person_tokens: timeNow() - t
+                    person_tokens: timeNow() - t,
                 });
 
                 await filterOnlineStatus();
@@ -132,34 +138,34 @@ function getMatches(me, params = {}) {
                 await filterSection('smoking', getSmoking, false);
 
                 return resolve();
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
                 return reject(e);
-            }       
+            }
         });
     }
 
     function filterPersonsAfterStage1() {
-        for(let person_token in person_tokens) {
+        for (let person_token in person_tokens) {
             let included = false;
 
-            if(!(person_token in exclude.send)) {
+            if (!(person_token in exclude.send)) {
                 included = true;
             }
 
             //if I'm offline or unavailable, exclude receiving from all
-            if(!am_online || !am_available) {
-                if(!send_only) {
+            if (!am_online || !am_available) {
+                if (!send_only) {
                     exclude.receive[person_token] = true;
                 }
             } else {
                 //allow receiving notifications if not excluded
-                if(!(person_token in exclude.receive)) {
+                if (!(person_token in exclude.receive)) {
                     included = true;
                 }
             }
 
-            if(included) {
+            if (included) {
                 persons_not_excluded_after_stage_1[person_token] = true;
             } else {
                 organized.counts.excluded++;
@@ -179,7 +185,7 @@ function getMatches(me, params = {}) {
                 await filterReviews();
 
                 await filterPersonsAvailability();
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
             }
 
@@ -202,14 +208,16 @@ function getMatches(me, params = {}) {
 
         let myInterests = {
             filters: {},
-            sections: {}
+            sections: {},
         };
 
         function calculateInterestScores() {
-            for(let person_token in personsInterests) {
+            for (let person_token in personsInterests) {
                 let person = personsInterests[person_token];
 
-                person.matches.total_score = calculateTotalScore(Object.values(person.matches.items));
+                person.matches.total_score = calculateTotalScore(
+                    Object.values(person.matches.items),
+                );
                 person.matches.count = Object.keys(person.matches.items).length;
             }
         }
@@ -219,24 +227,26 @@ function getMatches(me, params = {}) {
                 // Build my interests object
                 let my_pipeline = cacheService.startPipeline();
 
-                let sections = interests_sections.concat(schools_work_sections).concat(personal_sections);
+                let sections = interests_sections
+                    .concat(schools_work_sections)
+                    .concat(personal_sections);
 
                 for (let section of sections) {
                     myInterests.filters[section.token] = my_filters[section.token] || {};
                     my_pipeline.hGet(cacheService.keys.person_sections(my_token), section.token);
                 }
-                
+
                 let my_results = await cacheService.execMulti(my_pipeline);
-                
+
                 let my_idx = 0;
-                
-                for(let section of sections) {
+
+                for (let section of sections) {
                     myInterests.sections[section.token] = JSON.parse(my_results[my_idx++]);
                 }
 
                 //filter remaining person tokens for retrieval of person/filter data
-                for(let person_token in persons_not_excluded_after_stage_1) {
-                    if(person_token in exclude.send && person_token in exclude.receive) {
+                for (let person_token in persons_not_excluded_after_stage_1) {
+                    if (person_token in exclude.send && person_token in exclude.receive) {
                         continue;
                     }
 
@@ -246,18 +256,18 @@ function getMatches(me, params = {}) {
                         matches: {
                             items: {},
                             count: 0,
-                            total_score: 0
-                        }
+                            total_score: 0,
+                        },
                     };
                 }
 
                 let pipeline = cacheService.startPipeline();
 
-                for(let person_token in personsInterests) {
+                for (let person_token in personsInterests) {
                     let person_section_key = cacheService.keys.person_sections(person_token);
                     let person_filters_key = cacheService.keys.person_filters(person_token);
 
-                    for(let section of sections) {
+                    for (let section of sections) {
                         pipeline.hGet(person_section_key, section.token);
                         pipeline.hGet(person_filters_key, section.token);
                     }
@@ -269,12 +279,16 @@ function getMatches(me, params = {}) {
 
                 let t = timeNow();
 
-                for(let person_token in personsInterests) {
-                    for(let section of sections) {
+                for (let person_token in personsInterests) {
+                    for (let section of sections) {
                         try {
-                            personsInterests[person_token].sections[section.token] = JSON.parse(results[idx++]);
-                            personsInterests[person_token].filters[section.token] = JSON.parse(results[idx++]);
-                        } catch(e) {
+                            personsInterests[person_token].sections[section.token] = JSON.parse(
+                                results[idx++],
+                            );
+                            personsInterests[person_token].filters[section.token] = JSON.parse(
+                                results[idx++],
+                            );
+                        } catch (e) {
                             console.error(e);
                         }
                     }
@@ -289,7 +303,7 @@ function getMatches(me, params = {}) {
                 });
 
                 resolve();
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
                 return reject(e);
             }
@@ -310,12 +324,12 @@ function getMatches(me, params = {}) {
                 // default to user's current location
                 let location = {
                     lat: me.location_lat,
-                    lon: me.location_lon
-                }
+                    lon: me.location_lon,
+                };
 
-                if(activity?.place) {
+                if (activity?.place) {
                     // use activity place lat/lon
-                    if(activity.place?.data?.location_lat) {
+                    if (activity.place?.data?.location_lat) {
                         location.lat = activity.place.data.location_lat;
                         location.lon = activity.place.data.location_lon;
                     } else {
@@ -330,13 +344,14 @@ function getMatches(me, params = {}) {
 
                 let max_distance = DEFAULT_DISTANCE_MILES;
 
-                if (my_filters.distance?.is_active &&
-                    my_filters.distance.filter_value) {
-
-                    if(my_filters.distance.is_send && my_filters.distance.is_receive) {
+                if (my_filters.distance?.is_active && my_filters.distance.filter_value) {
+                    if (my_filters.distance.is_send && my_filters.distance.is_receive) {
                         max_distance = my_filters.distance.filter_value;
-                    } else if(my_filters.distance.is_send || my_filters.distance.is_receive) {
-                        max_distance = Math.max(my_filters.distance.filter_value, DEFAULT_DISTANCE_MILES);
+                    } else if (my_filters.distance.is_send || my_filters.distance.is_receive) {
+                        max_distance = Math.max(
+                            my_filters.distance.filter_value,
+                            DEFAULT_DISTANCE_MILES,
+                        );
                     }
                 }
 
@@ -344,14 +359,14 @@ function getMatches(me, params = {}) {
 
                 let grids = await gridService.findNearby(location.lat, location.lon, max_distance);
 
-                for(let grid of grids) {
+                for (let grid of grids) {
                     gridsLookup.byId[grid.id] = grid;
 
                     neighbor_grid_tokens.push(grid.token);
                 }
 
                 resolve();
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
                 return reject(e);
             }
@@ -365,7 +380,7 @@ function getMatches(me, params = {}) {
 
                 for (let grid_token of neighbor_grid_tokens) {
                     pipeline_persons.sMembers(
-                        cacheService.keys.persons_grid_set(grid_token, 'location')
+                        cacheService.keys.persons_grid_set(grid_token, 'location'),
                     );
                 }
 
@@ -392,7 +407,7 @@ function getMatches(me, params = {}) {
 
                 for (let grid_token of neighbor_grid_tokens) {
                     pipeline_offline.sMembers(
-                        cacheService.keys.persons_grid_exclude(grid_token, 'online')
+                        cacheService.keys.persons_grid_exclude(grid_token, 'online'),
                     );
                 }
 
@@ -402,7 +417,7 @@ function getMatches(me, params = {}) {
                     for (let token of grid) {
                         exclude.send[token] = true;
 
-                        if(!send_only) {
+                        if (!send_only) {
                             exclude.receive[token] = true;
                         }
                     }
@@ -412,7 +427,7 @@ function getMatches(me, params = {}) {
                     after_online_excluded: {
                         send: Object.keys(exclude.send).length,
                         receive: Object.keys(exclude.receive).length,
-                    }
+                    },
                 });
 
                 resolve();
@@ -463,38 +478,52 @@ function getMatches(me, params = {}) {
         return new Promise(async (resolve, reject) => {
             try {
                 let allNetworks = await getNetworksForFilters();
-                let network_token = allNetworks.networks?.find(network => network.id === me.network_id)?.network_token;
+                let network_token = allNetworks.networks?.find(
+                    (network) => network.id === me.network_id,
+                )?.network_token;
 
-                if(!network_token) {
+                if (!network_token) {
                     return resolve();
                 }
 
                 let pipeline = cacheService.startPipeline();
 
                 for (let grid_token of neighbor_grid_tokens) {
-                    if(!send_only) {
-                        pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `networks:${network_token}`, 'send'));
+                    if (!send_only) {
+                        pipeline.sMembers(
+                            cacheService.keys.persons_grid_exclude_send_receive(
+                                grid_token,
+                                `networks:${network_token}`,
+                                'send',
+                            ),
+                        );
                     }
 
-                    pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `networks:${network_token}`, 'receive'));
+                    pipeline.sMembers(
+                        cacheService.keys.persons_grid_exclude_send_receive(
+                            grid_token,
+                            `networks:${network_token}`,
+                            'receive',
+                        ),
+                    );
                 }
 
                 let results = await cacheService.execPipeline(pipeline);
 
                 let idx = 0;
 
-                for(let grid_token of neighbor_grid_tokens) {
-                    if(!send_only) {
+                for (let grid_token of neighbor_grid_tokens) {
+                    if (!send_only) {
                         let personsExcludeSend = results[idx++];
 
-                        for(let token of personsExcludeSend) {
+                        for (let token of personsExcludeSend) {
                             exclude.receive[token] = true;
                         }
                     }
 
                     let personsExcludeReceive = results[idx++];
 
-                    for(let token of personsExcludeReceive) {
+                    for (let token of personsExcludeReceive) {
                         exclude.send[token] = true;
                     }
                 }
@@ -503,7 +532,7 @@ function getMatches(me, params = {}) {
                     after_networks_excluded: {
                         send: Object.keys(exclude.send).length,
                         receive: Object.keys(exclude.receive).length,
-                    }
+                    },
                 });
 
                 resolve();
@@ -523,42 +552,46 @@ function getMatches(me, params = {}) {
 
                 let included_modes = {
                     send: [],
-                    receive: []
+                    receive: [],
                 };
 
-                for(let mode of modeTypes) {
-                    if(!excluded_modes.send.has(mode.token)) {
+                for (let mode of modeTypes) {
+                    if (!excluded_modes.send.has(mode.token)) {
                         included_modes.send.push(mode.token);
                     }
 
-                    if(!excluded_modes.receive.has(mode.token)) {
+                    if (!excluded_modes.receive.has(mode.token)) {
                         included_modes.receive.push(mode.token);
                     }
                 }
 
                 let pipeline = cacheService.startPipeline();
 
-                if(!send_only) {
+                if (!send_only) {
                     // Check all modes for send
-                    for(let mode of modeTypes) {
+                    for (let mode of modeTypes) {
                         for (let grid_token of neighbor_grid_tokens) {
-                            pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(
-                                grid_token,
-                                `modes:${mode.token}`,
-                                'send'
-                            ));
+                            pipeline.sMembers(
+                                cacheService.keys.persons_grid_exclude_send_receive(
+                                    grid_token,
+                                    `modes:${mode.token}`,
+                                    'send',
+                                ),
+                            );
                         }
                     }
                 }
 
                 // Check all modes for receive
-                for(let mode of modeTypes) {
-                    for(let grid_token of neighbor_grid_tokens) {
-                        pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(
-                            grid_token,
-                            `modes:${mode.token}`,
-                            'receive'
-                        ));
+                for (let mode of modeTypes) {
+                    for (let grid_token of neighbor_grid_tokens) {
+                        pipeline.sMembers(
+                            cacheService.keys.persons_grid_exclude_send_receive(
+                                grid_token,
+                                `modes:${mode.token}`,
+                                'receive',
+                            ),
+                        );
                     }
                 }
 
@@ -570,8 +603,8 @@ function getMatches(me, params = {}) {
                 let personsExcludeModesReceive = {};
 
                 // Process send results
-                if(!send_only) {
-                    for(let mode of modeTypes) {
+                if (!send_only) {
+                    for (let mode of modeTypes) {
                         personsExcludeModesSend[mode.token] = {};
 
                         for (let grid_token of neighbor_grid_tokens) {
@@ -585,7 +618,7 @@ function getMatches(me, params = {}) {
                 }
 
                 // Process receive results
-                for(let mode of modeTypes) {
+                for (let mode of modeTypes) {
                     personsExcludeModesReceive[mode.token] = {};
 
                     for (let grid_token of neighbor_grid_tokens) {
@@ -597,35 +630,35 @@ function getMatches(me, params = {}) {
                     }
                 }
 
-                for(let token in person_tokens) {
+                for (let token in person_tokens) {
                     //send
                     let hasSendModeMatch = false;
 
-                    for(let includedMode of included_modes.send) {
+                    for (let includedMode of included_modes.send) {
                         // If not excluded from receiving
-                        if(!(token in personsExcludeModesReceive[includedMode])) {
+                        if (!(token in personsExcludeModesReceive[includedMode])) {
                             hasSendModeMatch = true;
                             break;
                         }
                     }
 
-                    if(!hasSendModeMatch) {
+                    if (!hasSendModeMatch) {
                         exclude.send[token] = true;
                     }
 
                     //receive
-                    if(!send_only) {
+                    if (!send_only) {
                         let hasReceiveModeMatch = false;
 
-                        for(let includedMode of included_modes.receive) {
+                        for (let includedMode of included_modes.receive) {
                             // If not excluded from sending
-                            if(!(token in personsExcludeModesSend[includedMode])) {
+                            if (!(token in personsExcludeModesSend[includedMode])) {
                                 hasReceiveModeMatch = true;
                                 break;
                             }
                         }
 
-                        if(!hasReceiveModeMatch) {
+                        if (!hasReceiveModeMatch) {
                             exclude.receive[token] = true;
                         }
                     }
@@ -635,7 +668,7 @@ function getMatches(me, params = {}) {
                     after_modes_excluded: {
                         send: Object.keys(exclude.send).length,
                         receive: Object.keys(exclude.receive).length,
-                    }
+                    },
                 });
 
                 resolve();
@@ -654,17 +687,31 @@ function getMatches(me, params = {}) {
                 let pipeline = cacheService.startPipeline();
 
                 // Get all verification data for each grid token and type
-                for(let type of verificationTypes) {
-                    for(let grid_token of neighbor_grid_tokens) {
+                for (let type of verificationTypes) {
+                    for (let grid_token of neighbor_grid_tokens) {
                         // Get verified persons
-                        pipeline.sMembers(cacheService.keys.persons_grid_set(grid_token, `verified:${type}`));
+                        pipeline.sMembers(
+                            cacheService.keys.persons_grid_set(grid_token, `verified:${type}`),
+                        );
 
                         // Get send/receive filter states
-                        if(!send_only) {
-                            pipeline.sMembers(cacheService.keys.persons_grid_send_receive(grid_token, `verifications:${type}`, 'send'));
+                        if (!send_only) {
+                            pipeline.sMembers(
+                                cacheService.keys.persons_grid_send_receive(
+                                    grid_token,
+                                    `verifications:${type}`,
+                                    'send',
+                                ),
+                            );
                         }
 
-                        pipeline.sMembers(cacheService.keys.persons_grid_send_receive(grid_token, `verifications:${type}`, 'receive'));
+                        pipeline.sMembers(
+                            cacheService.keys.persons_grid_send_receive(
+                                grid_token,
+                                `verifications:${type}`,
+                                'receive',
+                            ),
+                        );
                     }
                 }
 
@@ -685,7 +732,7 @@ function getMatches(me, params = {}) {
                         let send_tokens;
                         let verified_tokens = results[idx++];
 
-                        if(!send_only) {
+                        if (!send_only) {
                             send_tokens = results[idx++];
                         }
 
@@ -696,7 +743,7 @@ function getMatches(me, params = {}) {
                             verifiedPersons[type][token] = true;
                         }
 
-                        if(!send_only) {
+                        if (!send_only) {
                             // Track send filter states
                             for (let token of send_tokens) {
                                 sendVerification[type][token] = true;
@@ -710,36 +757,40 @@ function getMatches(me, params = {}) {
                     }
                 }
 
-                for(let token in person_tokens) {
-                    for(let type of verificationTypes) {
-                        if(me[`is_verified_${type}`]) {
+                for (let token in person_tokens) {
+                    for (let type of verificationTypes) {
+                        if (me[`is_verified_${type}`]) {
                             //if filter enabled
-                            if(my_filters.verifications?.is_active && my_filters[`verification_${type}`]?.is_active) {
-                                if(my_filters[`verification_${type}`].is_send) {
+                            if (
+                                my_filters.verifications?.is_active &&
+                                my_filters[`verification_${type}`]?.is_active
+                            ) {
+                                if (my_filters[`verification_${type}`].is_send) {
                                     //send to verified only
-                                    if(!verifiedPersons[type][token]) {
+                                    if (!verifiedPersons[type][token]) {
                                         exclude.send[token] = true;
                                     }
                                 }
 
-                                if(my_filters[`verification_${type}`].is_receive && !send_only) {
+                                if (my_filters[`verification_${type}`].is_receive && !send_only) {
                                     //receive from verified only
-                                    if(!verifiedPersons[type][token]) {
+                                    if (!verifiedPersons[type][token]) {
                                         exclude.receive[token] = true;
                                     }
                                 }
                             } else {
                                 //send/receive from anybody
                             }
-                        } else { //if I am not verified
+                        } else {
+                            //if I am not verified
                             //exclude from sending/receiving if person is verified and requires verification
-                            if(token in verifiedPersons[type]) {
-                                if(token in receiveVerification[type]) {
+                            if (token in verifiedPersons[type]) {
+                                if (token in receiveVerification[type]) {
                                     exclude.send[token] = true;
                                 }
 
-                                if(!send_only) {
-                                    if(token in sendVerification[type]) {
+                                if (!send_only) {
+                                    if (token in sendVerification[type]) {
                                         exclude.receive[token] = true;
                                     }
                                 }
@@ -752,7 +803,7 @@ function getMatches(me, params = {}) {
                     after_verifications_excluded: {
                         send: Object.keys(exclude.send).length,
                         receive: Object.keys(exclude.receive).length,
-                    }
+                    },
                 });
 
                 resolve();
@@ -777,28 +828,31 @@ function getMatches(me, params = {}) {
                     // Get all gender set members
                     for (let token in gendersLookup.byToken) {
                         if (token !== 'any') {
-                            pipeline.sMembers(cacheService.keys.persons_grid_set(
-                                grid_token,
-                                `gender:${token}`
-                            ));
+                            pipeline.sMembers(
+                                cacheService.keys.persons_grid_set(grid_token, `gender:${token}`),
+                            );
                         }
                     }
 
                     for (let token in gendersLookup.byToken) {
                         if (token !== 'any') {
-                            if(!send_only) {
-                                pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(
-                                    grid_token,
-                                    `genders:${token}`,
-                                    'send'
-                                ));
+                            if (!send_only) {
+                                pipeline.sMembers(
+                                    cacheService.keys.persons_grid_exclude_send_receive(
+                                        grid_token,
+                                        `genders:${token}`,
+                                        'send',
+                                    ),
+                                );
                             }
 
-                            pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(
-                                grid_token,
-                                `genders:${token}`,
-                                'receive'
-                            ));
+                            pipeline.sMembers(
+                                cacheService.keys.persons_grid_exclude_send_receive(
+                                    grid_token,
+                                    `genders:${token}`,
+                                    'receive',
+                                ),
+                            );
                         }
                     }
                 }
@@ -837,7 +891,7 @@ function getMatches(me, params = {}) {
                                 personsExcludeReceive[gender_token] = {};
                             }
 
-                            if(!send_only) {
+                            if (!send_only) {
                                 // Send exclusions
                                 let sendExclusions = results[idx++];
 
@@ -857,20 +911,20 @@ function getMatches(me, params = {}) {
                 }
 
                 //if gender not set, exclude for all excluded
-                if(!myGender) {
-                    for(let gender_token in personsExcludeReceive) {
+                if (!myGender) {
+                    for (let gender_token in personsExcludeReceive) {
                         let tokens = personsExcludeReceive[gender_token];
 
-                        for(let token in tokens) {
+                        for (let token in tokens) {
                             exclude.send[token] = true;
                         }
                     }
 
-                    if(!send_only) {
-                        for(let gender_token in personsExcludeSend) {
+                    if (!send_only) {
+                        for (let gender_token in personsExcludeSend) {
                             let tokens = personsExcludeSend[gender_token];
 
-                            for(let token in tokens) {
+                            for (let token in tokens) {
                                 exclude.receive[token] = true;
                             }
                         }
@@ -889,13 +943,19 @@ function getMatches(me, params = {}) {
                         }
 
                         // Exclude send if person has excluded my gender or I have excluded the person's gender
-                        if (token in personsExcludeReceive[myGender] || my_token in personsExcludeSend[personGender]) {
+                        if (
+                            token in personsExcludeReceive[myGender] ||
+                            my_token in personsExcludeSend[personGender]
+                        ) {
                             exclude.send[token] = true;
                         }
 
-                        if(!send_only) {
+                        if (!send_only) {
                             // Exclude receive if person has excluded my gender or I have excluded the person's gender
-                            if (token in personsExcludeSend[myGender] || my_token in personsExcludeReceive[personGender]) {
+                            if (
+                                token in personsExcludeSend[myGender] ||
+                                my_token in personsExcludeReceive[personGender]
+                            ) {
                                 exclude.receive[token] = true;
                             }
                         }
@@ -906,7 +966,7 @@ function getMatches(me, params = {}) {
                     after_genders_excluded: {
                         send: Object.keys(exclude.send).length,
                         receive: Object.keys(exclude.receive).length,
-                    }
+                    },
                 });
 
                 resolve();
@@ -923,11 +983,11 @@ function getMatches(me, params = {}) {
                 //default to current location
                 let my_location = {
                     lat: me.location_lat,
-                    lon: me.location_lon
-                }
+                    lon: me.location_lon,
+                };
 
                 //activity place location
-                if(activity?.place?.data?.location_lat) {
+                if (activity?.place?.data?.location_lat) {
                     my_location.lat = activity.place.data.location_lat;
                     my_location.lon = activity.place.data.location_lon;
                 }
@@ -938,19 +998,19 @@ function getMatches(me, params = {}) {
                 let my_exclude_send_distance = DEFAULT_DISTANCE_MILES;
                 let my_exclude_receive_distance = DEFAULT_DISTANCE_MILES;
 
-                if(filter?.is_active && filter.filter_value) {
-                    if(filter.is_send) {
+                if (filter?.is_active && filter.filter_value) {
+                    if (filter.is_send) {
                         my_exclude_send_distance = filter.filter_value;
                     }
 
-                    if(filter.is_receive) {
+                    if (filter.is_receive) {
                         my_exclude_receive_distance = filter.filter_value;
                     }
                 }
 
                 let pipeline = cacheService.startPipeline();
 
-                for(let person_token in persons_not_excluded_after_stage_1) {
+                for (let person_token in persons_not_excluded_after_stage_1) {
                     let person_key = cacheService.keys.person(person_token);
                     let filter_key = cacheService.keys.person_filters(person_token);
 
@@ -962,24 +1022,24 @@ function getMatches(me, params = {}) {
                 let results = await cacheService.execPipeline(pipeline);
                 let idx = 0;
 
-                for(let person_token in persons_not_excluded_after_stage_1) {
+                for (let person_token in persons_not_excluded_after_stage_1) {
                     let their_location = results[idx++];
                     let their_grid = results[idx++];
                     let their_distance_filter = results[idx++];
 
                     try {
-                        if(their_location) {
+                        if (their_location) {
                             their_location = JSON.parse(their_location);
                         }
 
-                        if(their_grid) {
+                        if (their_grid) {
                             their_grid = JSON.parse(their_grid);
                         }
 
-                        if(their_distance_filter) {
+                        if (their_distance_filter) {
                             their_distance_filter = JSON.parse(their_distance_filter);
                         }
-                    } catch(e) {
+                    } catch (e) {
                         console.error('Error parsing results:', e);
                     }
 
@@ -989,21 +1049,22 @@ function getMatches(me, params = {}) {
                     // Calculate distance between persons
                     let distance_km = null;
 
-                    if(my_location && their_location) {
+                    if (my_location && their_location) {
                         // Calculate using lat/lon
                         distance_km = calculateDistanceMeters(
                             {
                                 lat: my_location.lat,
                                 lon: my_location.lon,
-                            }, {
-                                lat: their_location.lat,
-                                lon: their_location.lon
                             },
-                            true
+                            {
+                                lat: their_location.lat,
+                                lon: their_location.lon,
+                            },
+                            true,
                         );
-                    } else if(my_grid && their_grid) {
+                    } else if (my_grid && their_grid) {
                         //we'll later call the host network to help us filter distance without revealing actual location
-                        if(my_grid.id === their_grid.id) {
+                        if (my_grid.id === their_grid.id) {
                             distance_km = 0;
                         } else {
                             // Use grid center points
@@ -1012,16 +1073,17 @@ function getMatches(me, params = {}) {
                                     {
                                         lat: gridsLookup.byId[my_grid.id].center_lat,
                                         lon: gridsLookup.byId[my_grid.id].center_lon,
-                                    }, {
-                                        lat: gridsLookup.byId[their_grid.id].center_lat,
-                                        lon: gridsLookup.byId[their_grid.id].center_lon
                                     },
-                                    true
+                                    {
+                                        lat: gridsLookup.byId[their_grid.id].center_lat,
+                                        lon: gridsLookup.byId[their_grid.id].center_lon,
+                                    },
+                                    true,
                                 );
 
                                 //do a rough estimate of distance between two different grids
                                 distance_km = distance_km / 3;
-                            } catch(e) {
+                            } catch (e) {
                                 console.error(e);
                             }
                         }
@@ -1029,10 +1091,10 @@ function getMatches(me, params = {}) {
 
                     let compare_distance = distance_km / kms_per_mile;
 
-                    if(distance_km === null) {
+                    if (distance_km === null) {
                         exclude.send[person_token] = true;
 
-                        if(!send_only) {
+                        if (!send_only) {
                             exclude.receive[person_token] = true;
                         }
 
@@ -1040,11 +1102,11 @@ function getMatches(me, params = {}) {
                     }
 
                     // Check if I should exclude sending/receiving to/from them
-                    if(compare_distance > my_exclude_send_distance) {
+                    if (compare_distance > my_exclude_send_distance) {
                         should_exclude_send = true;
                     }
 
-                    if(compare_distance > my_exclude_receive_distance) {
+                    if (compare_distance > my_exclude_receive_distance) {
                         should_exclude_receive = true;
                     }
 
@@ -1052,29 +1114,29 @@ function getMatches(me, params = {}) {
                     let their_exclude_send_distance = DEFAULT_DISTANCE_MILES;
                     let their_exclude_receive_distance = DEFAULT_DISTANCE_MILES;
 
-                    if(their_distance_filter?.is_active && filter.filter_value) {
-                        if(their_distance_filter.is_send) {
+                    if (their_distance_filter?.is_active && filter.filter_value) {
+                        if (their_distance_filter.is_send) {
                             their_exclude_send_distance = filter.filter_value;
                         }
 
-                        if(their_distance_filter.is_receive) {
+                        if (their_distance_filter.is_receive) {
                             their_exclude_receive_distance = filter.filter_value;
                         }
                     }
 
-                    if(compare_distance > their_exclude_send_distance) {
+                    if (compare_distance > their_exclude_send_distance) {
                         should_exclude_receive = true;
                     }
 
-                    if(compare_distance > their_exclude_receive_distance) {
+                    if (compare_distance > their_exclude_receive_distance) {
                         should_exclude_send = true;
                     }
 
-                    if(should_exclude_send) {
+                    if (should_exclude_send) {
                         exclude.send[person_token] = true;
                     }
 
-                    if(should_exclude_receive && !send_only) {
+                    if (should_exclude_receive && !send_only) {
                         exclude.receive[person_token] = true;
                     }
                 }
@@ -1083,11 +1145,11 @@ function getMatches(me, params = {}) {
                     after_filter_distance_excluded: {
                         send: Object.keys(exclude.send).length,
                         receive: Object.keys(exclude.receive).length,
-                    }
+                    },
                 });
 
                 resolve();
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
                 return reject(e);
             }
@@ -1138,11 +1200,11 @@ function getMatches(me, params = {}) {
                         let my_max_age = parseInt(my_age_filter.filter_value_max) || maxAge;
 
                         if (their_age < my_min_age || their_age > my_max_age) {
-                            if(my_age_filter.is_send) {
+                            if (my_age_filter.is_send) {
                                 should_exclude_send = true;
                             }
 
-                            if(my_age_filter.is_receive) {
+                            if (my_age_filter.is_receive) {
                                 should_exclude_receive = true;
                             }
                         }
@@ -1153,12 +1215,12 @@ function getMatches(me, params = {}) {
                         let their_min_age = parseInt(their_age_filter.filter_value_min) || minAge;
                         let their_max_age = parseInt(their_age_filter.filter_value_max) || maxAge;
 
-                        if(me.age < their_min_age || me.age > their_max_age) {
-                            if(their_age_filter.is_receive) {
+                        if (me.age < their_min_age || me.age > their_max_age) {
+                            if (their_age_filter.is_receive) {
                                 should_exclude_send = true;
                             }
 
-                            if(their_age_filter.is_send) {
+                            if (their_age_filter.is_send) {
                                 should_exclude_receive = true;
                             }
                         }
@@ -1177,7 +1239,7 @@ function getMatches(me, params = {}) {
                     after_filter_ages_excluded: {
                         send: Object.keys(exclude.send).length,
                         receive: Object.keys(exclude.receive).length,
-                    }
+                    },
                 });
 
                 resolve();
@@ -1193,34 +1255,40 @@ function getMatches(me, params = {}) {
             try {
                 let myReviewsFilter = my_filters.reviews;
 
-                if(!myReviewsFilter) {
+                if (!myReviewsFilter) {
                     return resolve();
                 }
 
                 let myNewReviewsFilter = my_filters.reviews_new;
 
-                let me_exclude_send_new = myReviewsFilter.is_active && !myNewReviewsFilter?.is_active && myNewReviewsFilter?.is_send;
-                let me_exclude_receive_new = myReviewsFilter.is_active && !myNewReviewsFilter?.is_active && myNewReviewsFilter?.is_receive;
+                let me_exclude_send_new =
+                    myReviewsFilter.is_active &&
+                    !myNewReviewsFilter?.is_active &&
+                    myNewReviewsFilter?.is_send;
+                let me_exclude_receive_new =
+                    myReviewsFilter.is_active &&
+                    !myNewReviewsFilter?.is_active &&
+                    myNewReviewsFilter?.is_receive;
 
                 let myExclusions = {
                     send: {},
-                    receive: {}
+                    receive: {},
                 };
 
                 const reviewTypes = ['safety', 'trust', 'timeliness', 'friendliness', 'fun'];
 
-                for(let type of reviewTypes) {
+                for (let type of reviewTypes) {
                     let filter = my_filters[`reviews_${type}`];
 
-                    if(myReviewsFilter.is_active && filter?.is_active) {
+                    if (myReviewsFilter.is_active && filter?.is_active) {
                         //use custom filter value or default
                         let value = filter.filter_value || reviewService.filters.default;
 
-                        if(filter.is_send) {
+                        if (filter.is_send) {
                             myExclusions.send[type] = value;
                         }
 
-                        if(filter.is_receive) {
+                        if (filter.is_receive) {
                             myExclusions.receive[type] = value;
                         }
                     }
@@ -1231,23 +1299,25 @@ function getMatches(me, params = {}) {
 
                 let exclude_match_new = {
                     send: {},
-                    receive: {}
-                }
-                
+                    receive: {},
+                };
+
                 let exclude_settings = {
                     send: {},
-                    receive: {}
+                    receive: {},
                 };
 
                 // Get new members data
                 let pipeline = cacheService.startPipeline();
 
                 for (let grid_token of neighbor_grid_tokens) {
-                    pipeline.sMembers(cacheService.keys.persons_grid_set(grid_token, 'is_new_person'));
+                    pipeline.sMembers(
+                        cacheService.keys.persons_grid_set(grid_token, 'is_new_person'),
+                    );
                 }
 
                 let results = await cacheService.execPipeline(pipeline);
-                
+
                 for (let grid of results) {
                     for (let person_token of grid) {
                         new_persons_tokens[person_token] = true;
@@ -1259,32 +1329,64 @@ function getMatches(me, params = {}) {
 
                 for (let grid_token of neighbor_grid_tokens) {
                     // Persons who excluded match with new
-                    if(!send_only) {
-                        pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(grid_token, 'reviews:match_new', 'send'));
+                    if (!send_only) {
+                        pipeline.sMembers(
+                            cacheService.keys.persons_grid_exclude_send_receive(
+                                grid_token,
+                                'reviews:match_new',
+                                'send',
+                            ),
+                        );
                     }
 
-                    pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(grid_token, 'reviews:match_new', 'receive'));
+                    pipeline.sMembers(
+                        cacheService.keys.persons_grid_exclude_send_receive(
+                            grid_token,
+                            'reviews:match_new',
+                            'receive',
+                        ),
+                    );
 
                     for (let type of reviewTypes) {
                         // Ratings for each person
-                        pipeline.zRangeWithScores(cacheService.keys.persons_grid_sorted(grid_token, `reviews:${type}`), 0, -1);
+                        pipeline.zRangeWithScores(
+                            cacheService.keys.persons_grid_sorted(grid_token, `reviews:${type}`),
+                            0,
+                            -1,
+                        );
 
                         // Exclude filter settings for each person
-                        if(!send_only) {
-                            pipeline.zRangeWithScores(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `reviews:${type}`, 'send'), 0, -1);
+                        if (!send_only) {
+                            pipeline.zRangeWithScores(
+                                cacheService.keys.persons_grid_exclude_send_receive(
+                                    grid_token,
+                                    `reviews:${type}`,
+                                    'send',
+                                ),
+                                0,
+                                -1,
+                            );
                         }
 
-                        pipeline.zRangeWithScores(cacheService.keys.persons_grid_exclude_send_receive(grid_token, `reviews:${type}`, 'receive'), 0, -1);
+                        pipeline.zRangeWithScores(
+                            cacheService.keys.persons_grid_exclude_send_receive(
+                                grid_token,
+                                `reviews:${type}`,
+                                'receive',
+                            ),
+                            0,
+                            -1,
+                        );
                     }
                 }
 
                 results = await cacheService.execPipeline(pipeline);
 
                 let idx = 0;
-                
+
                 // Process match new preferences
                 for (let grid_token of neighbor_grid_tokens) {
-                    if(!send_only) {
+                    if (!send_only) {
                         let exclude_send_new = results[idx++];
 
                         for (let token of exclude_send_new) {
@@ -1302,17 +1404,17 @@ function getMatches(me, params = {}) {
                     for (let type of reviewTypes) {
                         // Get person ratings
                         let ratings = results[idx++];
-                        
+
                         for (let person of ratings) {
                             let person_token = person.value;
-                            
+
                             if (!persons_ratings[person_token]) {
                                 persons_ratings[person_token] = {};
                             }
                             persons_ratings[person_token][type] = person.score;
                         }
 
-                        if(!send_only) {
+                        if (!send_only) {
                             // Get send settings
                             let exclude_send = results[idx++];
 
@@ -1346,25 +1448,29 @@ function getMatches(me, params = {}) {
                 for (let token in persons_not_excluded_after_stage_1) {
                     let auto_include = {
                         send: false,
-                        receive: false
-                    }
+                        receive: false,
+                    };
 
                     // Handle new member matching
                     if (new_persons_tokens[token]) {
-                        if(me.is_new) {
-                            if(!me_exclude_send_new && !(token in exclude_match_new.receive)) {
+                        if (me.is_new) {
+                            if (!me_exclude_send_new && !(token in exclude_match_new.receive)) {
                                 auto_include.send = true;
                             }
 
-                            if(!me_exclude_receive_new && !(token in exclude_match_new.send) && !send_only) {
+                            if (
+                                !me_exclude_receive_new &&
+                                !(token in exclude_match_new.send) &&
+                                !send_only
+                            ) {
                                 auto_include.receive = true;
                             }
                         } else {
-                            if(!(me_exclude_send_new)) {
+                            if (!me_exclude_send_new) {
                                 auto_include.send = true;
                             }
 
-                            if(!(me_exclude_receive_new) && !send_only) {
+                            if (!me_exclude_receive_new && !send_only) {
                                 auto_include.receive = true;
                             }
                         }
@@ -1378,22 +1484,28 @@ function getMatches(me, params = {}) {
                     let personRatings = persons_ratings[token];
 
                     // Bi-directional send/receive filter settings
-                    if(!auto_include.send) {
+                    if (!auto_include.send) {
                         for (let type of reviewTypes) {
                             let my_threshold = myExclusions.send[type];
                             let their_threshold = exclude_settings.receive[token]?.[type];
 
-                            if(!my_threshold && !their_threshold) {
+                            if (!my_threshold && !their_threshold) {
                                 continue;
                             }
 
-                            if ((my_threshold && !isNumeric(personRatings[type])) || (my_threshold && personRatings[type] < my_threshold)) {
+                            if (
+                                (my_threshold && !isNumeric(personRatings[type])) ||
+                                (my_threshold && personRatings[type] < my_threshold)
+                            ) {
                                 exclude_send = true;
                                 break;
                             }
 
-                            if((their_threshold && !isNumeric(myRatings[type]) )|| (their_threshold && myRatings[type] < their_threshold)) {
-                                if(me.is_new && !(token in exclude_match_new.receive)) {
+                            if (
+                                (their_threshold && !isNumeric(myRatings[type])) ||
+                                (their_threshold && myRatings[type] < their_threshold)
+                            ) {
+                                if (me.is_new && !(token in exclude_match_new.receive)) {
                                     continue;
                                 }
 
@@ -1403,22 +1515,28 @@ function getMatches(me, params = {}) {
                         }
                     }
 
-                    if(!auto_include.receive && !send_only) {
+                    if (!auto_include.receive && !send_only) {
                         for (let type of reviewTypes) {
                             let my_threshold = myExclusions.receive[type];
                             let their_threshold = exclude_settings.send[token]?.[type];
 
-                            if(!my_threshold && !their_threshold) {
+                            if (!my_threshold && !their_threshold) {
                                 continue;
                             }
 
-                            if ((my_threshold && !isNumeric(personRatings[type])) || (my_threshold && personRatings[type] < my_threshold)) {
+                            if (
+                                (my_threshold && !isNumeric(personRatings[type])) ||
+                                (my_threshold && personRatings[type] < my_threshold)
+                            ) {
                                 exclude_receive = true;
                                 break;
                             }
 
-                            if((their_threshold && !isNumeric(myRatings[type]) )|| (their_threshold && myRatings[type] < their_threshold)) {
-                                if(me.is_new && !(token in exclude_match_new.send)) {
+                            if (
+                                (their_threshold && !isNumeric(myRatings[type])) ||
+                                (their_threshold && myRatings[type] < their_threshold)
+                            ) {
+                                if (me.is_new && !(token in exclude_match_new.send)) {
                                     continue;
                                 }
 
@@ -1441,7 +1559,7 @@ function getMatches(me, params = {}) {
                     after_filter_reviews_excluded: {
                         send: Object.keys(exclude.send).length,
                         receive: Object.keys(exclude.receive).length,
-                    }
+                    },
                 });
 
                 resolve();
@@ -1474,17 +1592,21 @@ function getMatches(me, params = {}) {
                     let availability = results[idx++];
 
                     try {
-                         availability = JSON.parse(availability);
-                    } catch(e) {
+                        availability = JSON.parse(availability);
+                    } catch (e) {
                         console.error(e);
                         continue;
                     }
 
-                    let is_available = isPersonAvailable({
-                        timezone
-                    }, availability, activity);
+                    let is_available = isPersonAvailable(
+                        {
+                            timezone,
+                        },
+                        availability,
+                        activity,
+                    );
 
-                    if(!is_available) {
+                    if (!is_available) {
                         exclude.send[person_token] = true;
                     }
                 }
@@ -1493,7 +1615,7 @@ function getMatches(me, params = {}) {
                     after_filter_availability_excluded: {
                         send: Object.keys(exclude.send).length,
                         receive: Object.keys(exclude.receive).length,
-                    }
+                    },
                 });
 
                 resolve();
@@ -1531,27 +1653,33 @@ function getMatches(me, params = {}) {
                 for (let grid_token of neighbor_grid_tokens) {
                     for (let option of options) {
                         // Get persons with this option
-                        pipeline.sMembers(cacheService.keys.persons_grid_set(
-                            grid_token,
-                            `${sectionKey}:${option.token}`
-                        ));
+                        pipeline.sMembers(
+                            cacheService.keys.persons_grid_set(
+                                grid_token,
+                                `${sectionKey}:${option.token}`,
+                            ),
+                        );
                     }
 
                     // Get excluded send/receive states
                     for (let option of options) {
-                        if(!send_only) {
-                            pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(
-                                grid_token,
-                                `${sectionKey}:${option.token}`,
-                                'send'
-                            ));
+                        if (!send_only) {
+                            pipeline.sMembers(
+                                cacheService.keys.persons_grid_exclude_send_receive(
+                                    grid_token,
+                                    `${sectionKey}:${option.token}`,
+                                    'send',
+                                ),
+                            );
                         }
 
-                        pipeline.sMembers(cacheService.keys.persons_grid_exclude_send_receive(
-                            grid_token,
-                            `${sectionKey}:${option.token}`,
-                            'receive'
-                        ));
+                        pipeline.sMembers(
+                            cacheService.keys.persons_grid_exclude_send_receive(
+                                grid_token,
+                                `${sectionKey}:${option.token}`,
+                                'receive',
+                            ),
+                        );
                     }
                 }
 
@@ -1586,7 +1714,7 @@ function getMatches(me, params = {}) {
                             excludeReceive[option.token] = {};
                         }
 
-                        if(!send_only) {
+                        if (!send_only) {
                             // Send exclusions
                             let sendExclusions = results[idx++];
 
@@ -1612,7 +1740,7 @@ function getMatches(me, params = {}) {
                         }
                     }
 
-                    if(!send_only) {
+                    if (!send_only) {
                         for (let optionToken in excludeSend) {
                             for (let token in excludeSend[optionToken]) {
                                 exclude.receive[token] = true;
@@ -1624,7 +1752,7 @@ function getMatches(me, params = {}) {
                         [`after_${sectionKey}_excluded`]: {
                             send: Object.keys(exclude.send).length,
                             receive: Object.keys(exclude.receive).length,
-                        }
+                        },
                     });
 
                     return resolve();
@@ -1650,7 +1778,7 @@ function getMatches(me, params = {}) {
                             }
                         }
 
-                        if(!send_only) {
+                        if (!send_only) {
                             for (let k in excludeReceive) {
                                 if (my_token in excludeReceive[k]) {
                                     exclude.receive[token] = true;
@@ -1668,14 +1796,18 @@ function getMatches(me, params = {}) {
                             // For each of their options
                             for (let theirOption of personOptionTokens) {
                                 // Check if they accept my option and I accept theirs
-                                if (!(token in excludeReceive[myOption]) &&
-                                    !(my_token in excludeSend[theirOption])) {
+                                if (
+                                    !(token in excludeReceive[myOption]) &&
+                                    !(my_token in excludeSend[theirOption])
+                                ) {
                                     shouldExcludeSend = false;
                                 }
 
-                                if(!send_only) {
-                                    if (!(token in excludeSend[myOption]) &&
-                                        !(my_token in excludeReceive[theirOption])) {
+                                if (!send_only) {
+                                    if (
+                                        !(token in excludeSend[myOption]) &&
+                                        !(my_token in excludeReceive[theirOption])
+                                    ) {
                                         shouldExcludeReceive = false;
                                     }
                                 }
@@ -1695,14 +1827,18 @@ function getMatches(me, params = {}) {
                         let myOption = Array.from(myOptionTokens)[0];
 
                         // Exclude send/receive if person has excluded my option or I have excluded their option
-                        if (token in excludeReceive[myOption] ||
-                            my_token in excludeSend[personOption]) {
+                        if (
+                            token in excludeReceive[myOption] ||
+                            my_token in excludeSend[personOption]
+                        ) {
                             exclude.send[token] = true;
                         }
 
-                        if(!send_only) {
-                            if (token in excludeSend[myOption] ||
-                                my_token in excludeReceive[personOption]) {
+                        if (!send_only) {
+                            if (
+                                token in excludeSend[myOption] ||
+                                my_token in excludeReceive[personOption]
+                            ) {
                                 exclude.receive[token] = true;
                             }
                         }
@@ -1717,7 +1853,7 @@ function getMatches(me, params = {}) {
                 [`after_${sectionKey}_excluded`]: {
                     send: Object.keys(exclude.send).length,
                     receive: Object.keys(exclude.receive).length,
-                }
+                },
             });
 
             resolve();
@@ -1727,27 +1863,29 @@ function getMatches(me, params = {}) {
     function organizeFinal() {
         let not_excluded = {
             send: {},
-            receive: {}
-        }
+            receive: {},
+        };
 
         delete persons_not_excluded_after_stage_1[my_token];
 
-        for(let person_token in persons_not_excluded_after_stage_1) {
+        for (let person_token in persons_not_excluded_after_stage_1) {
             let included = false;
 
-            if(!(person_token in exclude.send)) {
+            if (!(person_token in exclude.send)) {
                 not_excluded.send[person_token] = true;
                 organized.counts.send++;
                 included = true;
 
                 //add to send matches if preparing notifications
-                if(!counts_only) {
+                if (!counts_only) {
                     let personInterests = personsInterests[person_token];
 
                     personInterests.person_token = person_token;
 
-                    if(!personInterests) {
-                        console.error("Unexpectedly missing interests data for included send token");
+                    if (!personInterests) {
+                        console.error(
+                            'Unexpectedly missing interests data for included send token',
+                        );
                     } else {
                         organized.matches.send.push(personInterests);
                     }
@@ -1759,12 +1897,12 @@ function getMatches(me, params = {}) {
             }
 
             //if my online status is set to offline, exclude receiving from all
-            if(!me.is_online && !send_only) {
+            if (!me.is_online && !send_only) {
                 exclude.receive[person_token] = true;
             } else {
-                if(!send_only) {
+                if (!send_only) {
                     //allow receiving notifications if not excluded
-                    if(!(person_token in exclude.receive)) {
+                    if (!(person_token in exclude.receive)) {
                         not_excluded.receive[person_token] = true;
                         organized.counts.receive++;
                         included = true;
@@ -1772,18 +1910,20 @@ function getMatches(me, params = {}) {
                 }
             }
 
-            if(included) {
+            if (included) {
                 persons_not_excluded_final[person_token] = true;
 
                 let personInterests = personsInterests[person_token];
 
-                if(personInterests) {
-                    if(personInterests.matches?.count > 0) {
+                if (personInterests) {
+                    if (personInterests.matches?.count > 0) {
                         organized.counts.interests.total++;
 
-                        if(personInterests.matches.total_score >= interestScoreThresholds.ultra) {
+                        if (personInterests.matches.total_score >= interestScoreThresholds.ultra) {
                             organized.counts.interests.ultra++;
-                        } else if(personInterests.matches.total_score >= interestScoreThresholds.super) {
+                        } else if (
+                            personInterests.matches.total_score >= interestScoreThresholds.super
+                        ) {
                             organized.counts.interests.super++;
                         } else {
                             organized.counts.interests.regular++;
@@ -1802,7 +1942,7 @@ function getMatches(me, params = {}) {
 
         try {
             if (!me) {
-                return reject("Person required");
+                return reject('Person required');
             }
 
             my_token = me.person_token;
@@ -1810,7 +1950,7 @@ function getMatches(me, params = {}) {
             //exclude sending/receiving to/from self
             exclude.send[my_token] = true;
 
-            if(!send_only) {
+            if (!send_only) {
                 exclude.receive[my_token] = true;
             }
 
@@ -1821,13 +1961,13 @@ function getMatches(me, params = {}) {
             am_available = isPersonAvailable(me, my_filters.availability);
 
             console.log({
-                my_filters: timeNow() - t
+                my_filters: timeNow() - t,
             });
-            
+
             await processStage1();
 
             console.log({
-                stage_1: timeNow() - t
+                stage_1: timeNow() - t,
             });
 
             t = timeNow();
@@ -1835,18 +1975,18 @@ function getMatches(me, params = {}) {
             filterPersonsAfterStage1();
 
             console.log({
-                persons_after_stage_1: Object.keys(persons_not_excluded_after_stage_1).length
+                persons_after_stage_1: Object.keys(persons_not_excluded_after_stage_1).length,
             });
 
             console.log({
                 after_filter_stage_1_excluded: {
                     send: Object.keys(exclude.send).length,
                     receive: Object.keys(exclude.receive).length,
-                }
+                },
             });
 
             console.log({
-                filter_persons: timeNow() - t
+                filter_persons: timeNow() - t,
             });
 
             t = timeNow();
@@ -1854,7 +1994,7 @@ function getMatches(me, params = {}) {
             await processStage2();
 
             console.log({
-                stage_2: timeNow() - t
+                stage_2: timeNow() - t,
             });
 
             t = timeNow();
@@ -1862,7 +2002,7 @@ function getMatches(me, params = {}) {
             await matchInterests();
 
             console.log({
-                filter_interests: timeNow() - t
+                filter_interests: timeNow() - t,
             });
 
             t = timeNow();
@@ -1873,11 +2013,11 @@ function getMatches(me, params = {}) {
 
             console.log({
                 memory_start,
-                memory_end
+                memory_end,
             });
 
             console.log({
-                final_persons: Object.keys(persons_not_excluded_final).length
+                final_persons: Object.keys(persons_not_excluded_final).length,
             });
 
             neighbor_grid_tokens = null;
@@ -1887,7 +2027,7 @@ function getMatches(me, params = {}) {
             persons_not_excluded_after_stage_1 = null;
             persons_not_excluded_final = null;
 
-            if(counts_only) {
+            if (counts_only) {
                 return resolve(organized);
             }
 
@@ -1902,7 +2042,17 @@ function getMatches(me, params = {}) {
 }
 
 function organizePersonInterests(sections, myInterests, otherPersonInterests) {
-    function setMatchData(section, item_token, match_types, table_key = null, name, favorite_position, secondary, importance, totals) {
+    function setMatchData(
+        section,
+        item_token,
+        match_types,
+        table_key = null,
+        name,
+        favorite_position,
+        secondary,
+        importance,
+        totals,
+    ) {
         otherPersonInterests.matches.items[item_token] = {
             section: section.token,
             token: item_token,
@@ -1913,19 +2063,19 @@ function organizePersonInterests(sections, myInterests, otherPersonInterests) {
                 types: match_types,
                 mine: {
                     favorite: {
-                        position: favorite_position?.mine || null
+                        position: favorite_position?.mine || null,
                     },
                     secondary: secondary?.mine || null,
                     importance: importance?.mine || null,
                 },
                 theirs: {
                     favorite: {
-                        position: favorite_position?.theirs || null
+                        position: favorite_position?.theirs || null,
                     },
                     secondary: secondary?.theirs || null,
                     importance: importance?.theirs || null,
-                }
-            }
+                },
+            },
         };
     }
 
@@ -1935,18 +2085,18 @@ function organizePersonInterests(sections, myInterests, otherPersonInterests) {
     for (let section of sections) {
         function calcPersonalTotals(myItem, theirItem) {
             //calc total number of items/favorited
-            if(myItem && !myItem.deleted) {
+            if (myItem && !myItem.deleted) {
                 section_totals.mine.all++;
 
-                if(myItem.is_favorite) {
+                if (myItem.is_favorite) {
                     section_totals.mine.favorite++;
                 }
             }
 
-            if(theirItem && !theirItem.deleted) {
+            if (theirItem && !theirItem.deleted) {
                 section_totals.theirs.all++;
 
-                if(theirItem.is_favorite) {
+                if (theirItem.is_favorite) {
                     section_totals.theirs.favorite++;
                 }
             }
@@ -1956,7 +2106,7 @@ function organizePersonInterests(sections, myInterests, otherPersonInterests) {
         theirMergedItems[section.token] = {};
 
         let myItems = myInterests.sections[section.token] || {};
-        let myFilter = myInterests.filters[section.token] || {}
+        let myFilter = myInterests.filters[section.token] || {};
         let theirItems = otherPersonInterests.sections[section.token] || {};
         let theirFilter = otherPersonInterests.filters[section.token] || {};
 
@@ -1967,35 +2117,35 @@ function organizePersonInterests(sections, myInterests, otherPersonInterests) {
         let section_totals = {
             mine: {
                 all: 0,
-                favorite: 0
+                favorite: 0,
             },
             theirs: {
                 all: 0,
-                favorite: 0
-            }
+                favorite: 0,
+            },
         };
 
         //merge my personal/filter items
-        for(let token in myItems) {
-            if(!(token in myMergedItems[section.token])) {
+        for (let token in myItems) {
+            if (!(token in myMergedItems[section.token])) {
                 myMergedItems[section.token][token] = {
                     personal: null,
-                    filter: null
-                }
+                    filter: null,
+                };
             }
 
             myMergedItems[section.token][token].personal = myItems[token];
         }
 
-        if(myFilter.items) {
-            for(let k in myFilter.items) {
+        if (myFilter.items) {
+            for (let k in myFilter.items) {
                 let item = myFilter.items[k];
 
-                if(!(item.token in myMergedItems[section.token])) {
+                if (!(item.token in myMergedItems[section.token])) {
                     myMergedItems[section.token][item.token] = {
                         personal: null,
-                        filter: null
-                    }
+                        filter: null,
+                    };
                 }
 
                 myMergedItems[section.token][item.token].filter = item;
@@ -2003,50 +2153,60 @@ function organizePersonInterests(sections, myInterests, otherPersonInterests) {
         }
 
         //merge their personal/filter items
-        for(let token in theirItems) {
-            if(!(token in theirMergedItems[section.token])) {
+        for (let token in theirItems) {
+            if (!(token in theirMergedItems[section.token])) {
                 theirMergedItems[section.token][token] = {
                     personal: null,
-                    filter: null
-                }
+                    filter: null,
+                };
             }
 
             theirMergedItems[section.token][token].personal = theirItems[token];
         }
 
-        if(theirFilter.items) {
-            for(let k in theirFilter.items) {
+        if (theirFilter.items) {
+            for (let k in theirFilter.items) {
                 let item = theirFilter.items[k];
 
-                if(!(item.token in theirMergedItems[section.token])) {
+                if (!(item.token in theirMergedItems[section.token])) {
                     theirMergedItems[section.token][item.token] = {
                         personal: null,
-                        filter: null
-                    }
+                        filter: null,
+                    };
                 }
 
                 theirMergedItems[section.token][item.token].filter = item;
             }
         }
 
-        for(let item_token in myMergedItems[section.token]) {
+        for (let item_token in myMergedItems[section.token]) {
             let myItem = myMergedItems[section.token][item_token];
             calcPersonalTotals(myItem?.personal);
         }
 
-        for(let item_token in theirMergedItems[section.token]) {
+        for (let item_token in theirMergedItems[section.token]) {
             let theirItem = theirMergedItems[section.token][item_token];
             calcPersonalTotals(null, theirItem?.personal);
         }
 
-        for(let item_token in myMergedItems[section.token]) {
+        for (let item_token in myMergedItems[section.token]) {
             let myItem = myMergedItems[section.token][item_token];
             let theirItem = theirMergedItems[section.token][item_token];
 
             let isMyItem = myItem?.personal && !myItem.personal.deleted;
             let isTheirItem = theirItem?.personal && !theirItem.personal.deleted;
-            let isMyFilter = myFilterEnabled && myItem?.filter && myItem.filter.is_active && !myItem.filter.is_negative && !myItem.filter.deleted;
-            let isTheirFilter = theirFilterEnabled && theirItem?.filter && theirItem.filter.is_active && !theirItem.filter.is_negative && !theirItem.filter.deleted;
+            let isMyFilter =
+                myFilterEnabled &&
+                myItem?.filter &&
+                myItem.filter.is_active &&
+                !myItem.filter.is_negative &&
+                !myItem.filter.deleted;
+            let isTheirFilter =
+                theirFilterEnabled &&
+                theirItem?.filter &&
+                theirItem.filter.is_active &&
+                !theirItem.filter.is_negative &&
+                !theirItem.filter.deleted;
 
             // Only proceed if there's at least one type of match
             if (!(isMyItem || isTheirItem || isMyFilter || isTheirFilter)) {
@@ -2055,31 +2215,40 @@ function organizePersonInterests(sections, myInterests, otherPersonInterests) {
 
             let matchTypes = {};
 
-            if(isMyFilter) {
+            if (isMyFilter) {
                 matchTypes.my_filter = true;
             }
 
-            if(isTheirFilter) {
+            if (isTheirFilter) {
                 matchTypes.their_filter = true;
             }
 
-            if(isMyItem) {
+            if (isMyItem) {
                 matchTypes.my_item = true;
             }
 
-            if(isTheirItem) {
+            if (isTheirItem) {
                 matchTypes.their_item = true;
             }
 
-            let table_key = myItem?.personal?.table_key || theirItem?.personal?.table_key || myItem?.filter?.table_key || theirItem?.filter?.table_key;
-            let item_name = myItem?.personal?.name || theirItem?.personal?.name || myItem?.filter?.name || theirItem?.filter?.name;
+            let table_key =
+                myItem?.personal?.table_key ||
+                theirItem?.personal?.table_key ||
+                myItem?.filter?.table_key ||
+                theirItem?.filter?.table_key;
+            let item_name =
+                myItem?.personal?.name ||
+                theirItem?.personal?.name ||
+                myItem?.filter?.name ||
+                theirItem?.filter?.name;
 
-            if (Object.keys(matchTypes).length > 0 &&
+            if (
+                Object.keys(matchTypes).length > 0 &&
                 ((isMyItem && isTheirItem) ||
                     (isMyFilter && isTheirItem) ||
                     (isTheirFilter && isMyItem) ||
-                    (isMyFilter && isTheirFilter))) {
-
+                    (isMyFilter && isTheirFilter))
+            ) {
                 setMatchData(
                     section,
                     item_token,
@@ -2088,23 +2257,27 @@ function organizePersonInterests(sections, myInterests, otherPersonInterests) {
                     item_name,
                     {
                         mine: matchTypes.my_item ? myItem.personal.favorite_position : null,
-                        theirs: matchTypes.their_item ? theirItem.personal.favorite_position : null
+                        theirs: matchTypes.their_item ? theirItem.personal.favorite_position : null,
                     },
                     {
                         mine: {
                             item: matchTypes.my_item ? myItem.personal.secondary || null : null,
-                            filter: matchTypes.my_filter ? myItem.filter.secondary || null : null
+                            filter: matchTypes.my_filter ? myItem.filter.secondary || null : null,
                         },
                         theirs: {
-                            item: matchTypes.their_item ? theirItem.personal.secondary || null : null,
-                            filter: matchTypes.their_filter ? theirItem.filter.secondary || null : null
-                        }
+                            item: matchTypes.their_item
+                                ? theirItem.personal.secondary || null
+                                : null,
+                            filter: matchTypes.their_filter
+                                ? theirItem.filter.secondary || null
+                                : null,
+                        },
                     },
                     {
                         mine: matchTypes.my_filter ? myItem.filter.importance : null,
-                        theirs: matchTypes.their_filter ? theirItem.filter.importance : null
+                        theirs: matchTypes.their_filter ? theirItem.filter.importance : null,
                     },
-                    section_totals
+                    section_totals,
                 );
             }
         }
@@ -2134,7 +2307,12 @@ function calculateTotalScore(items) {
 function getBaseScore(item) {
     let matchTypes = item.match.types;
 
-    if (matchTypes.my_item && matchTypes.their_item && matchTypes.my_filter && matchTypes.their_filter) {
+    if (
+        matchTypes.my_item &&
+        matchTypes.their_item &&
+        matchTypes.my_filter &&
+        matchTypes.their_filter
+    ) {
         return 50;
     }
 
@@ -2214,7 +2392,9 @@ function getFavoriteMultiplier(item) {
         let myFavorites = item.totals.mine.favorite || 0;
         let theirFavorites = item.totals.theirs.favorite || 0;
         let myPositionScore = myFavoritePosition ? (myTotal - myFavoritePosition + 1) / myTotal : 0;
-        let theirPositionScore = theirFavoritePosition ? (theirTotal - theirFavoritePosition + 1) / theirTotal : 0;
+        let theirPositionScore = theirFavoritePosition
+            ? (theirTotal - theirFavoritePosition + 1) / theirTotal
+            : 0;
 
         // Scale based on total items (more items = more significant favorites)
         let totalItemsMultiplier = 1;
@@ -2227,10 +2407,10 @@ function getFavoriteMultiplier(item) {
             // Single favorite - moderate boost
             favoriteMultiplier = 1.5 * (myPositionScore || theirPositionScore);
 
-            if(myPositionScore) {
-                totalItemsMultiplier = Math.min((myTotal) / 6, 1);
+            if (myPositionScore) {
+                totalItemsMultiplier = Math.min(myTotal / 6, 1);
             } else {
-                totalItemsMultiplier = Math.min((theirTotal) / 6, 1);
+                totalItemsMultiplier = Math.min(theirTotal / 6, 1);
             }
         }
 
@@ -2243,59 +2423,65 @@ function getFavoriteMultiplier(item) {
 function getSecondaryMultiplier(item) {
     let secondaryMultiplier = 1.0;
 
-    let itemSecondaryOptions = sectionsData?.[item.section]?.secondary?.[item.table_key]?.options || [];
+    let itemSecondaryOptions =
+        sectionsData?.[item.section]?.secondary?.[item.table_key]?.options || [];
 
     let myItemIndex = null;
     let theirItemIndex = null;
     let filterIncludesMe = false;
     let filterIncludesThem = false;
 
-    if(itemSecondaryOptions) {
-        if(item.match.mine?.secondary?.item) {
+    if (itemSecondaryOptions) {
+        if (item.match.mine?.secondary?.item) {
             myItemIndex = itemSecondaryOptions.indexOf(item.match.mine.secondary?.item);
         }
 
-        if(item.match.theirs?.secondary?.item) {
+        if (item.match.theirs?.secondary?.item) {
             theirItemIndex = itemSecondaryOptions.indexOf(item.match.theirs.secondary?.item);
         }
     }
 
-    if(item.match.theirs?.secondary?.filter && item.match.mine?.secondary?.item) {
-        filterIncludesMe = item.match.theirs.secondary.filter.includes(item.match.mine.secondary.item);
+    if (item.match.theirs?.secondary?.filter && item.match.mine?.secondary?.item) {
+        filterIncludesMe = item.match.theirs.secondary.filter.includes(
+            item.match.mine.secondary.item,
+        );
     }
 
-    if(item.match.mine?.secondary?.filter && item.match.theirs?.secondary?.item) {
-        filterIncludesThem = item.match.mine.secondary.filter.includes(item.match.theirs.secondary.item);
+    if (item.match.mine?.secondary?.filter && item.match.theirs?.secondary?.item) {
+        filterIncludesThem = item.match.mine.secondary.filter.includes(
+            item.match.theirs.secondary.item,
+        );
     }
 
-    if(item.match.mine?.secondary?.item && item.match.theirs?.secondary?.item) {
+    if (item.match.mine?.secondary?.item && item.match.theirs?.secondary?.item) {
         let indexDiff = 0;
 
-        if(isNumeric(myItemIndex) && isNumeric(theirItemIndex)) {
+        if (isNumeric(myItemIndex) && isNumeric(theirItemIndex)) {
             indexDiff = Math.abs(myItemIndex - theirItemIndex);
-            secondaryMultiplier = 1 + itemSecondaryOptions.length / (indexDiff * itemSecondaryOptions.length + 1);
+            secondaryMultiplier =
+                1 + itemSecondaryOptions.length / (indexDiff * itemSecondaryOptions.length + 1);
         }
 
-        if(item.match.mine?.secondary?.filter && item.match.theirs?.secondary?.filter) {
+        if (item.match.mine?.secondary?.filter && item.match.theirs?.secondary?.filter) {
             // Both item and filter
-            if(filterIncludesMe && filterIncludesThem) {
+            if (filterIncludesMe && filterIncludesThem) {
                 secondaryMultiplier *= 10;
-            } else if(filterIncludesMe || filterIncludesThem) {
+            } else if (filterIncludesMe || filterIncludesThem) {
                 secondaryMultiplier *= 5;
             } else {
                 secondaryMultiplier *= 3;
             }
-        } else if(item.match.mine?.secondary?.filter) {
+        } else if (item.match.mine?.secondary?.filter) {
             // Both items, my filter
-            if(filterIncludesThem) {
+            if (filterIncludesThem) {
                 secondaryMultiplier *= 3;
             } else {
                 secondaryMultiplier *= 1.5;
             }
-        } else if(item.match.theirs?.secondary?.filter) {
+        } else if (item.match.theirs?.secondary?.filter) {
             // Both items, their filter
 
-            if(filterIncludesMe) {
+            if (filterIncludesMe) {
                 secondaryMultiplier *= 3;
             } else {
                 secondaryMultiplier *= 1.5;
@@ -2303,21 +2489,21 @@ function getSecondaryMultiplier(item) {
         } else {
             secondaryMultiplier *= 1.2;
         }
-    } else if(item.match.mine?.secondary?.item) {
-        if(item.match.mine?.secondary?.filter && item.match.theirs?.secondary?.filter) {
+    } else if (item.match.mine?.secondary?.item) {
+        if (item.match.mine?.secondary?.filter && item.match.theirs?.secondary?.filter) {
             //Only my item, both filters
-            if(filterIncludesMe) {
+            if (filterIncludesMe) {
                 secondaryMultiplier *= 5;
             } else {
                 secondaryMultiplier *= 2;
             }
-        } else if(item.match.mine?.secondary?.filter) {
+        } else if (item.match.mine?.secondary?.filter) {
             // My item, my filter
             secondaryMultiplier *= 1.5;
-        } else if(item.match.theirs?.secondary?.filter) {
+        } else if (item.match.theirs?.secondary?.filter) {
             // My item, their filter
 
-            if(filterIncludesMe) {
+            if (filterIncludesMe) {
                 secondaryMultiplier *= 4;
             } else {
                 secondaryMultiplier *= 1.5;
@@ -2327,35 +2513,35 @@ function getSecondaryMultiplier(item) {
 
             secondaryMultiplier *= 1.2;
         }
-    } else if(item.match.theirs?.secondary?.item) {
-        if(item.match.mine?.secondary?.filter && item.match.theirs?.secondary?.filter) {
+    } else if (item.match.theirs?.secondary?.item) {
+        if (item.match.mine?.secondary?.filter && item.match.theirs?.secondary?.filter) {
             // Their item, both filters
-            if(filterIncludesThem) {
+            if (filterIncludesThem) {
                 secondaryMultiplier *= 5;
             } else {
                 secondaryMultiplier *= 2;
             }
-        } else if(item.match.mine?.secondary?.filter) {
+        } else if (item.match.mine?.secondary?.filter) {
             // Their item, my filter
-            if(filterIncludesThem) {
+            if (filterIncludesThem) {
                 secondaryMultiplier *= 4;
             } else {
                 secondaryMultiplier *= 1.5;
             }
-        } else if(item.match.theirs?.secondary?.filter) {
+        } else if (item.match.theirs?.secondary?.filter) {
             // Only their item, their filter
             secondaryMultiplier *= 1.5;
         } else {
             secondaryMultiplier *= 1.2;
         }
     } else {
-        if(item.match.mine?.secondary?.filter && item.match.theirs?.secondary?.filter) {
+        if (item.match.mine?.secondary?.filter && item.match.theirs?.secondary?.filter) {
             // No items exist, both filters
             secondaryMultiplier *= 1.3;
-        } else if(item.match.mine?.secondary?.filter) {
+        } else if (item.match.mine?.secondary?.filter) {
             // No items, my filter
             secondaryMultiplier *= 1.1;
-        } else if(item.match.theirs?.secondary?.filter) {
+        } else if (item.match.theirs?.secondary?.filter) {
             // No items, their filter
             secondaryMultiplier *= 1.1;
         } else {
@@ -2379,22 +2565,24 @@ function personToPersonInterests(person_1, person_2) {
                 matches: {
                     items: {},
                     count: 0,
-                    total_score: 0
-                }
-            }
-        }
+                    total_score: 0,
+                },
+            },
+        };
 
         try {
             let person_tokens = [person_1.person_token, person_2.person_token];
             let pipeline = cacheService.startPipeline();
 
-            let sections = interests_sections.concat(schools_work_sections).concat(personal_sections);
+            let sections = interests_sections
+                .concat(schools_work_sections)
+                .concat(personal_sections);
 
-            for(let person_token of person_tokens) {
+            for (let person_token of person_tokens) {
                 let person_section_key = cacheService.keys.person_sections(person_token);
                 let person_filters_key = cacheService.keys.person_filters(person_token);
 
-                for(let section of sections) {
+                for (let section of sections) {
                     pipeline.hGet(person_section_key, section.token);
                     pipeline.hGet(person_filters_key, section.token);
                 }
@@ -2404,12 +2592,16 @@ function personToPersonInterests(person_1, person_2) {
 
             let idx = 0;
 
-            for(let i = 1; i <= 2; i++) {
-                for(let section of sections) {
+            for (let i = 1; i <= 2; i++) {
+                for (let section of sections) {
                     try {
-                        personsInterests[`person_${i}`].sections[section.token] = JSON.parse(results[idx++]);
-                        personsInterests[`person_${i}`].filters[section.token] = JSON.parse(results[idx++]);
-                    } catch(e) {
+                        personsInterests[`person_${i}`].sections[section.token] = JSON.parse(
+                            results[idx++],
+                        );
+                        personsInterests[`person_${i}`].filters[section.token] = JSON.parse(
+                            results[idx++],
+                        );
+                    } catch (e) {
                         console.error(e);
                     }
                 }
@@ -2417,21 +2609,25 @@ function personToPersonInterests(person_1, person_2) {
 
             organizePersonInterests(sections, personsInterests.person_1, personsInterests.person_2);
 
-            personsInterests.person_2.matches.total_score = calculateTotalScore(Object.values(personsInterests.person_2.matches.items));
-            personsInterests.person_2.matches.count = Object.keys(personsInterests.person_2.matches.items).length;
-        } catch(e) {
+            personsInterests.person_2.matches.total_score = calculateTotalScore(
+                Object.values(personsInterests.person_2.matches.items),
+            );
+            personsInterests.person_2.matches.count = Object.keys(
+                personsInterests.person_2.matches.items,
+            ).length;
+        } catch (e) {
             console.error(e);
             return reject(e);
         }
 
         resolve({
             ...personsInterests.person_2.matches,
-            thresholds: interestScoreThresholds
+            thresholds: interestScoreThresholds,
         });
     });
 }
 
 module.exports = {
     getMatches,
-    personToPersonInterests
-}
+    personToPersonInterests,
+};

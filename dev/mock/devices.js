@@ -27,7 +27,20 @@ if (args._ && args._.length) {
 let chunks = [];
 let personsLookup = {};
 
-let ignoreKeys = ['verification_dl', 'verification_cc', 'verification_video', 'sports_play', 'sports_leagues', 'sports_teams', 'movie_genres', 'tv_show_genres', 'music_artists', 'music_genres', 'work_industries', 'work_roles'];
+let ignoreKeys = [
+    'verification_dl',
+    'verification_cc',
+    'verification_video',
+    'sports_play',
+    'sports_leagues',
+    'sports_teams',
+    'movie_genres',
+    'tv_show_genres',
+    'music_artists',
+    'music_genres',
+    'work_industries',
+    'work_roles',
+];
 
 const helpers = {
     processBatch: async function (processFn) {
@@ -113,7 +126,7 @@ async function getPersonsLogins() {
                 personsLookup[person.id] = {
                     person_token: person.person_token,
                     login_token: person.login_token,
-                }
+                };
             }),
         );
     }
@@ -124,25 +137,20 @@ async function getPersonsLogins() {
 }
 
 async function updateDevices() {
-    let qry = await conn('persons_devices')
-        .orderBy('id', 'desc')
-        .first();
+    let qry = await conn('persons_devices').orderBy('id', 'desc').first();
 
-    if(!qry) {
+    if (!qry) {
         process.exit('No device tokens in DB');
     }
 
     await helpers.processBatch(async (person) => {
         try {
-            await axios.post(
-                joinPaths(process.env.APP_URL, '/devices'),
-                {
-                    login_token: person.login_token,
-                    person_token: person.person_token,
-                    device_token: qry.token,
-                    platform: qry.platform
-                }
-            );
+            await axios.post(joinPaths(process.env.APP_URL, '/devices'), {
+                login_token: person.login_token,
+                person_token: person.person_token,
+                device_token: qry.token,
+                platform: qry.platform,
+            });
         } catch (error) {
             console.error('Error adding device:', error.message);
         }

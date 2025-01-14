@@ -194,7 +194,7 @@ function birthDatePure(birth_date) {
 }
 
 function calculateAge(birth_date) {
-    if(!birth_date) {
+    if (!birth_date) {
         return null;
     }
 
@@ -334,7 +334,7 @@ function formatObjectTypes(obj) {
     }
 
     if (Array.isArray(obj)) {
-        return obj.map(item => formatObjectTypes(item));
+        return obj.map((item) => formatObjectTypes(item));
     }
 
     // Handle null or non-objects

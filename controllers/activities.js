@@ -72,9 +72,7 @@ function createActivity(req, res) {
                 is_now: activity.when.data.is_now,
                 is_schedule: activity.when.data.is_schedule,
                 is_public: true, // Default unless specified otherwise
-                is_new_friends: !!(
-                    activity.friends.type.is_new || activity.friends.type.is_both
-                ),
+                is_new_friends: !!(activity.friends.type.is_new || activity.friends.type.is_both),
                 is_existing_friends: !!(
                     activity.friends.type.is_existing || activity.friends.type.is_both
                 ),
@@ -128,7 +126,7 @@ function createActivity(req, res) {
                         {
                             activity_token: activity_token,
                         },
-                        201
+                        201,
                     );
                 } catch (e) {
                     console.error(e);
@@ -139,14 +137,13 @@ function createActivity(req, res) {
                         {
                             error: error_message,
                         },
-                        400
+                        400,
                     );
                 }
             } else {
                 res.json(
                     {
-                        error:
-                            'No persons found. Please check your filters or try again later.',
+                        error: 'No persons found. Please check your filters or try again later.',
                     },
                     400,
                 );
@@ -166,7 +163,7 @@ function getActivityNotification(req, res) {
         let network_token = req.query.network_token;
 
         try {
-            if(!activity_token || !network_token) {
+            if (!activity_token || !network_token) {
                 res.json(
                     {
                         message: 'Activity and network token required',
@@ -193,9 +190,12 @@ function getActivityNotification(req, res) {
             //validate network token
 
             //ensure person exists on activity invite
-            let notification = await cacheService.hGetItem(cacheService.keys.activities_notifications(activity_token), person_token);
+            let notification = await cacheService.hGetItem(
+                cacheService.keys.activities_notifications(activity_token),
+                person_token,
+            );
 
-            if(!notification) {
+            if (!notification) {
                 res.json(
                     {
                         message: 'Activity does not include person',
@@ -210,10 +210,13 @@ function getActivityNotification(req, res) {
 
             let activity = await cacheService.hGetItem(cache_key, activity_token);
 
-            if(!activity) {
-                res.json({
-                    error: 'Activity not found',
-                }, 400);
+            if (!activity) {
+                res.json(
+                    {
+                        error: 'Activity not found',
+                    },
+                    400,
+                );
 
                 return resolve();
             }
@@ -237,15 +240,18 @@ function getActivityNotification(req, res) {
                     first_name: person_from.first_name,
                     image_url: person_from.image_url,
                     age: person_from.age,
-                    reviews: person_from.reviews
-                }
+                    reviews: person_from.reviews,
+                },
             });
-        } catch(e) {
+        } catch (e) {
             console.error(e);
 
-            res.json({
-                error: 'Error getting activity',
-            }, 400);
+            res.json(
+                {
+                    error: 'Error getting activity',
+                },
+                400,
+            );
         }
 
         resolve();
@@ -258,7 +264,7 @@ function putAcceptNotification(req, res) {
         let person_token = req.body.person_token;
 
         try {
-            if(!activity_token) {
+            if (!activity_token) {
                 res.json(
                     {
                         message: 'Activity token required',
@@ -287,7 +293,7 @@ function putAcceptNotification(req, res) {
             //ensure person exists on activity invite
             let notification = await cacheService.hGetItem(cache_key, person_token);
 
-            if(!notification) {
+            if (!notification) {
                 res.json(
                     {
                         message: 'Activity does not include person',
@@ -298,26 +304,35 @@ function putAcceptNotification(req, res) {
                 return resolve();
             }
 
-            if(notification.declined_at) {
-                res.json({
-                    error: 'Activity cannot be accepted'
-                }, 400);
+            if (notification.declined_at) {
+                res.json(
+                    {
+                        error: 'Activity cannot be accepted',
+                    },
+                    400,
+                );
                 return resolve();
             }
-            
-            if(notification.accepted_at) {
-                res.json({
-                    error: 'Activity already accepted'
-                }, 400);
+
+            if (notification.accepted_at) {
+                res.json(
+                    {
+                        error: 'Activity already accepted',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
             let available_spots = await availableSpots(activity_token);
 
-            if(available_spots <= 0) {
-                res.json({
-                    error: `Unavailable: max spots reached`
-                }, 200);
+            if (available_spots <= 0) {
+                res.json(
+                    {
+                        error: `Unavailable: max spots reached`,
+                    },
+                    200,
+                );
             }
 
             let conn = await dbService.conn();
@@ -325,36 +340,38 @@ function putAcceptNotification(req, res) {
             let network_self = await getNetworkSelf();
 
             //own network
-            if(network_self.id === notification.person_to_network_id) {
+            if (network_self.id === notification.person_to_network_id) {
                 let update = {
                     accepted_at: timeNow(),
-                    updated: timeNow()
-                }
+                    updated: timeNow(),
+                };
 
                 notification = {
                     ...notification,
-                    ...update
-                }
+                    ...update,
+                };
 
                 await cacheService.hSet(cache_key, person_token, notification);
 
-                await conn('activities_notifications')
-                    .where('id', notification.id)
-                    .update(update);
+                await conn('activities_notifications').where('id', notification.id).update(update);
 
                 res.json({
                     success: true,
-                    message: 'Notification accepted successfully'
+                    message: 'Notification accepted successfully',
                 });
-            } else { //3rd party network
+            } else {
+                //3rd party network
                 //todo
             }
-        } catch(e) {
+        } catch (e) {
             console.error(e);
 
-            res.json({
-                error: 'Error getting activity',
-            }, 400);
+            res.json(
+                {
+                    error: 'Error getting activity',
+                },
+                400,
+            );
         }
 
         resolve();
@@ -367,7 +384,7 @@ function putDeclineNotification(req, res) {
         let person_token = req.body.person_token;
 
         try {
-            if(!activity_token) {
+            if (!activity_token) {
                 res.json(
                     {
                         message: 'Activity token required',
@@ -396,7 +413,7 @@ function putDeclineNotification(req, res) {
             //ensure person exists on activity invite
             let notification = await cacheService.hGetItem(cache_key, person_token);
 
-            if(!notification) {
+            if (!notification) {
                 res.json(
                     {
                         message: 'Activity does not include person',
@@ -407,17 +424,23 @@ function putDeclineNotification(req, res) {
                 return resolve();
             }
 
-            if(notification.accepted_at) {
-                res.json({
-                    error: 'Activity cannot be declined'
-                }, 400);
+            if (notification.accepted_at) {
+                res.json(
+                    {
+                        error: 'Activity cannot be declined',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
-            if(notification.declined_at) {
-                res.json({
-                    error: 'Activity already declined'
-                }, 400);
+            if (notification.declined_at) {
+                res.json(
+                    {
+                        error: 'Activity already declined',
+                    },
+                    400,
+                );
                 return resolve();
             }
 
@@ -426,36 +449,38 @@ function putDeclineNotification(req, res) {
             let network_self = await getNetworkSelf();
 
             //own network
-            if(network_self.id === notification.person_to_network_id) {
+            if (network_self.id === notification.person_to_network_id) {
                 let update = {
                     declined_at: timeNow(),
-                    updated: timeNow()
-                }
+                    updated: timeNow(),
+                };
 
                 notification = {
                     ...notification,
-                    ...update
-                }
+                    ...update,
+                };
 
                 await cacheService.hSet(cache_key, person_token, notification);
 
-                await conn('activities_notifications')
-                    .where('id', notification.id)
-                    .update(update);
+                await conn('activities_notifications').where('id', notification.id).update(update);
 
                 res.json({
                     success: true,
-                    message: 'Notification declined successfully'
+                    message: 'Notification declined successfully',
                 });
-            } else { //3rd party network
+            } else {
+                //3rd party network
                 //todo
             }
-        } catch(e) {
+        } catch (e) {
             console.error(e);
 
-            res.json({
-                error: 'Error getting activity',
-            }, 400);
+            res.json(
+                {
+                    error: 'Error getting activity',
+                },
+                400,
+            );
         }
 
         resolve();
@@ -469,10 +494,13 @@ function getMatches(req, res) {
 
             let activity = formatObjectTypes(req.query.activity);
 
-            if(!activity || typeof activity !== 'object') {
-                res.json({
-                    message: 'Invalid mode',
-                }, 400);
+            if (!activity || typeof activity !== 'object') {
+                res.json(
+                    {
+                        message: 'Invalid mode',
+                    },
+                    400,
+                );
 
                 return resolve();
             }
@@ -483,38 +511,55 @@ function getMatches(req, res) {
             let modes = await getModes();
             let mode = modes?.byToken[activity.person?.mode];
 
-            if(!mode) {
-                res.json({
-                    message: 'Invalid mode',
-                }, 400);
+            if (!mode) {
+                res.json(
+                    {
+                        message: 'Invalid mode',
+                    },
+                    400,
+                );
 
                 return resolve();
             }
 
             //duration
-            if (!activity.duration || !activitiesService.durations.options.includes(activity.duration)) {
-                res.json({
-                    message: 'Invalid duration',
-                }, 400);
+            if (
+                !activity.duration ||
+                !activitiesService.durations.options.includes(activity.duration)
+            ) {
+                res.json(
+                    {
+                        message: 'Invalid duration',
+                    },
+                    400,
+                );
 
                 return resolve();
             }
 
             //place
-            if(!activity.place?.id) {
-                res.json({
-                    message: 'Invalid place',
-                }, 400);
+            if (!activity.place?.id) {
+                res.json(
+                    {
+                        message: 'Invalid place',
+                    },
+                    400,
+                );
 
                 return resolve();
             }
 
-            let when_option = activity.when ? activitiesService.when.options[activity.when.id] : null;
+            let when_option = activity.when
+                ? activitiesService.when.options[activity.when.id]
+                : null;
 
-            if(!when_option) {
-                res.json({
-                    message: 'Invalid when',
-                }, 400);
+            if (!when_option) {
+                res.json(
+                    {
+                        message: 'Invalid when',
+                    },
+                    400,
+                );
 
                 return resolve();
             }
@@ -524,16 +569,19 @@ function getMatches(req, res) {
             let matches = await matchingService.getMatches(person, {
                 activity: activity,
                 send_only: true,
-                counts_only: true
+                counts_only: true,
             });
 
             res.json(matches);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
 
-            res.json({
-                message: 'Error getting matches',
-            }, 400);
+            res.json(
+                {
+                    message: 'Error getting matches',
+                },
+                400,
+            );
         }
 
         resolve();
@@ -545,5 +593,5 @@ module.exports = {
     getActivityNotification,
     getMatches,
     putAcceptNotification,
-    putDeclineNotification
+    putDeclineNotification,
 };

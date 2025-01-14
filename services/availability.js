@@ -1,7 +1,12 @@
 let cacheService = require('../services/cache');
 let dbService = require('../services/db');
 const { timeNow, isNumeric, getTimeZoneFromCoords } = require('./shared');
-const { getFilters, getPersonFilters, updateGridSets, getPersonFilterForKey } = require('./filters');
+const {
+    getFilters,
+    getPersonFilters,
+    updateGridSets,
+    getPersonFilterForKey,
+} = require('./filters');
 const dayjs = require('dayjs');
 
 const DEFAULT_START = '09:00:00';
@@ -112,19 +117,19 @@ function saveAvailabilityData(person, availabilityData) {
                             ? existingRecords[timeSlot.id]
                             : dayRecords.find((r) => !processedIds.has(r.id) && r.is_time);
 
-                        if(!timeSlot.start.split(':').length || !timeSlot.end.split(':').length) {
+                        if (!timeSlot.start.split(':').length || !timeSlot.end.split(':').length) {
                             continue;
                         }
 
                         let startHour = parseInt(timeSlot.start.split(':')[0]);
                         let endHour = parseInt(timeSlot.end.split(':')[0]);
 
-                        if(!isNumeric(startHour) || !isNumeric(endHour)) {
+                        if (!isNumeric(startHour) || !isNumeric(endHour)) {
                             continue;
                         }
 
                         //prevent start time hour from being greater than 23
-                        if(startHour > 23 || endHour > 47) {
+                        if (startHour > 23 || endHour > 47) {
                             continue;
                         }
 
@@ -217,7 +222,7 @@ function saveAvailabilityData(person, availabilityData) {
             const availabilityFilter = filters.byToken['availability'];
 
             if (availabilityFilter) {
-                if(!existingFilter) {
+                if (!existingFilter) {
                     existingFilter = {
                         is_active: true,
                         created: now,
@@ -262,9 +267,13 @@ function saveAvailabilityData(person, availabilityData) {
             // Map of frontend IDs to actual database IDs
             const idMapping = Object.fromEntries(newRecordIds);
 
-            await updateGridSets(person, {
-                availability: existingFilter,
-            }, 'availability');
+            await updateGridSets(
+                person,
+                {
+                    availability: existingFilter,
+                },
+                'availability',
+            );
 
             resolve({
                 success: true,
@@ -289,19 +298,24 @@ function isPersonAvailable(person, filter, activity = null) {
         const start = dayjs.tz(`${currentDate} ${DEFAULT_START}`, person.timezone);
         const end = dayjs.tz(`${currentDate} ${DEFAULT_END}`, person.timezone);
 
-        return (startTime.isAfter(start) || startTime.isSame(start)) &&
-            (endTime.isBefore(end) || endTime.isSame(end));
+        return (
+            (startTime.isAfter(start) || startTime.isSame(start)) &&
+            (endTime.isBefore(end) || endTime.isSame(end))
+        );
     }
 
     const currentUTC = dayjs().utc();
 
     let timezone = person.timezone;
 
-    if(activity?.place?.data) {
-        if(activity.place.data.timezone) {
+    if (activity?.place?.data) {
+        if (activity.place.data.timezone) {
             timezone = activity.place.data.timezone;
         } else {
-            timezone = getTimeZoneFromCoords(activity.place.data.location_lat, activity.place.data.location_lon);
+            timezone = getTimeZoneFromCoords(
+                activity.place.data.location_lat,
+                activity.place.data.location_lon,
+            );
         }
     }
 
@@ -315,7 +329,7 @@ function isPersonAvailable(person, filter, activity = null) {
     let activityEndTime = personTime;
 
     //set activity start time if provided
-    if(activity?.when?.in_mins) {
+    if (activity?.when?.in_mins) {
         activityStartTime = currentUTC.tz(timezone).add(activity.when.in_mins, 'minutes');
         activityEndTime = activityStartTime.add(activity.duration, 'minutes');
     } else {
@@ -338,15 +352,11 @@ function isPersonAvailable(person, filter, activity = null) {
     for (let id in availabilityItems) {
         const slot = availabilityItems[id];
 
-        if (slot.is_day &&
-            slot.day_of_week === currentDayOfWeek &&
-            !slot.deleted) {
+        if (slot.is_day && slot.day_of_week === currentDayOfWeek && !slot.deleted) {
             daySlot = slot;
         }
 
-        if (slot.is_day &&
-            slot.day_of_week === prevDayIndex &&
-            !slot.deleted) {
+        if (slot.is_day && slot.day_of_week === prevDayIndex && !slot.deleted) {
             prevDaySlot = slot;
         }
     }
@@ -358,24 +368,28 @@ function isPersonAvailable(person, filter, activity = null) {
         for (let id in availabilityItems) {
             const slot = availabilityItems[id];
 
-            if (slot.day_of_week === prevDayIndex &&
+            if (
+                slot.day_of_week === prevDayIndex &&
                 slot.is_time &&
                 slot.is_overnight &&
                 slot.is_active &&
-                !slot.deleted) {
-
+                !slot.deleted
+            ) {
                 // Handle end times > 24:00:00
                 const [endHour] = slot.end_time.split(':').map(Number);
 
                 if (endHour >= 24) {
                     const adjustedEndTime = slot.end_time.replace(
                         /^\d+/,
-                        String(endHour - 24).padStart(2, '0')
+                        String(endHour - 24).padStart(2, '0'),
                     );
 
-                    let endTime = dayjs.tz(`${activityStartTime.format('YYYY-MM-DD')} ${adjustedEndTime}`, timezone);
+                    let endTime = dayjs.tz(
+                        `${activityStartTime.format('YYYY-MM-DD')} ${adjustedEndTime}`,
+                        timezone,
+                    );
 
-                    if(activity?.duration) {
+                    if (activity?.duration) {
                         endTime.add(activity.duration, 'minutes');
                     }
 
@@ -388,7 +402,7 @@ function isPersonAvailable(person, filter, activity = null) {
         }
     }
 
-    if(isAvailableNow) {
+    if (isAvailableNow) {
         return true;
     }
 
@@ -409,11 +423,12 @@ function isPersonAvailable(person, filter, activity = null) {
     for (let id in availabilityItems) {
         const slot = availabilityItems[id];
 
-        if (slot.day_of_week === currentDayOfWeek &&
+        if (
+            slot.day_of_week === currentDayOfWeek &&
             slot.is_time &&
             slot.is_active &&
-            !slot.deleted) {
-
+            !slot.deleted
+        ) {
             hasTimeSlots = true;
 
             const currentDate = activityStartTime.format('YYYY-MM-DD');
@@ -426,8 +441,10 @@ function isPersonAvailable(person, filter, activity = null) {
                 // Regular time slot ending same day
                 const endTime = dayjs.tz(`${currentDate} ${slot.end_time}`, person.timezone);
 
-                if (activityStartTime.isSame(startTime) ||
-                    (activityStartTime.isAfter(startTime) && activityEndTime.isBefore(endTime))) {
+                if (
+                    activityStartTime.isSame(startTime) ||
+                    (activityStartTime.isAfter(startTime) && activityEndTime.isBefore(endTime))
+                ) {
                     isAvailableNow = true;
                     break;
                 }
@@ -436,12 +453,11 @@ function isPersonAvailable(person, filter, activity = null) {
                 const nextDate = personTime.add(1, 'day').format('YYYY-MM-DD');
                 const adjustedEndTime = slot.end_time.replace(
                     /^\d+/,
-                    String(endHour - 24).padStart(2, '0')
+                    String(endHour - 24).padStart(2, '0'),
                 );
                 const endTime = dayjs.tz(`${nextDate} ${adjustedEndTime}`, person.timezone);
 
-                if (activityStartTime.isSame(startTime) ||
-                    activityStartTime.isAfter(startTime)) {
+                if (activityStartTime.isSame(startTime) || activityStartTime.isAfter(startTime)) {
                     // For overnight slots, we're available after start
                     // until midnight and into next day until end time
                     isAvailableNow = true;
@@ -451,7 +467,7 @@ function isPersonAvailable(person, filter, activity = null) {
         }
     }
 
-    if(!hasTimeSlots) {
+    if (!hasTimeSlots) {
         return isWithinDefault(activityStartTime, activityEndTime);
     }
 
@@ -469,5 +485,5 @@ module.exports = {
     default_start: DEFAULT_START,
     default_end: DEFAULT_END,
     saveAvailabilityData,
-    isPersonAvailable
+    isPersonAvailable,
 };

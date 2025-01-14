@@ -3,7 +3,7 @@ const dbService = require('./db');
 
 module.exports = {
     importance: {
-        default: 5
+        default: 5,
     },
     data: null,
     getReligions: function () {

@@ -27,7 +27,7 @@ const axios = require('axios');
 
 module.exports = {
     autoComplete: {
-        minChars: 2
+        minChars: 2,
     },
     refresh_data: 30, //days
     cache_distance: 0.5, //mi/km
@@ -826,7 +826,7 @@ module.exports = {
                     }
 
                     //todo remove
-                    if(!fsq_id) {
+                    if (!fsq_id) {
                         debugger;
                     }
 
@@ -1176,8 +1176,8 @@ module.exports = {
     },
     getActivityPlace: function (activity) {
         return new Promise(async (resolve, reject) => {
-            if(!activity?.place?.id) {
-                return resolve("No place id");
+            if (!activity?.place?.id) {
+                return resolve('No place id');
             }
 
             let place;
@@ -1192,14 +1192,12 @@ module.exports = {
                         cacheService.keys.place_fsq(activity.place.id),
                     );
                 }
-
             } catch (e) {
                 console.error(e);
                 return reject();
             }
 
-
             resolve(place);
         });
-    }
+    },
 };

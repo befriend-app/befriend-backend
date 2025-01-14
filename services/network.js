@@ -380,7 +380,7 @@ module.exports = {
     getNetworkSelf: function () {
         return new Promise(async (resolve, reject) => {
             try {
-                if(module.exports.cache.self) {
+                if (module.exports.cache.self) {
                     return resolve(module.exports.cache.self);
                 }
 

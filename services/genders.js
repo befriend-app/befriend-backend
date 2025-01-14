@@ -43,7 +43,7 @@ module.exports = {
     getAllGenders: function () {
         return new Promise(async (resolve, reject) => {
             try {
-                if(module.exports.data) {
+                if (module.exports.data) {
                     return resolve(module.exports.data);
                 }
 

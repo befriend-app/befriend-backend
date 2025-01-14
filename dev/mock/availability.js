@@ -105,7 +105,7 @@ async function getPersonsLogins() {
                 personsLookup[person.id] = {
                     person_token: person.person_token,
                     login_token: person.login_token,
-                }
+                };
             }),
         );
     }

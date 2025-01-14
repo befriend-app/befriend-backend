@@ -5,7 +5,13 @@ const dbService = require('../../services/db');
 const encryptionService = require('../../services/encryption');
 const { getNetworkSelf } = require('../../services/network');
 
-const { loadScriptEnv, generateToken, timeNow, birthDatePure, calculateAge } = require('../../services/shared');
+const {
+    loadScriptEnv,
+    generateToken,
+    timeNow,
+    birthDatePure,
+    calculateAge,
+} = require('../../services/shared');
 
 const { batchInsert, batchUpdate } = require('../../services/db');
 const cacheService = require('../../services/cache');
@@ -37,14 +43,16 @@ if (args._ && args._.length) {
                 .select('p.id', 'person_token', 'eg.token AS grid_token')
                 .limit(num_persons);
 
-            if(!persons_qry.length) {
-                console.error("No persons with grid exists. Run (1) dev->mock->persons (2) dev->mock->me");
+            if (!persons_qry.length) {
+                console.error(
+                    'No persons with grid exists. Run (1) dev->mock->persons (2) dev->mock->me',
+                );
                 process.exit(1);
             }
 
             let pipeline = cacheService.startPipeline();
 
-            for(let p of persons_qry) {
+            for (let p of persons_qry) {
                 await updatePerson(p.person_token, {
                     is_new: true,
                 });
@@ -62,9 +70,7 @@ if (args._ && args._.length) {
     async function mockReviews() {
         let conn = await dbService.conn();
 
-        let persons = await conn('persons')
-            .whereNotNull('grid_id')
-            .select('id', 'person_token');
+        let persons = await conn('persons').whereNotNull('grid_id').select('id', 'person_token');
 
         // Rating fields to update
         const ratingFields = [
@@ -72,18 +78,18 @@ if (args._ && args._.length) {
             'rating_trust',
             'rating_timeliness',
             'rating_friendliness',
-            'rating_fun'
+            'rating_fun',
         ];
 
         let batch_update = [];
 
-        for(let person of persons) {
+        for (let person of persons) {
             let update = {
                 id: person.id,
-                updated: timeNow()
+                updated: timeNow(),
             };
 
-            for(let k of ratingFields) {
+            for (let k of ratingFields) {
                 update[k] = null;
             }
 
@@ -91,19 +97,19 @@ if (args._ && args._.length) {
             let baseRating;
 
             // Generate base rating biased towards 3.5-4.5 range
-            if(Math.random() < 0.8) {
+            if (Math.random() < 0.8) {
                 // 80% chance of 4-5 rating
-                baseRating = 4 + (Math.random() * 1.0);
-            } else if(Math.random() < 0.5) {
+                baseRating = 4 + Math.random() * 1.0;
+            } else if (Math.random() < 0.5) {
                 // 10% chance of 2.5-3.5 rating
-                baseRating = 2.5 + (Math.random() * 1.0);
+                baseRating = 2.5 + Math.random() * 1.0;
             } else {
                 // 10% chance of 1-2.5 rating
-                baseRating = 1.0 + (Math.random() * 1.5);
+                baseRating = 1.0 + Math.random() * 1.5;
             }
 
-            for(let field of ratingFields) {
-                let ratingPercent = .8 + (Math.random() / 2);
+            for (let field of ratingFields) {
+                let ratingPercent = 0.8 + Math.random() / 2;
                 ratingPercent = Math.min(ratingPercent, 1);
 
                 // Round to 1 decimal place
@@ -122,17 +128,21 @@ if (args._ && args._.length) {
                 trust: update.rating_trust,
                 timeliness: update.rating_timeliness,
                 friendliness: update.rating_friendliness,
-                fun: update.rating_fun
-            }
+                fun: update.rating_fun,
+            };
 
             person_obj.reviews = reviews;
 
-            await cacheService.hSet(cacheService.keys.person(person.person_token), 'reviews', reviews);
+            await cacheService.hSet(
+                cacheService.keys.person(person.person_token),
+                'reviews',
+                reviews,
+            );
 
             await updateGridSets(person_obj, null, 'reviews');
         }
 
-        if(batch_update.length) {
+        if (batch_update.length) {
             await batchUpdate('persons', batch_update);
         }
     }
@@ -149,7 +159,7 @@ if (args._ && args._.length) {
     try {
         await mockIsNewPerson();
         await mockReviews();
-    } catch(e) {
+    } catch (e) {
         console.error(e);
     }
 

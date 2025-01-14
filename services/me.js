@@ -29,16 +29,20 @@ function putModes(person_token, modes) {
 
             let allModes = await modesService.getModes();
 
-            if (!modes || !Array.isArray(modes) || !modes.every(mode => mode in allModes.byToken)) {
+            if (
+                !modes ||
+                !Array.isArray(modes) ||
+                !modes.every((mode) => mode in allModes.byToken)
+            ) {
                 return reject('Invalid mode');
             }
 
-            if(modes.length > Object.values(allModes.byToken).length) {
+            if (modes.length > Object.values(allModes.byToken).length) {
                 return reject('Invalid data');
             }
 
             await updatePerson(person_token, {
-                modes
+                modes,
             });
         } catch (e) {
             console.error(e);
@@ -892,7 +896,7 @@ function updateSectionItem(body) {
             // Get cache data
             const cache_key = cacheService.keys.person_sections(person.person_token);
 
-            const section_items = await cacheService.hGetItem(cache_key, section_key) || {};
+            const section_items = (await cacheService.hGetItem(cache_key, section_key)) || {};
 
             // Handle updates
             if (body.favorite?.reorder && Object.keys(body.favorite.reorder).length) {
@@ -964,23 +968,21 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
             const now = timeNow();
             const person_id_col = userTableData?.cols?.person_id || 'person_id';
             const cache_key = cacheService.keys.person_sections(person.person_token);
-            let cache_data = await cacheService.hGetItem(cache_key, section_key) || {};
+            let cache_data = (await cacheService.hGetItem(cache_key, section_key)) || {};
             let response_data = null;
 
             // Get existing selection
             let existing;
 
-            if(section_key === 'genders') {
-                existing = await conn(userTableData.name)
-                    .where(person_id_col, person.id)
-                    .first();
+            if (section_key === 'genders') {
+                existing = await conn(userTableData.name).where(person_id_col, person.id).first();
 
-                if(!existing || !is_select) {
+                if (!existing || !is_select) {
                     return reject();
                 }
 
                 await updatePerson(person.person_token, {
-                    gender_id: is_select ? itemOption.id : null
+                    gender_id: is_select ? itemOption.id : null,
                 });
 
                 person.gender_id = is_select ? itemOption.id : null;
@@ -1062,7 +1064,7 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
                         cache_data[item_token] = response_data;
                     }
 
-                    if(!is_select) {
+                    if (!is_select) {
                         delete cache_data[item_token];
                     }
                 }
@@ -1412,7 +1414,7 @@ function getSections(person) {
 
                 person_sections = {
                     active: sections,
-                }
+                };
             }
 
             // Set genders automatically if:
@@ -1431,7 +1433,7 @@ function getSections(person) {
                             .where('section_id', gendersSection.id)
                             .first();
 
-                        if(!existing) {
+                        if (!existing) {
                             // Create new section record
                             const newSection = {
                                 person_id: person.id,
@@ -1462,11 +1464,11 @@ function getSections(person) {
             for (let section of all_me_sections) {
                 let sectionActive = person_sections.active[section.section_key];
 
-                if(sectionActive && !sectionActive.deleted) {
+                if (sectionActive && !sectionActive.deleted) {
                     organized.active[section.section_key] = {
                         ...sectionActive,
                         items: person_sections[section.section_key]?.items || {},
-                    }
+                    };
 
                     delete organized.options[section.section_key];
                 }
@@ -1484,8 +1486,8 @@ function mergeDataForActiveSections(person, sections) {
     return new Promise(async (resolve, reject) => {
         let section_keys = Object.keys(sections.active);
 
-        for(let key of section_keys) {
-            if(sections.active[key].deleted) {
+        for (let key of section_keys) {
+            if (sections.active[key].deleted) {
                 removeArrItem(section_keys, key);
             }
         }
@@ -1494,19 +1496,19 @@ function mergeDataForActiveSections(person, sections) {
             return resolve({});
         }
 
-        for(let key in sections) {
-            if(key !== 'active') {
+        for (let key in sections) {
+            if (key !== 'active') {
                 let section = sections[key];
 
                 let items = {};
 
-                for(let k in section) {
+                for (let k in section) {
                     items[k] = section[k];
                 }
 
                 sections[key] = {
-                    items
-                }
+                    items,
+                };
             }
         }
 
@@ -1603,7 +1605,7 @@ function mergeDataForActiveSections(person, sections) {
                         country_code: person.country_code,
                     });
 
-                    if(!(key in sections.active)) {
+                    if (!(key in sections.active)) {
                         sections.active[key] = {};
                     }
 
@@ -1727,7 +1729,7 @@ function getInstruments() {
 
             let options = await cacheService.getObj(cacheService.keys.instruments_common);
 
-            if(!options) {
+            if (!options) {
                 let conn = await dbService.conn();
 
                 options = await conn('instruments')
@@ -1784,7 +1786,7 @@ function allInstruments() {
 
                 data = {};
 
-                for(let item of qry) {
+                for (let item of qry) {
                     data[item.token] = item;
                 }
 
@@ -1793,10 +1795,10 @@ function allInstruments() {
 
             let organized = {
                 byId: {},
-                byToken: {}
-            }
+                byToken: {},
+            };
 
-            for(let token in data) {
+            for (let token in data) {
                 let item = data[token];
 
                 organized.byId[item.id] = item;

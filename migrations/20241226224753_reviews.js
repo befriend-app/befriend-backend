@@ -2,7 +2,7 @@
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
-exports.up = async function(knex) {
+exports.up = async function (knex) {
     const hasColumn = await knex.schema.hasColumn('persons', 'reviews_rating');
 
     if (hasColumn) {
@@ -33,7 +33,7 @@ exports.up = async function(knex) {
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
-exports.down = async function(knex) {
+exports.down = async function (knex) {
     await knex.schema.alterTable('persons', (table) => {
         table.dropColumn('rating_fun');
         table.dropColumn('rating_friendliness');

@@ -27,7 +27,20 @@ if (args._ && args._.length) {
 let chunks = [];
 let personsLookup = {};
 
-let ignoreKeys = ['verification_dl', 'verification_cc', 'verification_video', 'sports_play', 'sports_leagues', 'sports_teams', 'movie_genres', 'tv_show_genres', 'music_artists', 'music_genres', 'work_industries', 'work_roles'];
+let ignoreKeys = [
+    'verification_dl',
+    'verification_cc',
+    'verification_video',
+    'sports_play',
+    'sports_leagues',
+    'sports_teams',
+    'movie_genres',
+    'tv_show_genres',
+    'music_artists',
+    'music_genres',
+    'work_industries',
+    'work_roles',
+];
 
 const helpers = {
     processBatch: async function (processFn) {
@@ -113,7 +126,7 @@ async function getPersonsLogins() {
                 personsLookup[person.id] = {
                     person_token: person.person_token,
                     login_token: person.login_token,
-                }
+                };
             }),
         );
     }
@@ -133,7 +146,7 @@ async function processActive() {
     await helpers.processBatch(async (person) => {
         // Randomly activate/deactivate filters
         for (let filterKey in filterMappings) {
-            if(ignoreKeys.includes(filterKey)) {
+            if (ignoreKeys.includes(filterKey)) {
                 continue;
             }
 
@@ -167,7 +180,7 @@ async function processSendReceive() {
 
     await helpers.processBatch(async (person) => {
         for (let filterKey in filterMappings) {
-            if(ignoreKeys.includes(filterKey)) {
+            if (ignoreKeys.includes(filterKey)) {
                 continue;
             }
 
@@ -195,26 +208,28 @@ async function processSendReceive() {
 
 async function processImportance() {
     console.log({
-        process: 'importance'
+        process: 'importance',
     });
 
     let conn = await dbService.conn();
 
     let filters = await getFilters();
 
-    let importance_cols = Object.values(filterMappings).filter(item => item.importance && item.column).map(item => item.column);
+    let importance_cols = Object.values(filterMappings)
+        .filter((item) => item.importance && item.column)
+        .map((item) => item.column);
 
     let items = await conn('persons_filters');
 
     let process_chunks = [];
 
-    for(let i = 0; i < items.length; i += parallelCount) {
+    for (let i = 0; i < items.length; i += parallelCount) {
         process_chunks.push(items.slice(i, i + parallelCount));
     }
 
     let processed = 0;
 
-    for(let chunk of process_chunks) {
+    for (let chunk of process_chunks) {
         await Promise.all(
             chunk.map(async (item) => {
                 if (processed % 100 === 0) {
@@ -226,52 +241,57 @@ async function processImportance() {
                 processed++;
 
                 try {
-                    let item_has_col = importance_cols.some(col => item[col]);
+                    let item_has_col = importance_cols.some((col) => item[col]);
 
-                    if(!item_has_col) {
+                    if (!item_has_col) {
                         return;
                     }
 
                     let filter = filters.byId[item.filter_id];
 
-                    if(!filter) {
-                        console.error("No filter found");
+                    if (!filter) {
+                        console.error('No filter found');
                         return;
                     }
 
                     let person = personsLookup[item.person_id];
 
-                    if(!person) {
-                        console.error("No person found");
+                    if (!person) {
+                        console.error('No person found');
                         return;
                     }
 
-                    if(Math.random() > 0.3) { //70% chance of setting importance
-                        let importance = Math.random() < 0.8 //skewed towards higher importance
-                            ? Math.floor(Math.random() * 6) + 5
-                            : Math.floor(Math.random() * 5) + 2;
+                    if (Math.random() > 0.3) {
+                        //70% chance of setting importance
+                        let importance =
+                            Math.random() < 0.8 //skewed towards higher importance
+                                ? Math.floor(Math.random() * 6) + 5
+                                : Math.floor(Math.random() * 5) + 2;
 
                         let section = filter.token;
 
-                        if(section.startsWith('movie')) {
+                        if (section.startsWith('movie')) {
                             section = 'movies';
-                        } else if(section.startsWith('tv')) {
+                        } else if (section.startsWith('tv')) {
                             section = 'tv_shows';
-                        } else if(section.startsWith('sport')) {
-                            section = 'sports'
-                        } else if(section.startsWith('music')) {
+                        } else if (section.startsWith('sport')) {
+                            section = 'sports';
+                        } else if (section.startsWith('music')) {
                             section = 'music';
-                        } else if(section.startsWith('work')) {
+                        } else if (section.startsWith('work')) {
                             section = 'work';
                         }
 
-                        let r = await axios.put(joinPaths(process.env.APP_URL, '/filters/importance'), {
-                            login_token: person.login_token,
-                            person_token: person.person_token,
-                            filter_item_id: item.id,
-                            section: section,
-                            importance: Math.min(importance, 10)
-                        });
+                        let r = await axios.put(
+                            joinPaths(process.env.APP_URL, '/filters/importance'),
+                            {
+                                login_token: person.login_token,
+                                person_token: person.person_token,
+                                filter_item_id: item.id,
+                                section: section,
+                                importance: Math.min(importance, 10),
+                            },
+                        );
                     }
                 } catch (e) {
                     console.error(e);
@@ -410,7 +430,10 @@ async function processActivityTypes() {
                                 if (subActivity.sub) {
                                     for (let level3Id in subActivity.sub) {
                                         let level3Activity = subActivity.sub[level3Id];
-                                        if (level3Activity.name.toLowerCase() !== 'any' && Math.random() > 0.5) {
+                                        if (
+                                            level3Activity.name.toLowerCase() !== 'any' &&
+                                            Math.random() > 0.5
+                                        ) {
                                             updateTokens[level3Activity.token] = false;
                                         }
                                     }
@@ -423,15 +446,12 @@ async function processActivityTypes() {
 
             // Make the update request if we have tokens to update
             if (Object.keys(updateTokens).length > 0) {
-                await axios.put(
-                    joinPaths(process.env.APP_URL, '/filters/activity-types'),
-                    {
-                        login_token: person.login_token,
-                        person_token: person.person_token,
-                        activities: updateTokens,
-                        active: false
-                    }
-                );
+                await axios.put(joinPaths(process.env.APP_URL, '/filters/activity-types'), {
+                    login_token: person.login_token,
+                    person_token: person.person_token,
+                    activities: updateTokens,
+                    active: false,
+                });
             }
 
             // 50% chance to explicitly activate some activities
@@ -456,7 +476,10 @@ async function processActivityTypes() {
                                 if (subActivity.sub) {
                                     for (let level3Id in subActivity.sub) {
                                         let level3Activity = subActivity.sub[level3Id];
-                                        if (level3Activity.name.toLowerCase() !== 'any' && Math.random() > 0.3) {
+                                        if (
+                                            level3Activity.name.toLowerCase() !== 'any' &&
+                                            Math.random() > 0.3
+                                        ) {
                                             updateTokens[level3Activity.token] = true;
                                         }
                                     }
@@ -467,37 +490,34 @@ async function processActivityTypes() {
                 }
 
                 if (Object.keys(updateTokens).length > 0) {
-                    await axios.put(
-                        joinPaths(process.env.APP_URL, '/filters/activity-types'),
-                        {
-                            login_token: person.login_token,
-                            person_token: person.person_token,
-                            activities: updateTokens,
-                            active: true
-                        }
-                    );
+                    await axios.put(joinPaths(process.env.APP_URL, '/filters/activity-types'), {
+                        login_token: person.login_token,
+                        person_token: person.person_token,
+                        activities: updateTokens,
+                        active: true,
+                    });
                 }
             }
 
             // 20% chance to set all activities to active
             if (Math.random() <= 0.2) {
-                await axios.put(
-                    joinPaths(process.env.APP_URL, '/filters/activity-types'),
-                    {
-                        login_token: person.login_token,
-                        person_token: person.person_token,
-                        activities: { all: true },
-                        active: true
-                    }
-                );
+                await axios.put(joinPaths(process.env.APP_URL, '/filters/activity-types'), {
+                    login_token: person.login_token,
+                    person_token: person.person_token,
+                    activities: { all: true },
+                    active: true,
+                });
             }
         } catch (error) {
-            console.error(`Error processing activity types for person ${person.person_token}:`, error.message);
+            console.error(
+                `Error processing activity types for person ${person.person_token}:`,
+                error.message,
+            );
         }
     });
 
     console.log({
-        activity_types: timeNow() - ts
+        activity_types: timeNow() - ts,
     });
 }
 
@@ -513,7 +533,6 @@ async function processModes() {
         try {
             // 80% chance to set mode filter settings for each person
             if (Math.random() > 0.2) {
-
                 // Select 1-3 random modes to activate
                 let numModes = Math.floor(Math.random() * 3) + 1;
                 let selectedModes = shuffleFunc([...modes]).slice(0, numModes);
@@ -522,27 +541,30 @@ async function processModes() {
                 for (let mode of selectedModes) {
                     try {
                         // Activate the mode
-                        await axios.put(
-                            joinPaths(process.env.APP_URL, '/filters/modes'),
-                            {
-                                login_token: person.login_token,
-                                person_token: person.person_token,
-                                mode_token: mode.token,
-                                active: true
-                            }
-                        );
+                        await axios.put(joinPaths(process.env.APP_URL, '/filters/modes'), {
+                            login_token: person.login_token,
+                            person_token: person.person_token,
+                            mode_token: mode.token,
+                            active: true,
+                        });
                     } catch (error) {
-                        console.error(`Error setting mode ${mode.token} for person ${person.person_token}:`, error.message);
+                        console.error(
+                            `Error setting mode ${mode.token} for person ${person.person_token}:`,
+                            error.message,
+                        );
                     }
                 }
             }
         } catch (error) {
-            console.error(`Error processing modes filter for person ${person.person_token}:`, error.message);
+            console.error(
+                `Error processing modes filter for person ${person.person_token}:`,
+                error.message,
+            );
         }
     });
 
     console.log({
-        modes: timeNow() - ts
+        modes: timeNow() - ts,
     });
 }
 
@@ -562,7 +584,7 @@ async function processNetworks() {
                     person_token: person.person_token,
                     network_token: 'any',
                     is_any_network: true,
-                    active: true
+                    active: true,
                 });
             } else {
                 // 40% chance to require verified networks
@@ -572,7 +594,7 @@ async function processNetworks() {
                         person_token: person.person_token,
                         network_token: 'any_verified',
                         is_all_verified: true,
-                        active: true
+                        active: true,
                     });
                 }
             }
@@ -603,13 +625,11 @@ async function processReviews() {
 
     const generateRating = () => {
         // Generate base rating biased towards higher numbers (3-5)
-        const baseRating = Math.random() < 0.8
-            ? Math.random() * 2 + 3
-            : Math.random() * 3 + 1
+        const baseRating = Math.random() < 0.8 ? Math.random() * 2 + 3 : Math.random() * 3 + 1;
 
         // Round to 1 decimal place
         return Math.round(baseRating * 10) / 10;
-    }
+    };
 
     await helpers.processBatch(async (person) => {
         //new members
@@ -621,7 +641,7 @@ async function processReviews() {
                 login_token: person.login_token,
                 person_token: person.person_token,
                 filter_token: 'reviews_new',
-                active: includeNew
+                active: includeNew,
             });
         } catch (error) {
             console.error(`Error setting unrated:`, error.message);
@@ -656,33 +676,30 @@ async function processVerifications() {
     console.log({ filter: 'verifications' });
     let ts = timeNow();
 
-    const verificationTypes = [
-        'verification_in_person',
-        'verification_linkedin',
-    ];
+    const verificationTypes = ['verification_in_person', 'verification_linkedin'];
 
     await helpers.processBatch(async (person) => {
         try {
-            for(let verification of verificationTypes) {
+            for (let verification of verificationTypes) {
                 let isActive = Math.random() > 0.5; //50% chance of enabling
 
-                await axios.put(
-                    joinPaths(process.env.APP_URL, '/filters/active'),
-                    {
-                        login_token: person.login_token,
-                        person_token: person.person_token,
-                        filter_token: verification,
-                        active: isActive
-                    }
-                );
+                await axios.put(joinPaths(process.env.APP_URL, '/filters/active'), {
+                    login_token: person.login_token,
+                    person_token: person.person_token,
+                    filter_token: verification,
+                    active: isActive,
+                });
             }
         } catch (error) {
-            console.error(`Error processing verifications for person ${person.person_token}:`, error.message);
+            console.error(
+                `Error processing verifications for person ${person.person_token}:`,
+                error.message,
+            );
         }
     });
 
     console.log({
-        verifications: timeNow() - ts
+        verifications: timeNow() - ts,
     });
 }
 
@@ -774,10 +791,7 @@ async function processGender() {
                 }
             } else {
                 // Set specific genders
-                const selectedGenders = shuffleFunc(genders).slice(
-                    0,
-                    Math.random() > 0.5 ? 2 : 1,
-                );
+                const selectedGenders = shuffleFunc(genders).slice(0, Math.random() > 0.5 ? 2 : 1);
 
                 for (let gender of selectedGenders) {
                     try {
@@ -814,28 +828,26 @@ async function processMovies() {
         .limit(1000);
 
     // Get all movie genres
-    const movieGenres = await conn('movie_genres')
-        .whereNull('deleted');
+    const movieGenres = await conn('movie_genres').whereNull('deleted');
 
     await helpers.processBatch(async (person) => {
         try {
             // Process movies
             // Select 5-15 random movies
-            const selectedMovies = shuffleFunc([...movies])
-                .slice(0, Math.floor(Math.random() * 11) + 5);
+            const selectedMovies = shuffleFunc([...movies]).slice(
+                0,
+                Math.floor(Math.random() * 11) + 5,
+            );
 
             for (const movie of selectedMovies) {
                 try {
-                    await axios.put(
-                        joinPaths(process.env.APP_URL, '/filters/movies'),
-                        {
-                            login_token: person.login_token,
-                            person_token: person.person_token,
-                            table_key: 'movies',
-                            token: movie.token,
-                            active: true
-                        }
-                    );
+                    await axios.put(joinPaths(process.env.APP_URL, '/filters/movies'), {
+                        login_token: person.login_token,
+                        person_token: person.person_token,
+                        table_key: 'movies',
+                        token: movie.token,
+                        active: true,
+                    });
                 } catch (error) {
                     console.error(`Error processing movie ${movie.token}:`, error.message);
                 }
@@ -843,23 +855,22 @@ async function processMovies() {
 
             // Process genres
             // Select 2-5 random genres
-            const selectedGenres = shuffleFunc([...movieGenres])
-                .slice(0, Math.floor(Math.random() * 4) + 2);
+            const selectedGenres = shuffleFunc([...movieGenres]).slice(
+                0,
+                Math.floor(Math.random() * 4) + 2,
+            );
 
             for (const genre of selectedGenres) {
                 genre.type = 'genre';
 
                 try {
-                    await axios.put(
-                        joinPaths(process.env.APP_URL, '/filters/movies'),
-                        {
-                            login_token: person.login_token,
-                            person_token: person.person_token,
-                            table_key: 'genres',
-                            token: genre.token,
-                            active: true
-                        }
-                    );
+                    await axios.put(joinPaths(process.env.APP_URL, '/filters/movies'), {
+                        login_token: person.login_token,
+                        person_token: person.person_token,
+                        table_key: 'genres',
+                        token: genre.token,
+                        active: true,
+                    });
                 } catch (error) {
                     console.error(`Error processing genre ${genre.token}:`, error.message);
                 }
@@ -867,67 +878,64 @@ async function processMovies() {
 
             // 20% chance to deactivate some selections randomly
             if (Math.random() <= 0.2) {
-                const itemsToDeactivate = [...selectedMovies, ...selectedGenres]
-                    .filter(() => Math.random() > 0.7); // 30% chance to select each item
+                const itemsToDeactivate = [...selectedMovies, ...selectedGenres].filter(
+                    () => Math.random() > 0.7,
+                ); // 30% chance to select each item
 
                 for (const item of itemsToDeactivate) {
                     try {
-                        await axios.put(
-                            joinPaths(process.env.APP_URL, '/filters/movies'),
-                            {
-                                login_token: person.login_token,
-                                person_token: person.person_token,
-                                table_key: item.type === 'genre' ? 'genres' : 'movies',
-                                token: item.token,
-                                active: false
-                            }
-                        );
+                        await axios.put(joinPaths(process.env.APP_URL, '/filters/movies'), {
+                            login_token: person.login_token,
+                            person_token: person.person_token,
+                            table_key: item.type === 'genre' ? 'genres' : 'movies',
+                            token: item.token,
+                            active: false,
+                        });
                     } catch (error) {
                         console.error(`Error deactivating item ${item.token}:`, error.message);
                     }
                 }
             }
 
-            if (Math.random() <= 0.3) { // 30% chance to set any on movies
+            if (Math.random() <= 0.3) {
+                // 30% chance to set any on movies
                 try {
-                    await axios.put(
-                        joinPaths(process.env.APP_URL, '/filters/movies'),
-                        {
-                            login_token: person.login_token,
-                            person_token: person.person_token,
-                            table_key: 'movies',
-                            token: 'any',
-                            active: true
-                        }
-                    );
+                    await axios.put(joinPaths(process.env.APP_URL, '/filters/movies'), {
+                        login_token: person.login_token,
+                        person_token: person.person_token,
+                        table_key: 'movies',
+                        token: 'any',
+                        active: true,
+                    });
                 } catch (error) {
                     console.error(`Error setting any movie:`, error.message);
                 }
             }
 
-            if (Math.random() <= 0.3) { // 30% chance to set any on genres
+            if (Math.random() <= 0.3) {
+                // 30% chance to set any on genres
                 try {
-                    await axios.put(
-                        joinPaths(process.env.APP_URL, '/filters/movies'),
-                        {
-                            login_token: person.login_token,
-                            person_token: person.person_token,
-                            table_key: 'genres',
-                            token: 'any',
-                            active: true
-                        }
-                    );
+                    await axios.put(joinPaths(process.env.APP_URL, '/filters/movies'), {
+                        login_token: person.login_token,
+                        person_token: person.person_token,
+                        table_key: 'genres',
+                        token: 'any',
+                        active: true,
+                    });
                 } catch (error) {
                     console.error(`Error setting any movie:`, error.message);
                 }
             }
         } catch (error) {
-            console.error(`Error processing movies for person ${person.person_token}:`, error.message);
+            console.error(
+                `Error processing movies for person ${person.person_token}:`,
+                error.message,
+            );
         }
     });
 
     console.log({
-        movies: timeNow() - ts
+        movies: timeNow() - ts,
     });
 }
 
@@ -942,28 +950,26 @@ async function processTvShows() {
         .limit(1000);
 
     // Get all TV show genres
-    const tvGenres = await conn('tv_genres')
-        .whereNull('deleted');
+    const tvGenres = await conn('tv_genres').whereNull('deleted');
 
     await helpers.processBatch(async (person) => {
         try {
             // Process TV shows
             // Select 5-15 random shows
-            const selectedShows = shuffleFunc([...shows])
-                .slice(0, Math.floor(Math.random() * 11) + 5);
+            const selectedShows = shuffleFunc([...shows]).slice(
+                0,
+                Math.floor(Math.random() * 11) + 5,
+            );
 
             for (const show of selectedShows) {
                 try {
-                    await axios.put(
-                        joinPaths(process.env.APP_URL, '/filters/tv-shows'),
-                        {
-                            login_token: person.login_token,
-                            person_token: person.person_token,
-                            table_key: 'shows',
-                            token: show.token,
-                            active: true
-                        }
-                    );
+                    await axios.put(joinPaths(process.env.APP_URL, '/filters/tv-shows'), {
+                        login_token: person.login_token,
+                        person_token: person.person_token,
+                        table_key: 'shows',
+                        token: show.token,
+                        active: true,
+                    });
                 } catch (error) {
                     console.error(`Error processing TV show ${show.token}:`, error.message);
                 }
@@ -971,23 +977,22 @@ async function processTvShows() {
 
             // Process genres
             // Select 2-5 random genres
-            const selectedGenres = shuffleFunc([...tvGenres])
-                .slice(0, Math.floor(Math.random() * 4) + 2);
+            const selectedGenres = shuffleFunc([...tvGenres]).slice(
+                0,
+                Math.floor(Math.random() * 4) + 2,
+            );
 
             for (const genre of selectedGenres) {
                 genre.type = 'genre';
 
                 try {
-                    await axios.put(
-                        joinPaths(process.env.APP_URL, '/filters/tv-shows'),
-                        {
-                            login_token: person.login_token,
-                            person_token: person.person_token,
-                            table_key: 'genres',
-                            token: genre.token,
-                            active: true
-                        }
-                    );
+                    await axios.put(joinPaths(process.env.APP_URL, '/filters/tv-shows'), {
+                        login_token: person.login_token,
+                        person_token: person.person_token,
+                        table_key: 'genres',
+                        token: genre.token,
+                        active: true,
+                    });
                 } catch (error) {
                     console.error(`Error processing genre ${genre.token}:`, error.message);
                 }
@@ -995,21 +1000,19 @@ async function processTvShows() {
 
             // 20% chance to deactivate some selections randomly
             if (Math.random() <= 0.2) {
-                const itemsToDeactivate = [...selectedShows, ...selectedGenres]
-                    .filter(() => Math.random() > 0.7); // 30% chance to select each item
+                const itemsToDeactivate = [...selectedShows, ...selectedGenres].filter(
+                    () => Math.random() > 0.7,
+                ); // 30% chance to select each item
 
                 for (const item of itemsToDeactivate) {
                     try {
-                        await axios.put(
-                            joinPaths(process.env.APP_URL, '/filters/tv-shows'),
-                            {
-                                login_token: person.login_token,
-                                person_token: person.person_token,
-                                table_key: item.type === 'genre' ? 'genres' : 'shows',
-                                token: item.token,
-                                active: false
-                            }
-                        );
+                        await axios.put(joinPaths(process.env.APP_URL, '/filters/tv-shows'), {
+                            login_token: person.login_token,
+                            person_token: person.person_token,
+                            table_key: item.type === 'genre' ? 'genres' : 'shows',
+                            token: item.token,
+                            active: false,
+                        });
                     } catch (error) {
                         console.error(`Error deactivating item ${item.token}:`, error.message);
                     }
@@ -1019,16 +1022,13 @@ async function processTvShows() {
             // 30% chance to set any on shows
             if (Math.random() <= 0.25) {
                 try {
-                    await axios.put(
-                        joinPaths(process.env.APP_URL, '/filters/tv-shows'),
-                        {
-                            login_token: person.login_token,
-                            person_token: person.person_token,
-                            table_key: 'shows',
-                            token: 'any',
-                            active: true
-                        }
-                    );
+                    await axios.put(joinPaths(process.env.APP_URL, '/filters/tv-shows'), {
+                        login_token: person.login_token,
+                        person_token: person.person_token,
+                        table_key: 'shows',
+                        token: 'any',
+                        active: true,
+                    });
                 } catch (error) {
                     console.error(`Error setting any show:`, error.message);
                 }
@@ -1037,27 +1037,27 @@ async function processTvShows() {
             // 30% chance to set any on genres
             if (Math.random() <= 0.25) {
                 try {
-                    await axios.put(
-                        joinPaths(process.env.APP_URL, '/filters/tv-shows'),
-                        {
-                            login_token: person.login_token,
-                            person_token: person.person_token,
-                            table_key: 'genres',
-                            token: 'any',
-                            active: true
-                        }
-                    );
+                    await axios.put(joinPaths(process.env.APP_URL, '/filters/tv-shows'), {
+                        login_token: person.login_token,
+                        person_token: person.person_token,
+                        table_key: 'genres',
+                        token: 'any',
+                        active: true,
+                    });
                 } catch (error) {
                     console.error(`Error setting any genre:`, error.message);
                 }
             }
         } catch (error) {
-            console.error(`Error processing TV shows for person ${person.person_token}:`, error.message);
+            console.error(
+                `Error processing TV shows for person ${person.person_token}:`,
+                error.message,
+            );
         }
     });
 
     console.log({
-        tv_shows: timeNow() - ts
+        tv_shows: timeNow() - ts,
     });
 }
 
@@ -1066,14 +1066,10 @@ async function processSports() {
     let ts = timeNow();
 
     try {
-        const test_country = await conn('open_countries')
-            .where('country_code', 'US')
-            .first();
+        const test_country = await conn('open_countries').where('country_code', 'US').first();
 
         // Get active sports, leagues, and teams
-        const sports = await conn('sports')
-            .whereNull('deleted')
-            .where('is_active', true);
+        const sports = await conn('sports').whereNull('deleted').where('is_active', true);
 
         const leagues = await conn('sports_leagues AS sl')
             .join('sports_leagues_countries AS slc', 'slc.league_id', '=', 'sl.id')
@@ -1094,8 +1090,10 @@ async function processSports() {
             try {
                 // Process play sports
                 // Select 2-5 random play sports
-                const selectedPlaySports = shuffleFunc(sports.filter(s => s.is_play))
-                    .slice(0, Math.floor(Math.random() * 4) + 2);
+                const selectedPlaySports = shuffleFunc(sports.filter((s) => s.is_play)).slice(
+                    0,
+                    Math.floor(Math.random() * 4) + 2,
+                );
 
                 for (const sport of selectedPlaySports) {
                     sport.type = 'play';
@@ -1106,31 +1104,27 @@ async function processSports() {
 
                         let numSecondaries = Math.floor(Math.random() * 3) + 1;
 
-                        let secondary = shuffleFunc(secondaryOptions.play.options)
-                            .slice(0, numSecondaries);
+                        let secondary = shuffleFunc(secondaryOptions.play.options).slice(
+                            0,
+                            numSecondaries,
+                        );
 
-                        await axios.put(
-                            joinPaths(process.env.APP_URL, '/filters/sports'),
-                            {
+                        await axios.put(joinPaths(process.env.APP_URL, '/filters/sports'), {
+                            login_token: person.login_token,
+                            person_token: person.person_token,
+                            table_key: 'play',
+                            token: sport.token,
+                            active: true,
+                        });
+
+                        if (addSecondary) {
+                            await axios.put(joinPaths(process.env.APP_URL, '/filters/sports'), {
                                 login_token: person.login_token,
                                 person_token: person.person_token,
                                 table_key: 'play',
                                 token: sport.token,
-                                active: true
-                            }
-                        );
-
-                        if(addSecondary) {
-                            await axios.put(
-                                joinPaths(process.env.APP_URL, '/filters/sports'),
-                                {
-                                    login_token: person.login_token,
-                                    person_token: person.person_token,
-                                    table_key: 'play',
-                                    token: sport.token,
-                                    secondary
-                                }
-                            );
+                                secondary,
+                            });
                         }
                     } catch (error) {
                         console.error(`Error processing play sport ${sport.token}:`, error.message);
@@ -1139,8 +1133,10 @@ async function processSports() {
 
                 // Process teams
                 // Select 3-7 random teams
-                const selectedTeams = shuffleFunc([...sportsTeams])
-                    .slice(0, Math.floor(Math.random() * 5) + 3);
+                const selectedTeams = shuffleFunc([...sportsTeams]).slice(
+                    0,
+                    Math.floor(Math.random() * 5) + 3,
+                );
 
                 for (const team of selectedTeams) {
                     team.type = 'team';
@@ -1151,31 +1147,27 @@ async function processSports() {
 
                         let numSecondaries = Math.floor(Math.random() * 3) + 1;
 
-                        let secondary = shuffleFunc(secondaryOptions.teams.options)
-                            .slice(0, numSecondaries);
+                        let secondary = shuffleFunc(secondaryOptions.teams.options).slice(
+                            0,
+                            numSecondaries,
+                        );
 
-                        await axios.put(
-                            joinPaths(process.env.APP_URL, '/filters/sports'),
-                            {
+                        await axios.put(joinPaths(process.env.APP_URL, '/filters/sports'), {
+                            login_token: person.login_token,
+                            person_token: person.person_token,
+                            table_key: 'teams',
+                            token: team.token,
+                            active: true,
+                        });
+
+                        if (addSecondary) {
+                            await axios.put(joinPaths(process.env.APP_URL, '/filters/sports'), {
                                 login_token: person.login_token,
                                 person_token: person.person_token,
                                 table_key: 'teams',
                                 token: team.token,
-                                active: true,
-                            }
-                        );
-
-                        if(addSecondary) {
-                            await axios.put(
-                                joinPaths(process.env.APP_URL, '/filters/sports'),
-                                {
-                                    login_token: person.login_token,
-                                    person_token: person.person_token,
-                                    table_key: 'teams',
-                                    token: team.token,
-                                    secondary
-                                }
-                            );
+                                secondary,
+                            });
                         }
                     } catch (error) {
                         console.error(`Error processing team ${team.token}:`, error.message);
@@ -1184,8 +1176,10 @@ async function processSports() {
 
                 // Process leagues
                 // Select 1-3 random leagues
-                const selectedLeagues = shuffleFunc([...leagues])
-                    .slice(0, Math.floor(Math.random() * 3) + 1);
+                const selectedLeagues = shuffleFunc([...leagues]).slice(
+                    0,
+                    Math.floor(Math.random() * 3) + 1,
+                );
 
                 for (const league of selectedLeagues) {
                     league.type = 'league';
@@ -1195,31 +1189,27 @@ async function processSports() {
                         const addSecondary = Math.random() > 0.4;
                         let numSecondaries = Math.floor(Math.random() * 3) + 1;
 
-                        let secondary = shuffleFunc(secondaryOptions.leagues.options)
-                            .slice(0, numSecondaries);
+                        let secondary = shuffleFunc(secondaryOptions.leagues.options).slice(
+                            0,
+                            numSecondaries,
+                        );
 
-                        await axios.put(
-                            joinPaths(process.env.APP_URL, '/filters/sports'),
-                            {
+                        await axios.put(joinPaths(process.env.APP_URL, '/filters/sports'), {
+                            login_token: person.login_token,
+                            person_token: person.person_token,
+                            table_key: 'leagues',
+                            token: league.token,
+                            active: true,
+                        });
+
+                        if (addSecondary) {
+                            await axios.put(joinPaths(process.env.APP_URL, '/filters/sports'), {
                                 login_token: person.login_token,
                                 person_token: person.person_token,
                                 table_key: 'leagues',
                                 token: league.token,
-                                active: true,
-                            }
-                        );
-
-                        if(addSecondary) {
-                            await axios.put(
-                                joinPaths(process.env.APP_URL, '/filters/sports'),
-                                {
-                                    login_token: person.login_token,
-                                    person_token: person.person_token,
-                                    table_key: 'leagues',
-                                    token: league.token,
-                                    secondary
-                                }
-                            );
+                                secondary,
+                            });
                         }
                     } catch (error) {
                         console.error(`Error processing league ${league.token}:`, error.message);
@@ -1231,24 +1221,25 @@ async function processSports() {
                     const itemsToDeactivate = [
                         ...selectedPlaySports,
                         ...selectedTeams,
-                        ...selectedLeagues
+                        ...selectedLeagues,
                     ].filter(() => Math.random() > 0.7); // 30% chance to select each item
 
                     for (const item of itemsToDeactivate) {
                         try {
-                            const tableKey = item.type === 'play' ? 'play' :
-                                (item.type === 'league' ? 'leagues' : 'teams');
+                            const tableKey =
+                                item.type === 'play'
+                                    ? 'play'
+                                    : item.type === 'league'
+                                      ? 'leagues'
+                                      : 'teams';
 
-                            await axios.put(
-                                joinPaths(process.env.APP_URL, '/filters/sports'),
-                                {
-                                    login_token: person.login_token,
-                                    person_token: person.person_token,
-                                    table_key: tableKey,
-                                    token: item.token,
-                                    active: false
-                                }
-                            );
+                            await axios.put(joinPaths(process.env.APP_URL, '/filters/sports'), {
+                                login_token: person.login_token,
+                                person_token: person.person_token,
+                                table_key: tableKey,
+                                token: item.token,
+                                active: false,
+                            });
                         } catch (error) {
                             console.error(`Error deactivating item ${item.token}:`, error.message);
                         }
@@ -1259,33 +1250,31 @@ async function processSports() {
                 for (const category of ['play', 'teams', 'leagues']) {
                     if (Math.random() <= 0.3) {
                         try {
-                            await axios.put(
-                                joinPaths(process.env.APP_URL, '/filters/sports'),
-                                {
-                                    login_token: person.login_token,
-                                    person_token: person.person_token,
-                                    table_key: category,
-                                    token: 'any',
-                                    active: true
-                                }
-                            );
+                            await axios.put(joinPaths(process.env.APP_URL, '/filters/sports'), {
+                                login_token: person.login_token,
+                                person_token: person.person_token,
+                                table_key: category,
+                                token: 'any',
+                                active: true,
+                            });
                         } catch (error) {
                             console.error(`Error setting any for ${category}:`, error.message);
                         }
                     }
                 }
-
             } catch (error) {
-                console.error(`Error processing sports for person ${person.person_token}:`, error.message);
+                console.error(
+                    `Error processing sports for person ${person.person_token}:`,
+                    error.message,
+                );
             }
         });
-
     } catch (error) {
         console.error('Error in sports processing:', error);
     }
 
     console.log({
-        sports: timeNow() - ts
+        sports: timeNow() - ts,
     });
 }
 
@@ -1310,21 +1299,20 @@ async function processMusic() {
             try {
                 // Process artists
                 // Select 5-15 random artists
-                const selectedArtists = shuffleFunc([...artists])
-                    .slice(0, Math.floor(Math.random() * 11) + 5);
+                const selectedArtists = shuffleFunc([...artists]).slice(
+                    0,
+                    Math.floor(Math.random() * 11) + 5,
+                );
 
                 for (const artist of selectedArtists) {
                     try {
-                        await axios.put(
-                            joinPaths(process.env.APP_URL, '/filters/music'),
-                            {
-                                login_token: person.login_token,
-                                person_token: person.person_token,
-                                table_key: 'artists',
-                                token: artist.token,
-                                active: true
-                            }
-                        );
+                        await axios.put(joinPaths(process.env.APP_URL, '/filters/music'), {
+                            login_token: person.login_token,
+                            person_token: person.person_token,
+                            table_key: 'artists',
+                            token: artist.token,
+                            active: true,
+                        });
                     } catch (error) {
                         console.error(`Error processing artist ${artist.token}:`, error.message);
                     }
@@ -1332,21 +1320,20 @@ async function processMusic() {
 
                 // Process genres
                 // Select 3-7 random genres
-                const selectedGenres = shuffleFunc([...genres])
-                    .slice(0, Math.floor(Math.random() * 5) + 3);
+                const selectedGenres = shuffleFunc([...genres]).slice(
+                    0,
+                    Math.floor(Math.random() * 5) + 3,
+                );
 
                 for (const genre of selectedGenres) {
                     try {
-                        await axios.put(
-                            joinPaths(process.env.APP_URL, '/filters/music'),
-                            {
-                                login_token: person.login_token,
-                                person_token: person.person_token,
-                                table_key: 'genres',
-                                token: genre.token,
-                                active: true
-                            }
-                        );
+                        await axios.put(joinPaths(process.env.APP_URL, '/filters/music'), {
+                            login_token: person.login_token,
+                            person_token: person.person_token,
+                            table_key: 'genres',
+                            token: genre.token,
+                            active: true,
+                        });
                     } catch (error) {
                         console.error(`Error processing genre ${genre.token}:`, error.message);
                     }
@@ -1354,22 +1341,20 @@ async function processMusic() {
 
                 // 20% chance to deactivate some selections randomly
                 if (Math.random() <= 0.2) {
-                    const itemsToDeactivate = [...selectedArtists, ...selectedGenres]
-                        .filter(() => Math.random() > 0.7); // 30% chance to select each item
+                    const itemsToDeactivate = [...selectedArtists, ...selectedGenres].filter(
+                        () => Math.random() > 0.7,
+                    ); // 30% chance to select each item
 
                     for (const item of itemsToDeactivate) {
                         try {
                             const isArtist = 'spotify_followers' in item;
-                            await axios.put(
-                                joinPaths(process.env.APP_URL, '/filters/music'),
-                                {
-                                    login_token: person.login_token,
-                                    person_token: person.person_token,
-                                    table_key: isArtist ? 'artists' : 'genres',
-                                    token: item.token,
-                                    active: false
-                                }
-                            );
+                            await axios.put(joinPaths(process.env.APP_URL, '/filters/music'), {
+                                login_token: person.login_token,
+                                person_token: person.person_token,
+                                table_key: isArtist ? 'artists' : 'genres',
+                                token: item.token,
+                                active: false,
+                            });
                         } catch (error) {
                             console.error(`Error deactivating item ${item.token}:`, error.message);
                         }
@@ -1379,16 +1364,13 @@ async function processMusic() {
                 // 30% chance to set any for artists
                 if (Math.random() <= 0.3) {
                     try {
-                        await axios.put(
-                            joinPaths(process.env.APP_URL, '/filters/music'),
-                            {
-                                login_token: person.login_token,
-                                person_token: person.person_token,
-                                table_key: 'artists',
-                                token: 'any',
-                                active: true
-                            }
-                        );
+                        await axios.put(joinPaths(process.env.APP_URL, '/filters/music'), {
+                            login_token: person.login_token,
+                            person_token: person.person_token,
+                            table_key: 'artists',
+                            token: 'any',
+                            active: true,
+                        });
                     } catch (error) {
                         console.error('Error setting any artists:', error.message);
                     }
@@ -1397,32 +1379,30 @@ async function processMusic() {
                 // 30% chance to set any for genres
                 if (Math.random() <= 0.3) {
                     try {
-                        await axios.put(
-                            joinPaths(process.env.APP_URL, '/filters/music'),
-                            {
-                                login_token: person.login_token,
-                                person_token: person.person_token,
-                                table_key: 'genres',
-                                token: 'any',
-                                active: true
-                            }
-                        );
+                        await axios.put(joinPaths(process.env.APP_URL, '/filters/music'), {
+                            login_token: person.login_token,
+                            person_token: person.person_token,
+                            table_key: 'genres',
+                            token: 'any',
+                            active: true,
+                        });
                     } catch (error) {
                         console.error('Error setting any genres:', error.message);
                     }
                 }
-
             } catch (error) {
-                console.error(`Error processing music for person ${person.person_token}:`, error.message);
+                console.error(
+                    `Error processing music for person ${person.person_token}:`,
+                    error.message,
+                );
             }
         });
-
     } catch (error) {
         console.error('Error in music processing:', error);
     }
 
     console.log({
-        music: timeNow() - ts
+        music: timeNow() - ts,
     });
 }
 
@@ -1442,31 +1422,29 @@ async function processInstruments() {
 
         await helpers.processBatch(async (person) => {
             try {
-                const selectedInstruments = shuffleFunc([...instruments])
-                    .slice(0, Math.floor(Math.random() * 2) + 1);
+                const selectedInstruments = shuffleFunc([...instruments]).slice(
+                    0,
+                    Math.floor(Math.random() * 2) + 1,
+                );
 
-                for(let instrument of selectedInstruments) {
+                for (let instrument of selectedInstruments) {
                     try {
                         // 40% chance to add secondary level
                         const addSecondary = Math.random() > 0.6;
 
                         let numSecondaries = Math.floor(Math.random() * 3) + 1;
 
-                        let secondary = shuffleFunc(skillLevels)
-                            .slice(0, numSecondaries);
+                        let secondary = shuffleFunc(skillLevels).slice(0, numSecondaries);
 
-                        await axios.put(
-                            joinPaths(process.env.APP_URL, '/filters/instruments'),
-                            {
-                                login_token: person.login_token,
-                                person_token: person.person_token,
-                                table_key: 'instruments',
-                                token: instrument.token,
-                                active: true
-                            }
-                        );
+                        await axios.put(joinPaths(process.env.APP_URL, '/filters/instruments'), {
+                            login_token: person.login_token,
+                            person_token: person.person_token,
+                            table_key: 'instruments',
+                            token: instrument.token,
+                            active: true,
+                        });
 
-                        if(addSecondary) {
+                        if (addSecondary) {
                             await axios.put(
                                 joinPaths(process.env.APP_URL, '/filters/instruments'),
                                 {
@@ -1474,8 +1452,8 @@ async function processInstruments() {
                                     person_token: person.person_token,
                                     table_key: 'instruments',
                                     token: instrument.token,
-                                    secondary
-                                }
+                                    secondary,
+                                },
                             );
                         }
                     } catch (error) {
@@ -1485,27 +1463,26 @@ async function processInstruments() {
 
                 // 60% chance to set any instruments
                 if (Math.random() <= 0.6) {
-                    await axios.put(
-                        joinPaths(process.env.APP_URL, '/filters/instruments'),
-                        {
-                            login_token: person.login_token,
-                            person_token: person.person_token,
-                            token: 'any',
-                            active: true
-                        }
-                    );
+                    await axios.put(joinPaths(process.env.APP_URL, '/filters/instruments'), {
+                        login_token: person.login_token,
+                        person_token: person.person_token,
+                        token: 'any',
+                        active: true,
+                    });
                 }
             } catch (error) {
-                console.error(`Error processing instruments for person ${person.person_token}:`, error.message);
+                console.error(
+                    `Error processing instruments for person ${person.person_token}:`,
+                    error.message,
+                );
             }
         });
-
     } catch (error) {
         console.error('Error in instruments processing:', error);
     }
 
     console.log({
-        instruments: timeNow() - ts
+        instruments: timeNow() - ts,
     });
 }
 
@@ -1514,9 +1491,7 @@ async function processSchools() {
     let ts = timeNow();
 
     try {
-        const test_country = await conn('open_countries')
-            .where('country_code', 'US')
-            .first();
+        const test_country = await conn('open_countries').where('country_code', 'US').first();
 
         // Get schools for the test country ordered by student count
         const schools = await conn('schools')
@@ -1527,11 +1502,11 @@ async function processSchools() {
             .limit(500);
 
         // Separate schools by type for balanced selection
-        const collegeSchools = schools.filter(s => s.is_college);
-        const highSchools = schools.filter(s => s.is_high_school);
-        const gradeSchools = schools.filter(s => s.is_grade_school);
+        const collegeSchools = schools.filter((s) => s.is_college);
+        const highSchools = schools.filter((s) => s.is_high_school);
+        const gradeSchools = schools.filter((s) => s.is_grade_school);
 
-        await helpers.processBatch( async (person) => {
+        await helpers.processBatch(async (person) => {
             // Randomly decide which types of schools to add
             const addCollege = Math.random() > 0.2; // 80% chance for college
             const addHighSchool = Math.random() > 0.3; // 70% chance for high school
@@ -1541,22 +1516,21 @@ async function processSchools() {
 
             // Add 1-2 colleges if selected
             if (addCollege) {
-                const selectedColleges = shuffleFunc(collegeSchools)
-                    .slice(0, Math.floor(Math.random() * 2) + 1);
+                const selectedColleges = shuffleFunc(collegeSchools).slice(
+                    0,
+                    Math.floor(Math.random() * 2) + 1,
+                );
 
                 schools = schools.concat(selectedColleges);
 
-                for(let school of selectedColleges) {
-                    await axios.put(
-                        joinPaths(process.env.APP_URL, '/filters/schools'),
-                        {
-                            login_token: person.login_token,
-                            person_token: person.person_token,
-                            token: school.token,
-                            hash_token: test_country.country_code,
-                            active: true
-                        }
-                    );
+                for (let school of selectedColleges) {
+                    await axios.put(joinPaths(process.env.APP_URL, '/filters/schools'), {
+                        login_token: person.login_token,
+                        person_token: person.person_token,
+                        token: school.token,
+                        hash_token: test_country.country_code,
+                        active: true,
+                    });
                 }
             }
 
@@ -1566,16 +1540,13 @@ async function processSchools() {
 
                 schools.push(school);
 
-                await axios.put(
-                    joinPaths(process.env.APP_URL, '/filters/schools'),
-                    {
-                        login_token: person.login_token,
-                        person_token: person.person_token,
-                        token: school.token,
-                        hash_token: test_country.country_code,
-                        active: true
-                    }
-                );
+                await axios.put(joinPaths(process.env.APP_URL, '/filters/schools'), {
+                    login_token: person.login_token,
+                    person_token: person.person_token,
+                    token: school.token,
+                    hash_token: test_country.country_code,
+                    active: true,
+                });
             }
 
             // Add 1 grade school if selected
@@ -1584,35 +1555,33 @@ async function processSchools() {
 
                 schools.push(school);
 
-                await axios.put(
-                    joinPaths(process.env.APP_URL, '/filters/schools'),
-                    {
-                        login_token: person.login_token,
-                        person_token: person.person_token,
-                        token: school.token,
-                        hash_token: test_country.country_code,
-                        active: true
-                    }
-                );
+                await axios.put(joinPaths(process.env.APP_URL, '/filters/schools'), {
+                    login_token: person.login_token,
+                    person_token: person.person_token,
+                    token: school.token,
+                    hash_token: test_country.country_code,
+                    active: true,
+                });
             }
 
             // 20% chance to deactivate some selections randomly
             if (Math.random() <= 0.2) {
-                for(let school of schools) {
-                    if (Math.random() > 0.7) { // 30% chance to deactivate each item
+                for (let school of schools) {
+                    if (Math.random() > 0.7) {
+                        // 30% chance to deactivate each item
                         try {
-                            await axios.put(
-                                joinPaths(process.env.APP_URL, '/filters/schools'),
-                                {
-                                    login_token: person.login_token,
-                                    person_token: person.person_token,
-                                    hash_token: test_country.country_code,
-                                    token: school.token,
-                                    active: false
-                                }
-                            );
+                            await axios.put(joinPaths(process.env.APP_URL, '/filters/schools'), {
+                                login_token: person.login_token,
+                                person_token: person.person_token,
+                                hash_token: test_country.country_code,
+                                token: school.token,
+                                active: false,
+                            });
                         } catch (error) {
-                            console.error(`Error deactivating school ${school.token}:`, error.message);
+                            console.error(
+                                `Error deactivating school ${school.token}:`,
+                                error.message,
+                            );
                         }
                     }
                 }
@@ -1621,28 +1590,24 @@ async function processSchools() {
             // 30% chance to set any
             if (Math.random() <= 0.3) {
                 try {
-                    await axios.put(
-                        joinPaths(process.env.APP_URL, '/filters/schools'),
-                        {
-                            login_token: person.login_token,
-                            person_token: person.person_token,
-                            hash_token: test_country.country_code,
-                            token: 'any',
-                            active: true
-                        }
-                    );
+                    await axios.put(joinPaths(process.env.APP_URL, '/filters/schools'), {
+                        login_token: person.login_token,
+                        person_token: person.person_token,
+                        hash_token: test_country.country_code,
+                        token: 'any',
+                        active: true,
+                    });
                 } catch (error) {
                     console.error('Error setting any school:', error.message);
                 }
             }
         });
-
     } catch (error) {
         console.error('Error in processSchools:', error);
     }
 
     console.log({
-        schools: timeNow() - ts
+        schools: timeNow() - ts,
     });
 }
 
@@ -1656,53 +1621,50 @@ async function processWork() {
             .whereNull('deleted')
             .where('is_visible', true);
 
-        const roles = await conn('work_roles')
-            .whereNull('deleted')
-            .where('is_visible', true);
+        const roles = await conn('work_roles').whereNull('deleted').where('is_visible', true);
 
         await helpers.processBatch(async (person) => {
             // Process Industries
-            if (Math.random() > 0.4) { // 60% chance to add industries
+            if (Math.random() > 0.4) {
+                // 60% chance to add industries
                 // Select 1-3 random industries
                 const numIndustries = Math.floor(Math.random() * 3) + 1;
                 const selectedIndustries = shuffleFunc([...industries]).slice(0, numIndustries);
 
                 for (const industry of selectedIndustries) {
                     try {
-                        await axios.put(
-                            joinPaths(process.env.APP_URL, '/filters/work'),
-                            {
-                                login_token: person.login_token,
-                                person_token: person.person_token,
-                                table_key: 'industries',
-                                token: industry.token,
-                                active: true
-                            }
-                        );
+                        await axios.put(joinPaths(process.env.APP_URL, '/filters/work'), {
+                            login_token: person.login_token,
+                            person_token: person.person_token,
+                            table_key: 'industries',
+                            token: industry.token,
+                            active: true,
+                        });
                     } catch (error) {
-                        console.error(`Error processing industry ${industry.token}:`, error.message);
+                        console.error(
+                            `Error processing industry ${industry.token}:`,
+                            error.message,
+                        );
                     }
                 }
             }
 
             // Process Roles
-            if (Math.random() > 0.4) { // 60% chance to add roles
+            if (Math.random() > 0.4) {
+                // 60% chance to add roles
                 // Select 1-3 random roles
                 const numRoles = Math.floor(Math.random() * 3) + 1;
                 const selectedRoles = shuffleFunc([...roles]).slice(0, numRoles);
 
                 for (const role of selectedRoles) {
                     try {
-                        await axios.put(
-                            joinPaths(process.env.APP_URL, '/filters/work'),
-                            {
-                                login_token: person.login_token,
-                                person_token: person.person_token,
-                                table_key: 'roles',
-                                token: role.token,
-                                active: true
-                            }
-                        );
+                        await axios.put(joinPaths(process.env.APP_URL, '/filters/work'), {
+                            login_token: person.login_token,
+                            person_token: person.person_token,
+                            table_key: 'roles',
+                            token: role.token,
+                            active: true,
+                        });
                     } catch (error) {
                         console.error(`Error processing role ${role.token}:`, error.message);
                     }
@@ -1712,16 +1674,13 @@ async function processWork() {
             // 20% chance to set any for industries
             if (Math.random() <= 0.2) {
                 try {
-                    await axios.put(
-                        joinPaths(process.env.APP_URL, '/filters/work'),
-                        {
-                            login_token: person.login_token,
-                            person_token: person.person_token,
-                            table_key: 'industries',
-                            token: 'any',
-                            active: true
-                        }
-                    );
+                    await axios.put(joinPaths(process.env.APP_URL, '/filters/work'), {
+                        login_token: person.login_token,
+                        person_token: person.person_token,
+                        table_key: 'industries',
+                        token: 'any',
+                        active: true,
+                    });
                 } catch (error) {
                     console.error('Error setting any industries:', error.message);
                 }
@@ -1730,28 +1689,24 @@ async function processWork() {
             // 20% chance to set any for roles
             if (Math.random() <= 0.2) {
                 try {
-                    await axios.put(
-                        joinPaths(process.env.APP_URL, '/filters/work'),
-                        {
-                            login_token: person.login_token,
-                            person_token: person.person_token,
-                            table_key: 'roles',
-                            token: 'any',
-                            active: true
-                        }
-                    );
+                    await axios.put(joinPaths(process.env.APP_URL, '/filters/work'), {
+                        login_token: person.login_token,
+                        person_token: person.person_token,
+                        table_key: 'roles',
+                        token: 'any',
+                        active: true,
+                    });
                 } catch (error) {
                     console.error('Error setting any roles:', error.message);
                 }
             }
         });
-
     } catch (error) {
         console.error('Error in work processing:', error);
     }
 
     console.log({
-        work_filter: timeNow() - ts
+        work_filter: timeNow() - ts,
     });
 }
 
@@ -1765,13 +1720,13 @@ async function processLifeStages() {
     let options = await meService.getLifeStages({ options_only: true });
 
     await helpers.processBatch(async (person) => {
-        if (Math.random() > 0.3) { //70% chance to set
+        if (Math.random() > 0.3) {
+            //70% chance to set
             //Select 1-5 random life stages
 
-            let personOptions = shuffleFunc(options)
-                .slice(0, Math.floor(Math.random() * 5) + 1);
+            let personOptions = shuffleFunc(options).slice(0, Math.floor(Math.random() * 5) + 1);
 
-            for(let option of personOptions) {
+            for (let option of personOptions) {
                 try {
                     await axios.put(joinPaths(process.env.APP_URL, '/filters/life-stages'), {
                         login_token: person.login_token,
@@ -1787,15 +1742,12 @@ async function processLifeStages() {
             //30% change to set any
             if (Math.random() <= 0.3) {
                 try {
-                    await axios.put(
-                        joinPaths(process.env.APP_URL, '/filters/life-stages'),
-                        {
-                            login_token: person.login_token,
-                            person_token: person.person_token,
-                            life_stage_token: 'any',
-                            active: true
-                        }
-                    );
+                    await axios.put(joinPaths(process.env.APP_URL, '/filters/life-stages'), {
+                        login_token: person.login_token,
+                        person_token: person.person_token,
+                        life_stage_token: 'any',
+                        active: true,
+                    });
                 } catch (error) {
                     console.error('Error setting any life stage:', error.message);
                 }
@@ -1818,13 +1770,13 @@ async function processRelationships() {
     let options = await meService.getRelationshipStatus({ options_only: true });
 
     await helpers.processBatch(async (person) => {
-        if (Math.random() > 0.3) { //70% chance to set
+        if (Math.random() > 0.3) {
+            //70% chance to set
             //Select 1-3 random relationship statuses
 
-            let personOptions = shuffleFunc(options)
-                .slice(0, Math.floor(Math.random() * 3) + 1);
+            let personOptions = shuffleFunc(options).slice(0, Math.floor(Math.random() * 3) + 1);
 
-            for(let option of personOptions) {
+            for (let option of personOptions) {
                 try {
                     await axios.put(joinPaths(process.env.APP_URL, '/filters/relationships'), {
                         login_token: person.login_token,
@@ -1840,15 +1792,12 @@ async function processRelationships() {
             //30% change to set any
             if (Math.random() <= 0.3) {
                 try {
-                    await axios.put(
-                        joinPaths(process.env.APP_URL, '/filters/relationships'),
-                        {
-                            login_token: person.login_token,
-                            person_token: person.person_token,
-                            relationship_status_token: 'any',
-                            active: true
-                        }
-                    );
+                    await axios.put(joinPaths(process.env.APP_URL, '/filters/relationships'), {
+                        login_token: person.login_token,
+                        person_token: person.person_token,
+                        relationship_status_token: 'any',
+                        active: true,
+                    });
                 } catch (error) {
                     console.error('Error setting any relationship:', error.message);
                 }
@@ -1871,13 +1820,13 @@ async function processLanguages() {
     let options = await meService.getLanguages({ options_only: true });
 
     await helpers.processBatch(async (person) => {
-        if (Math.random() > 0.3) { //70% chance to set
+        if (Math.random() > 0.3) {
+            //70% chance to set
             //Select 1-4 random languages
 
-            let personOptions = shuffleFunc(options)
-                .slice(0, Math.floor(Math.random() * 4) + 1);
+            let personOptions = shuffleFunc(options).slice(0, Math.floor(Math.random() * 4) + 1);
 
-            for(let option of personOptions) {
+            for (let option of personOptions) {
                 try {
                     await axios.put(joinPaths(process.env.APP_URL, '/filters/languages'), {
                         login_token: person.login_token,
@@ -1893,15 +1842,12 @@ async function processLanguages() {
             //30% change to set any
             if (Math.random() <= 0.3) {
                 try {
-                    await axios.put(
-                        joinPaths(process.env.APP_URL, '/filters/languages'),
-                        {
-                            login_token: person.login_token,
-                            person_token: person.person_token,
-                            language_token: 'any',
-                            active: true
-                        }
-                    );
+                    await axios.put(joinPaths(process.env.APP_URL, '/filters/languages'), {
+                        login_token: person.login_token,
+                        person_token: person.person_token,
+                        language_token: 'any',
+                        active: true,
+                    });
                 } catch (error) {
                     console.error('Error setting any language:', error.message);
                 }
@@ -1924,13 +1870,13 @@ async function processPolitics() {
     let options = await meService.getPolitics({ options_only: true });
 
     await helpers.processBatch(async (person) => {
-        if (Math.random() > 0.3) { //70% chance to set
+        if (Math.random() > 0.3) {
+            //70% chance to set
             //Select 1-2 random politic options
 
-            let personOptions = shuffleFunc(options)
-                .slice(0, Math.floor(Math.random() * 5) + 1);
+            let personOptions = shuffleFunc(options).slice(0, Math.floor(Math.random() * 5) + 1);
 
-            for(let option of personOptions) {
+            for (let option of personOptions) {
                 try {
                     await axios.put(joinPaths(process.env.APP_URL, '/filters/politics'), {
                         login_token: person.login_token,
@@ -1946,15 +1892,12 @@ async function processPolitics() {
             //30% change to set any
             if (Math.random() <= 0.3) {
                 try {
-                    await axios.put(
-                        joinPaths(process.env.APP_URL, '/filters/politics'),
-                        {
-                            login_token: person.login_token,
-                            person_token: person.person_token,
-                            politics_token: 'any',
-                            active: true
-                        }
-                    );
+                    await axios.put(joinPaths(process.env.APP_URL, '/filters/politics'), {
+                        login_token: person.login_token,
+                        person_token: person.person_token,
+                        politics_token: 'any',
+                        active: true,
+                    });
                 } catch (error) {
                     console.error('Error setting any politics:', error.message);
                 }
@@ -1977,13 +1920,13 @@ async function processReligions() {
     let options = await meService.getReligions({ options_only: true });
 
     await helpers.processBatch(async (person) => {
-        if (Math.random() > 0.3) { //70% chance to set
+        if (Math.random() > 0.3) {
+            //70% chance to set
             //Select 1-3 random religions
 
-            let personOptions = shuffleFunc(options)
-                .slice(0, Math.floor(Math.random() * 3) + 1);
+            let personOptions = shuffleFunc(options).slice(0, Math.floor(Math.random() * 3) + 1);
 
-            for(let option of personOptions) {
+            for (let option of personOptions) {
                 try {
                     await axios.put(joinPaths(process.env.APP_URL, '/filters/religion'), {
                         login_token: person.login_token,
@@ -1999,15 +1942,12 @@ async function processReligions() {
             //30% change to set any
             if (Math.random() <= 0.3) {
                 try {
-                    await axios.put(
-                        joinPaths(process.env.APP_URL, '/filters/religion'),
-                        {
-                            login_token: person.login_token,
-                            person_token: person.person_token,
-                            religion_token: 'any',
-                            active: true
-                        }
-                    );
+                    await axios.put(joinPaths(process.env.APP_URL, '/filters/religion'), {
+                        login_token: person.login_token,
+                        person_token: person.person_token,
+                        religion_token: 'any',
+                        active: true,
+                    });
                 } catch (error) {
                     console.error('Error setting any religion:', error.message);
                 }
@@ -2030,13 +1970,13 @@ async function processDrinking() {
     let options = await meService.getDrinking({ options_only: true });
 
     await helpers.processBatch(async (person) => {
-        if (Math.random() > 0.3) { //70% chance to set
+        if (Math.random() > 0.3) {
+            //70% chance to set
             //Select 1-2 random drinking options
 
-            let personOptions = shuffleFunc(options)
-                .slice(0, Math.floor(Math.random() * 2) + 1);
+            let personOptions = shuffleFunc(options).slice(0, Math.floor(Math.random() * 2) + 1);
 
-            for(let option of personOptions) {
+            for (let option of personOptions) {
                 try {
                     await axios.put(joinPaths(process.env.APP_URL, '/filters/drinking'), {
                         login_token: person.login_token,
@@ -2052,15 +1992,12 @@ async function processDrinking() {
             //30% change to set any
             if (Math.random() <= 0.3) {
                 try {
-                    await axios.put(
-                        joinPaths(process.env.APP_URL, '/filters/drinking'),
-                        {
-                            login_token: person.login_token,
-                            person_token: person.person_token,
-                            drinking_token: 'any',
-                            active: true
-                        }
-                    );
+                    await axios.put(joinPaths(process.env.APP_URL, '/filters/drinking'), {
+                        login_token: person.login_token,
+                        person_token: person.person_token,
+                        drinking_token: 'any',
+                        active: true,
+                    });
                 } catch (error) {
                     console.error('Error setting any drinking:', error.message);
                 }
@@ -2083,13 +2020,13 @@ async function processSmoking() {
     let options = await meService.getSmoking({ options_only: true });
 
     await helpers.processBatch(async (person) => {
-        if (Math.random() > 0.3) { //70% chance to set
+        if (Math.random() > 0.3) {
+            //70% chance to set
             //Select 1-2 random smoking options
 
-            let personOptions = shuffleFunc(options)
-                .slice(0, Math.floor(Math.random() * 2) + 1);
+            let personOptions = shuffleFunc(options).slice(0, Math.floor(Math.random() * 2) + 1);
 
-            for(let option of personOptions) {
+            for (let option of personOptions) {
                 try {
                     await axios.put(joinPaths(process.env.APP_URL, '/filters/smoking'), {
                         login_token: person.login_token,
@@ -2105,15 +2042,12 @@ async function processSmoking() {
             //30% change to set any
             if (Math.random() <= 0.3) {
                 try {
-                    await axios.put(
-                        joinPaths(process.env.APP_URL, '/filters/smoking'),
-                        {
-                            login_token: person.login_token,
-                            person_token: person.person_token,
-                            smoking_token: 'any',
-                            active: true
-                        }
-                    );
+                    await axios.put(joinPaths(process.env.APP_URL, '/filters/smoking'), {
+                        login_token: person.login_token,
+                        person_token: person.person_token,
+                        smoking_token: 'any',
+                        active: true,
+                    });
                 } catch (error) {
                     console.error('Error setting any smoking:', error.message);
                 }

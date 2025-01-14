@@ -87,8 +87,7 @@ function getActivityTypes() {
                 );
 
                 for (let at of level_3_qry) {
-                    data_organized[parent_id].sub[level_2_id].sub[at.id] =
-                        createActivityObject(at);
+                    data_organized[parent_id].sub[level_2_id].sub[at.id] = createActivityObject(at);
                 }
             }
         }
@@ -145,7 +144,7 @@ function getActivityTypesMapping() {
 function getActivityType(activity_type_token) {
     return new Promise(async (resolve, reject) => {
         try {
-            if(module.exports.lookup[activity_type_token]) {
+            if (module.exports.lookup[activity_type_token]) {
                 return resolve(module.exports.lookup[activity_type_token]);
             }
 
@@ -193,7 +192,7 @@ function prepareActivity(person, activity) {
             return reject('Activity data required');
         }
 
-        if(!activity.person?.mode) {
+        if (!activity.person?.mode) {
             errors.push('Mode required');
         } else {
             try {
@@ -201,16 +200,16 @@ function prepareActivity(person, activity) {
 
                 let mode = modes?.byToken[activity.person.mode];
 
-                if(!mode) {
+                if (!mode) {
                     errors.push('Invalid mode provided');
                 } else {
                     activity.mode = {
                         id: mode.id,
                         token: mode.token,
-                        name: mode.name
-                    }
+                        name: mode.name,
+                    };
                 }
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
             }
         }
@@ -254,9 +253,7 @@ function prepareActivity(person, activity) {
         } else if (activity.duration < module.exports.durations.min) {
             errors.push(`Minimum duration is ${module.exports.durations.min} min`);
         } else if (activity.duration > module.exports.durations.max) {
-            errors.push(
-                `Max duration is ${(module.exports.durations.max / 60).toFixed(0)} hours`,
-            );
+            errors.push(`Max duration is ${(module.exports.durations.max / 60).toFixed(0)} hours`);
         } else if (!module.exports.durations.options.includes(activity.duration)) {
             errors.push(`Invalid duration`);
         } else {
@@ -306,8 +303,9 @@ function prepareActivity(person, activity) {
                     let travel_time = travel.modes[activity.travel.mode];
 
                     if (
-                        !when_option || travel_time.total >
-                        when_option.in_mins + module.exports.thresholds.startTimeTravelTime
+                        !when_option ||
+                        travel_time.total >
+                            when_option.in_mins + module.exports.thresholds.startTimeTravelTime
                     ) {
                         errors.push('Update your location or activity time');
                     }
@@ -344,9 +342,7 @@ function prepareActivity(person, activity) {
                 end: date.add(activity.duration, 'minutes').unix(),
                 human: {
                     time: date.tz(activity.travel?.data?.to.tz).format(`h:mm a`),
-                    datetime: date
-                        .tz(activity.travel?.data?.to.tz)
-                        .format(`YYYY-MM-DD HH:mm:ssZ`),
+                    datetime: date.tz(activity.travel?.data?.to.tz).format(`YYYY-MM-DD HH:mm:ssZ`),
                 },
             };
         }
@@ -373,7 +369,7 @@ function prepareActivity(person, activity) {
         }
 
         //number_persons
-        if (!activity.friends || !isNumeric(activity.friends?.qty) ||  activity.friends.qty < 1) {
+        if (!activity.friends || !isNumeric(activity.friends?.qty) || activity.friends.qty < 1) {
             errors.push('Friends qty required');
         } else if (activity.friends.qty > module.exports.friends.max) {
             errors.push(`Max friends: ${module.exports.friends.max}`);
@@ -391,7 +387,7 @@ function prepareActivity(person, activity) {
 
             //todo remove
             if (0 && overlaps) {
-                return reject(['Activity time overlaps with current activity'])
+                return reject(['Activity time overlaps with current activity']);
             }
         } catch (e) {
             console.error(e);
@@ -409,37 +405,37 @@ function doesActivityOverlap(person_token, time) {
 
             let data = await cacheService.hGetAllObj(cache_key);
 
-            if(!data) {
+            if (!data) {
                 return resolve(false);
             }
 
             let overlaps = false;
 
-            for(let k in data) {
+            for (let k in data) {
                 let activity = data[k];
 
-                if(activity.is_cancelled) {
+                if (activity.is_cancelled) {
                     continue;
                 }
 
-                if(activity.activity_start <= time.start && activity.activity_end > time.start) {
+                if (activity.activity_start <= time.start && activity.activity_end > time.start) {
                     overlaps = true;
                     break;
                 }
 
-                if(activity.activity_start < time.end && activity.activity_end >= time.end) {
+                if (activity.activity_start < time.end && activity.activity_end >= time.end) {
                     overlaps = true;
                     break;
                 }
 
-                if(activity.activity_start >= time.start && activity.activity_end <= time.end) {
+                if (activity.activity_start >= time.start && activity.activity_end <= time.end) {
                     overlaps = true;
                     break;
                 }
             }
 
             resolve(overlaps);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return reject(e);
         }
@@ -479,7 +475,7 @@ function findMatches(person, activity) {
         try {
             let matches = await matchingService.getMatches(person, {
                 activity,
-                send_only: true
+                send_only: true,
             });
 
             resolve(matches?.matches?.send || []);
@@ -500,16 +496,13 @@ function notifyMatches(person, activity, matches) {
     async function getTmpPersonToken() {
         let conn = await dbService.conn();
 
-        let persons = await conn('persons')
-            .where('id', '>', 1)
-            .orderBy('id')
-            .limit(3);
+        let persons = await conn('persons').where('id', '>', 1).orderBy('id').limit(3);
 
         let token = persons[_tmp_person_int].person_token;
 
         _tmp_person_int++;
 
-        if(_tmp_person_int >= persons.length) {
+        if (_tmp_person_int >= persons.length) {
             _tmp_person_int = 0;
         }
 
@@ -528,7 +521,7 @@ function notifyMatches(person, activity, matches) {
 
         _tmp_device_int++;
 
-        if(_tmp_device_int >= devices.length) {
+        if (_tmp_device_int >= devices.length) {
             _tmp_device_int = 0;
         }
 
@@ -569,53 +562,53 @@ function notifyMatches(person, activity, matches) {
             body: `Join ${person.first_name}${plus_str} ${place_str}`,
             data: {
                 activity_token: activity.activity_token,
-                network_token: network.network_token
-            }
+                network_token: network.network_token,
+            },
         };
     }
 
     function sendGroupNotifications(group, delay) {
         let cache_key = cacheService.keys.activities_notifications(activity.activity_token);
 
-        setTimeout(async function() {
+        setTimeout(async function () {
             let platforms = {
                 ios: {
                     tokens: [],
-                    devices: {}
+                    devices: {},
                 },
                 android: {
                     tokens: [],
-                    devices: {}
-                }
-            }
+                    devices: {},
+                },
+            };
 
             //check if activity has already been fulfilled
-            if(isFulfilled) {
+            if (isFulfilled) {
                 return;
             }
 
-            if(delay > 0) {
+            if (delay > 0) {
                 let spots = await availableSpots(activity.activity_token);
 
-                if(spots <= 0) {
+                if (spots <= 0) {
                     isFulfilled = true;
                     return;
                 }
             }
 
             //1. send notifications
-            for(let to_person of group) {
+            for (let to_person of group) {
                 // our network
-                if(to_person.network_id === network.id) {
-                    if(to_person.device.platform === 'ios') {
+                if (to_person.network_id === network.id) {
+                    if (to_person.device.platform === 'ios') {
                         platforms.ios.tokens.push(to_person.device.token);
 
                         platforms.ios.devices[to_person.device.token] = to_person;
-                    } else if(to_person.device.platform === 'android') {
+                    } else if (to_person.device.platform === 'android') {
                         platforms.android.tokens.push(to_person.device.token);
                     }
-                } else { // 3rd party network
-
+                } else {
+                    // 3rd party network
                 }
             }
 
@@ -625,30 +618,34 @@ function notifyMatches(person, activity, matches) {
                     let to_persons = [];
                     let pipeline = cacheService.startPipeline();
 
-                    let results = await notificationService.ios.sendBatch(platforms.ios.tokens, payload, true);
+                    let results = await notificationService.ios.sendBatch(
+                        platforms.ios.tokens,
+                        payload,
+                        true,
+                    );
 
                     //2. add to db/cache
-                    for(let result of results) {
+                    for (let result of results) {
                         let is_success = false;
                         let device_token = null;
 
                         let sent = result.sent?.[0];
                         let failed = result.failed?.[0];
 
-                        if(sent) {
+                        if (sent) {
                             device_token = sent.device;
 
-                            if(sent.status === 'success') {
+                            if (sent.status === 'success') {
                                 is_success = true;
                             }
                         }
 
-                        if(failed) {
+                        if (failed) {
                             device_token = failed.device;
                         }
 
-                        if(!device_token) {
-                            console.error("No device token found");
+                        if (!device_token) {
+                            console.error('No device token found');
                             continue;
                         }
 
@@ -663,10 +660,10 @@ function notifyMatches(person, activity, matches) {
                             person_to_network_id: to_person.network_id,
                             sent_at: timeNow(),
                             created: timeNow(),
-                            updated: timeNow()
-                        }
+                            updated: timeNow(),
+                        };
 
-                        if(is_success) {
+                        if (is_success) {
                             insert.is_success = true;
                         } else {
                             insert.is_failed = true;
@@ -675,10 +672,10 @@ function notifyMatches(person, activity, matches) {
                         batch_insert.push(insert);
                     }
 
-                    if(batch_insert.length) {
+                    if (batch_insert.length) {
                         await batchInsert('activities_notifications', batch_insert, true);
 
-                        for(let i = 0; i < batch_insert.length; i++) {
+                        for (let i = 0; i < batch_insert.length; i++) {
                             let insert = batch_insert[i];
                             let to_person = to_persons[i];
 
@@ -688,7 +685,7 @@ function notifyMatches(person, activity, matches) {
                             pipeline.hSet(
                                 cache_key,
                                 to_person.person_token,
-                                JSON.stringify(insert)
+                                JSON.stringify(insert),
                             );
                         }
 
@@ -702,14 +699,15 @@ function notifyMatches(person, activity, matches) {
     }
 
     function isActivityTypeExcluded(filter) {
-        if(!filter?.is_active) {
+        if (!filter?.is_active) {
             return false;
         }
 
-        let filtered_activity = Object.values(filter.items || {})
-            .find(item => item.activity_type_id === activity.activity?.data?.id);
+        let filtered_activity = Object.values(filter.items || {}).find(
+            (item) => item.activity_type_id === activity.activity?.data?.id,
+        );
 
-        if(!filtered_activity) {
+        if (!filtered_activity) {
             return false;
         }
 
@@ -726,7 +724,7 @@ function notifyMatches(person, activity, matches) {
             network = await getNetworkSelf();
 
             payload = getPayload();
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return reject(e);
         }
@@ -740,25 +738,31 @@ function notifyMatches(person, activity, matches) {
             //tmp person token - todo remove
             // match.person_token = await getTmpPersonToken();
 
-            pipeline.hmGet(cacheService.keys.person(match.person_token), ['id', 'network_id', 'devices']);
+            pipeline.hmGet(cacheService.keys.person(match.person_token), [
+                'id',
+                'network_id',
+                'devices',
+            ]);
             pipeline.hGet(cacheService.keys.person_filters(match.person_token), 'activity_types');
         }
 
         try {
             results = await cacheService.execPipeline(pipeline);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
 
-        let activity_notification_key = cacheService.keys.activities_notifications(activity.activity_token);
+        let activity_notification_key = cacheService.keys.activities_notifications(
+            activity.activity_token,
+        );
 
         try {
             prev_notifications_persons = (await hGetAllObj(activity_notification_key)) || {};
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
 
-        for(let match of matches) {
+        for (let match of matches) {
             try {
                 let person = results[idx++];
                 match.person_id = parseInt(person[0]);
@@ -769,7 +773,7 @@ function notifyMatches(person, activity, matches) {
 
                 let is_activity_excluded = isActivityTypeExcluded(activities_filter);
 
-                if(is_activity_excluded) {
+                if (is_activity_excluded) {
                     excluded_by_activity_type[match.person_token] = true;
                 }
 
@@ -777,15 +781,15 @@ function notifyMatches(person, activity, matches) {
                     continue;
                 }
 
-                let currentDevice = personDevices?.find(device => device.is_current);
+                let currentDevice = personDevices?.find((device) => device.is_current);
 
                 if (currentDevice) {
                     match.device = {
                         platform: currentDevice.platform,
                         token: currentDevice.token,
-                    }
+                    };
                 }
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
             }
         }
@@ -793,15 +797,16 @@ function notifyMatches(person, activity, matches) {
         //organize into groups
         let filtered_matches = [];
 
-        for(let match of matches) {
-            if(
+        for (let match of matches) {
+            if (
                 match.person_token in prev_notifications_persons ||
-                match.person_token in excluded_by_activity_type) {
+                match.person_token in excluded_by_activity_type
+            ) {
                 continue;
             }
 
-            if(match.network_id === network.id) {
-                if(match.device?.platform && match.device.token) {
+            if (match.network_id === network.id) {
+                if (match.device?.platform && match.device.token) {
                     //tmp fixed devices - todo remove
                     match.device.token = await getTmpDeviceToken();
 
@@ -815,8 +820,8 @@ function notifyMatches(person, activity, matches) {
         //tmp limit - todo remove
         filtered_matches = filtered_matches.splice(0, 3);
 
-        if(!filtered_matches.length) {
-            return reject("No persons available to notify")
+        if (!filtered_matches.length) {
+            return reject('No persons available to notify');
         }
 
         let groups_organized = {};
@@ -825,14 +830,14 @@ function notifyMatches(person, activity, matches) {
 
         let currentIndex = 0;
 
-        for(let i = 0; i < group_keys.length; i++ ) {
+        for (let i = 0; i < group_keys.length; i++) {
             let group_key = group_keys[i];
             let group_size = module.exports.notifications.groups[group_key].size;
             let total_group_size = group_size * persons_multiplier;
 
             groups_organized[group_key] = {
-                persons: filtered_matches.slice(currentIndex, currentIndex + total_group_size)
-            }
+                persons: filtered_matches.slice(currentIndex, currentIndex + total_group_size),
+            };
 
             currentIndex += total_group_size;
 
@@ -841,7 +846,7 @@ function notifyMatches(person, activity, matches) {
             }
         }
 
-        for(let group_key in groups_organized) {
+        for (let group_key in groups_organized) {
             let group_matches = groups_organized[group_key].persons;
 
             let group_delay = module.exports.notifications.groups[group_key];
@@ -859,28 +864,28 @@ function availableSpots(activity_token) {
             let notification_key = cacheService.keys.activities_notifications(activity_token);
             let notification_data = (await cacheService.hGetAllObj(notification_key)) || {};
 
-            if(!Object.keys(notification_data).length) {
-                return reject("No notifications sent");
+            if (!Object.keys(notification_data).length) {
+                return reject('No notifications sent');
             }
 
             let persons_accepted = 0;
 
             let friends_qty = null;
 
-            for(let k in notification_data) {
+            for (let k in notification_data) {
                 let v = notification_data[k];
 
-                if(friends_qty === null) {
+                if (friends_qty === null) {
                     friends_qty = v.friends_qty;
                 }
 
-                if(v.accepted_at && !v.cancelled_at) {
+                if (v.accepted_at && !v.cancelled_at) {
                     persons_accepted++;
                 }
             }
 
             return resolve(friends_qty - persons_accepted);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return reject(e);
         }
@@ -896,8 +901,8 @@ module.exports = {
         min: 10,
         max: 360,
         options: [
-            10, 15, 20, 30, 40, 45, 50, 60, 70, 80, 90, 100, 110, 120,
-            150, 180, 210, 240, 270, 300, 330, 360,
+            10, 15, 20, 30, 40, 45, 50, 60, 70, 80, 90, 100, 110, 120, 150, 180, 210, 240, 270, 300,
+            330, 360,
         ],
     },
     thresholds: {
@@ -936,7 +941,7 @@ module.exports = {
         groups: {
             group_1: {
                 size: 1,
-                delay: 0
+                delay: 0,
             },
             group_2: {
                 size: 3,
@@ -944,21 +949,21 @@ module.exports = {
             },
             group_3: {
                 size: 5,
-                delay: 10000
+                delay: 10000,
             },
             group_4: {
                 size: 10,
-                delay: 15000
+                delay: 15000,
             },
             group_5: {
                 size: 20,
-                delay: 30000
+                delay: 30000,
             },
             group_6: {
                 size: 40,
-                delay: 60000
-            }
-        }
+                delay: 60000,
+            },
+        },
     },
     getActivityTypes,
     getActivityTypesMapping,
@@ -968,5 +973,5 @@ module.exports = {
     getDefaultActivity,
     findMatches,
     notifyMatches,
-    availableSpots
+    availableSpots,
 };

@@ -223,14 +223,14 @@ router.get('/hash-test', function (req, res, next) {
 
             let pipeline = require('../services/cache').startPipeline();
 
-            for(let i = start_id; i < cities + start_id; i++) {
+            for (let i = start_id; i < cities + start_id; i++) {
                 pipeline.hGet(require('../services/cache').keys.cities_country('US'), i.toString());
             }
 
             let r = await require('../services/cache').execPipeline(pipeline);
 
             console.log();
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
 
@@ -295,7 +295,5 @@ router.get('/review-venues', function (req, res, next) {
         resolve();
     });
 });
-
-
 
 module.exports = router;

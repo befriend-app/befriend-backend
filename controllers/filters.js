@@ -14,7 +14,13 @@ const {
     getSchools,
 } = require('../services/me');
 const { saveAvailabilityData } = require('../services/availability');
-const { filterMappings, getFilters, getPersonFilterForKey, getPersonFilters, updateGridSets } = require('../services/filters');
+const {
+    filterMappings,
+    getFilters,
+    getPersonFilterForKey,
+    getPersonFilters,
+    updateGridSets,
+} = require('../services/filters');
 const { getActivityTypesMapping } = require('../services/activities');
 const { getLifeStages } = require('../services/life_stages');
 const { getRelationshipStatus } = require('../services/relationships');
@@ -28,7 +34,6 @@ let sectionsData = require('../services/sections_data');
 const { getNetworksForFilters } = require('../services/network');
 const { getModes } = require('../services/modes');
 const matchingService = require('../services/matching');
-
 
 function createFilterEntry(filter_id, props = {}) {
     const now = timeNow();
@@ -121,16 +126,19 @@ function getMatches(req, res) {
             let person = await getPerson(req.query.person_token);
 
             let matches = await matchingService.getMatches(person, {
-                counts_only: true
+                counts_only: true,
             });
 
             res.json(matches);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
 
-            res.json({
-                message: 'Error getting matches',
-            }, 400);
+            res.json(
+                {
+                    message: 'Error getting matches',
+                },
+                400,
+            );
         }
 
         resolve();
@@ -301,9 +309,13 @@ function handleFilterUpdate(req, res, filterType) {
             // Update cache and return
             await cacheService.hSet(cache_key, filter.token, filterData);
 
-            await updateGridSets(person, {
-                [filter.token]: filterData
-            }, filterType);
+            await updateGridSets(
+                person,
+                {
+                    [filter.token]: filterData,
+                },
+                filterType,
+            );
 
             res.json({
                 id,
@@ -410,9 +422,13 @@ function putActive(req, res) {
 
             await cacheService.hSet(person_filter_cache_key, filter_token, filterData);
 
-            await updateGridSets(person, {
-                [filter_token]: filterData
-            }, filter_token);
+            await updateGridSets(
+                person,
+                {
+                    [filter_token]: filterData,
+                },
+                filter_token,
+            );
 
             res.json('Updated');
         } catch (e) {
@@ -493,9 +509,13 @@ function putImportance(req, res) {
 
             await cacheService.hSet(person_filter_cache_key, section, filterData);
 
-            await updateGridSets(person, {
-                [section]: filterData
-            }, section);
+            await updateGridSets(
+                person,
+                {
+                    [section]: filterData,
+                },
+                section,
+            );
 
             res.json('Updated');
         } catch (e) {
@@ -588,8 +608,7 @@ function putSendReceive(req, res) {
 
                 if (filterData.items) {
                     for (let k in filterData.items) {
-                        filterData.items[k][type === 'send' ? 'is_send' : 'is_receive'] =
-                            enabled;
+                        filterData.items[k][type === 'send' ? 'is_send' : 'is_receive'] = enabled;
                     }
                 }
             } else {
@@ -615,9 +634,13 @@ function putSendReceive(req, res) {
 
             await cacheService.hSet(person_filter_cache_key, filter_token, filterData);
 
-            await updateGridSets(person, {
-                [filter_token]: filterData
-            }, filter_token);
+            await updateGridSets(
+                person,
+                {
+                    [filter_token]: filterData,
+                },
+                filter_token,
+            );
 
             res.json({
                 success: true,
@@ -845,9 +868,13 @@ function putMode(req, res) {
             // Update cache
             await cacheService.hSet(person_filter_cache_key, filter.token, filterData);
 
-            await updateGridSets(person, {
-                [filter.token]: filterData
-            }, filter.token);
+            await updateGridSets(
+                person,
+                {
+                    [filter.token]: filterData,
+                },
+                filter.token,
+            );
 
             res.json({
                 success: true,
@@ -1053,9 +1080,13 @@ function putNetworks(req, res) {
             // Update cache
             await cacheService.hSet(person_filter_cache_key, filter.token, filterData);
 
-            await updateGridSets(person, {
-                [filter.token]: filterData
-            }, filter.token);
+            await updateGridSets(
+                person,
+                {
+                    [filter.token]: filterData,
+                },
+                filter.token,
+            );
 
             res.json(filterData);
         } catch (error) {
@@ -1344,12 +1375,10 @@ function putGender(req, res) {
             // Handle 'any' gender selection
             if (gender_token === 'any' && active) {
                 // Mark all non-any items as negative
-                await conn('persons_filters')
-                    .whereIn('id', Object.keys(filterData.items))
-                    .update({
-                        is_negative: true,
-                        updated: now,
-                    });
+                await conn('persons_filters').whereIn('id', Object.keys(filterData.items)).update({
+                    is_negative: true,
+                    updated: now,
+                });
 
                 for (let id in filterData.items) {
                     filterData.items[id].is_negative = true;
@@ -1440,9 +1469,13 @@ function putGender(req, res) {
 
             await cacheService.hSet(person_filter_cache_key, filter.token, filterData);
 
-            await updateGridSets(person, {
-                [filter.token]: filterData
-            }, filter.token);
+            await updateGridSets(
+                person,
+                {
+                    [filter.token]: filterData,
+                },
+                filter.token,
+            );
 
             res.json({
                 data: filterData,
@@ -1889,7 +1922,7 @@ function putSchools(req, res) {
                         person_id: person.id,
                         [mapping.column]: option.id,
                         is_active: active,
-                        hash_token: hash_token
+                        hash_token: hash_token,
                     });
 
                     [id] = await conn('persons_filters').insert(filterEntry);
