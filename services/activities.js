@@ -695,11 +695,12 @@ module.exports = {
                     }
                 }
 
-                let batch_insert = [];
-                let pipeline = cacheService.startPipeline();
-
                 if (platforms.ios.tokens.length) {
                     try {
+                        let batch_insert = [];
+                        let to_persons = [];
+                        let pipeline = cacheService.startPipeline();
+
                         let results = await notificationService.ios.sendBatch(platforms.ios.tokens, payload, true);
 
                         //2. add to db/cache
@@ -729,6 +730,8 @@ module.exports = {
 
                             let to_person = platforms.ios.devices[device_token];
 
+                            to_persons.push(to_person);
+
                             let insert = {
                                 activity_id: activity.activity_id,
                                 person_from_id: person.id,
@@ -745,30 +748,30 @@ module.exports = {
                                 insert.is_failed = true;
                             }
 
-                            let cache_data = structuredClone(insert);
-                            cache_data.person_from_token = person.person_token
-
-                            pipeline.hSet(
-                                cache_key,
-                                to_person.person_token,
-                                JSON.stringify(cache_data)
-                            )
-
                             batch_insert.push(insert);
+                        }
+
+                        if(batch_insert.length) {
+                            await batchInsert('activities_notifications', batch_insert, true);
+
+                            for(let i = 0; i < batch_insert.length; i++) {
+                                let insert = batch_insert[i];
+                                let to_person = to_persons[i];
+
+                                insert.person_from_token = person.person_token;
+
+                                pipeline.hSet(
+                                    cache_key,
+                                    to_person.person_token,
+                                    JSON.stringify(insert)
+                                );
+                            }
+
+                            await cacheService.execPipeline(pipeline);
                         }
                     } catch (e) {
                         console.error(e);
                     }
-                }
-
-                try {
-                    if(batch_insert.length) {
-                        await cacheService.execPipeline(pipeline);
-
-                        await batchInsert('activities_notifications', batch_insert);
-                    }
-                } catch(e) {
-                    console.error(e);
                 }
             }, delay);
         }

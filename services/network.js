@@ -51,6 +51,7 @@ module.exports = {
         befriend: [`api.befriend.app`],
         alt: null,
     },
+    cache: {},
     homeDomains: function () {
         return new Promise(async (resolve, reject) => {
             //initiate alt domains if null
@@ -379,12 +380,18 @@ module.exports = {
     getNetworkSelf: function () {
         return new Promise(async (resolve, reject) => {
             try {
+                if(module.exports.cache.self) {
+                    return resolve(module.exports.cache.self);
+                }
+
                 let conn = await dbService.conn();
 
                 let qry = await conn('networks')
                     .where('network_token', process.env[module.exports.env.network_token_key])
                     .where('is_self', true)
                     .first();
+
+                module.exports.cache.self = qry;
 
                 resolve(qry);
             } catch (e) {

@@ -509,6 +509,18 @@ router.put('/me/sections/items', function (req, res, next) {
     });
 });
 
+router.post('/activities', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await activitiesController.createActivity(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
 router.get('/activities/matches', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
@@ -533,10 +545,10 @@ router.get('/activities/:activity_token/notification', function (req, res, next)
     });
 });
 
-router.post('/activities', function (req, res, next) {
+router.put('/activities/:activity_token/notification/decline', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
-            await activitiesController.createActivity(req, res);
+            await activitiesController.putDeclineNotification(req, res);
         } catch (err) {
             console.log(err);
         }

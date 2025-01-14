@@ -11,6 +11,7 @@ const { personToPersonInterests } = require('../services/matching');
 const { getActivityType } = require('../services/activities');
 const { getGender } = require('../services/genders');
 const { getPlaceFSQ } = require('../services/places');
+const { getNetworkSelf } = require('../services/network');
 
 function createActivity(req, res) {
     return new Promise(async (resolve, reject) => {
@@ -250,6 +251,95 @@ function getActivityNotification(req, res) {
     });
 }
 
+function putDeclineNotification(req, res) {
+    return new Promise(async (resolve, reject) => {
+        let activity_token = req.params.activity_token;
+        let person_token = req.body.person_token;
+
+        try {
+            if(!activity_token) {
+                res.json(
+                    {
+                        message: 'Activity token required',
+                    },
+                    400,
+                );
+
+                return resolve();
+            }
+
+            let me = await getPerson(person_token);
+
+            if (!me) {
+                res.json(
+                    {
+                        message: 'Person token not found',
+                    },
+                    400,
+                );
+
+                return resolve();
+            }
+
+            //ensure person exists on activity invite
+            let notification = await cacheService.hGetItem(cacheService.keys.activities_notifications(activity_token), person_token);
+
+            if(!notification) {
+                res.json(
+                    {
+                        message: 'Activity does not include person',
+                    },
+                    400,
+                );
+
+                return resolve();
+            }
+
+            let conn = await dbService.conn();
+
+            let network_self = await getNetworkSelf();
+
+            //own network
+            if(network_self.id === notification.person_to_network_id) {
+                if(notification.declined_at) {
+                    res.json({
+                        error: 'Activity already declined'
+                    }, 400);
+                    return resolve();
+                }
+
+                let update = {
+                    declined_at: timeNow(),
+                    updated: timeNow()
+                }
+
+                notification = {
+                    ...notification,
+                    ...update
+                }
+
+                await conn('activities_notifications')
+                    .where('');
+            } else { //3rd party network
+
+            }
+
+            res.json({
+
+            });
+        } catch(e) {
+            console.error(e);
+
+            res.json({
+                error: 'Error getting activity',
+            }, 400);
+        }
+
+        resolve();
+    });
+}
+
+
 function getMatches(req, res) {
     return new Promise(async (resolve, reject) => {
         try {
@@ -331,5 +421,6 @@ function getMatches(req, res) {
 module.exports = {
     createActivity,
     getActivityNotification,
-    getMatches
+    getMatches,
+    putDeclineNotification
 };
