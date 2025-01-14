@@ -545,6 +545,18 @@ router.get('/activities/:activity_token/notification', function (req, res, next)
     });
 });
 
+router.put('/activities/:activity_token/notification/accept', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await activitiesController.putAcceptNotification(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
 router.put('/activities/:activity_token/notification/decline', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
