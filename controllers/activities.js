@@ -15,8 +15,6 @@ const { getNetworkSelf } = require('../services/network');
 
 function createActivity(req, res) {
     return new Promise(async (resolve, reject) => {
-        let matches;
-
         try {
             //person token, activity
             let person_token = req.body.person_token;
@@ -36,117 +34,21 @@ function createActivity(req, res) {
                 return resolve();
             }
 
-            //throws rejection if invalid
             try {
-                await activitiesService.prepareActivity(person, activity);
-            } catch (errs) {
+                let activity_token = await activitiesService.createActivity(person, activity);
+
                 res.json(
                     {
-                        error: errs,
+                        activity_token: activity_token,
                     },
-                    400,
+                    201
                 );
-                return resolve();
-            }
-
-            // unique across systems
-            let activity_token = generateToken(20);
-
-            activity.activity_token = activity_token;
-
-            let conn = await dbService.conn();
-
-            let insert_activity = {
-                activity_token: activity_token,
-                activity_type_id: activity.activity.data.id,
-                fsq_place_id: activity.place?.id || null,
-                mode_id: activity.mode.id,
-                person_id: person.id,
-                persons_qty: activity.friends.qty,
-                activity_start: activity.when.data.start,
-                activity_end: activity.when.data.end,
-                activity_duration_min: activity.duration,
-                in_min: activity.when.data.in_mins,
-                human_time: activity.when.data.human.time,
-                human_date: activity.when.data.human.datetime,
-                is_now: activity.when.data.is_now,
-                is_schedule: activity.when.data.is_schedule,
-                is_public: true, // Default unless specified otherwise
-                is_new_friends: !!(activity.friends.type.is_new || activity.friends.type.is_both),
-                is_existing_friends: !!(
-                    activity.friends.type.is_existing || activity.friends.type.is_both
-                ),
-                location_lat: activity.place.data.location_lat,
-                location_lon: activity.place.data.location_lon,
-                location_name: activity.place.data.name,
-                location_address: activity.place.data.location_address,
-                location_address_2: activity.place.data.location_address_2,
-                location_locality: activity.place.data.location_locality,
-                location_region: activity.place.data.location_region,
-                location_country: activity.place.data.location_country,
-
-                is_cancelled: false,
-                no_end_time: false,
-                custom_filters: !!activity.custom_filters,
-
-                created: timeNow(),
-                updated: timeNow(),
-            };
-
-            let id = await conn('activities').insert(insert_activity);
-
-            id = id[0];
-
-            activity.activity_id = id;
-
-            insert_activity.activity_id = id;
-            insert_activity.activity_token = activity_token;
-            insert_activity.activity_type_token = activity.activity.token;
-            insert_activity.person_token = person.person_token;
-
-            //save to cache
-            let cache_key = cacheService.keys.activities(person_token);
-
-            try {
-                await cacheService.hSet(cache_key, activity_token, insert_activity);
-            } catch (e) {
-                console.error(e);
-            }
-
-            try {
-                matches = await activitiesService.findMatches(person, activity);
-            } catch (e) {
-                console.error(e);
-            }
-
-            if (matches?.length) {
-                try {
-                    await activitiesService.notifyMatches(person, activity, matches);
-
-                    res.json(
-                        {
-                            activity_token: activity_token,
-                        },
-                        201,
-                    );
-                } catch (e) {
-                    console.error(e);
-
-                    let error_message = e?.message ? e.message : 'Error notifying matches';
-
-                    res.json(
-                        {
-                            error: error_message,
-                        },
-                        400,
-                    );
-                }
-            } else {
+            } catch(e) {
                 res.json(
                     {
-                        error: 'No persons found. Please check your filters or try again later.',
+                        error: e,
                     },
-                    400,
+                    400
                 );
             }
 

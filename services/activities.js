@@ -3,15 +3,112 @@ const dbService = require('../services/db');
 const matchingService = require('../services/matching');
 const notificationService = require('../services/notifications');
 
-const { getOptionDateTime, isNumeric, timeNow } = require('./shared');
+const { getOptionDateTime, isNumeric, timeNow, generateToken } = require('./shared');
 const { getModes } = require('./modes');
 const { getActivityPlace } = require('./places');
 const { getNetworkSelf } = require('./network');
 const { hGetAllObj } = require('./cache');
 const { batchInsert } = require('./db');
+const e = require('express');
+
+function createActivity(person, activity) {
+    return new Promise(async (resolve, reject) => {
+        let matches;
+
+        //throws rejection if invalid
+        try {
+            await prepareActivity(person, activity);
+        } catch (errs) {
+            return reject(errs);
+        }
+
+        try {
+            // unique across systems
+            let activity_token = generateToken(20);
+
+            activity.activity_token = activity_token;
+
+            let conn = await dbService.conn();
+
+            let insert_activity = {
+                activity_token: activity_token,
+                activity_type_id: activity.activity.data.id,
+                fsq_place_id: activity.place?.id || null,
+                mode_id: activity.mode.id,
+                person_id: person.id,
+                persons_qty: activity.friends.qty,
+                activity_start: activity.when.data.start,
+                activity_end: activity.when.data.end,
+                activity_duration_min: activity.duration,
+                in_min: activity.when.data.in_mins,
+                human_time: activity.when.data.human.time,
+                human_date: activity.when.data.human.datetime,
+                is_now: activity.when.data.is_now,
+                is_schedule: activity.when.data.is_schedule,
+                is_public: true, // Default unless specified otherwise
+                is_new_friends: !!(activity.friends.type.is_new || activity.friends.type.is_both),
+                is_existing_friends: !!(
+                    activity.friends.type.is_existing || activity.friends.type.is_both
+                ),
+                location_lat: activity.place.data.location_lat,
+                location_lon: activity.place.data.location_lon,
+                location_name: activity.place.data.name,
+                location_address: activity.place.data.location_address,
+                location_address_2: activity.place.data.location_address_2,
+                location_locality: activity.place.data.location_locality,
+                location_region: activity.place.data.location_region,
+                location_country: activity.place.data.location_country,
+
+                no_end_time: false,
+                custom_filters: !!activity.custom_filters,
+
+                created: timeNow(),
+                updated: timeNow(),
+            };
+
+            let id = await conn('activities').insert(insert_activity);
+
+            id = id[0];
+
+            activity.activity_id = id;
+
+            insert_activity.activity_id = id;
+            insert_activity.activity_token = activity_token;
+            insert_activity.activity_type_token = activity.activity.token;
+            insert_activity.person_token = person.person_token;
+
+            //save to cache
+            let cache_key = cacheService.keys.activities(person.person_token);
+
+            try {
+                await cacheService.hSet(cache_key, activity_token, insert_activity);
+            } catch (e) {
+                console.error(e);
+            }
+
+            try {
+                matches = await findMatches(person, activity);
+
+                if(matches.length) {
+                    await notifyMatches(person, activity, matches);
+
+                    return resolve(activity_token);
+                } else {
+                    return reject('No persons found. Please check your filters or try again later.');
+                }
+            } catch (e) {
+                console.error(e);
+                return reject(e?.message ? e.message : 'Error notifying matches');
+            }
+        } catch(e) {
+            console.error(e);
+            return reject("Error creating activity");
+        }
+    });
+}
 
 function getActivityTypes() {
-    function createActivityObject(activity) {
+    function organizeActivityType(activity) {
         let data = {
             name: activity.activity_name,
             title: activity.activity_title,
@@ -61,7 +158,7 @@ function getActivityTypes() {
 
         //level 1
         for (let at of parent_activity_types) {
-            data_organized[at.id] = createActivityObject(at);
+            data_organized[at.id] = organizeActivityType(at);
         }
 
         //level 2
@@ -72,7 +169,7 @@ function getActivityTypes() {
             );
 
             for (let at of level_2_qry) {
-                data_organized[parent_id].sub[at.id] = createActivityObject(at);
+                data_organized[parent_id].sub[at.id] = organizeActivityType(at);
             }
         }
 
@@ -87,7 +184,7 @@ function getActivityTypes() {
                 );
 
                 for (let at of level_3_qry) {
-                    data_organized[parent_id].sub[level_2_id].sub[at.id] = createActivityObject(at);
+                    data_organized[parent_id].sub[level_2_id].sub[at.id] = organizeActivityType(at);
                 }
             }
         }
@@ -414,7 +511,7 @@ function doesActivityOverlap(person_token, time) {
             for (let k in data) {
                 let activity = data[k];
 
-                if (activity.is_cancelled) {
+                if (activity.cancelled_at) {
                     continue;
                 }
 
@@ -965,6 +1062,7 @@ module.exports = {
             },
         },
     },
+    createActivity,
     getActivityTypes,
     getActivityTypesMapping,
     getActivityType,
