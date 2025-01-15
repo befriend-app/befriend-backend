@@ -18,7 +18,7 @@ function main() {
             for (let [key, filter] of Object.entries(filterMappings)) {
                 index++;
 
-                let insert_data = {
+                let data = {
                     token: filter.token,
                     name: filter.name,
                     position: index,
@@ -26,24 +26,24 @@ function main() {
                 };
 
                 if (filter.single) {
-                    insert_data.is_single = true;
+                    data.is_single = true;
                 }
 
                 if (filter.multi) {
-                    insert_data.is_multi = true;
+                    data.is_multi = true;
                 }
 
                 const exists = await conn('filters').where('token', filter.token).first();
 
                 if (!exists) {
                     await conn('filters').insert({
-                        ...filter,
+                        ...data,
                         created: now,
                     });
                 } else {
                     await conn('filters')
                         .where('id', exists.id)
-                        .update(filter);
+                        .update(data);
                 }
             }
 
