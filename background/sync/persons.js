@@ -235,7 +235,7 @@ function syncPersons() {
                         timestamps.last = sync_qry.last_updated;
                     }
 
-                    let sync_url = getURL(network.api_domain, joinPaths('sync', sync_name));
+                    let sync_url = getURL(network.api_domain, joinPaths('sync', 'persons'));
 
                     //security_key
                     let secret_key_to_qry = await conn('networks_secret_keys')
