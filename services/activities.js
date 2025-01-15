@@ -131,7 +131,9 @@ function acceptNotification(person, activity_token) {
 
         try {
             //ensure person exists on activity invite
-            let notification = await cacheService.hGetItem(notification_cache_key, person.person_token);
+            let notifications = await cacheService.hGetAllObj(notification_cache_key);
+
+            let notification = notifications?.[person.person_token];
 
             if (!notification) {
                 return reject('Activity does not include person');
@@ -145,7 +147,7 @@ function acceptNotification(person, activity_token) {
                 return reject('Activity already accepted');
             }
 
-            let spots = await getActivitySpots(activity_token);
+            let spots = await getActivitySpots(activity_token, notifications);
 
             if (spots.available <= 0) {
                 return resolve({
@@ -191,9 +193,25 @@ function acceptNotification(person, activity_token) {
 
                 await cacheService.hSet(person_activity_cache_key, activity_token, person_activity_insert);
 
-                --spots.available;
+                spots.accepted++;
+                spots.available--;
 
                 //update ws
+                try {
+                    //notification to everybody notified except me
+                    for(let _person_token in notifications) {
+                        if(_person_token !== person.person_token) {
+                            cacheService.publish('notifications', _person_token, {
+                                activity_token,
+                                spots
+                            });
+                        }
+                    }
+                } catch(e) {
+                    console.error(e);
+                }
+
+                //activity to everybody accepted
 
                 resolve({
                     success: true,
@@ -1116,11 +1134,13 @@ function notifyMatches(person, activity, matches) {
     });
 }
 
-function getActivitySpots(activity_token) {
+function getActivitySpots(activity_token, notification_data = null) {
     return new Promise(async (resolve, reject) => {
         try {
-            let notification_key = cacheService.keys.activities_notifications(activity_token);
-            let notification_data = (await cacheService.hGetAllObj(notification_key)) || {};
+            if(!notification_data) {
+                let notification_key = cacheService.keys.activities_notifications(activity_token);
+                notification_data = (await cacheService.hGetAllObj(notification_key)) || {};
+            }
 
             if (!Object.keys(notification_data).length) {
                 return reject('No notifications sent');

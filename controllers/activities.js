@@ -1,9 +1,8 @@
 const activitiesService = require('../services/activities');
 const cacheService = require('../services/cache');
-const dbService = require('../services/db');
 const matchingService = require('../services/matching');
 
-const { timeNow, generateToken, formatObjectTypes, isNumeric } = require('../services/shared');
+const { formatObjectTypes } = require('../services/shared');
 const { getPerson } = require('../services/persons');
 
 const { getModes, getModeById } = require('../services/modes');
@@ -11,7 +10,7 @@ const { personToPersonInterests } = require('../services/matching');
 const { getActivityType, declineNotification, acceptNotification } = require('../services/activities');
 const { getGender } = require('../services/genders');
 const { getPlaceFSQ } = require('../services/places');
-const { getNetworkSelf } = require('../services/network');
+
 
 function createActivity(req, res) {
     return new Promise(async (resolve, reject) => {

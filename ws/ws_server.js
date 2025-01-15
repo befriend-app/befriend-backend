@@ -277,29 +277,25 @@ function initSubscribe() {
 
                 console.log('processing ws message', getDateTimeStr());
 
-                if (data.matches && data.matches.length) {
-                    for (let match of data.matches) {
-                        let message_sent = false;
+                let message_sent = false;
 
-                        let person_token = match.person_token;
+                let person_token = data.person_token;
 
-                        if (person_token in persons_connections) {
-                            for (let k in persons_connections[person_token]) {
-                                let client = persons_connections[person_token][k];
+                if (person_token in persons_connections) {
+                    for (let k in persons_connections[person_token]) {
+                        let client = persons_connections[person_token][k];
 
-                                if (client.readyState === WebSocket.OPEN) {
-                                    console.log('Message sent');
+                        if (client.readyState === WebSocket.OPEN) {
+                            console.log('Message sent');
 
-                                    client.send(JSON.stringify(data));
-                                    message_sent = true;
-                                }
-                            }
-                        }
-
-                        if (!message_sent) {
-                            addPersonMessage(data);
+                            client.send(JSON.stringify(data));
+                            message_sent = true;
                         }
                     }
+                }
+
+                if (!message_sent) {
+                    addPersonMessage(data);
                 }
             } catch (e) {
                 console.error(e);

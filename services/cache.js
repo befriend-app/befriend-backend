@@ -859,4 +859,25 @@ module.exports = {
             resolve();
         });
     },
+    publish: function (namespace, person_token, data) {
+        return new Promise(async (resolve, reject) => {
+            if(!namespace || !person_token || !data) {
+                return resolve();
+            }
+
+            let message = {
+                namespace,
+                person_token,
+                data
+            }
+
+            try {
+                await module.exports.publisher.publish(module.exports.keys.ws, JSON.stringify(message));
+            } catch(e) {
+                console.error(e);
+            }
+
+            resolve();
+        });
+    },
 };
