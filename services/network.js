@@ -473,7 +473,7 @@ module.exports = {
 
                     let network = networks_lookup.byId[person.network_id];
 
-                    if (network && network.is_verified) {
+                    if (network?.is_verified) {
                         if (!verifiedPersonsBuckets[bucketIndex]) {
                             verifiedPersonsBuckets[bucketIndex] = new Set();
                         }

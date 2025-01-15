@@ -84,24 +84,6 @@ function updatePersonsCount() {
         }
     }
 
-    async function mockGenders() {
-        try {
-            await cacheService.init();
-
-            let conn = await dbService.conn();
-
-            let persons_qry = await conn('persons').orderBy('id').select('id', 'person_token');
-
-            for (let p of persons_qry) {
-                let person = await getPerson(p.person_token);
-
-                await updateGridSets(person, null, 'genders');
-            }
-        } catch (e) {
-            console.error(e);
-        }
-    }
-
     async function addPersons() {
         let current_count = 0;
 
@@ -213,7 +195,6 @@ function updatePersonsCount() {
 
     try {
         await addPersons();
-        await mockGenders();
         await updateAge();
         await updatePersonsCount();
     } catch (e) {

@@ -199,6 +199,8 @@ module.exports = {
 
                     if ('is_online' in data) {
                         await updateGridSets(person, null, 'online');
+                    } else if('gender_id' in data) {
+                        await updateGridSets(person, null, 'genders');
                     }
                 }
 

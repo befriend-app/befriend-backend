@@ -18,6 +18,7 @@ const { getSections } = require('../../services/me');
 const { getModes } = require('../../services/modes');
 
 const sectionsData = require('../../services/sections_data');
+const { getGendersLookup } = require('../../services/genders');
 
 loadScriptEnv();
 
@@ -313,6 +314,57 @@ async function processOnline() {
         );
     }
 }
+
+async function processGenders() {
+    console.log({
+        me: 'gender',
+    });
+
+    let processed = 0;
+
+    let genders = await getGendersLookup();
+
+    let selectable_genders = Object.values(genders.byId).filter(g => g.is_visible);
+
+    for (let chunk of chunks) {
+        await Promise.all(
+            chunk.map(async (person) => {
+                if (processed % 100 === 0) {
+                    console.log({
+                        online: `${processed + 1}/${persons.length}`,
+                    });
+                }
+
+                let gender = genders.byId[person.gender_id];
+
+                let gender_token = gender.gender_token;
+
+                if(!gender_token) {
+                    gender_token = shuffleFunc(selectable_genders)[0].gender_token;
+                }
+
+                processed++;
+
+                try {
+                    let r = await axios.put(joinPaths(process.env.APP_URL, '/me/sections/selection'), {
+                        login_token: person.login_token,
+                        person_token: person.person_token,
+                        section_key: 'genders',
+                        table_key: 'genders',
+                        item_token: gender_token,
+                        is_select: true
+                    });
+                } catch (error) {
+                    console.error(
+                        `Error processing online status for person ${person.person_token}:`,
+                        error.message,
+                    );
+                }
+            }),
+        );
+    }
+}
+
 
 async function processLocation() {
     console.log({
@@ -1111,12 +1163,16 @@ async function processSmoking() {
 
     await getPersonsLogins();
 
+    return await processGenders();
+
     await processSections();
 
     await processLocation();
 
     await processModes();
     await processOnline();
+
+    await processGenders();
 
     await processMovies();
     await processTvShows();
