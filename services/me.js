@@ -1395,9 +1395,9 @@ function getSections(person) {
             }
 
             //person sections
-            let person_sections = await cacheService.hGetAllObj(cache_key);
+            let person_sections = (await cacheService.hGetAllObj(cache_key)) || {};
 
-            if (!person_sections) {
+            if (!person_sections?.active) {
                 let sections = {};
 
                 let sections_qry = await conn('persons_sections')
