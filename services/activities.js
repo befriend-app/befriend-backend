@@ -1074,10 +1074,8 @@ function notifyMatches(person, activity, matches) {
         let filtered_matches = [];
 
         for (let match of matches) {
-            if (
-                match.person_token in prev_notifications_persons ||
-                match.person_token in excluded_by_activity_type
-            ) {
+            if (match.person_token in prev_notifications_persons ||
+                match.person_token in excluded_by_activity_type) {
                 continue;
             }
 
