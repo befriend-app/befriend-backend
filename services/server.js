@@ -6,9 +6,10 @@ const cors = require('cors');
 const express = require('express');
 const http = require('http');
 const logger = require('morgan');
+
 const webRouter = require('../routes/web');
-const apiRouter = require('../routes/api');
 const syncRouter = require('../routes/sync');
+const apiRouter = require('../routes/api');
 
 const { timeNow } = require('./shared');
 
