@@ -65,41 +65,60 @@ function getKidAgeOptions() {
             return resolve(module.exports.kidAgeOptions);
         }
 
-        let cache_key_kid_ages = cacheService.keys.kids_ages;
+        try {
+            let cache_key_kid_ages = cacheService.keys.kids_ages;
 
-        let cached_ages = await cacheService.getObj(cache_key_kid_ages);
+            let cached_ages = await cacheService.getObj(cache_key_kid_ages);
 
-        if (cached_ages) {
-            return resolve(cached_ages);
+            if (cached_ages) {
+                return resolve(cached_ages);
+            }
+
+            let ages_dict = await setKidAgesCache();
+
+            resolve(ages_dict);
+        } catch(e) {
+            console.error(e);
+            return reject(e);
         }
+    });
+}
 
-        let conn = await dbService.conn();
+function setKidAgesCache() {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let cache_key_kid_ages = cacheService.keys.kids_ages;
 
-        let ages = await conn('kids_ages')
-            .whereNull('deleted')
-            .orderBy('age_min')
-            .select('id', 'token', 'name', 'age_min', 'age_max');
+            let ages_dict = {};
 
-        // Organize data
-        let ages_dict = {};
-        for (let age of ages) {
-            ages_dict[age.token] = {
-                id: age.id,
-                token: age.token,
-                name: age.name,
-                range: {
-                    min: age.age_min,
-                    max: age.age_max,
-                },
-            };
+            let conn = await dbService.conn();
+
+            let ages = await conn('kids_ages')
+                .whereNull('deleted')
+                .orderBy('age_min')
+                .select('id', 'token', 'name', 'age_min', 'age_max');
+
+            for (let age of ages) {
+                ages_dict[age.token] = {
+                    id: age.id,
+                    token: age.token,
+                    name: age.name,
+                    range: {
+                        min: age.age_min,
+                        max: age.age_max,
+                    },
+                };
+            }
+
+            await cacheService.setCache(cache_key_kid_ages, ages_dict);
+
+            module.exports.kidAgeOptions = ages_dict;
+
+            resolve(ages_dict);
+        } catch(e) {
+            console.error(e);
+            return reject(e);
         }
-
-        // Update cache
-        await cacheService.setCache(cache_key_kid_ages, ages_dict);
-
-        module.exports.kidAgeOptions = ages_dict;
-
-        resolve(ages_dict);
     });
 }
 
@@ -219,4 +238,5 @@ module.exports = {
     getModes,
     getKidAgeOptions,
     getPersonExcludedModes,
+    setKidAgesCache
 };

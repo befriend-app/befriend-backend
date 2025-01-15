@@ -2,6 +2,7 @@ const dbService = require('../../services/db');
 const { loadScriptEnv, dataEndpoint, timeNow } = require('../../services/shared');
 const axios = require('axios');
 const { deleteKeys, keys } = require('../../services/cache');
+const { setKidAgesCache } = require('../../services/modes');
 
 loadScriptEnv();
 
@@ -41,6 +42,8 @@ function main() {
                     added++;
                 }
             }
+
+            await setKidAgesCache();
         } catch (e) {
             console.error(e);
             return reject();
