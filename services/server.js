@@ -8,8 +8,8 @@ const http = require('http');
 const logger = require('morgan');
 
 const webRouter = require('../routes/web');
-const syncRouter = require('../routes/sync');
 const apiRouter = require('../routes/api');
+const syncRouter = require('../routes/sync');
 
 const { timeNow } = require('./shared');
 
@@ -49,9 +49,9 @@ server.use(cookieParser());
 
 server.use(express.static(joinPaths(getRepoRoot(), 'public')));
 
+server.use('/sync', syncRouter);
 server.use('/', webRouter);
 server.use('/', apiRouter);
-server.use('/sync', syncRouter);
 
 server.use(function (req, res, next) {
     next(createError(404));
