@@ -522,6 +522,11 @@ module.exports = {
                         updated: timeNow(),
                     });
 
+                    await cacheService.hSet(cacheService.keys.networks_secrets, network_token, {
+                        from: secret_key_new_network,
+                        to: secret_key_befriend
+                    });
+
                     await conn('networks').where('id', network_qry.id).update({
                         keys_exchanged: true,
                         updated: timeNow(),
@@ -614,12 +619,17 @@ module.exports = {
                     updated: timeNow(),
                 });
 
+                await cacheService.hSet(cacheService.keys.networks_secrets, network_token, {
+                    from: secret_key_befriend,
+                    to: secret_key_new_network
+                });
+
                 await conn('networks').where('id', network_qry.id).update({
                     keys_exchanged: true,
                     updated: timeNow(),
                 });
 
-                //delete tokens from memory
+                //delete token from memory
                 delete networkService.keys.oneTime[keys_exchange_token.new_network];
             } catch (e) {
                 console.error(e);
@@ -914,6 +924,11 @@ module.exports = {
                         updated: timeNow(),
                     });
 
+                    await cacheService.hSet(cacheService.keys.networks_secrets, from_network.network_token, {
+                        from: r.data.secret_key_from,
+                        to: secret_key_self
+                    });
+
                     //set keys exchanged
                     await conn('networks').where('id', from_network.id).update({
                         keys_exchanged: true,
@@ -1057,6 +1072,11 @@ module.exports = {
                     secret_key_to: secret_key_to,
                     created: timeNow(),
                     updated: timeNow(),
+                });
+
+                await cacheService.hSet(cacheService.keys.networks_secrets, to_network.network_token, {
+                    from: secret_key_from,
+                    to: secret_key_to
                 });
 
                 //set keys exchanged
