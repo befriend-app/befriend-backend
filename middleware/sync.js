@@ -1,4 +1,3 @@
-const { confirmDecryptedNetworkToken } = require('../services/encryption');
 const { getNetwork } = require('../services/network');
 const cacheService = require('../services/cache');
 
