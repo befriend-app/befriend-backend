@@ -15,44 +15,35 @@ function main() {
 
             let index = 0;
 
-            for (let [key, data] of Object.entries(filterMappings)) {
+            for (let [key, filter] of Object.entries(filterMappings)) {
                 index++;
 
-                let filter = structuredClone(data);
-
-                delete filter.table;
-                delete filter.column;
-                delete filter.filters_table;
-                delete filter.importance;
+                let insert_data = {
+                    token: filter.token,
+                    name: filter.name,
+                    position: index,
+                    updated: now
+                };
 
                 if (filter.single) {
-                    filter.is_single = true;
+                    insert_data.is_single = true;
                 }
 
                 if (filter.multi) {
-                    filter.is_multi = true;
+                    insert_data.is_multi = true;
                 }
 
-                delete filter.single;
-                delete filter.multi;
-
                 const exists = await conn('filters').where('token', filter.token).first();
-
-                filter.position = index;
 
                 if (!exists) {
                     await conn('filters').insert({
                         ...filter,
                         created: now,
-                        updated: now,
                     });
                 } else {
                     await conn('filters')
                         .where('id', exists.id)
-                        .update({
-                            ...filter,
-                            updated: now,
-                        });
+                        .update(filter);
                 }
             }
 
