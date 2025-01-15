@@ -317,7 +317,7 @@ async function processOnline() {
 
 async function processGenders() {
     console.log({
-        me: 'gender',
+        me: 'genders',
     });
 
     let processed = 0;
@@ -331,7 +331,7 @@ async function processGenders() {
             chunk.map(async (person) => {
                 if (processed % 100 === 0) {
                     console.log({
-                        online: `${processed + 1}/${persons.length}`,
+                        genders: `${processed + 1}/${persons.length}`,
                     });
                 }
 
@@ -1162,8 +1162,6 @@ async function processSmoking() {
     }
 
     await getPersonsLogins();
-
-    return await processGenders();
 
     await processSections();
 
