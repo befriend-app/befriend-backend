@@ -12,7 +12,7 @@ const {
     birthDatePure,
 } = require('../../services/shared');
 const { getNetworkSelf } = require('../../services/network');
-const { setCache, deleteKeys } = require('../../services/cache');
+const { deleteKeys } = require('../../services/cache');
 const { encrypt } = require('../../services/encryption');
 const { getGendersLookup } = require('../../services/genders');
 const { keys: systemKeys } = require('../../services/system');
@@ -183,22 +183,24 @@ function updatePersonsCount() {
     });
 }
 
-(async function () {
-    loadScriptEnv();
-    let network_self;
-
-    try {
-        network_self = await getNetworkSelf();
-    } catch (e) {
-        console.error(e);
-        process.exit(1);
-    }
-
-    while (true) {
-        let conn, networks;
+function syncPersons() {
+    return new Promise(async (resolve, reject) => {
+        let conn, networks, network_self;
 
         try {
             conn = await dbService.conn();
+
+            try {
+                network_self = await getNetworkSelf();
+
+                if (!network_self) {
+                    throw new Error();
+                }
+            } catch (e) {
+                console.error('Error getting own network', e);
+                await timeoutAwait(5000);
+                process.exit();
+            }
 
             //networks to sync data with
             //networks can be updated through the sync_networks background process
@@ -245,16 +247,17 @@ function updatePersonsCount() {
                         continue;
                     }
 
-                    let encrypted_network_token = await encrypt(
-                        secret_key_to_qry.secret_key_to,
-                        network_self.network_token,
-                    );
+                    // let encrypted_network_token = await encrypt(
+                    //     secret_key_to_qry.secret_key_to,
+                    //     network_self.network_token,
+                    // );
 
                     let response = await axios.post(sync_url, {
+                        secret_key: secret_key_to_qry.secret_key_to,
                         request_sent: timeNow(),
                         data_since: timestamps.last,
                         network_token: network_self.network_token,
-                        encrypted_network_token: encrypted_network_token,
+                        // encrypted_network_token: encrypted_network_token,
                     });
 
                     if (response.status !== 202) {
@@ -308,6 +311,16 @@ function updatePersonsCount() {
                 }
             }
         }
+
+        resolve();
+    });
+}
+
+(async function () {
+    loadScriptEnv();
+
+    while (true) {
+        await syncPersons();
 
         await updatePersonsCount();
 

@@ -1,14 +1,20 @@
 const { confirmDecryptedNetworkToken } = require('../services/encryption');
 const { getNetwork } = require('../services/network');
+const cacheService = require('../services/cache');
 
 module.exports = function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         let network_token = req.body.network_token;
-        let encrypted_network_token = req.body.encrypted_network_token;
+        let secret_key = req.body.secret_key;
 
         try {
             if (!network_token) {
                 res.json('network_token required', 401);
+                return resolve();
+            }
+
+            if(!secret_key) {
+                res.json('secret key required', 401);
                 return resolve();
             }
 
@@ -24,7 +30,12 @@ module.exports = function (req, res, next) {
                 return resolve();
             }
 
-            await confirmDecryptedNetworkToken(encrypted_network_token, network);
+            let network_secrets = await cacheService.hGetItem(cacheService.keys.networks_secrets, network_token);
+
+            if(network_secrets?.from !== secret_key) {
+                res.json('invalid secret key', 401);
+                return resolve();
+            }
 
             req.from_network = network;
 

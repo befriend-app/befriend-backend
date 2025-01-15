@@ -29,7 +29,7 @@ loadScriptEnv();
             throw new Error();
         }
     } catch (e) {
-        console.error('Error getting network for self', e);
+        console.error('Error getting own network', e);
         await timeoutAwait(5000);
         process.exit();
     }
