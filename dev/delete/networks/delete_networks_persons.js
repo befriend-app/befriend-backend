@@ -38,41 +38,20 @@ function main() {
 
             let bulk_delete_count = 50000;
 
+            await knex('persons_networks')
+                .whereNot('network_id', network_self.id)
+                .delete();
+
             let persons = await knex('persons')
                 .whereNot('network_id', network_self.id)
                 .select('id');
-
-            let tables = [
-                'persons_networks',
-                'persons',
-            ];
 
             for (let i = 0; i < persons.length; i += bulk_delete_count) {
                 let chunk = persons.slice(i, i + bulk_delete_count);
 
                 let ids = chunk.map(x => x.id);
 
-                await knex('persons_networks').whereIn('person_id', ids).delete();
-
-
-            }
-
-            for (let table of tables) {
-                while (true) {
-                    try {
-                        var pn_qry = await knex(table).select('id').limit(bulk_delete_count);
-                    } catch (e) {
-                        break;
-                    }
-
-                    if (!pn_qry.length) {
-                        break;
-                    } else {
-                        let ids = pn_qry.map((x) => x.id);
-
-                        await knex(table).whereIn('id', ids).delete();
-                    }
-                }
+                await knex('persons').whereIn('id', ids).delete();
             }
 
             try {
@@ -81,10 +60,6 @@ function main() {
                 console.error(e);
             }
         }
-
-        let keys = await getKeysWithPrefix(`persons:`);
-
-        await deleteKeys(keys);
 
         resolve();
     });
