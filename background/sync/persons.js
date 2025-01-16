@@ -49,7 +49,7 @@ function processPersons(network_id, persons) {
                     .whereIn('person_token', batchPersonTokens)
                     .select('id', 'person_token', 'updated', 'deleted');
 
-                //lookup
+                //persons lookup
                 const existingPersonsDict = {};
                 for (const p of existingPersons) {
                     existingPersonsDict[p.person_token] = p;
@@ -67,11 +67,14 @@ function processPersons(network_id, persons) {
                     .whereIn('person_id', existingPersonIds)
                     .select('person_id');
 
+                //persons networks lookup
                 const existingNetworksDict = {};
 
                 for (const network of existingNetworks) {
                     existingNetworksDict[network.person_id] = true;
                 }
+
+                //todo - prepare grid set data
 
                 // Process each person in the batch
                 for (const person of batch) {

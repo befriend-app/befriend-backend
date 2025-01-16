@@ -2,6 +2,8 @@ const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 const { timeNow } = require('../services/shared');
 const { updateGridSets } = require('../services/filters');
+const { result } = require('lodash');
+const { getGridLookup } = require('./grid');
 
 module.exports = {
     minAge: 18,
@@ -38,6 +40,7 @@ module.exports = {
 
                 person = await cacheService.hGetAllObj(cache_key);
 
+                //todo remove
                 if (0 && person) {
                     return resolve(person);
                 }
@@ -106,7 +109,8 @@ module.exports = {
 
                 //add grid
                 if (person.grid_id) {
-                    let grid = await conn('earth_grid').where('id', person.grid_id).first();
+                    let gridLookup = await getGridLookup();
+                    let grid = gridLookup.byId[person.grid_id];
 
                     if (grid) {
                         person.grid = {
@@ -132,6 +136,179 @@ module.exports = {
             } catch (e) {
                 reject(e);
             }
+        });
+    },
+    getBatchPersons: function(person_tokens) {
+        return new Promise(async (resolve, reject) => {
+            if (!person_tokens || !person_tokens.length) {
+                return resolve({});
+            }
+
+            let unique_tokens = [];
+            const personsMap = {};
+            const missingTokens = [];
+
+            for (const token of person_tokens) {
+                if(!(token in personsMap)) {
+                    personsMap[token] = null;
+                    unique_tokens.push(token);
+                }
+            }
+
+            // 1. Get persons from cache
+            try {
+                const pipeline = cacheService.startPipeline();
+
+                for (let token of unique_tokens) {
+                    let cache_key = cacheService.keys.person(token);
+                    pipeline.hGetAll(cache_key);
+                }
+
+                const results = await cacheService.execPipeline(pipeline);
+
+                for(let i = 0; i < results.length; i++) {
+                    let result = results[i];
+                    let token = unique_tokens[i];
+
+                    try {
+                        if(result && Object.keys(result).length) {
+                            personsMap[token] = cacheService.parseHashData(result);
+                        } else {
+                            missingTokens.push(token);
+                        }
+                    } catch(e) {
+                        console.error(e);
+                        missingTokens.push(token);
+                    }
+                }
+
+                //2. retrieve from DB if missing in cache
+                if (missingTokens.length) {
+                    let gridLookup = await getGridLookup();
+
+                    const conn = await dbService.conn();
+
+                    const persons = await conn('persons')
+                        .whereIn('person_token', missingTokens);
+
+                    //lookup
+                    let personsLookup = {};
+
+                    for(let p of persons) {
+                        personsLookup[p.id] = p;
+                    }
+
+                    const personIds = persons.map(p => p.id);
+
+                    const [devices, partners, kids] = await Promise.all([
+                        conn('persons_devices')
+                            .whereIn('person_id', personIds),
+
+                        conn('persons_partner')
+                            .whereIn('person_id', personIds)
+                            .whereNull('deleted')
+                            .select('id', 'person_id', 'token', 'gender_id'),
+
+                        conn('persons_kids')
+                            .whereIn('person_id', personIds)
+                            .whereNull('deleted')
+                            .select('id', 'person_id', 'token', 'age_id', 'gender_id', 'is_active'),
+                    ]);
+
+                    let devicesLookup = {}
+
+                    for(let d of devices) {
+                        if(!(devicesLookup[d.person_id])) {
+                            devicesLookup[d.person_id] = [];
+                        }
+
+                        devicesLookup[d.person_id].push(d);
+                    }
+
+                    let partnersLookup = {};
+
+                    for(let p of partners) {
+                        partnersLookup[p.person_id] = p;
+                    }
+
+                    let kidsLookup = {};
+
+                    for(let k of kids) {
+                        if(!(kidsLookup[k.person_id])) {
+                            kidsLookup[k.person_id] = {};
+                        }
+
+                        kidsLookup[k.person_id][k.token] = {
+                            id: k.id,
+                            token: k.token,
+                            gender_id: k.gender_id,
+                            age_id: k.age_id,
+                            is_active: k.is_active,
+                        }
+                    }
+
+                    // Process each missing person
+                    let pipeline = cacheService.startPipeline();
+
+                    for (const person of persons) {
+                        //devices
+                        person.devices = devicesLookup[person.id] || [];
+
+                        //modes
+                        let selected_modes = [];
+                        try {
+                            selected_modes = person.modes ? JSON.parse(person.modes) : [];
+                        } catch (e) {
+                            console.error('Error parsing modes:', e);
+                        }
+
+                        person.modes = {
+                            selected: selected_modes,
+                            partner: partnersLookup[person.id] || {},
+                            kids: kidsLookup[person.id] || {}
+                        };
+
+                        //grid
+                        if (person.grid_id) {
+                            let grid = gridLookup.byId[person.grid_id];
+
+                            if(grid) {
+                                person.grid = {
+                                    id: grid.id,
+                                    token: grid.token
+                                };
+                            }
+                        }
+
+                        //reviews
+                        person.reviews = {
+                            count: person.reviews_count || 0,
+                            safety: person.rating_safety,
+                            trust: person.rating_trust,
+                            timeliness: person.rating_timeliness,
+                            friendliness: person.rating_friendliness,
+                            fun: person.rating_fun
+                        };
+
+                        personsMap[person.person_token] = person;
+
+                        const cacheKey = cacheService.keys.person(person.person_token);
+
+                        let cachePerson = structuredClone(person);
+
+                        cachePerson = cacheService.prepareSetHash(cachePerson);
+
+                        pipeline.hSet(cacheKey, cachePerson);
+                    }
+
+                    await cacheService.execPipeline(pipeline);
+                }
+            } catch(e) {
+                console.error(e);
+                return reject(e);
+            }
+
+            resolve(personsMap);
         });
     },
     updatePerson: function (person_token, data) {
