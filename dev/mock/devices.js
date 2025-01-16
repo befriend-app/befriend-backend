@@ -4,12 +4,6 @@ const yargs = require('yargs');
 const dbService = require('../../services/db');
 const { getNetworkSelf } = require('../../services/network');
 const { loadScriptEnv, timeNow, joinPaths, shuffleFunc } = require('../../services/shared');
-const { filterMappings, getFilters } = require('../../services/filters');
-const { getActivityTypes } = require('../../services/activities');
-const { getModes } = require('../../services/modes');
-const { getGendersLookup } = require('../../services/genders');
-const sectionsData = require('../../services/sections_data');
-const meService = require('../../services/me');
 
 loadScriptEnv();
 
@@ -26,21 +20,6 @@ if (args._ && args._.length) {
 
 let chunks = [];
 let personsLookup = {};
-
-let ignoreKeys = [
-    'verification_dl',
-    'verification_cc',
-    'verification_video',
-    'sports_play',
-    'sports_leagues',
-    'sports_teams',
-    'movie_genres',
-    'tv_show_genres',
-    'music_artists',
-    'music_genres',
-    'work_industries',
-    'work_roles',
-];
 
 const helpers = {
     processBatch: async function (processFn) {
