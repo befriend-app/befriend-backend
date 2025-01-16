@@ -9,15 +9,17 @@ const {
     timeNow,
     getURL,
     joinPaths,
-    birthDatePure,
 } = require('../../services/shared');
 const { getNetworkSelf } = require('../../services/network');
 const { deleteKeys } = require('../../services/cache');
 const { getGendersLookup } = require('../../services/genders');
 const { keys: systemKeys } = require('../../services/system');
 const { getGridLookup } = require('../../services/grid');
+const { batchInsert, batchUpdate } = require('../../services/db');
 
 const sync_name = systemKeys.sync.network.persons;
+
+let batch_process = 1000;
 
 function processPersons(network_id, persons) {
     return new Promise(async (resolve, reject) => {
@@ -31,107 +33,146 @@ function processPersons(network_id, persons) {
             let gridLookup = await getGridLookup();
             let genders = await getGendersLookup();
 
-            for (let person of persons) {
-                if (!person) {
-                    continue;
+            //batch process/insert/update
+            let batches = [];
+
+            for (let i = 0; i < persons.length; i += batch_process) {
+                batches.push(persons.slice(i, i + batch_process));
+            }
+
+            let t = timeNow();
+
+            for (let batch of batches) {
+                // Get existing persons for this batch
+                const batchPersonTokens = batch.map(p => p.person_token);
+                const existingPersons = await conn('persons')
+                    .whereIn('person_token', batchPersonTokens)
+                    .select('id', 'person_token', 'updated', 'deleted');
+
+                //lookup
+                const existingPersonsDict = {};
+                for (const p of existingPersons) {
+                    existingPersonsDict[p.person_token] = p;
                 }
 
-                let grid_id = null;
-                let gender_id = null;
+                // Prepare batch inserts and updates
+                const personsToInsert = [];
+                const personsToUpdate = [];
+                const networksToInsert = [];
 
-                if(person.grid_token) {
-                    grid_id = gridLookup.byToken[person.grid_token]?.token || null;
+                // Get all existing network_persons
+                const existingPersonIds = existingPersons.map(p => p.id);
+                const existingNetworks = await conn('persons_networks')
+                    .where('network_id', network_id)
+                    .whereIn('person_id', existingPersonIds)
+                    .select('person_id');
+
+                const existingNetworksDict = {};
+
+                for (const network of existingNetworks) {
+                    existingNetworksDict[network.person_id] = true;
                 }
 
-                if (person.gender_token) {
-                    gender_id = genders.byToken[person.gender_token]?.id || null;
-                }
-
-                //de-duplicate
-                let person_check = await conn('persons')
-                    .where('person_token', person.person_token)
-                    .first();
-
-                //add to persons and persons_networks
-                if (!person_check) {
-                    if (person.deleted) {
-                        //do not create new record for deleted person
+                // Process each person in the batch
+                for (const person of batch) {
+                    if (!person) {
                         continue;
                     }
 
-                    let person_id = await conn('persons').insert({
-                        person_token: person.person_token,
-                        network_id: network_id,
-                        modes: person.modes,
-                        is_verified_in_person: person.is_verified_in_person,
-                        is_verified_linkedin: person.is_verified_linkedin,
-                        is_online: person.is_online,
-                        gender_id: gender_id,
-                        timezone: person.timezone,
-                        reviews_count: person.reviews_count,
-                        rating_safety: person.rating_safety,
-                        rating_trust: person.rating_trust,
-                        rating_timeliness: person.rating_timeliness,
-                        rating_friendliness: person.rating_friendliness,
-                        rating_fun: person.rating_fun,
-                        age: person.age,
-                        birth_date: birthDatePure(person.birth_date), //todo convert to age
-                        is_blocked: person.is_blocked,
-                        created: timeNow(),
-                        updated: timeNow(),
-                    });
+                    const grid_id = gridLookup.byToken[person.grid_token]?.id || null
+                    const gender_id = genders.byToken[person.gender_token]?.id || null;
 
-                    person_id = person_id[0];
+                    const existingPerson = existingPersonsDict[person.person_token];
 
-                    await conn('persons_networks').insert({
-                        person_id: person_id,
-                        network_id: network_id,
-                        created: timeNow(),
-                        updated: person.updated,
-                    });
-                } else {
-                    //person could possibly already exist but joined with a new (second) network
-                    let pn_check = await conn('persons_networks')
-                        .where('person_id', person_check.id)
-                        .where('network_id', network_id)
-                        .first();
+                    if (!existingPerson) {
+                        // Skip deleted persons
+                        if (person.deleted) {
+                            continue;
+                        }
 
-                    if (!pn_check) {
-                        await conn('persons_networks').insert({
-                            person_id: person_check.id,
-                            network_id: network_id,
+                        // New person
+                        personsToInsert.push({
+                            network_id,
+                            grid_id,
+                            gender_id,
+                            person_token: person.person_token,
+                            modes: person.modes,
+                            is_verified_in_person: person.is_verified_in_person,
+                            is_verified_linkedin: person.is_verified_linkedin,
+                            is_online: person.is_online,
+                            timezone: person.timezone,
+                            reviews_count: person.reviews_count,
+                            rating_safety: person.rating_safety,
+                            rating_trust: person.rating_trust,
+                            rating_timeliness: person.rating_timeliness,
+                            rating_friendliness: person.rating_friendliness,
+                            rating_fun: person.rating_fun,
+                            age: person.age,
+                            is_blocked: person.is_blocked,
                             created: timeNow(),
-                            updated: timeNow(),
+                            updated: person.updated
+                        });
+                    } else if (person.updated > existingPerson.updated) {
+                        // Existing person needs update
+                        personsToUpdate.push({
+                            id: existingPerson.id,
+                            grid_id, //how to update grid sets with prev grid token
+                            gender_id,
+                            mode: person.mode,
+                            is_verified_in_person: person.is_verified_in_person,
+                            is_verified_linkedin: person.is_verified_linkedin,
+                            is_online: person.is_online,
+                            timezone: person.timezone,
+                            reviews_count: person.reviews_count,
+                            rating_safety: person.rating_safety,
+                            rating_trust: person.rating_trust,
+                            rating_timeliness: person.rating_timeliness,
+                            rating_friendliness: person.rating_friendliness,
+                            rating_fun: person.rating_fun,
+                            age: person.age,
+                            is_blocked: person.is_blocked,
+                            updated: person.updated,
+                            deleted: person.deleted || null
                         });
                     }
 
-                    //update if timestamp changed
-                    //updated col is set by network where data is retrieved from
-                    if (person.updated > person_check.updated) {
-                        await conn('persons')
-                            .where('person_id', person_check.id)
-                            .update({
-                                mode: person.mode,
-                                is_verified_in_person: person.is_verified_in_person,
-                                is_verified_linkedin: person.is_verified_linkedin,
-                                is_online: person.is_online,
-                                gender_id: gender_id,
-                                timezone: person.timezone,
-                                reviews_count: person.reviews_count,
-                                rating_safety: person.rating_safety,
-                                rating_trust: person.rating_trust,
-                                rating_timeliness: person.rating_timeliness,
-                                rating_friendliness: person.rating_friendliness,
-                                rating_fun: person.rating_fun,
-                                age: person.age,
-                                birth_date: birthDatePure(person.birth_date), //todo remove
-                                is_blocked: person.is_blocked,
-                                updated: person.updated,
-                                deleted: person.deleted || null,
-                            });
+                    // Check if we need to create network association
+                    if (existingPerson && !existingNetworksDict[existingPerson.id]) {
+                        networksToInsert.push({
+                            person_id: existingPerson.id,
+                            network_id: network_id,
+                            created: timeNow(),
+                            updated: timeNow()
+                        });
                     }
                 }
+
+                // Perform batch operations
+                if (personsToInsert.length > 0) {
+                    await batchInsert('persons', personsToInsert, true);
+
+                    for(let p of personsToUpdate) {
+                        networksToInsert.push({
+                            person_id: p.id,
+                            network_id: network_id,
+                            created: timeNow(),
+                            updated: timeNow()
+                        })
+                    }
+                }
+
+                if (personsToUpdate.length > 0) {
+                    await batchUpdate('persons', personsToUpdate);
+                }
+
+                if (networksToInsert.length > 0) {
+                    await batchInsert('persons_networks', networksToInsert);
+                }
             }
+
+            console.log({
+                process_time: timeNow() - t
+            });
         } catch (e) {
             console.error(e);
             return reject(e);
