@@ -1063,7 +1063,9 @@ function getMatches(me, params = {}) {
                             true,
                         );
                     } else if (my_grid && their_grid) {
-                        //we'll later call the host network to help us filter distance without revealing actual location
+                        //we'll later call the host network to help us
+                        //filter distance without revealing actual location
+
                         if (my_grid.id === their_grid.id) {
                             distance_km = 0;
                         } else {
@@ -1099,6 +1101,35 @@ function getMatches(me, params = {}) {
                         }
 
                         continue;
+                    }
+
+                    //if activity start time and distance is not feasible, exclude
+                    let activityStartTime = null;
+                    const now = timeNow(true);
+
+                    if(activity?.when?.data?.start) {
+                        activityStartTime = activity.when.data.start;
+                    } else if(activity?.when?.in_mins) {
+                        activityStartTime = new Date(now + activity.when.in_mins * 60);
+                    }
+
+                    if (activityStartTime) {
+                        const AVERAGE_TRAVEL_SPEED_MPH = 30;
+                        const now = timeNow(true);
+                        const timeToActivityMins = (new Date(activityStartTime) - now) / 60;
+                        const travelTimeNeededMins = (compare_distance / AVERAGE_TRAVEL_SPEED_MPH) * 60;
+
+                        const BUFFER_MINS_LATE = 5;
+
+                        if (timeToActivityMins < (travelTimeNeededMins - BUFFER_MINS_LATE)) {
+                            exclude.send[person_token] = true;
+
+                            if (!send_only) {
+                                exclude.receive[person_token] = true;
+                            }
+
+                            continue;
+                        }
                     }
 
                     // Check if I should exclude sending/receiving to/from them
