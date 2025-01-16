@@ -13,14 +13,11 @@ const {
 } = require('../../services/shared');
 const { getNetworkSelf } = require('../../services/network');
 const { deleteKeys } = require('../../services/cache');
-const { encrypt } = require('../../services/encryption');
 const { getGendersLookup } = require('../../services/genders');
 const { keys: systemKeys } = require('../../services/system');
 const { getGridLookup } = require('../../services/grid');
 
 const sync_name = systemKeys.sync.network.persons;
-
-const runInterval = 60 * 30 * 1000; //every 30 minutes
 
 function processPersons(network_id, persons) {
     return new Promise(async (resolve, reject) => {
@@ -202,7 +199,7 @@ function syncPersons() {
             } catch (e) {
                 console.error('Error getting own network', e);
                 await timeoutAwait(5000);
-                process.exit();
+                return reject(e);
             }
 
             //networks to sync data with
@@ -267,11 +264,11 @@ function syncPersons() {
                     while (response.data.last_person_token) {
                         try {
                             response = await axios.post(sync_url, {
-                                request_sent: timeNow(),
-                                prev_data_since: response.data.prev_data_since,
+                                secret_key: secret_key_to_qry.secret_key_to,
                                 network_token: network_self.network_token,
-                                encrypted_network_token: encrypted_network_token,
                                 last_person_token: response.data.last_person_token,
+                                prev_data_since: response.data.prev_data_since,
+                                request_sent: timeNow(),
                             });
 
                             if (response.status !== 202) {
@@ -313,14 +310,32 @@ function syncPersons() {
     });
 }
 
-(async function () {
+function main() {
     loadScriptEnv();
 
-    while (true) {
-        await syncPersons();
+    return new Promise(async (resolve, reject) => {
+        try {
+            await syncPersons();
+            await updatePersonsCount();
+        } catch(e) {
+            console.error(e);
+        }
 
-        await updatePersonsCount();
+        resolve();
+    });
+}
 
-        await timeoutAwait(runInterval);
-    }
-})();
+module.exports = {
+    main
+}
+
+if (require.main === module) {
+    (async function () {
+        try {
+            await main();
+            process.exit();
+        } catch (e) {
+            console.error(e);
+        }
+    })();
+}

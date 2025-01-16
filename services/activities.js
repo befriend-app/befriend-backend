@@ -1011,14 +1011,12 @@ function notifyMatches(person, activity, matches) {
         let idx = 0;
 
         for (let match of matches) {
-            //tmp person token - todo remove
-            // match.person_token = await getTmpPersonToken();
-
             pipeline.hmGet(cacheService.keys.person(match.person_token), [
                 'id',
                 'network_id',
                 'devices',
             ]);
+
             pipeline.hGet(cacheService.keys.person_filters(match.person_token), 'activity_types');
         }
 
@@ -1080,6 +1078,9 @@ function notifyMatches(person, activity, matches) {
             }
 
             if (match.network_id === network.id) {
+                //tmp - test other network only - todo remove
+                continue;
+
                 if (match.device?.platform && match.device.token) {
                     //tmp fixed devices - todo remove
                     match.device.token = await getTmpDeviceToken();
