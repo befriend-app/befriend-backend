@@ -16,6 +16,7 @@ const { deleteKeys } = require('../../services/cache');
 const { encrypt } = require('../../services/encryption');
 const { getGendersLookup } = require('../../services/genders');
 const { keys: systemKeys } = require('../../services/system');
+const { getGridLookup } = require('../../services/grid');
 
 const sync_name = systemKeys.sync.network.persons;
 
@@ -30,6 +31,7 @@ function processPersons(network_id, persons) {
         try {
             let conn = await dbService.conn();
 
+            let gridLookup = await getGridLookup();
             let genders = await getGendersLookup();
 
             for (let person of persons) {
@@ -37,14 +39,15 @@ function processPersons(network_id, persons) {
                     continue;
                 }
 
+                let grid_id = null;
                 let gender_id = null;
 
-                if (person.gender?.gender_token) {
-                    let gender = genders.byToken[person.gender.gender_token];
+                if(person.grid_token) {
+                    grid_id = gridLookup.byToken[person.grid_token]?.token || null;
+                }
 
-                    if (gender) {
-                        gender_id = gender.id;
-                    }
+                if (person.gender_token) {
+                    gender_id = genders.byToken[person.gender_token]?.id || null;
                 }
 
                 //de-duplicate
@@ -247,17 +250,11 @@ function syncPersons() {
                         continue;
                     }
 
-                    // let encrypted_network_token = await encrypt(
-                    //     secret_key_to_qry.secret_key_to,
-                    //     network_self.network_token,
-                    // );
-
                     let response = await axios.post(sync_url, {
                         secret_key: secret_key_to_qry.secret_key_to,
-                        request_sent: timeNow(),
-                        data_since: timestamps.last,
                         network_token: network_self.network_token,
-                        // encrypted_network_token: encrypted_network_token,
+                        data_since: timestamps.last,
+                        request_sent: timeNow(),
                     });
 
                     if (response.status !== 202) {

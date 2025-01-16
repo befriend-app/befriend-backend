@@ -2,6 +2,7 @@ const dbService = require('../services/db');
 const { getNetworkSelf } = require('../services/network');
 const { timeNow } = require('../services/shared');
 const { getGendersLookup } = require('../services/genders');
+const { gridLookup, getGridLookup } = require('../services/grid');
 
 module.exports = {
     limit: 10000,
@@ -63,11 +64,13 @@ module.exports = {
                     .limit(module.exports.limit)
                     .select(
                         'person_token',
+                        'grid_id', // converted to grid token
                         'modes',
+                        'is_new',
+                        'is_online',
                         'is_verified_in_person',
                         'is_verified_linkedin',
-                        'is_online',
-                        'gender_id', //converted to gender obj with token
+                        'gender_id', //converted to gender token
                         'timezone',
                         'reviews_count',
                         'rating_safety',
@@ -76,7 +79,6 @@ module.exports = {
                         'rating_friendliness',
                         'rating_fun',
                         'age',
-                        'birth_date', //todo convert to age
                         'is_blocked',
                         'updated',
                         'deleted',
@@ -102,21 +104,32 @@ module.exports = {
 
                 persons = await persons_qry;
 
+                let gridLookup = await getGridLookup();
                 let genders = await getGendersLookup();
+
+                genders = structuredClone(genders);
+
+                for(let k in genders.byId) {
+                    let g = genders.byId[k];
+                    delete g.id;
+                    delete g.created;
+                    delete g.updated;
+                }
 
                 //organize data
                 for (let person of persons) {
+                    let grid = gridLookup.byId[person.grid_id];
                     let gender = genders.byId[person.gender_id];
 
-                    gender = structuredClone(gender);
-
                     delete person.gender_id;
+                    delete person.grid_id;
+
+                    if(grid) {
+                        person.grid_token = grid.token;
+                    }
 
                     if (gender) {
-                        person.gender = gender;
-                        delete gender.id;
-                        delete gender.created;
-                        delete gender.updated;
+                        person.gender_token = gender.gender_token;
                     }
                 }
 

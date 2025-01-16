@@ -11,12 +11,17 @@ let gridStructure = {
     lat: {},
 };
 
+let gridLookup = {
+    byId: {},
+    byToken: {}
+}
+
 let gridInitialization = {
     initialized: false,
     in_progress: false,
 };
 
-function isInitialized() {
+function waitForInitialized() {
     return new Promise(async (resolve, reject) => {
         let int = setInterval(function () {
             if (gridInitialization.initialized) {
@@ -28,7 +33,7 @@ function isInitialized() {
 }
 
 function initialize() {
-    let wait_for_initialized = gridInitialization.in_progress;
+    let prev_in_progress = gridInitialization.in_progress;
 
     if (!gridInitialization.in_progress) {
         gridInitialization.in_progress = true;
@@ -39,12 +44,13 @@ function initialize() {
 
     return new Promise(async (resolve, reject) => {
         try {
-            if (wait_for_initialized) {
-                await isInitialized();
+            if (prev_in_progress) {
+                await waitForInitialized();
                 return resolve();
             }
 
             const conn = await dbService.conn();
+
             const records = await conn(TABLE_NAME)
                 .whereNull('deleted')
                 .select(
@@ -87,12 +93,17 @@ function addGridCell(cell) {
         gridStructure.lat[lat_key].lon[lon_key] = [];
     }
 
-    gridStructure.lat[lat_key].lon[lon_key].push({
+    let data = {
         id: cell.id,
         token: cell.token,
         center_lat: cell.center_lat,
         center_lon: cell.center_lon,
-    });
+    };
+
+    gridStructure.lat[lat_key].lon[lon_key].push(data);
+
+    gridLookup.byId[cell.id] = data;
+    gridLookup.byToken[cell.token] = data;
 }
 
 function kmPerDegreeLon(lat) {
@@ -182,7 +193,25 @@ function findNearby(lat, lon, radiusKm = DEFAULT_RADIUS_KM, limit = null) {
     });
 }
 
+function getGridLookup() {
+    return new Promise(async (resolve, reject) => {
+        if(gridInitialization.initialized) {
+            return resolve(gridLookup);
+        }
+
+        try {
+            await initialize();
+
+            resolve(gridLookup);
+        } catch(e) {
+            console.error(e);
+            return reject(e);
+        }
+    });
+}
+
 module.exports = {
     findNearest,
     findNearby,
+    getGridLookup
 };

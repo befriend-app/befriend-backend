@@ -12,7 +12,7 @@ exports.up = async function (knex) {
     }
 
     await knex.schema.alterTable('persons', (table) => {
-        table.string('modes').nullable();
+        table.string('modes').nullable().after('person_token');
     });
 
     await knex.schema.alterTable('activities', (table) => {
