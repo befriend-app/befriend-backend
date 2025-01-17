@@ -3,7 +3,6 @@ const {
 } = require('../../services/shared');
 
 const yargs = require('yargs');
-const devicesScript = require('./devices');
 let args = yargs.argv;
 let num_persons = 1000;
 
