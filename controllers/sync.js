@@ -253,7 +253,7 @@ module.exports = {
                 for (let kid of kids) {
                     if (!persons_modes[kid.person_token]) {
                         persons_modes[kid.person_token] = {
-                            token: kid.person_token,
+                            person_token: kid.person_token,
                             modes: JSON.parse(kid.modes || '[]'),
                             partner: null,
                             kids: {},

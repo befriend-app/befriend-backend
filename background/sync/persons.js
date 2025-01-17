@@ -16,6 +16,7 @@ const { getGendersLookup } = require('../../services/genders');
 const { keys: systemKeys } = require('../../services/system');
 const { getGridLookup } = require('../../services/grid');
 const { batchInsert, batchUpdate } = require('../../services/db');
+const { getKidsAgeLookup } = require('../../services/modes');
 
 const sync_name = systemKeys.sync.network.persons;
 
@@ -262,6 +263,218 @@ function processPersons(network_id, persons) {
 
 function processPersonsModes(network_id, persons_modes) {
     return new Promise(async (resolve, reject) => {
+        if(!persons_modes?.length) {
+            return resolve();
+        }
+
+        try {
+            let conn = await dbService.conn();
+            let batches = [];
+
+            for (let i = 0; i < persons_modes.length; i += batch_process) {
+                batches.push(persons_modes.slice(i, i + batch_process));
+            }
+
+            let [genders, ages] = await Promise.all([
+                getGendersLookup(),
+                getKidsAgeLookup()
+            ]);
+
+            for (let batch of batches) {
+                let pipeline = cacheService.startPipeline();
+
+                let batch_insert = {
+                    partners: [],
+                    kids: []
+                };
+
+                let batch_update = {
+                    partners: [],
+                    kids: []
+                }
+
+                let batchPersonTokens = batch.map(p => p.person_token);
+
+                let existingPersons = await conn('persons')
+                    .whereIn('person_token', batchPersonTokens)
+                    .select('id', 'person_token', 'updated');
+
+                let existingPersonsIds = existingPersons.map(p => p.id);
+
+                let existingPersonsPartners = await conn('persons_partner')
+                    .whereIn('person_id', existingPersonsIds);
+
+                let existingPersonsKids = await conn('persons_kids')
+                    .whereIn('person_id', existingPersonsIds);
+
+                let personsIdTokenMap = {};
+                let personsLookup = {};
+                let existingPartnersLookup = {};
+                let existingKidsLookup = {};
+
+                for (const person of existingPersons) {
+                    personsLookup[person.person_token] = person;
+                    personsIdTokenMap[person.id] = person.person_token;
+                }
+
+                for(let p of existingPersonsPartners) {
+                    existingPartnersLookup[p.token] = p;
+                }
+
+                for(let k of existingPersonsKids) {
+                    existingKidsLookup[p.token] = k;
+                }
+
+                for (let person of batch) {
+                    const existingPerson = personsLookup[person.person_token];
+
+                    if (!existingPerson) {
+                        continue;
+                    }
+
+                    if (person.partner) {
+                        const partner = person.partner;
+                        const gender = genders.byToken[partner.gender_token];
+
+                        let partnerData = {
+                            person_id: existingPerson.id,
+                            token: partner.partner_token,
+                            gender_id: gender?.id || null,
+                            updated: partner.updated,
+                            deleted: partner.deleted || null
+                        };
+
+                        let existingPartner = existingPartnersLookup[partner.partner_token];
+
+                        if (existingPartner) {
+                            if (partner.updated > existingPartner.updated) {
+                                partnerData.id = existingPartner.id;
+                                batch_update.partners.push(partnerData);
+                            }
+                        } else if (!partner.deleted) {
+                            partnerData.created = timeNow();
+                            batch_insert.partners.push(partnerData);
+                        }
+                    }
+
+                    if (person.kids && Object.keys(person.kids).length) {
+                        for (const [kidToken, kid] of Object.entries(person.kids)) {
+                            const gender = genders.byToken[kid.gender_token];
+                            const age = ages.byToken[kid.age_token];
+
+                            const kidData = {
+                                person_id: existingPerson.id,
+                                token: kidToken,
+                                gender_id: gender?.id || null,
+                                age_id: age?.id || null,
+                                is_active: kid.is_active,
+                                updated: kid.updated,
+                                deleted: kid.deleted || null
+                            };
+
+                            const existingKid = existingKidsLookup[kidToken];
+
+                            if (existingKid) {
+                                if (kid.updated > existingKid.updated) {
+                                    kidData.id = existingKid.id;
+                                    batch_update.kids.push(kidData);
+                                }
+                            } else if (!kid.deleted) {
+                                kidData.created = timeNow();
+                                batch_insert.kids.push(kidData);
+                            }
+                        }
+                    }
+                }
+
+                if(batch_insert.partners.length) {
+                    await batchInsert('persons_partner', batch_insert.partners, true);
+                }
+
+                if(batch_update.partners.length) {
+                    await batchUpdate('persons_partner', batch_update.partners);
+                }
+
+                if(batch_insert.kids.length) {
+                    await batchInsert('persons_kids', batch_insert.kids, true);
+                }
+
+                if(batch_update.kids.length) {
+                    await batchUpdate('persons_kids', batch_update.kids);
+                }
+
+                //update cache
+                let modes_qry = conn('persons')
+                    .whereIn('id', existingPersonsIds)
+                    .select('id', 'person_token', 'modes');
+
+                let partners_qry = conn('persons_partner')
+                    .whereNull('deleted')
+                    .whereIn('person_id', existingPersonsIds)
+                    .select('id', 'person_id', 'token', 'gender_id');
+
+                let kids_qry = conn('persons_kid')
+                    .whereNull('deleted')
+                    .whereIn('person_id', existingPersonsIds)
+                    .select('id', 'person_id', 'token', 'age_id', 'gender_id', 'is_active');
+
+                let [modes, partners, kids] = await Promise.all([
+                    modes_qry, partners_qry, kids_qry
+                ]);
+
+                let personsModes = {};
+
+                for(let p of modes) {
+                    personsModes[p.person_token] = {
+                        selected: JSON.parse(p.modes) || [],
+                        partner: {},
+                        kids: {}
+                    }
+                }
+
+                for(let p of partners) {
+                    let person_token = personsIdTokenMap[p.person_id];
+
+                    personsModes[person_token].partner = {
+                        id: p.id,
+                        token: p.token,
+                        gender_id: p.gender_id,
+                    }
+                }
+
+                for(let k of kids) {
+                    let person_token = personsIdTokenMap[k.person_id];
+
+                    personsModes[person_token].kids[k.token] = {
+                        id: k.id,
+                        token: k.token,
+                        gender_id: k.gender_id,
+                        age_id: k.age_id,
+                        is_active: k.is_active
+                    }
+                }
+
+                for(let person_token in personsModes) {
+                    let data = personsModes[person_token];
+
+                    pipeline.hSet(
+                        cacheService.keys.person(person_token),
+                        'modes',
+                        JSON.stringify(data)
+                    );
+                }
+
+                if(
+                    batch_insert.partners.length || batch_insert.kids.length ||
+                    batch_update.partners.length || batch_update.kids.length) {
+                    await cacheService.execPipeline(pipeline);
+                }
+            }
+        } catch (e) {
+            console.error('Error in processPersonsModes:', e);
+            return reject(e);
+        }
+
          resolve();
     });
 }
