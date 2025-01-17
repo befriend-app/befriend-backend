@@ -119,7 +119,7 @@ async function updateDevices() {
     let qry = await conn('persons_devices').orderBy('id', 'desc').first();
 
     if (!qry) {
-        process.exit('No device tokens in DB');
+        process.exit(-1);
     }
 
     await helpers.processBatch(async (person) => {
@@ -136,7 +136,11 @@ async function updateDevices() {
     });
 }
 
-(async function () {
+async function main(qty) {
+    if(qty) {
+        num_persons = qty;
+    }
+
     conn = await dbService.conn();
     self_network = await getNetworkSelf();
 
@@ -151,5 +155,18 @@ async function updateDevices() {
 
     await updateDevices();
 
-    process.exit();
-})();
+}
+
+module.exports = { main };
+
+if (require.main === module) {
+    (async function () {
+        try {
+            await main();
+            process.exit();
+        } catch (e) {
+            console.error(e);
+            process.exit(1);
+        }
+    })();
+}

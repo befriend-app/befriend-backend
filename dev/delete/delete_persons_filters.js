@@ -34,7 +34,10 @@ function main() {
                 connection: connection,
             });
 
-            let tables = ['persons_filters_networks', 'persons_filters'];
+            let tables = [
+                'persons_availability',
+                'persons_filters_networks',
+                'persons_filters'];
 
             for (let table of tables) {
                 try {

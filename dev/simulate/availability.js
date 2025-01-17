@@ -166,7 +166,11 @@ async function processAvailability() {
     });
 }
 
-(async function () {
+async function main(qty) {
+    if(qty) {
+        num_persons = qty;
+    }
+
     conn = await dbService.conn();
     self_network = await getNetworkSelf();
 
@@ -180,6 +184,18 @@ async function processAvailability() {
     await getPersonsLogins();
 
     await processAvailability();
+}
 
-    process.exit();
-})();
+module.exports = { main };
+
+if (require.main === module) {
+    (async function () {
+        try {
+            await main();
+            process.exit();
+        } catch (e) {
+            console.error(e);
+            process.exit(1);
+        }
+    })();
+}

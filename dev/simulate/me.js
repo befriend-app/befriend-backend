@@ -1150,7 +1150,11 @@ async function processSmoking() {
     });
 }
 
-(async function () {
+async function main(qty) {
+    if(qty) {
+        num_persons = qty;
+    }
+
     conn = await dbService.conn();
     self_network = await getNetworkSelf();
 
@@ -1186,6 +1190,18 @@ async function processSmoking() {
     await processReligion();
     await processDrinking();
     await processSmoking();
+}
 
-    process.exit();
-})();
+module.exports = { main };
+
+if (require.main === module) {
+    (async function () {
+        try {
+            await main();
+            process.exit();
+        } catch (e) {
+            console.error(e);
+            process.exit(1);
+        }
+    })();
+}

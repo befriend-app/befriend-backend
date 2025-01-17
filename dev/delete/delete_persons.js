@@ -13,6 +13,9 @@ function main(is_me) {
             return resolve();
         }
 
+        await require('./delete_persons_me').main();
+        await require('./delete_persons_filters').main();
+
         let dbs = [process.env.DB_NAME, 'befriend-4001', 'befriend-4002'];
 
         for (let db of dbs) {
@@ -37,6 +40,7 @@ function main(is_me) {
             //delete activities
             let tables = [
                 'activities_persons',
+                'activities_notifications',
                 'activities_filters',
                 'activities',
                 'persons_login_tokens',
