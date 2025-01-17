@@ -322,7 +322,7 @@ function processPersonsModes(network_id, persons_modes) {
                 }
 
                 for(let k of existingPersonsKids) {
-                    existingKidsLookup[p.token] = k;
+                    existingKidsLookup[k.token] = k;
                 }
 
                 for (let person of batch) {
@@ -387,6 +387,11 @@ function processPersonsModes(network_id, persons_modes) {
                     }
                 }
 
+                if(!batch_insert.partners.length && !batch_insert.kids.length &&
+                    !batch_update.partners.length && !batch_update.kids.length) {
+                    return resolve();
+                }
+
                 if(batch_insert.partners.length) {
                     await batchInsert('persons_partner', batch_insert.partners, true);
                 }
@@ -413,7 +418,7 @@ function processPersonsModes(network_id, persons_modes) {
                     .whereIn('person_id', existingPersonsIds)
                     .select('id', 'person_id', 'token', 'gender_id');
 
-                let kids_qry = conn('persons_kid')
+                let kids_qry = conn('persons_kids')
                     .whereNull('deleted')
                     .whereIn('person_id', existingPersonsIds)
                     .select('id', 'person_id', 'token', 'age_id', 'gender_id', 'is_active');
@@ -464,11 +469,7 @@ function processPersonsModes(network_id, persons_modes) {
                     );
                 }
 
-                if(
-                    batch_insert.partners.length || batch_insert.kids.length ||
-                    batch_update.partners.length || batch_update.kids.length) {
-                    await cacheService.execPipeline(pipeline);
-                }
+                await cacheService.execPipeline(pipeline);
             }
         } catch (e) {
             console.error('Error in processPersonsModes:', e);
