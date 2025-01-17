@@ -194,6 +194,11 @@ module.exports = {
 
                 if (!prev_grid_token || prev_grid_token !== grid.token) {
                     dbUpdate.grid_id = grid.id;
+
+                    //set prev grid on db
+                    if(prev_grid_token !== grid.token) {
+                        dbUpdate.prev_grid_id = me.grid.id;
+                    }
                 }
 
                 await conn('persons').where('id', me.id).update(dbUpdate);
@@ -201,9 +206,11 @@ module.exports = {
                 //update cache
                 //person location cache
                 for (let k in dbUpdate) {
-                    if (k !== 'grid_id') {
-                        me[k] = dbUpdate[k];
+                    if(['grid_id', 'prev_grid_id'].includes(k)) {
+                        continue;
                     }
+
+                    me[k] = dbUpdate[k];
                 }
 
                 me.location = {
@@ -218,6 +225,7 @@ module.exports = {
                     me.grid = {
                         id: grid.id,
                         token: grid.token,
+                        prev_token: prev_grid_token || null
                     };
                 }
 

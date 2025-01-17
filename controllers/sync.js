@@ -65,6 +65,7 @@ module.exports = {
                     .select(
                         'person_token',
                         'grid_id', // converted to grid token
+                        'prev_grid_id', // converted to grid token
                         'modes',
                         'is_new',
                         'is_online',
@@ -119,13 +120,19 @@ module.exports = {
                 //organize data
                 for (let person of persons) {
                     let grid = gridLookup.byId[person.grid_id];
+                    let prev_grid = gridLookup.byId[person.prev_grid_id];
                     let gender = genders.byId[person.gender_id];
 
                     delete person.gender_id;
                     delete person.grid_id;
+                    delete person.prev_grid_id;
 
                     if(grid) {
                         person.grid_token = grid.token;
+                    }
+
+                    if(prev_grid) {
+                        person.prev_grid_token = prev_grid.token;
                     }
 
                     if (gender) {

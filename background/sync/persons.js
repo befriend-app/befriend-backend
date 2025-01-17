@@ -43,7 +43,7 @@ function processPersons(network_id, persons) {
             let t = timeNow();
 
             for (let batch of batches) {
-                // Get existing persons for this batch
+                //existing persons
                 const batchPersonTokens = batch.map(p => p.person_token);
                 const existingPersons = await conn('persons')
                     .whereIn('person_token', batchPersonTokens)
@@ -51,6 +51,7 @@ function processPersons(network_id, persons) {
 
                 //persons lookup
                 const existingPersonsDict = {};
+
                 for (const p of existingPersons) {
                     existingPersonsDict[p.person_token] = p;
                 }
@@ -74,6 +75,7 @@ function processPersons(network_id, persons) {
                     existingNetworksDict[network.person_id] = true;
                 }
 
+                //todo - add/update persons cache
                 //todo - prepare grid set data
 
                 // Process each person in the batch
@@ -150,7 +152,6 @@ function processPersons(network_id, persons) {
                     }
                 }
 
-                // Perform batch operations
                 if (personsToInsert.length > 0) {
                     await batchInsert('persons', personsToInsert, true);
 
