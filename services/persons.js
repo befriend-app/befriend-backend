@@ -344,8 +344,8 @@ module.exports = {
 
                     await updateGridSets(person, null, 'modes');
 
-                    let new_modes = data.modes.filter((mode) => !prev_modes.includes(mode));
-                    let deselected_mode = prev_modes.find((mode) => !data.modes.includes(mode));
+                    let new_modes = data.modes.filter((mode) => !(prev_modes.includes(mode)));
+                    let deselected_mode = prev_modes.find((mode) => !(data.modes.includes(mode)));
 
                     //update grid cache sets
                     if (person.grid?.token) {
@@ -355,6 +355,7 @@ module.exports = {
                                     person.grid.token,
                                     new_mode,
                                 );
+
                                 await cacheService.addItemToSet(cache_key, person.person_token);
                             }
                         } else if (deselected_mode) {
@@ -362,6 +363,7 @@ module.exports = {
                                 person.grid.token,
                                 deselected_mode,
                             );
+
                             await cacheService.removeMemberFromSet(cache_key, person.person_token);
                         }
                     }

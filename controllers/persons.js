@@ -1,18 +1,15 @@
 const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 const gridService = require('../services/grid');
-const matchingService = require('../services/matching');
 
 const {
     timeNow,
-    generateToken,
     latLonLookup,
     getTimeZoneFromCoords,
     isLatValid,
     isLonValid,
 } = require('../services/shared');
 const { getPerson, updatePerson, savePerson } = require('../services/persons');
-const { findMatches, notifyMatches, prepareActivity } = require('../services/activities');
 const { getCountryByCode } = require('../services/locations');
 const { getPersonFilters, updateGridSets } = require('../services/filters');
 
@@ -194,11 +191,6 @@ module.exports = {
 
                 if (!prev_grid_token || prev_grid_token !== grid.token) {
                     dbUpdate.grid_id = grid.id;
-
-                    //set prev grid on db
-                    if(prev_grid_token !== grid.token) {
-                        dbUpdate.prev_grid_id = me.grid.id;
-                    }
                 }
 
                 await conn('persons').where('id', me.id).update(dbUpdate);
@@ -206,7 +198,7 @@ module.exports = {
                 //update cache
                 //person location cache
                 for (let k in dbUpdate) {
-                    if(['grid_id', 'prev_grid_id'].includes(k)) {
+                    if(['grid_id'].includes(k)) {
                         continue;
                     }
 
@@ -225,7 +217,6 @@ module.exports = {
                     me.grid = {
                         id: grid.id,
                         token: grid.token,
-                        prev_token: prev_grid_token || null
                     };
                 }
 
