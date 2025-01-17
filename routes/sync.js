@@ -16,4 +16,16 @@ router.post('/persons', function (req, res, next) {
     });
 });
 
+router.post('/persons/modes', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await syncController.syncPersonsModes(req, res);
+        } catch (e) {
+            console.error(e);
+        }
+
+        resolve();
+    });
+});
+
 module.exports = router;

@@ -29,7 +29,7 @@ const {
     removeKid,
 } = require('../services/me');
 
-const { getKidAgeOptions } = require('../services/modes');
+const { getKidsAgeOptions } = require('../services/modes');
 
 module.exports = {
     getMe: function (req, res) {
@@ -64,7 +64,7 @@ module.exports = {
 
                 let genders = await getGenders(true);
 
-                let kidAgeOptions = await getKidAgeOptions();
+                let kidsAgeOptions = await getKidsAgeOptions();
 
                 let sections = await getSections(me);
 
@@ -75,7 +75,7 @@ module.exports = {
                     sections,
                     modes: {
                         kids: {
-                            options: kidAgeOptions,
+                            options: kidsAgeOptions,
                         },
                     },
                 });

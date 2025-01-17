@@ -21,8 +21,8 @@ const sync_name = systemKeys.sync.network.persons;
 
 let batch_process = 1000;
 
-function processPersons(network_id, persons, params = {}) {
-    function preparePersonCache(new_data, prev_data) {
+function processPersons(network_id, persons) {
+    function preparePersonCache(new_data, prev_data, params = {}) {
         let { grid, prev_grid } = params;
 
         let person_data = structuredClone(new_data);
@@ -129,7 +129,6 @@ function processPersons(network_id, persons, params = {}) {
                     existingNetworksDict[network.person_id] = true;
                 }
 
-                //todo - add/update persons cache
                 //todo - prepare grid set data
                 for (let person of batch) {
                     if (!person) {
@@ -155,6 +154,7 @@ function processPersons(network_id, persons, params = {}) {
                             gender_id: gender?.id || null,
                             person_token: person.person_token,
                             modes: person.modes,
+                            is_new: person.is_new,
                             is_verified_in_person: person.is_verified_in_person,
                             is_verified_linkedin: person.is_verified_linkedin,
                             is_online: person.is_online,
@@ -184,6 +184,7 @@ function processPersons(network_id, persons, params = {}) {
                             grid_id: grid?.id || null,
                             gender_id: gender?.id || null,
                             modes: person.modes,
+                            is_new: person.is_new,
                             is_verified_in_person: person.is_verified_in_person,
                             is_verified_linkedin: person.is_verified_linkedin,
                             is_online: person.is_online,
@@ -241,6 +242,10 @@ function processPersons(network_id, persons, params = {}) {
                 if (networksToInsert.length) {
                     await batchInsert('persons_networks', networksToInsert);
                 }
+
+                if(personsToInsert.length || personsToUpdate.length) {
+                    await cacheService.execPipeline(pipeline);
+                }
             }
 
             console.log({
@@ -252,6 +257,12 @@ function processPersons(network_id, persons, params = {}) {
         }
 
         return resolve();
+    });
+}
+
+function processPersonsModes(network_id, persons_modes) {
+    return new Promise(async (resolve, reject) => {
+         resolve();
     });
 }
 
@@ -302,19 +313,19 @@ function syncPersons() {
         let conn, networks, network_self;
 
         try {
+            network_self = await getNetworkSelf();
+        } catch(e) {
+            console.error(e);
+        }
+
+        if (!network_self) {
+            console.error('Error getting own network', e);
+            await timeoutAwait(5000);
+            return reject(e);
+        }
+
+        try {
             conn = await dbService.conn();
-
-            try {
-                network_self = await getNetworkSelf();
-
-                if (!network_self) {
-                    throw new Error();
-                }
-            } catch (e) {
-                console.error('Error getting own network', e);
-                await timeoutAwait(5000);
-                return reject(e);
-            }
 
             //networks to sync data with
             //networks can be updated through the sync_networks background process
@@ -424,12 +435,135 @@ function syncPersons() {
     });
 }
 
+function syncPersonsModes() {
+    return new Promise(async (resolve, reject) => {
+        const sync_name = systemKeys.sync.network.persons_modes;
+        let conn, networks, network_self;
+
+        try {
+            network_self = await getNetworkSelf();
+        } catch(e) {
+            console.error(e);
+        }
+
+        if (!network_self) {
+            console.error('Error getting own network', e);
+            await timeoutAwait(5000);
+            return reject(e);
+        }
+
+        try {
+            conn = await dbService.conn();
+
+            networks = await conn('networks')
+                .where('is_self', false)
+                .where('keys_exchanged', true)
+                .where('is_online', true)
+                .where('is_blocked', false);
+
+            for (let network of networks) {
+                try {
+                    let skipSaveTimestamps = false;
+
+                    let timestamps = {
+                        current: timeNow(),
+                        last: null
+                    };
+
+                    let sync_qry = await conn('sync')
+                        .where('network_id', network.id)
+                        .where('sync_process', sync_name)
+                        .first();
+
+                    if (sync_qry) {
+                        timestamps.last = sync_qry.last_updated;
+                    }
+
+                    let secret_key_to_qry = await conn('networks_secret_keys')
+                        .where('network_id', network.id)
+                        .where('is_active', true)
+                        .first();
+
+                    if (!secret_key_to_qry) {
+                        continue;
+                    }
+
+                    let sync_url = getURL(network.api_domain, joinPaths('sync', 'persons/modes'));
+
+                    let response = await axios.post(sync_url, {
+                        secret_key: secret_key_to_qry.secret_key_to,
+                        network_token: network_self.network_token,
+                        data_since: timestamps.last,
+                        request_sent: timeNow()
+                    });
+
+                    if (response.status !== 202) {
+                        continue;
+                    }
+
+                    await processPersonsModes(network.id, response.data.persons_modes);
+
+                    // Handle pagination
+                    while (response.data.last_person_token) {
+                        try {
+                            response = await axios.post(sync_url, {
+                                secret_key: secret_key_to_qry.secret_key_to,
+                                network_token: network_self.network_token,
+                                last_person_token: response.data.last_person_token,
+                                prev_data_since: response.data.prev_data_since,
+                                request_sent: timeNow()
+                            });
+
+                            if (response.status !== 202) {
+                                break;
+                            }
+
+                            await processPersonsModes(network.id, response.data.persons_modes);
+                        } catch (e) {
+                            console.error('Error in pagination:', e);
+                            skipSaveTimestamps = true;
+                            break;
+                        }
+                    }
+
+                    if (!skipSaveTimestamps) {
+                        if (sync_qry) {
+                            await conn('sync')
+                                .where('id', sync_qry.id)
+                                .update({
+                                    last_updated: timestamps.current,
+                                    updated: timeNow()
+                                });
+                        } else {
+                            await conn('sync').insert({
+                                sync_process: sync_name,
+                                network_id: network.id,
+                                last_updated: timestamps.current,
+                                created: timeNow(),
+                                updated: timeNow()
+                            });
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error syncing with network:', e);
+                }
+            }
+        } catch (e) {
+            console.error('Error in syncPersonsModes:', e);
+            return reject(e);
+        }
+
+        resolve();
+    });
+}
+
 function main() {
     loadScriptEnv();
 
     return new Promise(async (resolve, reject) => {
         try {
             await syncPersons();
+            await syncPersonsModes();
             await updatePersonsCount();
         } catch(e) {
             console.error(e);

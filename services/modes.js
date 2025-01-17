@@ -59,10 +59,10 @@ function getModes() {
     });
 }
 
-function getKidAgeOptions() {
+function getKidsAgeOptions() {
     return new Promise(async (resolve, reject) => {
-        if (module.exports.kidAgeOptions) {
-            return resolve(module.exports.kidAgeOptions);
+        if (module.exports.kidsAgeOptions) {
+            return resolve(module.exports.kidsAgeOptions);
         }
 
         try {
@@ -77,6 +77,37 @@ function getKidAgeOptions() {
             let ages_dict = await setKidAgesCache();
 
             resolve(ages_dict);
+        } catch(e) {
+            console.error(e);
+            return reject(e);
+        }
+    });
+}
+
+function getKidsAgeLookup() {
+    return new Promise(async (resolve, reject) => {
+        if (module.exports.kidsAgeLookup) {
+            return resolve(module.exports.kidsAgeLookup);
+        }
+
+        try {
+            let options = await getKidsAgeOptions();
+
+            let lookup = {
+                byId: {},
+                byToken: {}
+            }
+
+            for(let k in options) {
+                let v = options[k];
+
+                lookup.byId[v.id] = v;
+                lookup.byToken[v.token] = v;
+            }
+
+            module.exports.kidsAgeLookup = lookup;
+
+            resolve(lookup);
         } catch(e) {
             console.error(e);
             return reject(e);
@@ -112,7 +143,7 @@ function setKidAgesCache() {
 
             await cacheService.setCache(cache_key_kid_ages, ages_dict);
 
-            module.exports.kidAgeOptions = ages_dict;
+            module.exports.kidsAgeOptions = ages_dict;
 
             resolve(ages_dict);
         } catch(e) {
@@ -233,10 +264,12 @@ module.exports = {
         data: appModes,
         lookup: null,
     },
-    kidAgeOptions: null,
+    kidsAgeOptions: null,
+    kidsAgeLookup: null,
     getModeById,
     getModes,
-    getKidAgeOptions,
+    getKidsAgeOptions,
+    getKidsAgeLookup,
     getPersonExcludedModes,
     setKidAgesCache
 };

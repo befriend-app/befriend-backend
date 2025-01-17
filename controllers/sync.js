@@ -2,7 +2,8 @@ const dbService = require('../services/db');
 const { getNetworkSelf } = require('../services/network');
 const { timeNow } = require('../services/shared');
 const { getGendersLookup } = require('../services/genders');
-const { gridLookup, getGridLookup } = require('../services/grid');
+const { getGridLookup } = require('../services/grid');
+const { getKidsAgeLookup } = require('../services/modes');
 
 module.exports = {
     limit: 10000,
@@ -12,53 +13,33 @@ module.exports = {
             //returns persons on this network
             //recursive request process to support pagination and most recent data
             try {
-                let add_data_since_ms,
-                    data_since_timestamp,
-                    conn,
-                    from_network,
-                    last_person_token,
-                    my_network,
-                    person_token_qry,
-                    persons,
-                    persons_qry,
-                    request_sent,
-                    server_ms_diff,
-                    data_since_timestamp_w_extra = null,
-                    prev_data_since = null,
-                    return_last_person_token = null;
-
-                conn = await dbService.conn();
-
-                my_network = await getNetworkSelf();
+                let conn = await dbService.conn();
+                let my_network = await getNetworkSelf();
 
                 //request_sent at
                 //adjust timestamp to account for server time differences
                 //return more data than requested
                 //de-duplicate on request initiating side
-                request_sent = req.body.request_sent;
+                let request_sent = req.body.request_sent;
+
+                //most recent data
+                let data_since_timestamp = req.body.data_since;
+                let prev_data_since = req.body.prev_data_since;
+
+                //pagination
+                let last_person_token = req.body.last_person_token;
 
                 if (!request_sent) {
                     res.json('request timestamp required', 400);
                     return resolve();
                 }
 
-                server_ms_diff = timeNow() - request_sent;
-
-                if (server_ms_diff < 0) {
-                    server_ms_diff = 0;
-                }
-
-                add_data_since_ms = server_ms_diff + module.exports.data_since_ms_extra;
-
-                //for most recent data
-                data_since_timestamp = req.body.data_since;
-                prev_data_since = req.body.prev_data_since;
-
-                //for pagination
-                last_person_token = req.body.last_person_token;
+                let server_ms_diff = Math.max(0, timeNow() - request_sent);
+                let add_data_since_ms = server_ms_diff + module.exports.data_since_ms_extra;
+                let data_since_timestamp_w_extra = null;
 
                 //results in reverse order
-                persons_qry = conn('persons')
+                let persons_qry = conn('persons')
                     .where('network_id', my_network.id) //my network's persons
                     .orderBy('id', 'desc')
                     .limit(module.exports.limit)
@@ -83,17 +64,20 @@ module.exports = {
                         'updated',
                         'deleted',
                     );
-
-                if (prev_data_since) {
-                    persons_qry = persons_qry.where('updated', '>', prev_data_since);
-                } else if (data_since_timestamp) {
+                
+                if(data_since_timestamp) {
                     data_since_timestamp_w_extra = data_since_timestamp - add_data_since_ms;
-                    persons_qry = persons_qry.where('updated', '>', data_since_timestamp_w_extra);
+                }
+
+                let timestamp_updated = prev_data_since || data_since_timestamp_w_extra;
+                
+                if(timestamp_updated) {
+                    persons_qry = persons_qry.where('updated', '>', timestamp_updated);
                 }
 
                 if (last_person_token) {
                     //id from person token
-                    person_token_qry = await conn('persons')
+                    let person_token_qry = await conn('persons')
                         .where('person_token', last_person_token)
                         .first();
 
@@ -102,7 +86,8 @@ module.exports = {
                     }
                 }
 
-                persons = await persons_qry;
+                let persons = await persons_qry;
+                let return_last_person_token = null;
 
                 let gridLookup = await getGridLookup();
                 let genders = await getGendersLookup();
@@ -160,4 +145,155 @@ module.exports = {
             resolve();
         });
     },
+    syncPersonsModes: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let conn = await dbService.conn();
+                let my_network = await getNetworkSelf();
+
+                let request_sent = req.body.request_sent;
+                let data_since_timestamp = req.body.data_since;
+                let prev_data_since = req.body.prev_data_since;
+                let last_person_token = req.body.last_person_token;
+
+                if (!request_sent) {
+                    res.json('request timestamp required', 400);
+                    return resolve();
+                }
+
+                let server_ms_diff = Math.max(0, timeNow() - request_sent);
+                let add_data_since_ms = server_ms_diff + module.exports.data_since_ms_extra;
+                let data_since_timestamp_w_extra = null;
+
+                let partner_qry = conn('persons AS p')
+                    .select(
+                        'p.person_token',
+                        'p.modes',
+                        'pp.token',
+                        'pp.gender_id',
+                        'pp.updated',
+                        'pp.deleted'
+                    )
+                    .where('p.network_id', my_network.id)
+                    .join('persons_partner AS pp', 'pp.person_id', '=', 'p.id')
+                    .orderBy('p.id', 'desc')
+                    .limit(module.exports.limit);
+
+                let kids_qry = conn('persons AS p')
+                    .select(
+                        'p.person_token',
+                        'p.modes',
+                        'pk.token',
+                        'pk.gender_id',
+                        'pk.age_id',
+                        'pk.is_active',
+                        'pk.updated',
+                        'pk.deleted',
+                    )
+                    .where('p.network_id', my_network.id)
+                    .join('persons_kids AS pk', 'pk.person_id', '=', 'p.id')
+                    .orderBy('p.id', 'desc')
+                    .limit(module.exports.limit);
+
+                if (data_since_timestamp) {
+                    data_since_timestamp_w_extra = data_since_timestamp - add_data_since_ms;
+                }
+
+                let timestamp_updated = prev_data_since || data_since_timestamp_w_extra;
+
+                if (timestamp_updated) {
+                    partner_qry = partner_qry.where('pp.updated', '>', timestamp_updated);
+                    kids_qry = kids_qry.where('pk.updated', '>', timestamp_updated);
+                }
+
+                if (last_person_token) {
+                    const person_token_qry = await conn('persons')
+                        .where('person_token', last_person_token)
+                        .first();
+
+                    if (person_token_qry) {
+                        partner_qry = partner_qry.where('p.id', '<', person_token_qry.id);
+                        kids_qry = kids_qry.where('p.id', '<', person_token_qry.id);
+                    }
+                }
+
+                let [partners, kids] = await Promise.all([
+                    partner_qry,
+                    kids_qry
+                ]);
+
+                let [genders, ages] = await Promise.all([
+                    getGendersLookup(),
+                    getKidsAgeLookup()
+                ]);
+
+                let persons_modes = {};
+                let return_last_person_token = null;
+
+                for (let partner of partners) {
+                    if (!persons_modes[partner.person_token]) {
+                        persons_modes[partner.person_token] = {
+                            person_token: partner.person_token,
+                            modes: JSON.parse(partner.modes || '[]'),
+                            partner: null,
+                            kids: {},
+                        };
+                    }
+
+                    const gender = genders.byId[partner.gender_id];
+
+                    persons_modes[partner.person_token].partner = {
+                        partner_token: partner.token,
+                        gender_token: gender?.gender_token || null,
+                        updated: partner.updated,
+                        deleted: partner.deleted
+                    };
+                }
+
+                for (let kid of kids) {
+                    if (!persons_modes[kid.person_token]) {
+                        persons_modes[kid.person_token] = {
+                            token: kid.person_token,
+                            modes: JSON.parse(kid.modes || '[]'),
+                            partner: null,
+                            kids: {},
+                        };
+                    }
+
+                    const gender = genders.byId[kid.gender_id];
+                    const age = ages.byId[kid.age_id];
+
+                    persons_modes[kid.person_token].kids[kid.token] = {
+                        token: kid.token,
+                        gender_token: gender?.gender_token || null,
+                        age_token: age?.token || null,
+                        is_active: kid.is_active,
+                        updated: kid.updated,
+                        deleted: kid.deleted
+                    };
+                }
+
+                const results = Object.values(persons_modes);
+
+                if (results.length === module.exports.limit) {
+                    const last_person = results[results.length - 1];
+
+                    if (last_person) {
+                        return_last_person_token = last_person.person_token;
+                    }
+                }
+
+                res.json({
+                    last_person_token: return_last_person_token,
+                    prev_data_since: prev_data_since || data_since_timestamp_w_extra,
+                    persons_modes: results
+                }, 202);
+            } catch (e) {
+                console.error('Error syncing persons modes:', e);
+                res.json('Error syncing persons modes', 400);
+            }
+
+            resolve();
+        });
+    }
 };
