@@ -596,27 +596,27 @@ function getPersonFilters(person) {
 }
 
 function updateGridSets(person, person_filters = null, filter_token, prev_grid_token = null) {
-    let grid_token, keysAddSet, keysDelSet, keysDelSorted, keysAddSorted, pipelineRem, pipelineAdd;
+    let grid_token, addKeysSet, delKeysSet, keysDelSorted, keysAddSorted, pipelineRem, pipelineAdd;
 
     function updateOnline() {
         if (prev_grid_token) {
-            keysDelSet.add(cacheService.keys.persons_grid_exclude(prev_grid_token, 'online'));
+            delKeysSet.add(cacheService.keys.persons_grid_exclude(prev_grid_token, 'online'));
         }
 
         if (person.is_online) {
-            keysDelSet.add(cacheService.keys.persons_grid_exclude(grid_token, 'online'));
+            delKeysSet.add(cacheService.keys.persons_grid_exclude(grid_token, 'online'));
         } else {
-            keysAddSet.add(cacheService.keys.persons_grid_exclude(grid_token, 'online'));
+            addKeysSet.add(cacheService.keys.persons_grid_exclude(grid_token, 'online'));
         }
     }
 
     function updateLocation() {
         return new Promise(async (resolve, reject) => {
             if (prev_grid_token) {
-                keysDelSet.add(cacheService.keys.persons_grid_set(prev_grid_token, 'location'));
+                delKeysSet.add(cacheService.keys.persons_grid_set(prev_grid_token, 'location'));
             }
 
-            keysAddSet.add(cacheService.keys.persons_grid_set(grid_token, 'location'));
+            addKeysSet.add(cacheService.keys.persons_grid_set(grid_token, 'location'));
 
             resolve();
         });
@@ -682,14 +682,14 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                     }
 
                     if (!networksFilter.is_active || networksFilter.is_any_network) {
-                        keysDelSet.add(
+                        delKeysSet.add(
                             cacheService.keys.persons_grid_exclude_send_receive(
                                 grid_token,
                                 `networks:${network.network_token}`,
                                 'send',
                             ),
                         );
-                        keysDelSet.add(
+                        delKeysSet.add(
                             cacheService.keys.persons_grid_exclude_send_receive(
                                 grid_token,
                                 `networks:${network.network_token}`,
@@ -699,7 +699,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                     } else {
                         //send
                         if (!networksFilter.is_send) {
-                            keysDelSet.add(
+                            delKeysSet.add(
                                 cacheService.keys.persons_grid_exclude_send_receive(
                                     grid_token,
                                     `networks:${network.network_token}`,
@@ -708,7 +708,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                             );
                         } else {
                             if (include_networks.has(network.network_token)) {
-                                keysDelSet.add(
+                                delKeysSet.add(
                                     cacheService.keys.persons_grid_exclude_send_receive(
                                         grid_token,
                                         `networks:${network.network_token}`,
@@ -716,7 +716,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                                     ),
                                 );
                             } else if (exclude_networks.has(network.network_token)) {
-                                keysAddSet.add(
+                                addKeysSet.add(
                                     cacheService.keys.persons_grid_exclude_send_receive(
                                         grid_token,
                                         `networks:${network.network_token}`,
@@ -728,7 +728,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
 
                         //receive
                         if (!networksFilter.is_receive) {
-                            keysDelSet.add(
+                            delKeysSet.add(
                                 cacheService.keys.persons_grid_exclude_send_receive(
                                     grid_token,
                                     `networks:${network.network_token}`,
@@ -737,7 +737,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                             );
                         } else {
                             if (include_networks.has(network.network_token)) {
-                                keysDelSet.add(
+                                delKeysSet.add(
                                     cacheService.keys.persons_grid_exclude_send_receive(
                                         grid_token,
                                         `networks:${network.network_token}`,
@@ -745,7 +745,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                                     'receive',
                                 );
                             } else if (exclude_networks.has(network.network_token)) {
-                                keysAddSet.add(
+                                addKeysSet.add(
                                     cacheService.keys.persons_grid_exclude_send_receive(
                                         grid_token,
                                         `networks:${network.network_token}`,
@@ -759,14 +759,14 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
 
                 if (prev_grid_token) {
                     for (let network of allNetworks.networks) {
-                        keysDelSet.add(
+                        delKeysSet.add(
                             cacheService.keys.persons_grid_exclude_send_receive(
                                 prev_grid_token,
                                 `networks:${network.network_token}`,
                                 'send',
                             ),
                         );
-                        keysDelSet.add(
+                        delKeysSet.add(
                             cacheService.keys.persons_grid_exclude_send_receive(
                                 prev_grid_token,
                                 `networks:${network.network_token}`,
@@ -831,23 +831,23 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
 
                 if (prev_grid_token) {
                     if (person.is_new) {
-                        keysDelSet.add(
+                        delKeysSet.add(
                             cacheService.keys.persons_grid_set(prev_grid_token, `is_new_person`),
                         );
-                        keysAddSet.add(
+                        addKeysSet.add(
                             cacheService.keys.persons_grid_set(grid_token, `is_new_person`),
                         );
                     }
 
                     //excluded match with new
-                    keysDelSet.add(
+                    delKeysSet.add(
                         cacheService.keys.persons_grid_exclude_send_receive(
                             prev_grid_token,
                             `reviews:match_new`,
                             'send',
                         ),
                     );
-                    keysDelSet.add(
+                    delKeysSet.add(
                         cacheService.keys.persons_grid_exclude_send_receive(
                             prev_grid_token,
                             `reviews:match_new`,
@@ -883,14 +883,14 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                 }
 
                 //remove self from previous exclude keys
-                keysDelSet.add(
+                delKeysSet.add(
                     cacheService.keys.persons_grid_exclude_send_receive(
                         grid_token,
                         `reviews:match_new`,
                         'send',
                     ),
                 );
-                keysDelSet.add(
+                delKeysSet.add(
                     cacheService.keys.persons_grid_exclude_send_receive(
                         grid_token,
                         `reviews:match_new`,
@@ -919,7 +919,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                 if (reviews_filters.reviews?.is_active) {
                     if (reviews_filters.new && !reviews_filters.new.is_active) {
                         if (reviews_filters.new.is_send) {
-                            keysAddSet.add(
+                            addKeysSet.add(
                                 cacheService.keys.persons_grid_exclude_send_receive(
                                     grid_token,
                                     `reviews:match_new`,
@@ -929,7 +929,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                         }
 
                         if (reviews_filters.new.is_receive) {
-                            keysAddSet.add(
+                            addKeysSet.add(
                                 cacheService.keys.persons_grid_exclude_send_receive(
                                     grid_token,
                                     `reviews:match_new`,
@@ -1008,14 +1008,21 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                 let excluded_modes = await getPersonExcludedModes(person, person_filters);
 
                 for (let mode of Object.values(modes.byId) || {}) {
-                    keysDelSet.add(
+                    //person sets
+                    delKeysSet.add(
+                        cacheService.keys.persons_grid_set(grid_token, mode.token)
+                    );
+                    
+                    //filter sets
+                    delKeysSet.add(
                         cacheService.keys.persons_grid_exclude_send_receive(
                             grid_token,
                             `modes:${mode.token}`,
                             'send',
                         ),
                     );
-                    keysDelSet.add(
+
+                    delKeysSet.add(
                         cacheService.keys.persons_grid_exclude_send_receive(
                             grid_token,
                             `modes:${mode.token}`,
@@ -1024,14 +1031,19 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                     );
 
                     if (prev_grid_token) {
-                        keysDelSet.add(
+                        delKeysSet.add(
+                            cacheService.keys.persons_grid_set(prev_grid_token, mode.token)
+                        );
+                        
+                        delKeysSet.add(
                             cacheService.keys.persons_grid_exclude_send_receive(
                                 prev_grid_token,
                                 `modes:${mode.token}`,
                                 'send',
                             ),
                         );
-                        keysDelSet.add(
+
+                        delKeysSet.add(
                             cacheService.keys.persons_grid_exclude_send_receive(
                                 prev_grid_token,
                                 `modes:${mode.token}`,
@@ -1040,9 +1052,18 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                         );
                     }
                 }
+                
+                //person sets
+                if(person.modes?.selected?.length) {
+                    for(let mode_token of person.modes.selected) {
+                        addKeysSet.add(
+                            cacheService.keys.persons_grid_set(grid_token, mode_token)
+                        );
+                    }
+                }
 
                 for (let mode_token of excluded_modes.send) {
-                    keysAddSet.add(
+                    addKeysSet.add(
                         cacheService.keys.persons_grid_exclude_send_receive(
                             grid_token,
                             `modes:${mode_token}`,
@@ -1052,7 +1073,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                 }
 
                 for (let mode_token of excluded_modes.receive) {
-                    keysAddSet.add(
+                    addKeysSet.add(
                         cacheService.keys.persons_grid_exclude_send_receive(
                             grid_token,
                             `modes:${mode_token}`,
@@ -1074,48 +1095,48 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                 const verificationTypes = ['in_person', 'linkedin'];
 
                 if (person.is_verified_in_person) {
-                    keysAddSet.add(
+                    addKeysSet.add(
                         cacheService.keys.persons_grid_set(grid_token, `verified:in_person`),
                     );
                 } else {
-                    keysDelSet.add(
+                    delKeysSet.add(
                         cacheService.keys.persons_grid_set(grid_token, `verified:in_person`),
                     );
                 }
 
                 if (person.is_verified_linkedin) {
-                    keysAddSet.add(
+                    addKeysSet.add(
                         cacheService.keys.persons_grid_set(grid_token, `verified:linkedin`),
                     );
                 } else {
-                    keysDelSet.add(
+                    delKeysSet.add(
                         cacheService.keys.persons_grid_set(grid_token, `verified:linkedin`),
                     );
                 }
 
                 if (!person_filters.verifications?.is_active) {
-                    keysDelSet.add(
+                    delKeysSet.add(
                         cacheService.keys.persons_grid_send_receive(
                             grid_token,
                             'verifications:in_person',
                             'send',
                         ),
                     );
-                    keysDelSet.add(
+                    delKeysSet.add(
                         cacheService.keys.persons_grid_send_receive(
                             grid_token,
                             'verifications:in_person',
                             'receive',
                         ),
                     );
-                    keysDelSet.add(
+                    delKeysSet.add(
                         cacheService.keys.persons_grid_send_receive(
                             grid_token,
                             'verifications:linkedin',
                             'send',
                         ),
                     );
-                    keysDelSet.add(
+                    delKeysSet.add(
                         cacheService.keys.persons_grid_send_receive(
                             grid_token,
                             'verifications:linkedin',
@@ -1124,13 +1145,13 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                     );
                 } else {
                     if (!person_filters.verification_in_person?.is_active) {
-                        keysDelSet.add(
+                        delKeysSet.add(
                             cacheService.keys.persons_grid_send_receive(
                                 'verifications:in_person',
                                 'send',
                             ),
                         );
-                        keysDelSet.add(
+                        delKeysSet.add(
                             cacheService.keys.persons_grid_send_receive(
                                 'verifications:in_person',
                                 'receive',
@@ -1138,7 +1159,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                         );
                     } else {
                         if (person_filters.verification_in_person.is_send) {
-                            keysAddSet.add(
+                            addKeysSet.add(
                                 cacheService.keys.persons_grid_send_receive(
                                     grid_token,
                                     'verifications:in_person',
@@ -1146,7 +1167,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                                 ),
                             );
                         } else {
-                            keysDelSet.add(
+                            delKeysSet.add(
                                 cacheService.keys.persons_grid_send_receive(
                                     grid_token,
                                     'verifications:in_person',
@@ -1156,7 +1177,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                         }
 
                         if (person_filters.verification_in_person.is_receive) {
-                            keysAddSet.add(
+                            addKeysSet.add(
                                 cacheService.keys.persons_grid_send_receive(
                                     grid_token,
                                     'verifications:in_person',
@@ -1164,7 +1185,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                                 ),
                             );
                         } else {
-                            keysDelSet.add(
+                            delKeysSet.add(
                                 cacheService.keys.persons_grid_send_receive(
                                     grid_token,
                                     'verifications:in_person',
@@ -1175,13 +1196,13 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                     }
 
                     if (!person_filters.verification_linkedin?.is_active) {
-                        keysDelSet.add(
+                        delKeysSet.add(
                             cacheService.keys.persons_grid_send_receive(
                                 'verifications:linkedin',
                                 'send',
                             ),
                         );
-                        keysDelSet.add(
+                        delKeysSet.add(
                             cacheService.keys.persons_grid_send_receive(
                                 'verifications:linkedin',
                                 'receive',
@@ -1189,7 +1210,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                         );
                     } else {
                         if (person_filters.verification_linkedin.is_send) {
-                            keysAddSet.add(
+                            addKeysSet.add(
                                 cacheService.keys.persons_grid_send_receive(
                                     grid_token,
                                     'verifications:linkedin',
@@ -1197,7 +1218,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                                 ),
                             );
                         } else {
-                            keysDelSet.add(
+                            delKeysSet.add(
                                 cacheService.keys.persons_grid_send_receive(
                                     grid_token,
                                     'verifications:linkedin',
@@ -1207,7 +1228,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                         }
 
                         if (person_filters.verification_linkedin.is_receive) {
-                            keysAddSet.add(
+                            addKeysSet.add(
                                 cacheService.keys.persons_grid_send_receive(
                                     grid_token,
                                     'verifications:linkedin',
@@ -1215,7 +1236,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                                 ),
                             );
                         } else {
-                            keysDelSet.add(
+                            delKeysSet.add(
                                 cacheService.keys.persons_grid_send_receive(
                                     grid_token,
                                     'verifications:linkedin',
@@ -1228,17 +1249,17 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
 
                 if (prev_grid_token) {
                     for (let type of verificationTypes) {
-                        keysDelSet.add(
+                        delKeysSet.add(
                             cacheService.keys.persons_grid_set(prev_grid_token, `verified:${type}`),
                         );
-                        keysDelSet.add(
+                        delKeysSet.add(
                             cacheService.keys.persons_grid_send_receive(
                                 prev_grid_token,
                                 `verifications:${type}`,
                                 'send',
                             ),
                         );
-                        keysDelSet.add(
+                        delKeysSet.add(
                             cacheService.keys.persons_grid_send_receive(
                                 prev_grid_token,
                                 `verifications:${type}`,
@@ -1266,21 +1287,21 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                 for (let gender_token in genders.byToken) {
                     if (gender_token !== 'any') {
                         if (prev_grid_token) {
-                            keysDelSet.add(
+                            delKeysSet.add(
                                 cacheService.keys.persons_grid_set(
                                     prev_grid_token,
                                     `gender:${gender_token}`,
                                 ),
                             );
 
-                            keysDelSet.add(
+                            delKeysSet.add(
                                 cacheService.keys.persons_grid_exclude_send_receive(
                                     prev_grid_token,
                                     `genders:${gender_token}`,
                                     'send',
                                 ),
                             );
-                            keysDelSet.add(
+                            delKeysSet.add(
                                 cacheService.keys.persons_grid_exclude_send_receive(
                                     prev_grid_token,
                                     `genders:${gender_token}`,
@@ -1289,20 +1310,20 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                             );
                         }
 
-                        keysDelSet.add(
+                        delKeysSet.add(
                             cacheService.keys.persons_grid_set(
                                 grid_token,
                                 `gender:${gender_token}`,
                             ),
                         );
-                        keysDelSet.add(
+                        delKeysSet.add(
                             cacheService.keys.persons_grid_exclude_send_receive(
                                 grid_token,
                                 `genders:${gender_token}`,
                                 'send',
                             ),
                         );
-                        keysDelSet.add(
+                        delKeysSet.add(
                             cacheService.keys.persons_grid_exclude_send_receive(
                                 grid_token,
                                 `genders:${gender_token}`,
@@ -1313,7 +1334,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                 }
 
                 if (person_gender) {
-                    keysAddSet.add(
+                    addKeysSet.add(
                         cacheService.keys.persons_grid_set(
                             grid_token,
                             `gender:${person_gender.gender_token}`,
@@ -1354,7 +1375,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                                 genderItem.is_negative ||
                                 genderItem.deleted
                             ) {
-                                keysAddSet.add(
+                                addKeysSet.add(
                                     cacheService.keys.persons_grid_exclude_send_receive(
                                         grid_token,
                                         `genders:${gender.gender_token}`,
@@ -1371,7 +1392,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                                 genderItem.is_negative ||
                                 genderItem.deleted
                             ) {
-                                keysAddSet.add(
+                                addKeysSet.add(
                                     cacheService.keys.persons_grid_exclude_send_receive(
                                         grid_token,
                                         `genders:${gender.gender_token}`,
@@ -1413,20 +1434,20 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                 // Clear existing keys for this grid
                 for (let option of section_options) {
                     if (prev_grid_token) {
-                        keysDelSet.add(
+                        delKeysSet.add(
                             cacheService.keys.persons_grid_set(
                                 prev_grid_token,
                                 `${sectionKey}:${option.token}`,
                             ),
                         );
-                        keysDelSet.add(
+                        delKeysSet.add(
                             cacheService.keys.persons_grid_exclude_send_receive(
                                 prev_grid_token,
                                 `${sectionKey}:${option.token}`,
                                 'send',
                             ),
                         );
-                        keysDelSet.add(
+                        delKeysSet.add(
                             cacheService.keys.persons_grid_exclude_send_receive(
                                 prev_grid_token,
                                 `${sectionKey}:${option.token}`,
@@ -1435,20 +1456,20 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                         );
                     }
 
-                    keysDelSet.add(
+                    delKeysSet.add(
                         cacheService.keys.persons_grid_set(
                             grid_token,
                             `${sectionKey}:${option.token}`,
                         ),
                     );
-                    keysDelSet.add(
+                    delKeysSet.add(
                         cacheService.keys.persons_grid_exclude_send_receive(
                             grid_token,
                             `${sectionKey}:${option.token}`,
                             'send',
                         ),
                     );
-                    keysDelSet.add(
+                    delKeysSet.add(
                         cacheService.keys.persons_grid_exclude_send_receive(
                             grid_token,
                             `${sectionKey}:${option.token}`,
@@ -1462,7 +1483,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                     let item = section_data[key];
 
                     if (!item.deleted) {
-                        keysAddSet.add(
+                        addKeysSet.add(
                             cacheService.keys.persons_grid_set(
                                 grid_token,
                                 `${sectionKey}:${item.token}`,
@@ -1501,7 +1522,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                         if (!added_tokens.includes(option.token)) {
                             // Apply send exclusions
                             if (filter.is_send) {
-                                keysAddSet.add(
+                                addKeysSet.add(
                                     cacheService.keys.persons_grid_exclude_send_receive(
                                         grid_token,
                                         `${sectionKey}:${option.token}`,
@@ -1512,7 +1533,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
 
                             // Apply receive exclusions
                             if (filter.is_receive) {
-                                keysAddSet.add(
+                                addKeysSet.add(
                                     cacheService.keys.persons_grid_exclude_send_receive(
                                         grid_token,
                                         `${sectionKey}:${option.token}`,
@@ -1554,20 +1575,20 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                 // Clear existing keys for this grid
                 for (let option of section_options) {
                     if (prev_grid_token) {
-                        keysDelSet.add(
+                        delKeysSet.add(
                             cacheService.keys.persons_grid_set(
                                 prev_grid_token,
                                 `${sectionKey}:${option.token}`,
                             ),
                         );
-                        keysDelSet.add(
+                        delKeysSet.add(
                             cacheService.keys.persons_grid_exclude_send_receive(
                                 prev_grid_token,
                                 `${sectionKey}:${option.token}`,
                                 'send',
                             ),
                         );
-                        keysDelSet.add(
+                        delKeysSet.add(
                             cacheService.keys.persons_grid_exclude_send_receive(
                                 prev_grid_token,
                                 `${sectionKey}:${option.token}`,
@@ -1576,20 +1597,20 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                         );
                     }
 
-                    keysDelSet.add(
+                    delKeysSet.add(
                         cacheService.keys.persons_grid_set(
                             grid_token,
                             `${sectionKey}:${option.token}`,
                         ),
                     );
-                    keysDelSet.add(
+                    delKeysSet.add(
                         cacheService.keys.persons_grid_exclude_send_receive(
                             grid_token,
                             `${sectionKey}:${option.token}`,
                             'send',
                         ),
                     );
-                    keysDelSet.add(
+                    delKeysSet.add(
                         cacheService.keys.persons_grid_exclude_send_receive(
                             grid_token,
                             `${sectionKey}:${option.token}`,
@@ -1601,7 +1622,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                 // Add person's current selection to grid sets
                 if (Object.keys(section_data).length) {
                     let item = Object.values(section_data)[0];
-                    keysAddSet.add(
+                    addKeysSet.add(
                         cacheService.keys.persons_grid_set(
                             grid_token,
                             `${sectionKey}:${item.token}`,
@@ -1639,7 +1660,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                         if (!added_tokens.includes(option.token)) {
                             // Apply send exclusions
                             if (filter.is_send) {
-                                keysAddSet.add(
+                                addKeysSet.add(
                                     cacheService.keys.persons_grid_exclude_send_receive(
                                         grid_token,
                                         `${sectionKey}:${option.token}`,
@@ -1650,7 +1671,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
 
                             // Apply receive exclusions
                             if (filter.is_receive) {
-                                keysAddSet.add(
+                                addKeysSet.add(
                                     cacheService.keys.persons_grid_exclude_send_receive(
                                         grid_token,
                                         `${sectionKey}:${option.token}`,
@@ -1701,8 +1722,8 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
             return reject();
         }
 
-        keysAddSet = new Set();
-        keysDelSet = new Set();
+        addKeysSet = new Set();
+        delKeysSet = new Set();
 
         keysAddSorted = new Set();
         keysDelSorted = new Set();
@@ -1840,8 +1861,8 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
         }
 
         try {
-            if (keysDelSet.size) {
-                for (let key of keysDelSet) {
+            if (delKeysSet.size) {
+                for (let key of delKeysSet) {
                     pipelineRem.sRem(key, person.person_token);
                 }
 
@@ -1856,8 +1877,8 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                 await cacheService.execPipeline(pipelineRem);
             }
 
-            if (keysAddSet.size) {
-                for (let key of keysAddSet) {
+            if (addKeysSet.size) {
+                for (let key of addKeysSet) {
                     pipelineAdd.sAdd(key, person.person_token);
                 }
 

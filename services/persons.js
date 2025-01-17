@@ -338,35 +338,9 @@ module.exports = {
                         person.modes = {};
                     }
 
-                    let prev_modes = person.modes.selected || [];
-
                     person.modes.selected = data.modes;
 
                     await updateGridSets(person, null, 'modes');
-
-                    let new_modes = data.modes.filter((mode) => !(prev_modes.includes(mode)));
-                    let deselected_mode = prev_modes.find((mode) => !(data.modes.includes(mode)));
-
-                    //update grid cache sets
-                    if (person.grid?.token) {
-                        if (new_modes?.length) {
-                            for (let new_mode of new_modes) {
-                                let cache_key = cacheService.keys.persons_grid_set(
-                                    person.grid.token,
-                                    new_mode,
-                                );
-
-                                await cacheService.addItemToSet(cache_key, person.person_token);
-                            }
-                        } else if (deselected_mode) {
-                            let cache_key = cacheService.keys.persons_grid_set(
-                                person.grid.token,
-                                deselected_mode,
-                            );
-
-                            await cacheService.removeMemberFromSet(cache_key, person.person_token);
-                        }
-                    }
                 } else {
                     data.updated = timeNow();
 
