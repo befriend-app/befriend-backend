@@ -53,7 +53,6 @@ const sportsKeys = {
 };
 
 const keyFunctions = {
-    session: (session) => `session:api:${session}`,
     exchange_keys: (token) => `networks:keys:exchange:${token}`,
     activities: (person_token) => `activities:persons:${person_token}`, //lookup of activity is by hash field of activity_token by person who created activity
     activities_notifications: (activity_token) => `activities:${activity_token}:notifications`,
@@ -75,11 +74,13 @@ const keyFunctions = {
     person_sections: (person_token) => `persons:me:sections:${person_token}`,
     persons_grid_set: (gridToken, key) => `persons:grid:${gridToken}:set:${key}`,
     persons_grid_sorted: (gridToken, key) => `persons:grid:${gridToken}:sorted:${key}`,
+    persons_grid_send_receive: (gridToken, key, send_or_receive) =>
+        `persons:grid:${gridToken}:${key}:${send_or_receive}`,
     persons_grid_exclude: (gridToken, key) => `persons:grid:${gridToken}:exclude:${key}`,
     persons_grid_exclude_send_receive: (gridToken, key, send_or_receive) =>
         `persons:grid:${gridToken}:exclude:${key}:${send_or_receive}`,
-    persons_grid_send_receive: (gridToken, key, send_or_receive) =>
-        `persons:grid:${gridToken}:${key}:${send_or_receive}`,
+    persons_grid_exclude_sorted_send_receive: (gridToken, key, send_or_receive) =>
+        `persons:grid:${gridToken}:sorted:exclude:${key}:${send_or_receive}`,
     instruments_prefix: (prefix) => `instruments:prefix:${prefix}`,
     movies_prefix: (prefix) => `movies:prefix:${prefix}`,
     movies_prefix_top_1000: (prefix) => `movies:prefix:top:1000:${prefix}`,

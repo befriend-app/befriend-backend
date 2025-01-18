@@ -866,14 +866,15 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
 
                         //filters
                         keysDelSorted.add(
-                            cacheService.keys.persons_grid_exclude_send_receive(
+                            cacheService.keys.persons_grid_exclude_sorted_send_receive(
                                 prev_grid_token,
                                 `reviews:${type}`,
                                 'send',
                             ),
                         );
+
                         keysDelSorted.add(
-                            cacheService.keys.persons_grid_exclude_send_receive(
+                            cacheService.keys.persons_grid_exclude_sorted_send_receive(
                                 prev_grid_token,
                                 `reviews:${type}`,
                                 'receive',
@@ -907,14 +908,15 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
 
                 for (let type of reviewTypes) {
                     keysDelSorted.add(
-                        cacheService.keys.persons_grid_exclude_send_receive(
+                        cacheService.keys.persons_grid_exclude_sorted_send_receive(
                             grid_token,
                             `reviews:${type}`,
                             'send',
                         ),
                     );
+
                     keysDelSorted.add(
-                        cacheService.keys.persons_grid_exclude_send_receive(
+                        cacheService.keys.persons_grid_exclude_sorted_send_receive(
                             grid_token,
                             `reviews:${type}`,
                             'receive',
@@ -977,7 +979,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
 
                         if (filter.is_send) {
                             keysAddSorted.add({
-                                key: cacheService.keys.persons_grid_exclude_send_receive(
+                                key: cacheService.keys.persons_grid_exclude_sorted_send_receive(
                                     grid_token,
                                     `reviews:${type}`,
                                     'send',
@@ -988,7 +990,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
 
                         if (filter.is_receive) {
                             keysAddSorted.add({
-                                key: cacheService.keys.persons_grid_exclude_send_receive(
+                                key: cacheService.keys.persons_grid_exclude_sorted_send_receive(
                                     grid_token,
                                     `reviews:${type}`,
                                     'receive',

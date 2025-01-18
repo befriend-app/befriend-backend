@@ -14,7 +14,9 @@ function main() {
             return resolve();
         }
 
-        let dbs = [process.env.DB_NAME, 'befriend-4001', 'befriend-4002'];
+        await cacheService.init();
+
+        let dbs = [process.env.DB_NAME];
 
         for (let db of dbs) {
             let connection = {
@@ -53,7 +55,7 @@ function main() {
                 let chunk = persons.slice(i, i + bulk_delete_count);
 
                 let ids = chunk.map(x => x.id);
-                let tokens = chunk.map(x => x.token);
+                let tokens = chunk.map(x => x.person_token);
                 let grids = {};
 
                 for(let p of chunk) {
@@ -72,9 +74,9 @@ function main() {
                     .whereIn('person_id', ids)
                     .delete();
 
-                await knex('persons')
-                    .whereIn('id', ids)
-                    .delete();
+                // await knex('persons')
+                //     .whereIn('id', ids)
+                //     .delete();
 
                 let pipeline = cacheService.startPipeline();
 
@@ -84,16 +86,15 @@ function main() {
                     let set_keys = await cacheService.getKeysWithPrefix(cacheService.keys.persons_grid_set(grid, ''));
                     let exclude_keys = await cacheService.getKeysWithPrefix(`persons:grid:${grid}:exclude`);
                     let send_receive = await cacheService.getKeysWithPrefix(cacheService.keys.persons_grid_send_receive(grid, 'verifications'));
-
                     let srem_keys = set_keys.concat(exclude_keys).concat(send_receive);
 
                     for(let token of tokens) {
-                        for(let key of srem_keys) {
-                            pipeline.sRem(key, token);
-                        }
-
                         for(let key of sorted_keys) {
                             pipeline.zRem(key, token);
+                        }
+
+                        for(let key of srem_keys) {
+                            pipeline.sRem(key, token);
                         }
                     }
                 }

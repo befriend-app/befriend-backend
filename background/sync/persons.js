@@ -140,7 +140,6 @@ function processPersons(network_id, persons) {
                     existingNetworksDict[network.person_id] = true;
                 }
 
-                //todo - prepare grid set data
                 for (let person of batch) {
                     if (!person) {
                         continue;
@@ -271,6 +270,10 @@ function processPersons(network_id, persons) {
                     await batchInsert('persons', personsToInsert, true);
 
                     for(let p of personsToInsert) {
+                        //append id to cloned grid person data
+                        personsGrids[p.person_token].person.id = p.id
+
+                        //prepare persons_networks
                         networksToInsert.push({
                             person_id: p.id,
                             network_id: network_id,

@@ -1389,7 +1389,7 @@ function getMatches(me, params = {}) {
                         // Exclude filter settings for each person
                         if (!send_only) {
                             pipeline.zRangeWithScores(
-                                cacheService.keys.persons_grid_exclude_send_receive(
+                                cacheService.keys.persons_grid_exclude_sorted_send_receive(
                                     grid_token,
                                     `reviews:${type}`,
                                     'send',
@@ -1400,7 +1400,7 @@ function getMatches(me, params = {}) {
                         }
 
                         pipeline.zRangeWithScores(
-                            cacheService.keys.persons_grid_exclude_send_receive(
+                            cacheService.keys.persons_grid_exclude_sorted_send_receive(
                                 grid_token,
                                 `reviews:${type}`,
                                 'receive',
