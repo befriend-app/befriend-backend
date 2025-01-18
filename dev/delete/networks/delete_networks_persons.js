@@ -74,9 +74,9 @@ function main() {
                     .whereIn('person_id', ids)
                     .delete();
 
-                // await knex('persons')
-                //     .whereIn('id', ids)
-                //     .delete();
+                await knex('persons')
+                    .whereIn('id', ids)
+                    .delete();
 
                 let pipeline = cacheService.startPipeline();
 

@@ -595,6 +595,29 @@ function getPersonFilters(person) {
     });
 }
 
+function getPersonsFiltersBatch(persons) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let pipeline = cacheService.startPipeline();
+
+            for(let personObj of persons) {
+                pipeline.hGetAll(cacheService.keys.person_filters(personObj.person.person_token));
+            }
+
+            let results = await cacheService.execPipeline(pipeline);
+
+            for(let i = 0; i < persons.length; i++) {
+                persons[i].filters = cacheService.parseHashData(results[i]);
+            }
+
+            resolve();
+        } catch (e) {
+            console.error(e);
+            return reject(e);
+        }
+    });
+}
+
 function updateGridSets(person, person_filters = null, filter_token, prev_grid_token = null) {
     let grid_token, addKeysSet, delKeysSet, keysDelSorted, keysAddSorted, pipelineRem, pipelineAdd;
 
@@ -1904,6 +1927,793 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
     });
 }
 
+function batchUpdateGridSets(persons) {
+    return new Promise(async (resolve, reject) => {
+        let modes, genders;
+
+        if (!persons?.length) {
+            return reject();
+        }
+
+        try {
+            modes = await getModes();
+
+            genders = await getGendersLookup();
+
+            await getPersonsFiltersBatch(persons);
+        } catch (e) {
+            console.error(e);
+            return reject();
+        }
+
+        let hasPipelineRem = false;
+        let hasPipelineAdd = false;
+        let pipelineRem = cacheService.startPipeline();
+        let pipelineAdd = cacheService.startPipeline();
+
+        for(let personObj of persons) {
+            let grid_token, prev_grid_token, addKeysSet, delKeysSet, keysDelSorted, keysAddSorted;
+
+            let person = personObj.person;
+            let filters = personObj.filters;
+
+            let filter_tokens = personObj.filter_tokens;
+
+            addKeysSet = new Set();
+            delKeysSet = new Set();
+
+            keysAddSorted = new Set();
+            keysDelSorted = new Set();
+
+            function updateOnline() {
+                if (prev_grid_token) {
+                    delKeysSet.add(cacheService.keys.persons_grid_exclude(prev_grid_token, 'online'));
+                }
+
+                if (person.is_online) {
+                    delKeysSet.add(cacheService.keys.persons_grid_exclude(grid_token, 'online'));
+                } else {
+                    addKeysSet.add(cacheService.keys.persons_grid_exclude(grid_token, 'online'));
+                }
+            }
+
+            function updateLocation() {
+                return new Promise(async (resolve, reject) => {
+                    if (prev_grid_token) {
+                        delKeysSet.add(cacheService.keys.persons_grid_set(prev_grid_token, 'location'));
+                    }
+
+                    addKeysSet.add(cacheService.keys.persons_grid_set(grid_token, 'location'));
+
+                    resolve();
+                });
+            }
+
+            function updateReviews() {
+                return new Promise(async (resolve, reject) => {
+                    try {
+                        const reviewTypes = ['safety', 'trust', 'timeliness', 'friendliness', 'fun'];
+
+                        let reviews_filters = {
+                            reviews: null, // top-level
+                            new: null, // new matches
+                        };
+
+                        for (let type of reviewTypes) {
+                            //review types
+                            reviews_filters[type] = null;
+                        }
+
+                        let pipeline = cacheService.startPipeline();
+
+                        let filter_key = cacheService.keys.person_filters(person.person_token);
+
+                        pipeline.hGet(filter_key, `reviews`);
+                        pipeline.hGet(filter_key, `reviews_new`);
+
+                        for (let type of reviewTypes) {
+                            pipeline.hGet(filter_key, `reviews_${type}`);
+                        }
+
+                        let results = await cacheService.execPipeline(pipeline);
+
+                        let idx = 0;
+
+                        let reviews_filter = results[idx++];
+                        let new_filter = results[idx++];
+
+                        reviews_filters.reviews = reviews_filter ? JSON.parse(reviews_filter) : null;
+                        reviews_filters.new = new_filter ? JSON.parse(new_filter) : null;
+
+                        for (let type of reviewTypes) {
+                            let data = results[idx++];
+
+                            if (data) {
+                                reviews_filters[type] = JSON.parse(data);
+                            } else {
+                                reviews_filters[type] = null;
+                            }
+                        }
+
+                        if (prev_grid_token) {
+                            if (person.is_new) {
+                                delKeysSet.add(
+                                    cacheService.keys.persons_grid_set(prev_grid_token, `is_new_person`),
+                                );
+                                addKeysSet.add(
+                                    cacheService.keys.persons_grid_set(grid_token, `is_new_person`),
+                                );
+                            }
+
+                            //excluded match with new
+                            delKeysSet.add(
+                                cacheService.keys.persons_grid_exclude_send_receive(
+                                    prev_grid_token,
+                                    `reviews:match_new`,
+                                    'send',
+                                ),
+                            );
+                            delKeysSet.add(
+                                cacheService.keys.persons_grid_exclude_send_receive(
+                                    prev_grid_token,
+                                    `reviews:match_new`,
+                                    'receive',
+                                ),
+                            );
+
+                            for (let type of reviewTypes) {
+                                //own rating
+                                keysDelSorted.add(
+                                    cacheService.keys.persons_grid_sorted(
+                                        prev_grid_token,
+                                        `reviews:${type}`,
+                                    ),
+                                );
+
+                                //filters
+                                keysDelSorted.add(
+                                    cacheService.keys.persons_grid_exclude_sorted_send_receive(
+                                        prev_grid_token,
+                                        `reviews:${type}`,
+                                        'send',
+                                    ),
+                                );
+
+                                keysDelSorted.add(
+                                    cacheService.keys.persons_grid_exclude_sorted_send_receive(
+                                        prev_grid_token,
+                                        `reviews:${type}`,
+                                        'receive',
+                                    ),
+                                );
+                            }
+                        }
+
+                        //new person
+                        if (person.is_new) {
+                            addKeysSet.add(
+                                cacheService.keys.persons_grid_set(grid_token, `is_new_person`),
+                            );
+                        }
+
+                        //remove self from previous exclude keys
+                        delKeysSet.add(
+                            cacheService.keys.persons_grid_exclude_send_receive(
+                                grid_token,
+                                `reviews:match_new`,
+                                'send',
+                            ),
+                        );
+                        delKeysSet.add(
+                            cacheService.keys.persons_grid_exclude_send_receive(
+                                grid_token,
+                                `reviews:match_new`,
+                                'receive',
+                            ),
+                        );
+
+                        for (let type of reviewTypes) {
+                            keysDelSorted.add(
+                                cacheService.keys.persons_grid_exclude_sorted_send_receive(
+                                    grid_token,
+                                    `reviews:${type}`,
+                                    'send',
+                                ),
+                            );
+
+                            keysDelSorted.add(
+                                cacheService.keys.persons_grid_exclude_sorted_send_receive(
+                                    grid_token,
+                                    `reviews:${type}`,
+                                    'receive',
+                                ),
+                            );
+                        }
+
+                        //exclude matching with new members
+                        if (reviews_filters.reviews?.is_active) {
+                            if (reviews_filters.new && !reviews_filters.new.is_active) {
+                                if (reviews_filters.new.is_send) {
+                                    addKeysSet.add(
+                                        cacheService.keys.persons_grid_exclude_send_receive(
+                                            grid_token,
+                                            `reviews:match_new`,
+                                            'send',
+                                        ),
+                                    );
+                                }
+
+                                if (reviews_filters.new.is_receive) {
+                                    addKeysSet.add(
+                                        cacheService.keys.persons_grid_exclude_send_receive(
+                                            grid_token,
+                                            `reviews:match_new`,
+                                            'receive',
+                                        ),
+                                    );
+                                }
+                            }
+                        }
+
+                        for (let type of reviewTypes) {
+                            let rating = person.reviews?.[type];
+                            let filter = reviews_filters[type];
+
+                            //add own rating
+                            if (isNumeric(rating)) {
+                                keysAddSorted.add({
+                                    key: cacheService.keys.persons_grid_sorted(
+                                        grid_token,
+                                        `reviews:${type}`,
+                                    ),
+                                    score: rating.toString(),
+                                });
+                            }
+
+                            //main reviews filter active state
+                            if (!reviews_filters.reviews?.is_active) {
+                                continue;
+                            }
+
+                            if (filter?.is_active) {
+                                //use custom filter value or default
+                                let value = filter.filter_value || reviewsService.filters.default;
+
+                                if (!isNumeric(value)) {
+                                    continue;
+                                }
+
+                                if (filter.is_send) {
+                                    keysAddSorted.add({
+                                        key: cacheService.keys.persons_grid_exclude_sorted_send_receive(
+                                            grid_token,
+                                            `reviews:${type}`,
+                                            'send',
+                                        ),
+                                        score: value.toString(),
+                                    });
+                                }
+
+                                if (filter.is_receive) {
+                                    keysAddSorted.add({
+                                        key: cacheService.keys.persons_grid_exclude_sorted_send_receive(
+                                            grid_token,
+                                            `reviews:${type}`,
+                                            'receive',
+                                        ),
+                                        score: value.toString(),
+                                    });
+                                }
+                            }
+                        }
+
+                        resolve();
+                    } catch (e) {
+                        console.error(e);
+                        return reject(e);
+                    }
+                });
+            }
+
+            function updateModes() {
+                return new Promise(async (resolve, reject) => {
+                    try {
+                        let excluded_modes = await getPersonExcludedModes(person, filters);
+
+                        for (let mode of Object.values(modes.byId) || {}) {
+                            //person sets
+                            delKeysSet.add(
+                                cacheService.keys.persons_grid_set(grid_token, mode.token)
+                            );
+
+                            //filter sets
+                            delKeysSet.add(
+                                cacheService.keys.persons_grid_exclude_send_receive(
+                                    grid_token,
+                                    `modes:${mode.token}`,
+                                    'send',
+                                ),
+                            );
+
+                            delKeysSet.add(
+                                cacheService.keys.persons_grid_exclude_send_receive(
+                                    grid_token,
+                                    `modes:${mode.token}`,
+                                    'receive',
+                                ),
+                            );
+
+                            if (prev_grid_token) {
+                                delKeysSet.add(
+                                    cacheService.keys.persons_grid_set(prev_grid_token, mode.token)
+                                );
+
+                                delKeysSet.add(
+                                    cacheService.keys.persons_grid_exclude_send_receive(
+                                        prev_grid_token,
+                                        `modes:${mode.token}`,
+                                        'send',
+                                    ),
+                                );
+
+                                delKeysSet.add(
+                                    cacheService.keys.persons_grid_exclude_send_receive(
+                                        prev_grid_token,
+                                        `modes:${mode.token}`,
+                                        'receive',
+                                    ),
+                                );
+                            }
+                        }
+
+                        //person sets
+                        if(person.modes?.selected?.length) {
+                            for(let mode_token of person.modes.selected) {
+                                addKeysSet.add(
+                                    cacheService.keys.persons_grid_set(grid_token, mode_token)
+                                );
+                            }
+                        }
+
+                        for (let mode_token of excluded_modes.send) {
+                            addKeysSet.add(
+                                cacheService.keys.persons_grid_exclude_send_receive(
+                                    grid_token,
+                                    `modes:${mode_token}`,
+                                    'send',
+                                ),
+                            );
+                        }
+
+                        for (let mode_token of excluded_modes.receive) {
+                            addKeysSet.add(
+                                cacheService.keys.persons_grid_exclude_send_receive(
+                                    grid_token,
+                                    `modes:${mode_token}`,
+                                    'receive',
+                                ),
+                            );
+                        }
+                    } catch (e) {
+                        console.error(e);
+                    }
+
+                    resolve();
+                });
+            }
+
+            function updateVerifications() {
+                return new Promise(async (resolve, reject) => {
+                    try {
+                        const verificationTypes = ['in_person', 'linkedin'];
+
+                        if (person.is_verified_in_person) {
+                            addKeysSet.add(
+                                cacheService.keys.persons_grid_set(grid_token, `verified:in_person`),
+                            );
+                        } else {
+                            delKeysSet.add(
+                                cacheService.keys.persons_grid_set(grid_token, `verified:in_person`),
+                            );
+                        }
+
+                        if (person.is_verified_linkedin) {
+                            addKeysSet.add(
+                                cacheService.keys.persons_grid_set(grid_token, `verified:linkedin`),
+                            );
+                        } else {
+                            delKeysSet.add(
+                                cacheService.keys.persons_grid_set(grid_token, `verified:linkedin`),
+                            );
+                        }
+
+                        if (!filters?.verifications?.is_active) {
+                            delKeysSet.add(
+                                cacheService.keys.persons_grid_send_receive(
+                                    grid_token,
+                                    'verifications:in_person',
+                                    'send',
+                                ),
+                            );
+                            delKeysSet.add(
+                                cacheService.keys.persons_grid_send_receive(
+                                    grid_token,
+                                    'verifications:in_person',
+                                    'receive',
+                                ),
+                            );
+                            delKeysSet.add(
+                                cacheService.keys.persons_grid_send_receive(
+                                    grid_token,
+                                    'verifications:linkedin',
+                                    'send',
+                                ),
+                            );
+                            delKeysSet.add(
+                                cacheService.keys.persons_grid_send_receive(
+                                    grid_token,
+                                    'verifications:linkedin',
+                                    'receive',
+                                ),
+                            );
+                        } else {
+                            if (!filters?.verification_in_person?.is_active) {
+                                delKeysSet.add(
+                                    cacheService.keys.persons_grid_send_receive(
+                                        'verifications:in_person',
+                                        'send',
+                                    ),
+                                );
+                                delKeysSet.add(
+                                    cacheService.keys.persons_grid_send_receive(
+                                        'verifications:in_person',
+                                        'receive',
+                                    ),
+                                );
+                            } else {
+                                if (filters?.verification_in_person.is_send) {
+                                    addKeysSet.add(
+                                        cacheService.keys.persons_grid_send_receive(
+                                            grid_token,
+                                            'verifications:in_person',
+                                            'send',
+                                        ),
+                                    );
+                                } else {
+                                    delKeysSet.add(
+                                        cacheService.keys.persons_grid_send_receive(
+                                            grid_token,
+                                            'verifications:in_person',
+                                            'send',
+                                        ),
+                                    );
+                                }
+
+                                if (filters?.verification_in_person.is_receive) {
+                                    addKeysSet.add(
+                                        cacheService.keys.persons_grid_send_receive(
+                                            grid_token,
+                                            'verifications:in_person',
+                                            'receive',
+                                        ),
+                                    );
+                                } else {
+                                    delKeysSet.add(
+                                        cacheService.keys.persons_grid_send_receive(
+                                            grid_token,
+                                            'verifications:in_person',
+                                            'receive',
+                                        ),
+                                    );
+                                }
+                            }
+
+                            if (!filters?.verification_linkedin?.is_active) {
+                                delKeysSet.add(
+                                    cacheService.keys.persons_grid_send_receive(
+                                        'verifications:linkedin',
+                                        'send',
+                                    ),
+                                );
+                                delKeysSet.add(
+                                    cacheService.keys.persons_grid_send_receive(
+                                        'verifications:linkedin',
+                                        'receive',
+                                    ),
+                                );
+                            } else {
+                                if (filters?.verification_linkedin.is_send) {
+                                    addKeysSet.add(
+                                        cacheService.keys.persons_grid_send_receive(
+                                            grid_token,
+                                            'verifications:linkedin',
+                                            'send',
+                                        ),
+                                    );
+                                } else {
+                                    delKeysSet.add(
+                                        cacheService.keys.persons_grid_send_receive(
+                                            grid_token,
+                                            'verifications:linkedin',
+                                            'send',
+                                        ),
+                                    );
+                                }
+
+                                if (filters?.verification_linkedin.is_receive) {
+                                    addKeysSet.add(
+                                        cacheService.keys.persons_grid_send_receive(
+                                            grid_token,
+                                            'verifications:linkedin',
+                                            'receive',
+                                        ),
+                                    );
+                                } else {
+                                    delKeysSet.add(
+                                        cacheService.keys.persons_grid_send_receive(
+                                            grid_token,
+                                            'verifications:linkedin',
+                                            'receive',
+                                        ),
+                                    );
+                                }
+                            }
+                        }
+
+                        if (prev_grid_token) {
+                            for (let type of verificationTypes) {
+                                delKeysSet.add(
+                                    cacheService.keys.persons_grid_set(prev_grid_token, `verified:${type}`),
+                                );
+
+                                delKeysSet.add(
+                                    cacheService.keys.persons_grid_send_receive(
+                                        prev_grid_token,
+                                        `verifications:${type}`,
+                                        'send',
+                                    )
+                                );
+
+                                delKeysSet.add(
+                                    cacheService.keys.persons_grid_send_receive(
+                                        prev_grid_token,
+                                        `verifications:${type}`,
+                                        'receive',
+                                    ),
+                                );
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Error in updateVerifications:', e);
+                    }
+
+                    resolve();
+                });
+            }
+
+            function updateGenders() {
+                return new Promise(async (resolve, reject) => {
+                    try {
+                        let genderFilter = filters?.genders;
+
+                        let person_gender = genders.byId[person.gender_id];
+
+                        for (let gender_token in genders.byToken) {
+                            if (gender_token !== 'any') {
+                                if (prev_grid_token) {
+                                    delKeysSet.add(
+                                        cacheService.keys.persons_grid_set(
+                                            prev_grid_token,
+                                            `gender:${gender_token}`,
+                                        ),
+                                    );
+
+                                    delKeysSet.add(
+                                        cacheService.keys.persons_grid_exclude_send_receive(
+                                            prev_grid_token,
+                                            `genders:${gender_token}`,
+                                            'send',
+                                        ),
+                                    );
+                                    delKeysSet.add(
+                                        cacheService.keys.persons_grid_exclude_send_receive(
+                                            prev_grid_token,
+                                            `genders:${gender_token}`,
+                                            'receive',
+                                        ),
+                                    );
+                                }
+
+                                delKeysSet.add(
+                                    cacheService.keys.persons_grid_set(
+                                        grid_token,
+                                        `gender:${gender_token}`,
+                                    ),
+                                );
+                                delKeysSet.add(
+                                    cacheService.keys.persons_grid_exclude_send_receive(
+                                        grid_token,
+                                        `genders:${gender_token}`,
+                                        'send',
+                                    ),
+                                );
+                                delKeysSet.add(
+                                    cacheService.keys.persons_grid_exclude_send_receive(
+                                        grid_token,
+                                        `genders:${gender_token}`,
+                                        'receive',
+                                    ),
+                                );
+                            }
+                        }
+
+                        if (person_gender) {
+                            addKeysSet.add(
+                                cacheService.keys.persons_grid_set(
+                                    grid_token,
+                                    `gender:${person_gender.gender_token}`,
+                                ),
+                            );
+                        }
+
+                        //filters
+                        if (!genderFilter) {
+                            return resolve();
+                        }
+
+                        let anyId = genders.byToken['any']?.id;
+
+                        let anyItem = Object.values(genderFilter.items).find(
+                            (item) => item.gender_id === anyId,
+                        );
+
+                        let isAnySelected = anyItem?.is_active && !anyItem.is_negative && !anyItem.deleted;
+
+                        //if any is selected, do not add self to excluded gender sets
+                        if (!isAnySelected && genderFilter.is_active) {
+                            for (let gender_id in genders.byId) {
+                                let gender = genders.byId[gender_id];
+
+                                if (gender.gender_token === 'any') {
+                                    continue;
+                                }
+
+                                let genderItem = Object.values(genderFilter.items).find(
+                                    (item) => item.gender_id === parseInt(gender_id),
+                                );
+
+                                if (genderFilter.is_send) {
+                                    if (
+                                        !genderItem ||
+                                        !genderItem.is_active ||
+                                        genderItem.is_negative ||
+                                        genderItem.deleted
+                                    ) {
+                                        addKeysSet.add(
+                                            cacheService.keys.persons_grid_exclude_send_receive(
+                                                grid_token,
+                                                `genders:${gender.gender_token}`,
+                                                'send',
+                                            ),
+                                        );
+                                    }
+                                }
+
+                                if (genderFilter.is_receive) {
+                                    if (
+                                        !genderItem ||
+                                        !genderItem.is_active ||
+                                        genderItem.is_negative ||
+                                        genderItem.deleted
+                                    ) {
+                                        addKeysSet.add(
+                                            cacheService.keys.persons_grid_exclude_send_receive(
+                                                grid_token,
+                                                `genders:${gender.gender_token}`,
+                                                'receive',
+                                            ),
+                                        );
+                                    }
+                                }
+                            }
+                        }
+
+                        resolve();
+                    } catch (e) {
+                        console.error(e);
+                        return reject();
+                    }
+                });
+            }
+
+
+            if (person.prev_grid) {
+                prev_grid_token = person.prev_grid.token;
+                //todo
+            } else {
+                for(let filter_token of filter_tokens) {
+                    if (filter_token === 'online') {
+                        await updateOnline();
+                    }
+
+                    if (filter_token === 'location') {
+                        await updateLocation();
+                    }
+
+                    if (filter_token === 'modes') {
+                        await updateModes();
+                    }
+
+                    if (filter_token.startsWith('review')) {
+                        await updateReviews();
+                    }
+
+                    if (filter_token === 'verifications') {
+                        await updateVerifications();
+                    }
+
+                    if (filter_token === 'genders') {
+                        await updateGenders();
+                    }
+                }
+            }
+
+            if (delKeysSet.size) {
+                hasPipelineRem = true;
+
+                for (let key of delKeysSet) {
+                    pipelineRem.sRem(key, person.person_token);
+                }
+            }
+
+            if (keysDelSorted.size) {
+                hasPipelineRem = true;
+
+                for (let key of keysDelSorted) {
+                    pipelineRem.zRem(key, person.person_token);
+                }
+            }
+
+            if (addKeysSet.size) {
+                hasPipelineAdd = true;
+
+                for (let key of addKeysSet) {
+                    pipelineAdd.sAdd(key, person.person_token);
+                }
+            }
+
+            if (keysAddSorted.size) {
+                hasPipelineAdd = true;
+
+                for (let data of keysAddSorted) {
+                    pipelineAdd.zAdd(data.key, {
+                        value: person.person_token,
+                        score: data.score,
+                    });
+                }
+            }
+        }
+
+        if(hasPipelineRem) {
+            try {
+                await cacheService.execPipeline(pipelineRem);
+            } catch(e) {
+                console.error(e);
+            }
+        }
+
+        if(hasPipelineAdd) {
+            try {
+                await cacheService.execPipeline(pipelineAdd);
+            } catch(e) {
+                console.error(e);
+            }
+        }
+
+        resolve();
+    });
+}
+
 function getInterestSections() {
     return Object.values(filterMappings).filter(
         (section) => section.is_interests && !section.is_sub,
@@ -1928,8 +2738,9 @@ module.exports = {
     getFilters,
     getPersonFilters,
     getPersonFilterForKey,
-    updateGridSets,
     getInterestSections,
     getSchoolsWorkSections,
     getPersonalSections,
+    updateGridSets,
+    batchUpdateGridSets
 };

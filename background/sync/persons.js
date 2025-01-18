@@ -17,7 +17,7 @@ const { keys: systemKeys } = require('../../services/system');
 const { getGridLookup } = require('../../services/grid');
 const { batchInsert, batchUpdate } = require('../../services/db');
 const { getKidsAgeLookup } = require('../../services/modes');
-const { updateGridSets } = require('../../services/filters');
+const { updateGridSets, batchUpdateGridSets } = require('../../services/filters');
 
 let sync_name = systemKeys.sync.network.persons;
 let persons_grid_filters = ['online', 'location', 'modes', 'reviews', 'verifications', 'genders'];
@@ -191,7 +191,7 @@ function processPersons(network_id, persons) {
 
                         personsGrids[person.person_token] = {
                             person: cache_person_data,
-                            filters: persons_grid_filters
+                            filter_tokens: persons_grid_filters
                         };
                     } else if (person.updated > existingPerson.updated) {
                         person_data = {
@@ -227,31 +227,31 @@ function processPersons(network_id, persons) {
 
                         personsGrids[person.person_token] = {
                             person: cache_person_data,
-                            filters: [],
+                            filter_tokens: [],
                             prev_grid
                         }
 
                         if(person.is_online !== existingPerson.is_online) {
-                            personsGrids[person.person_token].filters.push('online');
+                            personsGrids[person.person_token].filter_tokens.push('online');
                         }
 
                         if(grid?.id !== prev_grid?.id) {
-                            personsGrids[person.person_token].filters.push('location');
+                            personsGrids[person.person_token].filter_tokens.push('location');
                         }
 
                         if(person.modes !== existingPerson.modes) {
-                            personsGrids[person.person_token].filters.push('modes');
+                            personsGrids[person.person_token].filter_tokens.push('modes');
                         }
 
-                        personsGrids[person.person_token].filters.push('reviews');
+                        personsGrids[person.person_token].filter_tokens.push('reviews');
 
                         if(person.is_verified_in_person !== existingPerson.is_verified_in_person ||
                             person.is_verified_linkedin !== existingPerson.is_verified_linkedin) {
-                            personsGrids[person.person_token].filters.push('verifications');
+                            personsGrids[person.person_token].filter_tokens.push('verifications');
                         }
 
                         if(person.gender_id !== existingPerson.gender_id) {
-                            personsGrids[person.person_token].filters.push('genders');
+                            personsGrids[person.person_token].filter_tokens.push('genders');
                         }
                     }
 
@@ -297,26 +297,28 @@ function processPersons(network_id, persons) {
 
                 let t = timeNow();
 
-                for(let person_token in personsGrids) {
-                    let data = personsGrids[person_token];
+                await batchUpdateGridSets(Object.values(personsGrids))
 
-                    if(data.prev_grid) {
-                        try {
-                            await updateGridSets(data.person, null, null, data.prev_grid.token);
-                        } catch(e) {
-                            console.error(e);
-                        }
-
-                    } else {
-                        for(let filter of data.filters) {
-                            try {
-                                await updateGridSets(data.person, null, filter);
-                            } catch(e) {
-                                console.error(e);
-                            }
-                        }
-                    }
-                }
+                // for(let person_token in personsGrids) {
+                //     let data = personsGrids[person_token];
+                //
+                //     if(data.prev_grid) {
+                //         try {
+                //             await updateGridSets(data.person, null, null, data.prev_grid.token);
+                //         } catch(e) {
+                //             console.error(e);
+                //         }
+                //
+                //     } else {
+                //         for(let filter of data.filter_tokens) {
+                //             try {
+                //                 await updateGridSets(data.person, null, filter);
+                //             } catch(e) {
+                //                 console.error(e);
+                //             }
+                //         }
+                //     }
+                // }
 
                 console.log({
                     time: timeNow() - t
