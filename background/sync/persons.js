@@ -17,10 +17,12 @@ const { keys: systemKeys } = require('../../services/system');
 const { getGridLookup } = require('../../services/grid');
 const { batchInsert, batchUpdate } = require('../../services/db');
 const { getKidsAgeLookup } = require('../../services/modes');
+const { updateGridSets } = require('../../services/filters');
 
-const sync_name = systemKeys.sync.network.persons;
-
+let sync_name = systemKeys.sync.network.persons;
+let persons_grid_filters = ['online', 'location', 'modes', 'reviews', 'verifications', 'genders'];
 let batch_process = 1000;
+let defaultTimeout = 10000;
 
 function processPersons(network_id, persons) {
     function preparePersonCache(new_data, prev_data, params = {}) {
@@ -41,6 +43,16 @@ function processPersons(network_id, persons) {
             selected: JSON.parse(new_data.modes) || []
         };
 
+        //reviews
+        person_data.reviews = {
+            count: person_data.reviews_count || 0,
+            safety: person_data.rating_safety,
+            trust: person_data.rating_trust,
+            timeliness: person_data.rating_timeliness,
+            friendliness: person_data.rating_friendliness,
+            fun: person_data.rating_fun,
+        };
+
         if(prev_data) {
             let prev_person_data = structuredClone(prev_data);
 
@@ -57,8 +69,6 @@ function processPersons(network_id, persons) {
                 }
             }
         }
-
-        person_data = cacheService.prepareSetHash(person_data);
 
         return person_data;
     }
@@ -178,7 +188,12 @@ function processPersons(network_id, persons) {
                             grid
                         });
 
-                        pipeline.hSet(cacheService.keys.person(person.person_token), cache_person_data);
+                        pipeline.hSet(cacheService.keys.person(person.person_token), cacheService.prepareSetHash(cache_person_data));
+
+                        personsGrids[person.person_token] = {
+                            person: cache_person_data,
+                            filters: persons_grid_filters
+                        };
                     } else if (person.updated > existingPerson.updated) {
                         person_data = {
                             id: existingPerson.id,
@@ -209,7 +224,36 @@ function processPersons(network_id, persons) {
                             prev_grid
                         });
 
-                        pipeline.hSet(cacheService.keys.person(person.person_token), cache_person_data);
+                        pipeline.hSet(cacheService.keys.person(person.person_token), cacheService.prepareSetHash(cache_person_data));
+
+                        personsGrids[person.person_token] = {
+                            person: cache_person_data,
+                            filters: [],
+                            prev_grid
+                        }
+
+                        if(person.is_online !== existingPerson.is_online) {
+                            personsGrids[person.person_token].filters.push('online');
+                        }
+
+                        if(grid?.id !== prev_grid?.id) {
+                            personsGrids[person.person_token].filters.push('location');
+                        }
+
+                        if(person.modes !== existingPerson.modes) {
+                            personsGrids[person.person_token].filters.push('modes');
+                        }
+
+                        personsGrids[person.person_token].filters.push('reviews');
+
+                        if(person.is_verified_in_person !== existingPerson.is_verified_in_person ||
+                            person.is_verified_linkedin !== existingPerson.is_verified_linkedin) {
+                            personsGrids[person.person_token].filters.push('verifications');
+                        }
+
+                        if(person.gender_id !== existingPerson.gender_id) {
+                            personsGrids[person.person_token].filters.push('genders');
+                        }
                     }
 
                     //update persons networks
@@ -247,6 +291,33 @@ function processPersons(network_id, persons) {
                 if(personsToInsert.length || personsToUpdate.length) {
                     await cacheService.execPipeline(pipeline);
                 }
+
+                let t = timeNow();
+
+                for(let person_token in personsGrids) {
+                    let data = personsGrids[person_token];
+
+                    if(data.prev_grid) {
+                        try {
+                            await updateGridSets(data.person, null, null, data.prev_grid.token);
+                        } catch(e) {
+                            console.error(e);
+                        }
+
+                    } else {
+                        for(let filter of data.filters) {
+                            try {
+                                await updateGridSets(data.person, null, filter);
+                            } catch(e) {
+                                console.error(e);
+                            }
+                        }
+                    }
+                }
+
+                console.log({
+                    time: timeNow() - t
+                });
             }
 
             console.log({
@@ -586,7 +657,11 @@ function syncPersons() {
                         continue;
                     }
 
-                    let response = await axios.post(sync_url, {
+                    const axiosInstance = axios.create({
+                        timeout: defaultTimeout
+                    });
+
+                    let response = await axiosInstance.post(sync_url, {
                         secret_key: secret_key_to_qry.secret_key_to,
                         network_token: network_self.network_token,
                         data_since: timestamps.last,
@@ -602,7 +677,7 @@ function syncPersons() {
                     //handle paging, ~10,000 results
                     while (response.data.last_person_token) {
                         try {
-                            response = await axios.post(sync_url, {
+                            response = await axiosInstance.post(sync_url, {
                                 secret_key: secret_key_to_qry.secret_key_to,
                                 network_token: network_self.network_token,
                                 last_person_token: response.data.last_person_token,
@@ -704,7 +779,11 @@ function syncPersonsModes() {
 
                     let sync_url = getURL(network.api_domain, joinPaths('sync', 'persons/modes'));
 
-                    let response = await axios.post(sync_url, {
+                    const axiosInstance = axios.create({
+                        timeout: defaultTimeout
+                    });
+
+                    let response = await axiosInstance.post(sync_url, {
                         secret_key: secret_key_to_qry.secret_key_to,
                         network_token: network_self.network_token,
                         data_since: timestamps.last,
@@ -720,7 +799,7 @@ function syncPersonsModes() {
                     // Handle pagination
                     while (response.data.last_person_token) {
                         try {
-                            response = await axios.post(sync_url, {
+                            response = await axiosInstance.post(sync_url, {
                                 secret_key: secret_key_to_qry.secret_key_to,
                                 network_token: network_self.network_token,
                                 last_person_token: response.data.last_person_token,

@@ -882,6 +882,13 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                     }
                 }
 
+                //new person
+                if (person.is_new) {
+                    addKeysSet.add(
+                        cacheService.keys.persons_grid_set(grid_token, `is_new_person`),
+                    );
+                }
+
                 //remove self from previous exclude keys
                 delKeysSet.add(
                     cacheService.keys.persons_grid_exclude_send_receive(
@@ -1252,13 +1259,15 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                         delKeysSet.add(
                             cacheService.keys.persons_grid_set(prev_grid_token, `verified:${type}`),
                         );
+
                         delKeysSet.add(
                             cacheService.keys.persons_grid_send_receive(
                                 prev_grid_token,
                                 `verifications:${type}`,
                                 'send',
-                            ),
+                            )
                         );
+
                         delKeysSet.add(
                             cacheService.keys.persons_grid_send_receive(
                                 prev_grid_token,
@@ -1412,12 +1421,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
         });
     }
 
-    function updateMultiFilter(
-        sectionKey,
-        getOptions,
-        default_importance = 5,
-        importance_threshold = 8,
-    ) {
+    function updateMultiFilter(sectionKey, getOptions, default_importance = 5, importance_threshold = 8) {
         return new Promise(async (resolve, reject) => {
             try {
                 let section_options = await getOptions();
@@ -1553,12 +1557,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
         });
     }
 
-    function updateSingleFilter(
-        sectionKey,
-        getOptions,
-        default_importance = 5,
-        importance_threshold = 8,
-    ) {
+    function updateSingleFilter(sectionKey, getOptions, default_importance = 5, importance_threshold = 8) {
         return new Promise(async (resolve, reject) => {
             try {
                 let section_options = await getOptions();

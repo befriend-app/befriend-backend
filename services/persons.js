@@ -2,7 +2,6 @@ const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 const { timeNow } = require('../services/shared');
 const { updateGridSets } = require('../services/filters');
-const { result } = require('lodash');
 const { getGridLookup } = require('./grid');
 
 module.exports = {
@@ -105,6 +104,7 @@ module.exports = {
                         is_active: kid.is_active,
                     };
                 }
+
                 person.modes.kids = kids_dict;
 
                 //add grid

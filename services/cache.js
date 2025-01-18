@@ -1,5 +1,4 @@
 const redis = require('redis');
-const { IBM_LZ77 } = require('adm-zip/util/constants');
 const { isNumeric } = require('./shared');
 
 const standardKeys = {
