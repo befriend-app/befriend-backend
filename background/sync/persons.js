@@ -790,7 +790,7 @@ function syncPersonsModes() {
                     await processPersonsModes(network.id, response.data.persons_modes);
 
                     // Handle pagination
-                    while (response.data.last_person_token) {
+                    while (response.data.pagination_updated) {
                         try {
                             response = await axiosInstance.get(sync_url, {
                                 params: {

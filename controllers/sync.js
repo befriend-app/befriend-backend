@@ -254,7 +254,7 @@ module.exports = {
 
                 if (pagination_updated) {
                     partner_qry = partner_qry.where('pp.updated', '<=', pagination_updated);
-                    kids_qry = kids_qry.where('pp.updated', '<', pagination_updated);
+                    kids_qry = kids_qry.where('pp.updated', '<=', pagination_updated);
                 }
 
                 let [partners, kids] = await Promise.all([
@@ -399,7 +399,7 @@ module.exports = {
                     }
 
                     if (pagination_updated) {
-                        qryDict[table] = qryDict[table].where('t.updated', '<', pagination_updated);
+                        qryDict[table] = qryDict[table].where('t.updated', '<=', pagination_updated);
                     }
                 }
 
@@ -423,7 +423,7 @@ module.exports = {
                 }
 
                 if (pagination_updated) {
-                    qryDict.sections = qryDict.sections.where('t.updated', '<', pagination_updated);
+                    qryDict.sections = qryDict.sections.where('t.updated', '<=', pagination_updated);
                 }
 
                 for(let table in qryDict) {

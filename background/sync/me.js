@@ -27,7 +27,7 @@ function processMe(network_id, persons) {
         try {
             let conn = await dbService.conn();
 
-            let me_sections = await getAllSections(true);
+            let sectionsLookup = await getAllSections(true);
 
             //batch process/insert/update
             let batches = [];
@@ -75,17 +75,46 @@ function processMe(network_id, persons) {
                 }
 
                 //Existing data for all tables
-                const existingData = {};
+                let existingData = {};
+                let existingDataLookup = {};
 
-                for (const table in batch_insert) {
+                for (let table in batch_insert) {
                     existingData[table] = await conn(table)
                         .whereIn('person_id', existingPersonsIds)
                         .select('*');
                 }
 
+                for(let table in existingData) {
+                    existingDataLookup[table] = {};
+                }
+
+                for(let item of existingData.persons_sections) {
+                    let person_token = personsIdTokenMap[item.person_id];
+
+                    if(!person_token) {
+                        console.warn("No person token");
+                        continue;
+                    }
+
+                    if(!(person_token in existingDataLookup.persons_sections)) {
+                        existingDataLookup.persons_sections[person_token] = {};
+                    }
+
+                    let db_item = sectionsLookup.byId[item.section_id];
+
+                    if(!db_item) {
+                        console.warn("No db item");
+                        continue;
+                    }
+
+                    existingDataLookup.persons_sections[person_token][db_item.token] = item;
+                }
+
                 // Process each person
                 for (let person of batch) {
-                    const existingPerson = personsLookup[person.person_token];
+                    let person_token = person.person_token;
+
+                    let existingPerson = personsLookup[person_token];
 
                     if (!existingPerson) {
                         continue;
@@ -93,13 +122,17 @@ function processMe(network_id, persons) {
 
                     if (person.sections) {
                         for (const [token, section] of Object.entries(person.sections)) {
-                            const existingSection = existingData.persons_sections.find(s =>
-                                s.person_id === existingPerson.id && s.token === token
-                            );
+                            let section_db = sectionsLookup.byKey[token];
+
+                            if(!section_db) {
+                                continue;
+                            }
+
+                            const existingSection = existingDataLookup.persons_sections[person_token]?.[token];
 
                             const sectionData = {
                                 person_id: existingPerson.id,
-                                section_id: await getSectionId(token),
+                                section_id: section_db.id,
                                 position: section.position,
                                 updated: section.updated,
                                 deleted: section.deleted
@@ -108,11 +141,11 @@ function processMe(network_id, persons) {
                             if (existingSection) {
                                 if (section.updated > existingSection.updated) {
                                     sectionData.id = existingSection.id;
-                                    batch_update.sections.push(sectionData);
+                                    batch_update.persons_sections.push(sectionData);
                                 }
                             } else {
                                 sectionData.created = timeNow();
-                                batch_insert.sections.push(sectionData);
+                                batch_insert.persons_sections.push(sectionData);
                             }
                         }
                     }
@@ -177,7 +210,7 @@ function processMe(network_id, persons) {
             return reject(e);
         }
 
-        return resolve();
+        resolve();
     });
 }
 
@@ -265,7 +298,7 @@ function syncMe() {
                     await processMe(network.id, response.data.persons);
 
                     //handle paging, ~10,000 results
-                    while (response.data.last_person_token) {
+                    while (response.data.pagination_updated) {
                         try {
                             response = await axiosInstance.get(sync_url, {
                                 params: {
