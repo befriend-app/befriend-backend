@@ -94,6 +94,7 @@ async function syncLanguagesCountries() {
         console.log('Sync top languages by country');
 
         let main_table = 'languages_countries_top';
+
         let added = 0;
         let updated = 0;
         let deleted = 0;
