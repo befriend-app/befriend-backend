@@ -297,28 +297,7 @@ function processPersons(network_id, persons) {
 
                 let t = timeNow();
 
-                await batchUpdateGridSets(Object.values(personsGrids))
-
-                // for(let person_token in personsGrids) {
-                //     let data = personsGrids[person_token];
-                //
-                //     if(data.prev_grid) {
-                //         try {
-                //             await updateGridSets(data.person, null, null, data.prev_grid.token);
-                //         } catch(e) {
-                //             console.error(e);
-                //         }
-                //
-                //     } else {
-                //         for(let filter of data.filter_tokens) {
-                //             try {
-                //                 await updateGridSets(data.person, null, filter);
-                //             } catch(e) {
-                //                 console.error(e);
-                //             }
-                //         }
-                //     }
-                // }
+                await batchUpdateGridSets(Object.values(personsGrids));
 
                 console.log({
                     time: timeNow() - t

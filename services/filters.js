@@ -2515,6 +2515,7 @@ function batchUpdateGridSets(persons) {
                                             'send',
                                         ),
                                     );
+
                                     delKeysSet.add(
                                         cacheService.keys.persons_grid_exclude_send_receive(
                                             prev_grid_token,
@@ -2530,6 +2531,7 @@ function batchUpdateGridSets(persons) {
                                         `gender:${gender_token}`,
                                     ),
                                 );
+
                                 delKeysSet.add(
                                     cacheService.keys.persons_grid_exclude_send_receive(
                                         grid_token,
@@ -2537,6 +2539,7 @@ function batchUpdateGridSets(persons) {
                                         'send',
                                     ),
                                 );
+
                                 delKeysSet.add(
                                     cacheService.keys.persons_grid_exclude_send_receive(
                                         grid_token,

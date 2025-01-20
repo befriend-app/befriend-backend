@@ -123,7 +123,7 @@ module.exports = {
             let base = tldts.parse(data.base_domain);
             let api = tldts.parse(data.api_domain);
 
-            if (base.hostname !== api.hostname) {
+            if (base.domain !== api.domain) {
                 res.json(
                     {
                         domain_mismatch: {
