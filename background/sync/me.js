@@ -14,9 +14,42 @@ const { getNetworkSelf } = require('../../services/network');
 const { keys: systemKeys } = require('../../services/system');
 const { batchInsert, batchUpdate } = require('../../services/db');
 const { getAllSections } = require('../../services/me');
+const sectionsData = require('../../services/sections_data');
 
 let batch_process = 1000;
 let defaultTimeout = 10000;
+
+let tableLookup = {};
+
+function getTableInfo(table_name) {
+    if(table_name in tableLookup) {
+        return tableLookup[table_name];
+    }
+
+    for(let k in sectionsData) {
+        let sectionData = sectionsData[k];
+
+        for(let t in sectionData.tables) {
+            let tableData = sectionData.tables[t];
+
+            if(tableData.user.name === table_name) {
+                let data = {
+                    section_key: k,
+                    table_key: t,
+                    is_favorable: tableData.isFavorable,
+                    source_table: tableData.data.name,
+                    col_id: tableData.user.cols.id,
+                    cache_key: sectionData.cacheKeys[t].byHash || null,
+                    cache_key_hash: sectionData.cacheKeys[t].byHashKey || null,
+                };
+
+                tableLookup[table_name] = data;
+
+                return data;
+            }
+        }
+    }
+}
 
 function processMe(network_id, persons) {
     return new Promise(async (resolve, reject) => {
@@ -28,6 +61,42 @@ function processMe(network_id, persons) {
             let conn = await dbService.conn();
 
             let sectionsLookup = await getAllSections(true);
+
+            let lookup_pipelines = {};
+            let schemaItemsLookup = {};
+
+            for(let person of persons) {
+                for(let section in person.me) {
+                    if(!(lookup_pipelines[section])) {
+                        lookup_pipelines[section] = cacheService.startPipeline();
+                    }
+
+                    let section_table = getTableInfo(section);
+
+                    let items = person.me[section];
+
+                    for(let token in items) {
+                        let item = items[token];
+
+                        if(section_table.cache_key) {
+                            lookup_pipelines[section].hGet(section_table.cache_key, item.token);
+                        }
+                    }
+                }
+            }
+
+            for(let section in lookup_pipelines) {
+                try {
+                     let results = await cacheService.execPipeline(lookup_pipelines[section]);
+
+                     for(let result of results) {
+                         result = JSON.parse(result);
+                         schemaItemsLookup[section][result.token] = result;
+                     }
+                } catch(e) {
+                    console.error(e);
+                }
+            }
 
             //batch process/insert/update
             let batches = [];

@@ -272,6 +272,11 @@ module.exports = {
         styles: {
             rowCols: 'cols-2',
         },
+        cacheKeys: {
+            instruments: {
+                byHash: cacheService.keys.instruments,
+            },
+        },
     },
     movies: {
         myStr: 'My Movies',
@@ -710,4 +715,21 @@ module.exports = {
             },
         },
     },
+    getSectionByTableName: function(tableName) {
+        for(let k in this) {
+            if(!this[k].tables) {
+                continue;
+            }
+
+            let sectionData = this[k];
+
+            for(let t in sectionData.tables) {
+                let tableData = sectionData.tables[t];
+
+                if(tableData.user.name === tableName) {
+                    return sectionData;
+                }
+            }
+        }
+    }
 };
