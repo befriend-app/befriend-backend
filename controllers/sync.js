@@ -48,7 +48,9 @@ module.exports = {
                         table_key: t,
                         is_favorable: tableData.isFavorable,
                         source_table: tableData.data.name,
-                        col_id: tableData.user.cols.id
+                        col_id: tableData.user.cols.id,
+                        col_secondary: tableData.user.cols.secondary || null,
+                        has_hash_token: !!(sectionData.cacheKeys?.[t].byHashKey)
                     }
                 }
             }
@@ -384,6 +386,14 @@ module.exports = {
                         select_cols.push('is_favorite', 'favorite_position');
                     }
 
+                    if(tableData.col_secondary) {
+                        select_cols.push(tableData.col_secondary);
+                    }
+
+                    if(tableData.has_hash_token) {
+                        select_cols.push('hash_token');
+                    }
+
                     qryDict[table] = conn('persons AS p')
                         .select(
                             select_cols
@@ -434,6 +444,8 @@ module.exports = {
                 let persons = {};
 
                 for(let table in qryDict) {
+                    let tableInfo = module.exports.getTableRelations(table);
+
                     let items = qryDict[table];
 
                     for(let item of items) {
@@ -459,21 +471,26 @@ module.exports = {
                                 persons[item.person_token].me[table] = {};
                             }
 
-                            let favorable = {};
-
-                            if(tableData.is_favorable) {
-                                favorable = {
-                                    is_favorite: item.is_favorite,
-                                    favorite_position: item.favorite_position
-                                }
-                            }
-
-                            persons[item.person_token].me[table][item.token] = {
+                            let itemData = {
                                 token: item.token,
                                 updated: item.updated,
-                                deleted: item.deleted,
-                                ...favorable
-                            };
+                                deleted: item.deleted
+                            }
+
+                            if(tableData.is_favorable) {
+                                itemData.is_favorite = item.is_favorite || null;
+                                itemData.favorite_position = item.favorite_position || null;
+                            }
+
+                            if(tableData.col_secondary) {
+                                itemData[tableData.col_secondary] = item[tableData.col_secondary];
+                            }
+
+                            if(tableData.has_hash_token) {
+                                itemData.hash_token = item.hash_token;
+                            }
+
+                            persons[item.person_token].me[table][item.token] = itemData;
                         }
                     }
                 }

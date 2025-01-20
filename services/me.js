@@ -380,7 +380,7 @@ function addSection(person_token, section_key) {
 
             let sections_dict = await getAllSections(true);
 
-            if (!(section_key in sections_dict.byKey)) {
+            if (!(section_key in sections_dict.byToken)) {
                 return reject('Invalid section key');
             }
 
@@ -402,7 +402,7 @@ function addSection(person_token, section_key) {
             //check if exists
             if (!(section_key in person_sections)) {
                 //add to db
-                let section_data = sections_dict.byKey[section_key];
+                let section_data = sections_dict.byToken[section_key];
 
                 let new_section = {
                     person_id: person.id,
@@ -544,7 +544,7 @@ function addSectionItem(person_token, section_key, table_key, item_token, hash_k
             }
 
             let sections_dict = await getAllSections(true);
-            let this_section = sections_dict.byKey[section_key];
+            let this_section = sections_dict.byToken[section_key];
 
             if (!this_section) {
                 return reject('Section not found');
@@ -1330,12 +1330,12 @@ function getAllSections(with_lookup) {
 
             let lookup = {
                 byId: {},
-                byKey: {}
+                byToken: {},
             }
 
             for (let section of all_me_sections) {
                 lookup.byId[section.id] = section;
-                lookup.byKey[section.section_key] = section;
+                lookup.byToken[section.section_key] = section;
             }
 
             resolve(lookup);
@@ -1368,8 +1368,8 @@ function getSections(person) {
             //all me sections
             let sections_dict = await getAllSections(true);
 
-            for (let key in sections_dict.byKey) {
-                let section = sections_dict.byKey[key];
+            for (let key in sections_dict.byToken) {
+                let section = sections_dict.byToken[key];
                 organized.all[key] = section;
                 organized.options[key] = section;
             }
@@ -1405,7 +1405,7 @@ function getSections(person) {
 
                 if (!wasDeleted) {
                     // Get the genders section data
-                    const gendersSection = sections_dict.byKey['genders'];
+                    const gendersSection = sections_dict.byToken['genders'];
 
                     if (gendersSection) {
                         let existing = await conn('persons_sections')
@@ -1441,7 +1441,7 @@ function getSections(person) {
             //add data options to active
             await mergeDataForActiveSections(person, person_sections);
 
-            for (let section of Object.values(sections_dict.byKey)) {
+            for (let section of Object.values(sections_dict.byToken)) {
                 let sectionActive = person_sections.active[section.section_key];
 
                 if (sectionActive && !sectionActive.deleted) {
@@ -1599,8 +1599,10 @@ function mergeDataForActiveSections(person, sections) {
                 if (section.items) {
                     for (let token in section.items) {
                         let item = section.items[token];
+
                         delete item.created;
                         delete item.updated;
+
                         if (item.deleted) {
                             delete section.items[token];
                         }
@@ -2662,7 +2664,9 @@ function getWork() {
             const roleItems = [];
             for (const [token, roleData] of Object.entries(roles)) {
                 // Skip if not visible
-                if (!roleData.is_visible || roleData.deleted) continue;
+                if (!roleData.is_visible || roleData.deleted) {
+                    continue;
+                }
 
                 // Add to items
                 roleItems.push({

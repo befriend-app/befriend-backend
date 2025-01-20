@@ -2,6 +2,7 @@ const axios = require('axios');
 
 const cacheService = require('../../services/cache');
 const dbService = require('../../services/db');
+const meService = require('../../services/me');
 
 const {
     loadScriptEnv,
@@ -39,8 +40,11 @@ function getTableInfo(table_name) {
                     is_favorable: tableData.isFavorable,
                     source_table: tableData.data.name,
                     col_id: tableData.user.cols.id,
-                    cache_key: sectionData.cacheKeys[t].byHash || null,
-                    cache_key_hash: sectionData.cacheKeys[t].byHashKey || null,
+                    col_token: tableData.user.cols.token || null,
+                    col_secondary: tableData.user.cols.secondary || null,
+                    cache_key: sectionData.cacheKeys?.[t].byHash || null,
+                    cache_key_hash: sectionData.cacheKeys?.[t].byHashKey || null,
+                    data_fn: sectionData.functions?.data || null
                 };
 
                 tableLookup[table_name] = data;
@@ -60,14 +64,17 @@ function processMe(network_id, persons) {
         try {
             let conn = await dbService.conn();
 
-            let sectionsLookup = await getAllSections(true);
-
-            let lookup_pipelines = {};
             let schemaItemsLookup = {};
+            let lookup_pipelines = {};
 
             for(let person of persons) {
                 for(let section in person.me) {
-                    if(!(lookup_pipelines[section])) {
+                    if(!(schemaItemsLookup[section])) {
+                        schemaItemsLookup[section] = {
+                            byId: {},
+                            byToken: {}
+                        };
+
                         lookup_pipelines[section] = cacheService.startPipeline();
                     }
 
@@ -80,10 +87,14 @@ function processMe(network_id, persons) {
 
                         if(section_table.cache_key) {
                             lookup_pipelines[section].hGet(section_table.cache_key, item.token);
+                        } else if(section_table.cache_key_hash) {
+                            lookup_pipelines[section].hGet(section_table.cache_key_hash(item.hash_token), item.token);
                         }
                     }
                 }
             }
+
+            schemaItemsLookup.persons_sections = await getAllSections(true);
 
             for(let section in lookup_pipelines) {
                 try {
@@ -91,10 +102,32 @@ function processMe(network_id, persons) {
 
                      for(let result of results) {
                          result = JSON.parse(result);
-                         schemaItemsLookup[section][result.token] = result;
+                         schemaItemsLookup[section].byId[result.id] = result;
+                         schemaItemsLookup[section].byToken[result.token] = result;
                      }
                 } catch(e) {
                     console.error(e);
+                }
+            }
+
+            //get remaining lookup data
+            for(let section in schemaItemsLookup) {
+                let tableInfo = getTableInfo(section);
+                let items = schemaItemsLookup[section].byId;
+
+                if(!Object.keys(items).length && tableInfo.data_fn) {
+                    try {
+                         let options = await meService[tableInfo.data_fn]({
+                             options_only: true
+                         });
+
+                         for(let option of options) {
+                             schemaItemsLookup[section].byId[option.id] = option;
+                             schemaItemsLookup[section].byToken[option.token] = option;
+                         }
+                    } catch(e) {
+                        console.error(e);
+                    }
                 }
             }
 
@@ -153,30 +186,37 @@ function processMe(network_id, persons) {
                         .select('*');
                 }
 
-                for(let table in existingData) {
-                    existingDataLookup[table] = {};
-                }
+                for(let table_name in existingData) {
+                    existingDataLookup[table_name] = {};
 
-                for(let item of existingData.persons_sections) {
-                    let person_token = personsIdTokenMap[item.person_id];
+                    let tableInfo = getTableInfo(table_name);
+                    let item_col = tableInfo?.col_id;
 
-                    if(!person_token) {
-                        console.warn("No person token");
-                        continue;
+                    if(table_name === 'persons_sections') {
+                        item_col = 'section_id';
                     }
 
-                    if(!(person_token in existingDataLookup.persons_sections)) {
-                        existingDataLookup.persons_sections[person_token] = {};
+                    for(let item of existingData[table_name]) {
+                        let person_token = personsIdTokenMap[item.person_id];
+
+                        if(!person_token) {
+                            console.warn("No person token");
+                            continue;
+                        }
+
+                        if(!(person_token in existingDataLookup[table_name])) {
+                            existingDataLookup[table_name][person_token] = {};
+                        }
+
+                        let db_item = schemaItemsLookup[table_name].byId[item[item_col]]
+
+                        if(!db_item) {
+                            console.warn("No db item");
+                            continue;
+                        }
+
+                        existingDataLookup[table_name][person_token][db_item.token] = item;
                     }
-
-                    let db_item = sectionsLookup.byId[item.section_id];
-
-                    if(!db_item) {
-                        console.warn("No db item");
-                        continue;
-                    }
-
-                    existingDataLookup.persons_sections[person_token][db_item.token] = item;
                 }
 
                 // Process each person
@@ -191,17 +231,18 @@ function processMe(network_id, persons) {
 
                     if (person.sections) {
                         for (const [token, section] of Object.entries(person.sections)) {
-                            let section_db = sectionsLookup.byKey[token];
+                            let db_item = schemaItemsLookup.persons_sections.byToken[token];
 
-                            if(!section_db) {
+                            if(!db_item) {
+                                console.warn("No section item");
                                 continue;
                             }
 
-                            const existingSection = existingDataLookup.persons_sections[person_token]?.[token];
+                            let existingSection = existingDataLookup.persons_sections[person_token]?.[token];
 
-                            const sectionData = {
+                            let sectionData = {
                                 person_id: existingPerson.id,
-                                section_id: section_db.id,
+                                section_id: db_item.id,
                                 position: section.position,
                                 updated: section.updated,
                                 deleted: section.deleted
@@ -220,26 +261,43 @@ function processMe(network_id, persons) {
                     }
 
                     // Process me data
-                    if (0 && person.me) {
-                        for (const [table, items] of Object.entries(person.me)) {
-                            const tableData = existingData[table];
+                    if (person.me) {
+                        for (let [table, items] of Object.entries(person.me)) {
+                            let tableInfo = getTableInfo(table);
 
-                            for (const [token, item] of Object.entries(items)) {
-                                const existingItem = tableData.find(t =>
-                                    t.person_id === existingPerson.id && t.token === token
-                                );
+                            for (let [token, item] of Object.entries(items)) {
+                                let db_item = schemaItemsLookup[table].byToken[item.token];
 
-                                const itemData = {
+                                if(!db_item) {
+                                    console.warn("No me item");
+                                    continue;
+                                }
+
+                                let existingItem = existingDataLookup[table][person_token]?.[token];
+
+                                let itemData = {
                                     person_id: existingPerson.id,
-                                    token: token,
                                     updated: item.updated,
                                     deleted: item.deleted
                                 };
 
-                                // Add favorable data if applicable
-                                if ('is_favorite' in item) {
-                                    itemData.is_favorite = item.is_favorite;
-                                    itemData.favorite_position = item.favorite_position;
+                                itemData[tableInfo.col_id] = db_item.id;
+
+                                if(tableInfo.col_token) {
+                                    itemData[tableInfo.col_token] = token;
+                                }
+
+                                if(tableInfo.is_favorable) {
+                                    itemData.is_favorite = item.is_favorite || null;
+                                    itemData.favorite_position = item.favorite_position || null;
+                                }
+
+                                if(tableInfo.col_secondary) {
+                                    itemData[tableInfo.col_secondary] = item[tableInfo.col_secondary];
+                                }
+
+                                if(item.hash_token) {
+                                    itemData.hash_token = item.hash_token;
                                 }
 
                                 if (existingItem) {
