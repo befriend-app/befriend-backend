@@ -222,23 +222,24 @@ function getMatches(me, params = {}) {
         return new Promise(async (resolve, reject) => {
             try {
                 // Build my interests object
-                let my_pipeline = cacheService.startPipeline();
-
                 let sections = interests_sections
                     .concat(schools_work_sections)
                     .concat(personal_sections);
 
                 for (let section of sections) {
                     myInterests.filters[section.token] = my_filters[section.token] || {};
-                    my_pipeline.hGet(cacheService.keys.person_sections(my_token), section.token);
                 }
 
-                let my_results = await cacheService.execMulti(my_pipeline);
+                let my_sections = await cacheService.hGetAllObj(cacheService.keys.person_sections(my_token));
 
-                let my_idx = 0;
+                for(let s in my_sections) {
+                    if(s === 'active') {
+                        continue;
+                    }
 
-                for (let section of sections) {
-                    myInterests.sections[section.token] = JSON.parse(my_results[my_idx++]);
+                    if(my_sections.active[s] && !my_sections.active[s].deleted) {
+                        myInterests.sections[s] = my_sections[s];
+                    }
                 }
 
                 //filter remaining person tokens for retrieval of person/filter data
@@ -264,8 +265,9 @@ function getMatches(me, params = {}) {
                     let person_section_key = cacheService.keys.person_sections(person_token);
                     let person_filters_key = cacheService.keys.person_filters(person_token);
 
+                    pipeline.hGetAll(person_section_key);
+
                     for (let section of sections) {
-                        pipeline.hGet(person_section_key, section.token);
                         pipeline.hGet(person_filters_key, section.token);
                     }
                 }
@@ -277,11 +279,28 @@ function getMatches(me, params = {}) {
                 let t = timeNow();
 
                 for (let person_token in personsInterests) {
+                    //person sections
+                    let person_sections = results[idx++];
+
+                    try {
+                        person_sections = cacheService.parseHashData(person_sections[person_token]);
+
+                        for(let s in person_sections) {
+                            if(s === 'active') {
+                                continue;
+                            }
+
+                            if(person_sections.active[s] && !person_sections.active[s].deleted) {
+                                personsInterests[person_token].sections[s] = person_sections[s];
+                            }
+                        }
+                    } catch(e) {
+                        console.error(e);
+                    }
+
+                    //person filters
                     for (let section of sections) {
                         try {
-                            personsInterests[person_token].sections[section.token] = JSON.parse(
-                                results[idx++],
-                            );
                             personsInterests[person_token].filters[section.token] = JSON.parse(
                                 results[idx++],
                             );
