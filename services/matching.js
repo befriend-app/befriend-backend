@@ -26,6 +26,7 @@ const { isPersonAvailable } = require('./availability');
 const { minAge, maxAge } = require('./persons');
 const { token } = require('morgan');
 const { getActivityPlace } = require('./places');
+const { getGridLookup } = require('./grid');
 
 const DEFAULT_DISTANCE_MILES = 20;
 const MAX_PERSONS_PROCESS = 1000;
@@ -42,7 +43,7 @@ let interestScoreThresholds = {
 function getMatches(me, params = {}) {
     let { activity, send_only, counts_only } = params;
 
-    let my_token, my_filters;
+    let my_token, my_filters, gridLookup;
     let am_online = me?.is_online;
     let am_available = false;
 
@@ -50,10 +51,6 @@ function getMatches(me, params = {}) {
 
     let person_tokens = {};
     let personsInterests = {};
-
-    let gridsLookup = {
-        byId: {},
-    };
 
     let exclude = {
         send: {},
@@ -319,6 +316,8 @@ function getMatches(me, params = {}) {
                     return reject('Grid token required');
                 }
 
+                neighbor_grid_tokens.push(my_grid_token);
+
                 // choose location for grid tokens based on if we have a location provided
 
                 // default to user's current location
@@ -360,9 +359,9 @@ function getMatches(me, params = {}) {
                 let grids = await gridService.findNearby(location.lat, location.lon, max_distance);
 
                 for (let grid of grids) {
-                    gridsLookup.byId[grid.id] = grid;
-
-                    neighbor_grid_tokens.push(grid.token);
+                    if(grid.token !== my_grid_token) {
+                        neighbor_grid_tokens.push(grid.token);
+                    }
                 }
 
                 resolve();
@@ -388,7 +387,9 @@ function getMatches(me, params = {}) {
 
                 for (let grid_persons of results_persons) {
                     for (let token of grid_persons) {
-                        person_tokens[token] = true;
+                        if(token !== my_token) {
+                            person_tokens[token] = true;
+                        }
                     }
                 }
 
@@ -1073,12 +1074,12 @@ function getMatches(me, params = {}) {
                             try {
                                 distance_km = calculateDistanceMeters(
                                     {
-                                        lat: gridsLookup.byId[my_grid.id].center_lat,
-                                        lon: gridsLookup.byId[my_grid.id].center_lon,
+                                        lat: gridLookup.byId[my_grid.id].center_lat,
+                                        lon: gridLookup.byId[my_grid.id].center_lon,
                                     },
                                     {
-                                        lat: gridsLookup.byId[their_grid.id].center_lat,
-                                        lon: gridsLookup.byId[their_grid.id].center_lon,
+                                        lat: gridLookup.byId[their_grid.id].center_lat,
+                                        lon: gridLookup.byId[their_grid.id].center_lon,
                                     },
                                     true,
                                 );
@@ -1897,8 +1898,6 @@ function getMatches(me, params = {}) {
             receive: {},
         };
 
-        delete persons_not_excluded_after_stage_1[my_token];
-
         for (let person_token in persons_not_excluded_after_stage_1) {
             let included = false;
 
@@ -1968,7 +1967,6 @@ function getMatches(me, params = {}) {
     }
 
     return new Promise(async (resolve, reject) => {
-        let ts = timeNow();
         let memory_start = process.memoryUsage().heapTotal / 1024 / 1024;
 
         try {
@@ -1977,13 +1975,7 @@ function getMatches(me, params = {}) {
             }
 
             my_token = me.person_token;
-
-            //exclude sending/receiving to/from self
-            exclude.send[my_token] = true;
-
-            if (!send_only) {
-                exclude.receive[my_token] = true;
-            }
+            gridLookup = await getGridLookup();
 
             let t = timeNow();
 

@@ -40,6 +40,7 @@ function createFilterEntry(filter_id, props = {}) {
 
     // If props contain a reference to an existing filter, inherit its states
     const filterData = props.filterData ? structuredClone(props.filterData) : null;
+
     if (filterData) {
         delete props.filterData;
 

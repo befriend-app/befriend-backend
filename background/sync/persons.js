@@ -17,7 +17,7 @@ const { keys: systemKeys } = require('../../services/system');
 const { getGridLookup } = require('../../services/grid');
 const { batchInsert, batchUpdate } = require('../../services/db');
 const { getKidsAgeLookup } = require('../../services/modes');
-const { updateGridSets, batchUpdateGridSets } = require('../../services/filters');
+const { batchUpdateGridSets } = require('../../services/filters');
 
 let sync_name = systemKeys.sync.network.persons;
 let persons_grid_filters = ['online', 'location', 'modes', 'reviews', 'verifications', 'genders'];
@@ -191,7 +191,8 @@ function processPersons(network_id, persons) {
 
                         personsGrids[person.person_token] = {
                             person: cache_person_data,
-                            filter_tokens: persons_grid_filters
+                            filter_tokens: persons_grid_filters,
+                            grid
                         };
                     } else if (person.updated > existingPerson.updated) {
                         person_data = {
@@ -228,6 +229,7 @@ function processPersons(network_id, persons) {
                         personsGrids[person.person_token] = {
                             person: cache_person_data,
                             filter_tokens: [],
+                            grid,
                             prev_grid
                         }
 
@@ -293,15 +295,15 @@ function processPersons(network_id, persons) {
 
                 if(personsToInsert.length || personsToUpdate.length) {
                     await cacheService.execPipeline(pipeline);
+
+                    let t = timeNow();
+
+                    await batchUpdateGridSets(Object.values(personsGrids));
+
+                    console.log({
+                        grid_sets_time: timeNow() - t
+                    });
                 }
-
-                let t = timeNow();
-
-                await batchUpdateGridSets(Object.values(personsGrids));
-
-                console.log({
-                    time: timeNow() - t
-                });
             }
 
             console.log({
