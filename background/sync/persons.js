@@ -19,7 +19,6 @@ const { batchInsert, batchUpdate } = require('../../services/db');
 const { getKidsAgeLookup } = require('../../services/modes');
 const { batchUpdateGridSets } = require('../../services/filters');
 
-let sync_name = systemKeys.sync.network.persons;
 let persons_grid_filters = ['online', 'location', 'modes', 'reviews', 'verifications', 'genders'];
 let batch_process = 1000;
 let defaultTimeout = 10000;
@@ -580,6 +579,8 @@ function updatePersonsCount() {
 }
 
 function syncPersons() {
+    let sync_name = systemKeys.sync.network.persons;
+
     return new Promise(async (resolve, reject) => {
         let conn, networks, network_self;
 

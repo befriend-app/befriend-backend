@@ -302,7 +302,7 @@ module.exports = {
             genres: {
                 isFavorable: true,
                 data: {
-                    name: 'movies_genres',
+                    name: 'movie_genres',
                 },
                 user: {
                     name: 'persons_movie_genres',
@@ -488,6 +488,9 @@ module.exports = {
         tables: {
             teams: {
                 isFavorable: true,
+                data: {
+                    name: 'sports_teams',
+                },
                 user: {
                     name: 'persons_sports_teams',
                     cols: {
@@ -499,6 +502,9 @@ module.exports = {
             },
             leagues: {
                 isFavorable: true,
+                data: {
+                    name: 'sports_leagues',
+                },
                 user: {
                     name: 'persons_sports_leagues',
                     cols: {
@@ -510,6 +516,9 @@ module.exports = {
             },
             play: {
                 isFavorable: true,
+                data: {
+                    name: 'sports',
+                },
                 user: {
                     name: 'persons_sports_play',
                     cols: {
@@ -652,6 +661,9 @@ module.exports = {
         ],
         tables: {
             industries: {
+                data: {
+                    name: 'work_industries',
+                },
                 user: {
                     name: 'persons_industries',
                     cols: {
@@ -661,6 +673,9 @@ module.exports = {
                 },
             },
             roles: {
+                data: {
+                    name: 'work_roles',
+                },
                 user: {
                     name: 'persons_roles',
                     cols: {

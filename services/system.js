@@ -82,7 +82,8 @@ module.exports = {
             },
             network: {
                 persons: 'sync_persons',
-                persons_modes: 'sync_persons_modes'
+                persons_modes: 'sync_persons_modes',
+                persons_me: 'sync_persons_me',
             },
         },
         system: {},
