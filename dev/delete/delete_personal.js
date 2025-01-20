@@ -1,7 +1,7 @@
 const cacheService = require('../../services/cache');
 const { loadScriptEnv, isProdApp } = require('../../services/shared');
 const { keys: systemKeys } = require('../../services/system');
-const { getKeys, getKeysWithPrefix } = require('../../services/cache');
+const { getKeys } = require('../../services/cache');
 
 loadScriptEnv();
 
@@ -25,27 +25,15 @@ async function deleteDb() {
             connection: connection,
         });
 
-        //delete sync
-        let db_sync_keys = [];
-
-        for (let key of db_sync_keys) {
-            try {
-                await knex('sync').where('sync_process', key).delete();
-            } catch (e) {
-                console.error(e);
-            }
-        }
-
         let tables = [
-            'persons_sports_teams',
-            'persons_sports_leagues',
-            'persons_sports_play',
-            'sports_countries',
-            'sports_teams_leagues',
-            'sports_teams',
-            'sports_leagues_countries',
-            'sports_leagues',
-            'sports',
+            'life_stages',
+            'relationship_status',
+            'languages_countries_top',
+            'languages',
+            'politics',
+            'religions',
+            'drinking',
+            'smoking'
         ];
 
         for (let table of tables) {
@@ -62,25 +50,19 @@ async function deleteDb() {
 async function deleteRedis() {
     await cacheService.init();
 
-    let keys = await getKeysWithPrefix('sports:');
+    let keys = [cacheService.keys.life_stages, cacheService.keys.relationship_status,
+        cacheService.keys.languages, cacheService.keys.politics, cacheService.keys.religions,
+        cacheService.keys.drinking, cacheService.keys.smoking
+    ];
 
-    keys.push(
-        cacheService.keys.sports,
-        cacheService.keys.sports_countries,
-        cacheService.keys.sports_leagues,
-        cacheService.keys.sports_teams,
-    );
+    let languages_countries_keys = await getKeys(cacheService.keys.languages_country(''));
 
-    console.log({
-        keys: keys.length,
-    });
-
-    await cacheService.deleteKeys(keys);
+    await cacheService.deleteKeys(keys.concat(languages_countries_keys));
 }
 
-function main(is_me) {
+function main() {
     return new Promise(async (resolve, reject) => {
-        console.log('Delete: sports');
+        console.log('Delete: personal');
 
         if (isProdApp()) {
             console.error('App env: [prod]', 'exiting');
@@ -101,7 +83,7 @@ module.exports = {
 if (require.main === module) {
     (async function () {
         try {
-            await main(true);
+            await main();
             process.exit();
         } catch (e) {
             console.error(e);

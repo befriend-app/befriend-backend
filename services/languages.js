@@ -78,12 +78,12 @@ module.exports = {
 
                     // Get and apply country-specific top languages if country exists
                     if (countries.length) {
-                        let topLanguages = await conn('top_languages_countries AS tlc')
-                            .join('languages AS l', 'l.id', 'tlc.language_id')
-                            .where('tlc.country_id', countries[0].id)
-                            .whereNull('tlc.deleted')
-                            .select('l.id', 'tlc.sort_position')
-                            .orderBy('tlc.sort_position', 'asc');
+                        let topLanguages = await conn('languages_countries_top AS lct')
+                            .join('languages AS l', 'l.id', 'lct.language_id')
+                            .where('lct.country_id', countries[0].id)
+                            .whereNull('lct.deleted')
+                            .select('l.id', 'lct.sort_position')
+                            .orderBy('lct.sort_position', 'asc');
 
                         for (let lang of topLanguages) {
                             if (lang.id in languagesDict) {

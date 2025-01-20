@@ -40,9 +40,8 @@ function main(is_me) {
                 await knex(table).delete();
             }
 
-            let keys = await cacheService.getKeys(cacheService.keys.instrument('') + '*');
+            let keys = [];
 
-            //instruments
             keys.push(cacheService.keys.instruments);
             keys.push(cacheService.keys.instruments_common);
 

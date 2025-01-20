@@ -12,9 +12,11 @@ function main(is_me) {
         }
 
         let scripts = [
+            'delete_filters',
             'delete_me_all',
             'delete_activity_types',
             'delete_persons',
+            'delete_personal',
             'delete_open_locations',
             'delete_places',
         ];
