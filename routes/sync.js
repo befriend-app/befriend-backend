@@ -4,7 +4,7 @@ const syncController = require('../controllers/sync');
 
 router.use(require('../middleware/sync'));
 
-router.post('/persons', function (req, res, next) {
+router.get('/persons', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await syncController.syncPersons(req, res);
@@ -16,7 +16,7 @@ router.post('/persons', function (req, res, next) {
     });
 });
 
-router.post('/persons/modes', function (req, res, next) {
+router.get('/persons/modes', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await syncController.syncPersonsModes(req, res);

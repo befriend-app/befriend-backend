@@ -179,14 +179,7 @@ function addKid(person_token) {
     });
 }
 
-function updateKid(
-    person_token,
-    kid_token,
-    age_token = null,
-    gender_token = null,
-    is_select = null,
-    is_active = null,
-) {
+function updateKid(person_token, kid_token, age_token = null, gender_token = null, is_select = null, is_active = null) {
     return new Promise(async (resolve, reject) => {
         try {
             let cache_key = cacheService.keys.person(person_token);

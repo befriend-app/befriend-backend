@@ -3,8 +3,8 @@ const cacheService = require('../services/cache');
 
 module.exports = function (req, res, next) {
     return new Promise(async (resolve, reject) => {
-        let network_token = req.body.network_token;
-        let secret_key = req.body.secret_key;
+        let network_token = req.body.network_token || req.query.network_token;
+        let secret_key = req.body.secret_key || req.query.secret_key;
 
         try {
             if (!network_token) {

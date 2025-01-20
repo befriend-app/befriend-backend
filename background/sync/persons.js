@@ -647,11 +647,13 @@ function syncPersons() {
                         timeout: defaultTimeout
                     });
 
-                    let response = await axiosInstance.post(sync_url, {
-                        secret_key: secret_key_to_qry.secret_key_to,
-                        network_token: network_self.network_token,
-                        data_since: timestamps.last,
-                        request_sent: timeNow(),
+                    let response = await axiosInstance.get(sync_url, {
+                        params: {
+                            secret_key: secret_key_to_qry.secret_key_to,
+                            network_token: network_self.network_token,
+                            data_since: timestamps.last,
+                            request_sent: timeNow(),
+                        }
                     });
 
                     if (response.status !== 202) {
@@ -663,12 +665,14 @@ function syncPersons() {
                     //handle paging, ~10,000 results
                     while (response.data.last_person_token) {
                         try {
-                            response = await axiosInstance.post(sync_url, {
-                                secret_key: secret_key_to_qry.secret_key_to,
-                                network_token: network_self.network_token,
-                                last_person_token: response.data.last_person_token,
-                                prev_data_since: response.data.prev_data_since,
-                                request_sent: timeNow(),
+                            response = await axiosInstance.get(sync_url, {
+                                params: {
+                                    secret_key: secret_key_to_qry.secret_key_to,
+                                    network_token: network_self.network_token,
+                                    last_person_token: response.data.last_person_token,
+                                    prev_data_since: response.data.prev_data_since,
+                                    request_sent: timeNow(),
+                                }
                             });
 
                             if (response.status !== 202) {
@@ -769,11 +773,13 @@ function syncPersonsModes() {
                         timeout: defaultTimeout
                     });
 
-                    let response = await axiosInstance.post(sync_url, {
-                        secret_key: secret_key_to_qry.secret_key_to,
-                        network_token: network_self.network_token,
-                        data_since: timestamps.last,
-                        request_sent: timeNow()
+                    let response = await axiosInstance.get(sync_url, {
+                        params: {
+                            secret_key: secret_key_to_qry.secret_key_to,
+                            network_token: network_self.network_token,
+                            data_since: timestamps.last,
+                            request_sent: timeNow()
+                        }
                     });
 
                     if (response.status !== 202) {
@@ -785,12 +791,14 @@ function syncPersonsModes() {
                     // Handle pagination
                     while (response.data.last_person_token) {
                         try {
-                            response = await axiosInstance.post(sync_url, {
-                                secret_key: secret_key_to_qry.secret_key_to,
-                                network_token: network_self.network_token,
-                                last_person_token: response.data.last_person_token,
-                                prev_data_since: response.data.prev_data_since,
-                                request_sent: timeNow()
+                            response = await axiosInstance.get(sync_url, {
+                                params: {
+                                    secret_key: secret_key_to_qry.secret_key_to,
+                                    network_token: network_self.network_token,
+                                    last_person_token: response.data.last_person_token,
+                                    prev_data_since: response.data.prev_data_since,
+                                    request_sent: timeNow()
+                                }
                             });
 
                             if (response.status !== 202) {
