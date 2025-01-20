@@ -850,6 +850,8 @@ function main() {
 
     return new Promise(async (resolve, reject) => {
         try {
+            await cacheService.init();
+
             await syncPersons();
             await syncPersonsModes();
             await updatePersonsCount();

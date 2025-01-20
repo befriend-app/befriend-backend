@@ -368,11 +368,6 @@ function addSection(person_token, section_key) {
             return reject('Person and section key required');
         }
 
-        let sections_dict = {
-            byId: {},
-            byKey: {},
-        };
-
         try {
             person = await getPerson(person_token);
 
@@ -383,12 +378,7 @@ function addSection(person_token, section_key) {
             let conn = await dbService.conn();
             let cache_key = cacheService.keys.person_sections(person.person_token);
 
-            let all_sections = await getAllSections();
-
-            for (let section of all_sections) {
-                sections_dict.byId[section.id] = section;
-                sections_dict.byKey[section.section_key] = section;
-            }
+            let sections_dict = await getAllSections(true);
 
             if (!(section_key in sections_dict.byKey)) {
                 return reject('Invalid section key');
@@ -413,6 +403,7 @@ function addSection(person_token, section_key) {
             if (!(section_key in person_sections)) {
                 //add to db
                 let section_data = sections_dict.byKey[section_key];
+
                 let new_section = {
                     person_id: person.id,
                     section_id: section_data.id,
@@ -472,10 +463,6 @@ function deleteSection(person_token, section_key) {
             return reject('Person and section key required');
         }
 
-        let sections_dict = {
-            byKey: {},
-        };
-
         try {
             let person = await getPerson(person_token);
 
@@ -485,12 +472,6 @@ function deleteSection(person_token, section_key) {
 
             let conn = await dbService.conn();
             let cache_key = cacheService.keys.person_sections(person.person_token);
-
-            let all_sections = await getAllSections();
-
-            for (let section of all_sections) {
-                sections_dict.byKey[section.section_key] = section;
-            }
 
             let person_sections = await cacheService.hGetItem(cache_key, 'active');
 
@@ -562,8 +543,8 @@ function addSectionItem(person_token, section_key, table_key, item_token, hash_k
                 return reject('No person found');
             }
 
-            let me_sections = await getAllSections();
-            let this_section = me_sections.find((section) => section.section_key === section_key);
+            let sections_dict = await getAllSections(true);
+            let this_section = sections_dict.byKey[section_key];
 
             if (!this_section) {
                 return reject('Section not found');
@@ -1324,7 +1305,7 @@ function getPersonSectionItems(person, section_key) {
     });
 }
 
-function getAllSections() {
+function getAllSections(with_lookup) {
     return new Promise(async (resolve, reject) => {
         let me_sections_cache_key = cacheService.keys.me_sections;
 
@@ -1343,7 +1324,21 @@ function getAllSections() {
                 }
             }
 
-            resolve(all_me_sections);
+            if(!with_lookup) {
+                return resolve(all_me_sections);
+            }
+
+            let lookup = {
+                byId: {},
+                byKey: {}
+            }
+
+            for (let section of all_me_sections) {
+                lookup.byId[section.id] = section;
+                lookup.byKey[section.section_key] = section;
+            }
+
+            resolve(lookup);
         } catch (e) {
             console.error(e);
             return reject();
@@ -1359,12 +1354,6 @@ function getSections(person) {
 
         //options, active, data
 
-        //lookup dict
-        let me_dict = {
-            byId: {},
-            byKey: {},
-        };
-
         //return object
         let organized = {
             all: {},
@@ -1377,14 +1366,12 @@ function getSections(person) {
             let cache_key = cacheService.keys.person_sections(person.person_token);
 
             //all me sections
-            let all_me_sections = await getAllSections();
+            let sections_dict = await getAllSections(true);
 
-            for (let section of all_me_sections) {
-                me_dict.byId[section.id] = section;
-                me_dict.byKey[section.section_key] = section;
-
-                organized.all[section.section_key] = section;
-                organized.options[section.section_key] = section;
+            for (let key in sections_dict.byKey) {
+                let section = sections_dict.byKey[key];
+                organized.all[key] = section;
+                organized.options[key] = section;
             }
 
             //person sections
@@ -1398,7 +1385,7 @@ function getSections(person) {
                     .orderBy('position', 'asc');
 
                 for (let section of sections_qry) {
-                    let section_data = me_dict.byId[section.section_id];
+                    let section_data = sections_dict.byId[section.section_id];
 
                     sections[section_data.section_key] = section;
                 }
@@ -1418,7 +1405,7 @@ function getSections(person) {
 
                 if (!wasDeleted) {
                     // Get the genders section data
-                    const gendersSection = me_dict.byKey['genders'];
+                    const gendersSection = sections_dict.byKey['genders'];
 
                     if (gendersSection) {
                         let existing = await conn('persons_sections')
@@ -1454,7 +1441,7 @@ function getSections(person) {
             //add data options to active
             await mergeDataForActiveSections(person, person_sections);
 
-            for (let section of all_me_sections) {
+            for (let section of Object.values(sections_dict.byKey)) {
                 let sectionActive = person_sections.active[section.section_key];
 
                 if (sectionActive && !sectionActive.deleted) {

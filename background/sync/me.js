@@ -13,6 +13,7 @@ const {
 const { getNetworkSelf } = require('../../services/network');
 const { keys: systemKeys } = require('../../services/system');
 const { batchInsert, batchUpdate } = require('../../services/db');
+const { getAllSections } = require('../../services/me');
 
 let batch_process = 1000;
 let defaultTimeout = 10000;
@@ -26,6 +27,8 @@ function processMe(network_id, persons) {
         try {
             let conn = await dbService.conn();
 
+            let me_sections = await getAllSections(true);
+
             //batch process/insert/update
             let batches = [];
 
@@ -38,20 +41,31 @@ function processMe(network_id, persons) {
             for (let batch of batches) {
                 let pipeline = cacheService.startPipeline();
 
+                //setup table inserts/updates
                 let batch_insert = {
+                    persons_sections: []
                 };
 
                 let batch_update = {
+                    persons_sections: []
+                };
+
+                for(let person of batch) {
+                    for(let table in person.me) {
+                        batch_insert[table] = [];
+                        batch_update[table] = [];
+                    }
                 }
 
-                let batchPersonTokens = batch.map(p => p.person_token);
+                const batchPersonTokens = batch.map(p => p.person_token);
 
-                let existingPersons = await conn('persons')
+                const existingPersons = await conn('persons')
                     .whereIn('person_token', batchPersonTokens)
                     .select('id', 'person_token', 'updated');
 
-                let existingPersonsIds = existingPersons.map(p => p.id);
+                const existingPersonsIds = existingPersons.map(p => p.id);
 
+                //lookup maps
                 let personsIdTokenMap = {};
                 let personsLookup = {};
 
@@ -60,15 +74,99 @@ function processMe(network_id, persons) {
                     personsIdTokenMap[person.id] = person.person_token;
                 }
 
+                //Existing data for all tables
+                const existingData = {};
+
+                for (const table in batch_insert) {
+                    existingData[table] = await conn(table)
+                        .whereIn('person_id', existingPersonsIds)
+                        .select('*');
+                }
+
+                // Process each person
                 for (let person of batch) {
                     const existingPerson = personsLookup[person.person_token];
 
                     if (!existingPerson) {
                         continue;
                     }
+
+                    if (person.sections) {
+                        for (const [token, section] of Object.entries(person.sections)) {
+                            const existingSection = existingData.persons_sections.find(s =>
+                                s.person_id === existingPerson.id && s.token === token
+                            );
+
+                            const sectionData = {
+                                person_id: existingPerson.id,
+                                section_id: await getSectionId(token),
+                                position: section.position,
+                                updated: section.updated,
+                                deleted: section.deleted
+                            };
+
+                            if (existingSection) {
+                                if (section.updated > existingSection.updated) {
+                                    sectionData.id = existingSection.id;
+                                    batch_update.sections.push(sectionData);
+                                }
+                            } else {
+                                sectionData.created = timeNow();
+                                batch_insert.sections.push(sectionData);
+                            }
+                        }
+                    }
+
+                    // Process me data
+                    if (0 && person.me) {
+                        for (const [table, items] of Object.entries(person.me)) {
+                            const tableData = existingData[table];
+
+                            for (const [token, item] of Object.entries(items)) {
+                                const existingItem = tableData.find(t =>
+                                    t.person_id === existingPerson.id && t.token === token
+                                );
+
+                                const itemData = {
+                                    person_id: existingPerson.id,
+                                    token: token,
+                                    updated: item.updated,
+                                    deleted: item.deleted
+                                };
+
+                                // Add favorable data if applicable
+                                if ('is_favorite' in item) {
+                                    itemData.is_favorite = item.is_favorite;
+                                    itemData.favorite_position = item.favorite_position;
+                                }
+
+                                if (existingItem) {
+                                    if (item.updated > existingItem.updated) {
+                                        itemData.id = existingItem.id;
+                                        batch_update[table].push(itemData);
+                                    }
+                                } else {
+                                    itemData.created = timeNow();
+                                    batch_insert[table].push(itemData);
+                                }
+                            }
+                        }
+                    }
                 }
 
-                // await cacheService.execPipeline(pipeline);
+                for (const [table, items] of Object.entries(batch_insert)) {
+                    if (items.length) {
+                        await batchInsert(table, items);
+                    }
+                }
+
+                for (const [table, items] of Object.entries(batch_update)) {
+                    if (items.length) {
+                        await batchUpdate(table, items);
+                    }
+                }
+
+                await cacheService.execPipeline(pipeline);
             }
 
             console.log({
@@ -191,7 +289,8 @@ function syncMe() {
                         }
                     }
 
-                    if (!skipSaveTimestamps) {
+                    //todo remove
+                    if (0 && !skipSaveTimestamps) {
                         //update sync table
                         if (sync_qry) {
                             await conn('sync').where('id', sync_qry.id).update({
@@ -223,6 +322,8 @@ function main() {
 
     return new Promise(async (resolve, reject) => {
         try {
+            await cacheService.init();
+
             await syncMe();
         } catch(e) {
             console.error(e);
