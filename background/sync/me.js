@@ -173,7 +173,7 @@ function syncMe() {
                                 params: {
                                     secret_key: secret_key_to_qry.secret_key_to,
                                     network_token: network_self.network_token,
-                                    last_person_token: response.data.last_person_token,
+                                    pagination_updated: response.data.pagination_updated,
                                     prev_data_since: response.data.prev_data_since,
                                     request_sent: timeNow(),
                                 }

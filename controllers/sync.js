@@ -11,6 +11,49 @@ const { getKidsAgeLookup } = require('../services/modes');
 module.exports = {
     limit: 10000,
     data_since_ms_extra: 1000,
+    me: {
+        tables: [
+            'persons_movies',
+            'persons_movie_genres',
+            'persons_tv_shows',
+            'persons_tv_genres',
+            'persons_sports_teams',
+            'persons_sports_leagues',
+            'persons_sports_play',
+            'persons_music_artists',
+            'persons_music_genres',
+            'persons_instruments',
+            'persons_schools',
+            'persons_industries',
+            'persons_roles',
+            'persons_life_stages',
+            'persons_relationship_status',
+            'persons_languages',
+            'persons_politics',
+            'persons_religions',
+            'persons_drinking',
+            'persons_smoking'
+        ],
+    },
+    getTableRelations: function(table_name) {
+        for(let k in sectionsData) {
+            let sectionData = sectionsData[k];
+
+            for(let t in sectionData.tables) {
+                let tableData = sectionData.tables[t];
+
+                if(tableData.user.name === table_name) {
+                    return {
+                        section_key: k,
+                        table_key: t,
+                        is_favorable: tableData.isFavorable,
+                        source_table: tableData.data.name,
+                        col_id: tableData.user.cols.id
+                    }
+                }
+            }
+        }
+    },
     syncPersons: function (req, res) {
         return new Promise(async (resolve, reject) => {
             //returns persons on this network
@@ -157,9 +200,7 @@ module.exports = {
                 let request_sent = req.query.request_sent ? parseInt(req.query.request_sent) : null;
                 let data_since_timestamp = req.query.data_since ? parseInt(req.query.data_since) : null;
                 let prev_data_since = req.query.prev_data_since ? parseInt(req.query.prev_data_since) : null;
-                let last_person_token = req.query.last_person_token;
-
-                let return_last_person_token = null;
+                let pagination_updated = req.query.pagination_updated ? parseInt(req.query.pagination_updated) : null;
 
                 if (!request_sent) {
                     res.json('request timestamp required', 400);
@@ -181,7 +222,7 @@ module.exports = {
                     )
                     .where('p.network_id', my_network.id)
                     .join('persons_partner AS pp', 'pp.person_id', '=', 'p.id')
-                    .orderBy('p.id', 'desc')
+                    .orderBy('pp.updated', 'desc')
                     .limit(module.exports.limit);
 
                 let kids_qry = conn('persons AS p')
@@ -197,7 +238,7 @@ module.exports = {
                     )
                     .where('p.network_id', my_network.id)
                     .join('persons_kids AS pk', 'pk.person_id', '=', 'p.id')
-                    .orderBy('p.id', 'desc')
+                    .orderBy('pp.updated', 'desc')
                     .limit(module.exports.limit);
 
                 if (data_since_timestamp) {
@@ -211,15 +252,9 @@ module.exports = {
                     kids_qry = kids_qry.where('pk.updated', '>', timestamp_updated);
                 }
 
-                if (last_person_token) {
-                    const person_token_qry = await conn('persons')
-                        .where('person_token', last_person_token)
-                        .first();
-
-                    if (person_token_qry) {
-                        partner_qry = partner_qry.where('p.id', '<', person_token_qry.id);
-                        kids_qry = kids_qry.where('p.id', '<', person_token_qry.id);
-                    }
+                if (pagination_updated) {
+                    partner_qry = partner_qry.where('pp.updated', '<=', pagination_updated);
+                    kids_qry = kids_qry.where('pp.updated', '<', pagination_updated);
                 }
 
                 let [partners, kids] = await Promise.all([
@@ -279,16 +314,19 @@ module.exports = {
 
                 const results = Object.values(persons_modes);
 
-                if (results.length === module.exports.limit) {
-                    const last_person = results[results.length - 1];
+                let lastTimestamps = [];
 
-                    if (last_person) {
-                        return_last_person_token = last_person.person_token;
-                    }
+                if (partners.length === module.exports.limit) {
+                    lastTimestamps.push(partners[partners.length - 1].updated);
+                }
+                if (kids.length === module.exports.limit) {
+                    lastTimestamps.push(kids[kids.length - 1].updated);
                 }
 
+                let return_pagination_updated = lastTimestamps.length ? Math.max(...lastTimestamps) : null;
+
                 res.json({
-                    last_person_token: return_last_person_token,
+                    pagination_updated: return_pagination_updated,
                     prev_data_since: prev_data_since || data_since_timestamp_w_extra,
                     persons_modes: results
                 }, 202);
@@ -301,49 +339,6 @@ module.exports = {
         });
     },
     syncMe: function (req, res) {
-        let tables = [
-            'persons_movies',
-            'persons_movie_genres',
-            'persons_tv_shows',
-            'persons_tv_genres',
-            'persons_sports_teams',
-            'persons_sports_leagues',
-            'persons_sports_play',
-            'persons_music_artists',
-            'persons_music_genres',
-            'persons_instruments',
-            'persons_schools',
-            'persons_industries',
-            'persons_roles',
-            'persons_life_stages',
-            'persons_relationship_status',
-            'persons_languages',
-            'persons_politics',
-            'persons_religions',
-            'persons_drinking',
-            'persons_smoking'
-        ];
-
-        function getTableRelations(table_name) {
-            for(let k in sectionsData) {
-                let sectionData = sectionsData[k];
-
-                for(let t in sectionData.tables) {
-                    let tableData = sectionData.tables[t];
-
-                    if(tableData.user.name === table_name) {
-                        return {
-                            section_key: k,
-                            table_key: t,
-                            is_favorable: tableData.isFavorable,
-                            source_table: tableData.data.name,
-                            col_id: tableData.user.cols.id
-                        }
-                    }
-                }
-            }
-        }
-
         return new Promise(async (resolve, reject) => {
             try {
                 let conn = await dbService.conn();
@@ -352,9 +347,7 @@ module.exports = {
                 let request_sent = req.query.request_sent ? parseInt(req.query.request_sent) : null;
                 let data_since_timestamp = req.query.data_since ? parseInt(req.query.data_since) : null;
                 let prev_data_since = req.query.prev_data_since ? parseInt(req.query.prev_data_since) : null;
-                let last_person_token = req.query.last_person_token;
-                let last_person_qry = null;
-                let return_last_person_token = null;
+                let pagination_updated = req.query.pagination_updated ? parseInt(req.query.pagination_updated) : null;
 
                 if (!request_sent) {
                     res.json('request timestamp required', 400);
@@ -367,91 +360,141 @@ module.exports = {
 
                 let qryDict = {};
 
-                if (last_person_token) {
-                    last_person_qry = await conn('persons')
-                        .where('person_token', last_person_token)
-                        .first();
+                if (data_since_timestamp) {
+                    data_since_timestamp_w_extra = data_since_timestamp - add_data_since_ms;
                 }
+
+                let timestamp_updated = prev_data_since || data_since_timestamp_w_extra;
+
+                let tables = module.exports.me.tables;
 
                 //query all sections
                 for(let table of tables) {
-                    let tableData = getTableRelations(table);
+                    let tableData = module.exports.getTableRelations(table);
+
+                    let select_cols = [
+                        'p.id AS person_id',
+                        'p.person_token',
+                        'st.token',
+                        't.updated',
+                        't.deleted'
+                    ];
+
+                    if(tableData.is_favorable) {
+                        select_cols.push('is_favorite', 'favorite_position');
+                    }
 
                     qryDict[table] = conn('persons AS p')
                         .select(
-                            'p.person_token',
-                            't.updated',
-                            't.deleted'
+                            select_cols
                         )
                         .where('p.network_id', my_network.id)
                         .join(`${table} AS t`, 't.person_id', '=', 'p.id')
                         .join(`${tableData.source_table} AS st`, `t.${tableData.col_id}`, '=', 'st.id')
-                        .orderBy('p.id', 'desc')
+                        .orderBy('t.updated', 'desc')
                         .limit(module.exports.limit);
-
-                    if (data_since_timestamp) {
-                        data_since_timestamp_w_extra = data_since_timestamp - add_data_since_ms;
-                    }
-
-                    let timestamp_updated = prev_data_since || data_since_timestamp_w_extra;
 
                     if (timestamp_updated) {
                         qryDict[table] = qryDict[table].where('t.updated', '>', timestamp_updated);
                     }
 
-                    if (last_person_qry) {
-                        qryDict[table] = qryDict[table].where('p.id', '<', last_person_qry.id);
+                    if (pagination_updated) {
+                        qryDict[table] = qryDict[table].where('t.updated', '<', pagination_updated);
                     }
+                }
+
+                qryDict.sections = conn('persons AS p')
+                    .select(
+                        'p.id AS person_id',
+                        'p.person_token',
+                        'st.token',
+                        't.position',
+                        't.updated',
+                        't.deleted'
+                    )
+                    .where('p.network_id', my_network.id)
+                    .join(`persons_sections AS t`, 't.person_id', '=', 'p.id')
+                    .join(`me_sections AS st`, `t.section_id`, '=', 'st.id')
+                    .orderBy('t.updated', 'desc')
+                    .limit(module.exports.limit);
+
+                if (timestamp_updated) {
+                    qryDict.sections = qryDict.sections.where('t.updated', '>', timestamp_updated);
+                }
+
+                if (pagination_updated) {
+                    qryDict.sections = qryDict.sections.where('t.updated', '<', pagination_updated);
                 }
 
                 for(let table in qryDict) {
                     qryDict[table] = await qryDict[table]
                 }
 
-                //unique person ids/tokens
-                let person_ids = {};
+                //process/return data
+                let persons = {};
 
                 for(let table in qryDict) {
                     let items = qryDict[table];
 
                     for(let item of items) {
-                        person_ids[item.person_id] = true;
+                        if (!persons[item.person_token]) {
+                            persons[item.person_token] = {
+                                person_token: item.person_token,
+                                sections: {},
+                                me: {}
+                            };
+                        }
+
+                        if (table === 'sections') {
+                            persons[item.person_token].sections[item.token] = {
+                                token: item.token,
+                                position: item.position,
+                                updated: item.updated,
+                                deleted: item.deleted
+                            };
+                        } else {
+                            let tableData = module.exports.getTableRelations(table);
+
+                            if (!persons[item.person_token].me[table]) {
+                                persons[item.person_token].me[table] = {};
+                            }
+
+                            let favorable = {};
+
+                            if(tableData.is_favorable) {
+                                favorable = {
+                                    is_favorite: item.is_favorite,
+                                    favorite_position: item.favorite_position
+                                }
+                            }
+
+                            persons[item.person_token].me[table][item.token] = {
+                                token: item.token,
+                                updated: item.updated,
+                                deleted: item.deleted,
+                                ...favorable
+                            };
+                        }
                     }
                 }
 
-                let persons_sections = await conn('persons_sections AS ps')
-                    .join('me_sections AS ms', 'ms.id', '=', 'ps.section_id')
-                    .whereIn('ps.person_id', Object.keys(person_ids))
-                    .select('ms.token', 'person_id', 'ps.updated', 'ps.deleted')
+                // Calculate next pagination cursor
+                const lastTimestamps = [];
 
-                let persons_tokens_qry = await conn('persons')
-                    .whereIn('id', Object.keys(person_ids))
-                    .select('id', 'person_token');
+                for(let table in qryDict) {
+                    const tableResults = qryDict[table];
 
-                let personsIdTokenMap = persons_tokens_qry.reduce((acc, item) => {
-                    acc[item.id] = item.person_token;
-                    return acc;
-                }, {});
-
-                let persons = {};
-
-                //active sections for person ids
-
-                //build return object
-                const results = Object.values(persons);
-
-                if (results.length === module.exports.limit) {
-                    const last_person = results[results.length - 1];
-
-                    if (last_person) {
-                        return_last_person_token = last_person.person_token;
+                    if (tableResults.length === module.exports.limit) {
+                        lastTimestamps.push(tableResults[tableResults.length - 1].updated);
                     }
                 }
+
+                let return_pagination_updated = lastTimestamps.length ? Math.max(...lastTimestamps) : null;
 
                 res.json({
-                    last_person_token: return_last_person_token,
+                    pagination_updated: return_pagination_updated,
                     prev_data_since: prev_data_since || data_since_timestamp_w_extra,
-                    persons_modes: results
+                    persons: Object.values(persons)
                 }, 202);
             } catch (e) {
                 console.error('Error syncing persons modes:', e);
