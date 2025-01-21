@@ -1067,6 +1067,7 @@ function putNetworks(req, res) {
                         },
                         400,
                     );
+
                     return resolve();
                 }
 

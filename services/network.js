@@ -374,6 +374,31 @@ function getNetworkSelf() {
     });
 }
 
+function getNetworksLookup() {
+    return new Promise(async (resolve, reject) => {
+        try {
+            //all networks
+             let conn = await dbService.conn();
+
+             let networks = await conn('networks');
+
+             let networks_lookup = networks.reduce(
+                (acc, network) => {
+                    acc.byId[network.id] = network;
+                    acc.byToken[network.network_token] = network;
+                    return acc;
+                },
+                { byId: {}, byToken: {} },
+            );
+
+             resolve(networks_lookup);
+        } catch(e) {
+            console.error(e);
+            return reject(e);
+        }
+    });
+}
+
 function getNetworksForFilters() {
     return new Promise(async (resolve, reject) => {
         let cache_key = cacheService.keys.networks_filters;
@@ -1315,6 +1340,7 @@ module.exports = {
     getNetwork,
     getNetworkSelf,
     getNetworksForFilters,
+    getNetworksLookup,
     addNetwork,
     exchangeKeysHomeFrom,
     exchangeKeysHomeTo,

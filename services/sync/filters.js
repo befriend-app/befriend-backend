@@ -1,5 +1,5 @@
 const dbService = require('../db');
-const { getNetworkSelf } = require('../network');
+const { getNetworkSelf, getNetworksLookup } = require('../network');
 const { timeNow } = require('../shared');
 const { results_limit, data_since_ms_extra } = require('./common');
 const { filterMappings} = require('../../services/filters');
@@ -78,6 +78,7 @@ function syncFilters (inputs) {
                 .select(
                     'p.id AS person_id',
                     'p.person_token',
+                    'pa.token',
                     'pa.day_of_week',
                     'pa.is_day',
                     'pa.is_time',
@@ -128,6 +129,7 @@ function syncFilters (inputs) {
 
             //organize lookups
             let filtersLookup = await getFilters();
+            let networksLookup = await getNetworksLookup();
             let tablesLookup = {};
             let tablesIds = {};
 
@@ -277,7 +279,7 @@ function syncFilters (inputs) {
                 }
             }
 
-            // Add availability data to persons structure
+            //availability
             for(let item of availability_qry) {
                 let person_filters = persons[item.person_token];
 
@@ -298,7 +300,6 @@ function syncFilters (inputs) {
                     };
                 }
 
-                //availability
                 person_filters.filters['availability'].items[item.token] = {
                     token: item.token,
                     day_of_week: item.day_of_week,
@@ -312,6 +313,47 @@ function syncFilters (inputs) {
                     updated: item.updated,
                     deleted: item.deleted
                 };
+            }
+
+            //networks
+            for(let item of networks_qry) {
+                let person_filters = persons[item.person_token];
+
+                if (!person_filters) {
+                    person_filters = persons[item.person_token] = {
+                        person_token: item.person_token,
+                        filters: {}
+                    };
+                }
+
+                let network_filter = person_filters.filters['networks'];
+
+                if (!network_filter) {
+                    network_filter = person_filters.filters['networks'] = {
+                        filter_token: 'networks',
+                        updated_2: item.updated,
+                        items: {}
+                    };
+                }
+
+                if(item.network_id) {
+                    let network = networksLookup.byId[item.network_id];
+
+                    if(!network) {
+                        continue;
+                    }
+
+                    network_filter.items[network.network_token] = {
+                        token: network.network_token,
+                        is_active: item.is_active,
+                        updated: item.updated,
+                        deleted: item.deleted
+                    };
+                } else {
+                    network_filter.is_all_verified = item.is_all_verified;
+                    network_filter.is_any_network = item.is_any_network;
+                    network_filter.updated_2 = item.updated;
+                }
             }
 
             const lastTimestamps = [];

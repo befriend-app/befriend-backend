@@ -2079,6 +2079,7 @@ async function main(qty) {
 
     // notifications
     await processAvailability();
+
     await processActivityTypes();
     await processModes();
     await processNetworks();
