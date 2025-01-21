@@ -1,6 +1,6 @@
 let cacheService = require('../services/cache');
 let dbService = require('../services/db');
-const { timeNow, isNumeric, getTimeZoneFromCoords } = require('./shared');
+const { timeNow, isNumeric, getTimeZoneFromCoords, generateToken } = require('./shared');
 const {
     getFilters,
     getPersonFilters,
@@ -90,6 +90,7 @@ function saveAvailabilityData(person, availabilityData) {
                 } else {
                     recordsToInsert.push({
                         person_id: person.id,
+                        token: generateToken(14),
                         day_of_week: parseInt(dayOfWeek),
                         is_day: true,
                         is_time: false,
