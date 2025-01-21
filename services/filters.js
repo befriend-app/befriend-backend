@@ -1335,6 +1335,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                                     'send',
                                 ),
                             );
+
                             delKeysSet.add(
                                 cacheService.keys.persons_grid_exclude_send_receive(
                                     prev_grid_token,
@@ -1350,6 +1351,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                                 `gender:${gender_token}`,
                             ),
                         );
+
                         delKeysSet.add(
                             cacheService.keys.persons_grid_exclude_send_receive(
                                 grid_token,
@@ -1357,6 +1359,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                                 'send',
                             ),
                         );
+
                         delKeysSet.add(
                             cacheService.keys.persons_grid_exclude_send_receive(
                                 grid_token,
