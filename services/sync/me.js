@@ -80,8 +80,6 @@ function syncMe (inputs) {
 
             let timestamp_updated = prev_data_since || data_since_timestamp_w_extra;
 
-            let tables = tables;
-
             //query all sections
             for(let table of tables) {
                 let tableData = getTableRelations(table);

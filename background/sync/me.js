@@ -4,6 +4,12 @@ const cacheService = require('../../services/cache');
 const dbService = require('../../services/db');
 const meService = require('../../services/me');
 
+const { getNetworkSelf } = require('../../services/network');
+const { keys: systemKeys } = require('../../services/system');
+const { batchInsert, batchUpdate } = require('../../services/db');
+const { getAllSections } = require('../../services/me');
+const sectionsData = require('../../services/sections_data');
+
 const {
     loadScriptEnv,
     timeoutAwait,
@@ -11,14 +17,9 @@ const {
     getURL,
     joinPaths,
 } = require('../../services/shared');
-const { getNetworkSelf } = require('../../services/network');
-const { keys: systemKeys } = require('../../services/system');
-const { batchInsert, batchUpdate } = require('../../services/db');
-const { getAllSections } = require('../../services/me');
-const sectionsData = require('../../services/sections_data');
 
 let batch_process = 1000;
-let defaultTimeout = 10000;
+let defaultTimeout = 20000;
 
 let tableLookup = {};
 

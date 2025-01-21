@@ -3,7 +3,7 @@ const { loadScriptEnv, isProdApp } = require('../../../services/shared');
 const { keys: systemKeys } = require('../../../services/system');
 const { getGridLookup } = require('../../../services/grid');
 
-let syncController = require('../../../controllers/sync');
+let syncMe = require('../../../services/sync/me');
 
 loadScriptEnv();
 
@@ -68,7 +68,7 @@ function main() {
                     }
                 }
 
-                for(let table of syncController.me.tables) {
+                for(let table of syncMe.tables) {
                     await knex(table)
                         .whereIn('person_id', ids)
                         .delete();

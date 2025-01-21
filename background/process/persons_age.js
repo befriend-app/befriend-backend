@@ -1,6 +1,5 @@
 const cacheService = require('../../services/cache');
 const dbService = require('../../services/db');
-const { isPersonAvailable } = require('../../services/availability');
 const { timeNow, loadScriptEnv, calculateAge } = require('../../services/shared');
 const { getNetworkSelf } = require('../../services/network');
 const { batchUpdate } = require('../../services/db');
