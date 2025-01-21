@@ -42,7 +42,9 @@ function saveAvailabilityData(person, availabilityData) {
             const processedIds = new Set();
 
             for (const [dayOfWeek, dayData] of Object.entries(availabilityData)) {
-                if (!dayData) continue;
+                if (!dayData) {
+                    continue;
+                }
 
                 const dayRecords = Object.values(existingRecords).filter(
                     (record) => record.day_of_week === parseInt(dayOfWeek),
@@ -158,6 +160,7 @@ function saveAvailabilityData(person, availabilityData) {
                                 recordsToUpdate.push({
                                     ...newTimeData,
                                     id: existingRecord.id,
+                                    token: existingRecord.token,
                                 });
                             } else {
                                 recordsToKeep.add(existingRecord.id);
@@ -166,6 +169,7 @@ function saveAvailabilityData(person, availabilityData) {
                         } else {
                             recordsToInsert.push({
                                 ...newTimeData,
+                                token: generateToken(14),
                                 frontend_id: timeId,
                                 created: now,
                             });
