@@ -16,6 +16,18 @@ router.get('/persons', function (req, res, next) {
     });
 });
 
+router.get('/persons/filters', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await syncController.syncPersonsFilters(req, res);
+        } catch (e) {
+            console.error(e);
+        }
+
+        resolve();
+    });
+});
+
 router.get('/persons/modes', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
