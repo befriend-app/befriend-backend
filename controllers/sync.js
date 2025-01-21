@@ -240,7 +240,7 @@ module.exports = {
                     )
                     .where('p.network_id', my_network.id)
                     .join('persons_kids AS pk', 'pk.person_id', '=', 'p.id')
-                    .orderBy('pp.updated', 'desc')
+                    .orderBy('pk.updated', 'desc')
                     .limit(module.exports.limit);
 
                 if (data_since_timestamp) {

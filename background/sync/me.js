@@ -141,6 +141,56 @@ function processMe(network_id, persons) {
             let t = timeNow();
 
             for (let batch of batches) {
+                function organizeItemsCache(table, items) {
+                    if(table === 'persons_sections') {
+                        return;
+                    }
+
+                    //prepare for cache
+                    let tableInfo = getTableInfo(table);
+
+                    for(let item of items) {
+                        let person_token = personsIdTokenMap[item.person_id];
+                        let person_cache = persons_cache[person_token];
+
+                        if(!(person_cache[tableInfo.section_key])) {
+                            person_cache[tableInfo.section_key] = {};
+                        }
+
+                        let item_id = item[tableInfo.col_id];
+
+                        let db_item = schemaItemsLookup[table].byId[item_id];
+
+                        if(!db_item) {
+                            console.warn("No me item");
+                            continue;
+                        }
+
+                        let cache_item = person_cache[tableInfo.section_key][db_item.token] = {
+                            id: item.id,
+                            [tableInfo.col_id]: db_item.id,
+                            token: db_item.token,
+                            table_key: tableInfo.table_key,
+                            ...(tableInfo.col_secondary && { secondary: item[tableInfo.col_secondary] || null }),
+                            created: item.created,
+                            updated: item.updated,
+                        }
+
+                        if(db_item.name) {
+                            cache_item.name = db_item.name;
+                        }
+
+                        if(item.is_favorite) {
+                            cache_item.is_favorite = item.is_favorite || null;
+                            cache_item.favorite_position = item.favorite_position || null;
+                        }
+
+                        if(tableInfo.col_secondary) {
+                            cache_item.secondary = item[tableInfo.col_secondary] || null;
+                        }
+                    }
+                }
+
                 let pipeline = cacheService.startPipeline();
 
                 //setup table inserts/updates
@@ -219,6 +269,8 @@ function processMe(network_id, persons) {
                     }
                 }
 
+                let persons_cache = {};
+
                 // Process each person
                 for (let person of batch) {
                     let person_token = person.person_token;
@@ -228,6 +280,10 @@ function processMe(network_id, persons) {
                     if (!existingPerson) {
                         continue;
                     }
+
+                    let person_cache = persons_cache[person_token] = {
+                        active: {}
+                    };
 
                     if (person.sections) {
                         for (const [token, section] of Object.entries(person.sections)) {
@@ -245,7 +301,7 @@ function processMe(network_id, persons) {
                                 section_id: db_item.id,
                                 position: section.position,
                                 updated: section.updated,
-                                deleted: section.deleted
+                                deleted: section.deleted || null
                             };
 
                             if (existingSection) {
@@ -257,6 +313,9 @@ function processMe(network_id, persons) {
                                 sectionData.created = timeNow();
                                 batch_insert.persons_sections.push(sectionData);
                             }
+
+                            //prepare sections for cache
+                            person_cache['active'][token] = sectionData;
                         }
                     }
 
@@ -266,7 +325,7 @@ function processMe(network_id, persons) {
                             let tableInfo = getTableInfo(table);
 
                             for (let [token, item] of Object.entries(items)) {
-                                let db_item = schemaItemsLookup[table].byToken[item.token];
+                                let db_item = schemaItemsLookup[table].byToken[token];
 
                                 if(!db_item) {
                                     console.warn("No me item");
@@ -316,13 +375,29 @@ function processMe(network_id, persons) {
 
                 for (const [table, items] of Object.entries(batch_insert)) {
                     if (items.length) {
-                        await batchInsert(table, items);
+                        await batchInsert(table, items, true);
+                        
+                        organizeItemsCache(table, items);
                     }
                 }
 
                 for (const [table, items] of Object.entries(batch_update)) {
                     if (items.length) {
                         await batchUpdate(table, items);
+
+                        organizeItemsCache(table, items);
+                    }
+                }
+
+                for(let person_token in persons_cache) {
+                    let sections = persons_cache[person_token];
+
+                    let cache_key = cacheService.keys.person_sections(person_token);
+
+                    for(let section in sections) {
+                        let data = sections[section];
+
+                        pipeline.hSet(cache_key, section, JSON.stringify(data));
                     }
                 }
 

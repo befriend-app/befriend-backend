@@ -418,6 +418,7 @@ function addSection(person_token, section_key) {
 
                 //add to cache
                 person_sections[section_key] = new_section;
+
                 await cacheService.hSet(cache_key, 'active', person_sections);
 
                 await addDataToSection(new_section);
@@ -865,7 +866,10 @@ function updateSectionItem(body) {
             // Get section data
             const { userTableData } = getSection();
             const person = await getPerson(body.person_token);
-            if (!person) return reject('Person not found');
+
+            if (!person) {
+                return reject('Person not found');
+            }
 
             // Get cache data
             const cache_key = cacheService.keys.person_sections(person.person_token);
