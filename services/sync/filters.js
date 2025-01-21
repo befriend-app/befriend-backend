@@ -5,7 +5,7 @@ const { results_limit, data_since_ms_extra } = require('./common');
 const { filterMappings} = require('../../services/filters');
 const { getFilters } = require('../filters');
 
-function getFilterMap(item) {
+function getFilterMapByItem(item) {
     for(let k in item) {
         if(['person_id', 'filter_id'].includes(k)) {
             continue;
@@ -24,6 +24,17 @@ function getFilterMap(item) {
 
     return null;
 }
+
+function getFilterMapByTable(table) {
+    for(let f in filterMappings) {
+        if(table === filterMappings[f].table) {
+            return filterMappings[f];
+        }
+    }
+
+    return null;
+}
+
 
 function syncFilters (inputs) {
     return new Promise(async (resolve, reject) => {
@@ -121,7 +132,7 @@ function syncFilters (inputs) {
             let tablesIds = {};
 
             for(let item of filters_qry) {
-                let filterMapping = getFilterMap(item);
+                let filterMapping = getFilterMapByItem(item);
 
                 if(filterMapping) {
                     if(!(filterMapping.table in tablesIds)) {
@@ -134,9 +145,17 @@ function syncFilters (inputs) {
             }
 
             for(let table in tablesIds) {
+                let filterMapping = getFilterMapByTable(table);
+
+                let token_col = 'token';
+
+                if(filterMapping?.column_token) {
+                    token_col = `${filterMapping.column_token} AS token`;
+                }
+
                 let qry = await conn(table)
                     .whereIn('id', Object.keys(tablesIds[table]))
-                    .select('id', 'token');
+                    .select('id', token_col);
 
                 tablesLookup[table] = {};
 
@@ -145,7 +164,7 @@ function syncFilters (inputs) {
                 }
             }
 
-            // Organize return object
+            //organize return object
             let persons = {};
 
             //1st loop - parent structure
@@ -161,7 +180,7 @@ function syncFilters (inputs) {
 
                 let filter = filtersLookup.byId[item.filter_id];
 
-                let filterMapping = getFilterMap(item);
+                let filterMapping = getFilterMapByItem(item);
 
                 if(filterMapping?.column) {
                     let filterItem = tablesLookup[filterMapping.table][item[filterMapping.column]];
@@ -211,7 +230,7 @@ function syncFilters (inputs) {
                     }
                 }
 
-                let filterMapping = getFilterMap(item);
+                let filterMapping = getFilterMapByItem(item);
 
                 if(filterMapping?.column) {
                     let itemToken = tablesLookup[filterMapping.table][item[filterMapping.column]];

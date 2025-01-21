@@ -266,7 +266,7 @@ function syncFilters() {
                         continue;
                     }
 
-                    await processFilters(network.id, response.data.persons);
+                    // await processFilters(network.id, response.data.persons);
 
                     while (response.data.pagination_updated) {
                         try {
@@ -284,7 +284,7 @@ function syncFilters() {
                                 break;
                             }
 
-                            await processFilters(network.id, response.data.persons);
+                            // await processFilters(network.id, response.data.persons);
                         } catch (e) {
                             console.error(e);
                             skipSaveTimestamps = true;

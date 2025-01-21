@@ -29,6 +29,7 @@ const filterMappings = {
         name: 'Activity Types',
         table: 'activity_types',
         column: 'activity_type_id',
+        column_token: 'activity_type_token',
         multi: true,
         is_notifications: true,
     },
@@ -160,8 +161,9 @@ const filterMappings = {
     genders: {
         token: 'genders',
         name: 'Gender',
-        column: 'gender_id',
         table: 'genders',
+        column: 'gender_id',
+        column_token: 'gender_token',
         multi: true,
         is_general: true,
     },
