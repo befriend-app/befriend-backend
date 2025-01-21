@@ -1314,6 +1314,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
         return new Promise(async (resolve, reject) => {
             try {
                 let genderFilter = person_filters.genders;
+
                 let genders = await getGendersLookup();
 
                 let person_gender = genders.byId[person.gender_id];

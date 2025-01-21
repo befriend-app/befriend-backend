@@ -100,6 +100,8 @@ function main() {
                     let send_receive = await cacheService.getKeysWithPrefix(cacheService.keys.persons_grid_send_receive(grid, 'verifications'));
                     let srem_keys = set_keys.concat(exclude_keys).concat(send_receive);
 
+                    let grid_rest_keys = await cacheService.getKeysWithPrefix(`persons:grid:${grid}`);
+
                     for(let token of tokens) {
                         for(let key of sorted_keys) {
                             pipeline.zRem(key, token);
@@ -107,6 +109,12 @@ function main() {
 
                         for(let key of srem_keys) {
                             pipeline.sRem(key, token);
+                        }
+
+                        for(let key of grid_rest_keys) {
+                            if(!(sorted_keys.includes(key))) {
+                                pipeline.sRem(key, token);
+                            }
                         }
                     }
                 }
