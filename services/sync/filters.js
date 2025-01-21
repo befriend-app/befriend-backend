@@ -277,6 +277,43 @@ function syncFilters (inputs) {
                 }
             }
 
+            // Add availability data to persons structure
+            for(let item of availability_qry) {
+                let person_filters = persons[item.person_token];
+
+                if (!person_filters) {
+                    person_filters = persons[item.person_token] = {
+                        person_token: item.person_token,
+                        filters: {}
+                    };
+                }
+
+                if (!person_filters.filters['availability']) {
+                    person_filters.filters['availability'] = {
+                        filter_token: 'availability',
+                        is_active: true,
+                        updated: item.updated,
+                        deleted: item.deleted,
+                        items: {}
+                    };
+                }
+
+                //availability
+                person_filters.filters['availability'].items[item.token] = {
+                    token: item.token,
+                    day_of_week: item.day_of_week,
+                    is_day: item.is_day,
+                    is_time: item.is_time,
+                    start_time: item.start_time,
+                    end_time: item.end_time,
+                    is_overnight: item.is_overnight,
+                    is_any_time: item.is_any_time,
+                    is_active: item.is_active,
+                    updated: item.updated,
+                    deleted: item.deleted
+                };
+            }
+
             const lastTimestamps = [];
 
             let filters_data = [filters_qry, availability_qry, networks_qry];

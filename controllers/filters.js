@@ -388,14 +388,43 @@ function putActive(req, res) {
             let now = timeNow();
 
             if (filterData) {
-                // Update all filter entries for this filter
-                await conn('persons_filters')
-                    .where('person_id', person.id)
-                    .where('filter_id', filter.id)
-                    .update({
-                        is_active: active,
-                        updated: now,
-                    });
+                //custom for availability
+                if(filter_token === 'availability') {
+                    let exists_qry = await conn('persons_filters')
+                        .where('person_id', person.id)
+                        .where('filter_id', filter.id)
+                        .first();
+
+                    if(!exists_qry) {
+                        let [id] = await conn('persons_filters')
+                            .insert({
+                                person_id: person.id,
+                                filter_id: filter.id,
+                                is_active: active,
+                                created: now,
+                                updated: now
+                            });
+
+                        filterData.id = id;
+                    } else {
+                        await conn('persons_filters')
+                            .where('person_id', person.id)
+                            .where('filter_id', filter.id)
+                            .update({
+                                is_active: active,
+                                updated: now,
+                            });
+                    }
+                } else {
+                    //update all entries for this filter
+                    await conn('persons_filters')
+                        .where('person_id', person.id)
+                        .where('filter_id', filter.id)
+                        .update({
+                            is_active: active,
+                            updated: now,
+                        });
+                }
 
                 // Update cache
                 filterData.is_active = active;
