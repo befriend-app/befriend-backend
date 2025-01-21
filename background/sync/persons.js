@@ -21,7 +21,7 @@ const { batchUpdateGridSets } = require('../../services/filters');
 
 let persons_grid_filters = ['online', 'location', 'modes', 'reviews', 'verifications', 'genders'];
 let batch_process = 1000;
-let defaultTimeout = 10000;
+let defaultTimeout = 20000;
 
 function processPersons(network_id, persons) {
     function preparePersonCache(new_data, prev_data, params = {}) {
