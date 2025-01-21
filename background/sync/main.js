@@ -1,4 +1,5 @@
 const personsSync = require('./persons');
+const meSync = require('./me');
 
 const {
     loadScriptEnv,
@@ -13,6 +14,7 @@ const runInterval = 60 * 30 * 1000; //every 30 minutes
     while (true) {
         try {
             await personsSync.main();
+            await meSync.main();
         } catch(e) {
             console.error(e);
         }
