@@ -404,7 +404,7 @@ function putActive(req, res) {
                 // Create new filter entry
                 const filterEntry = createFilterEntry(filter.id, {
                     person_id: person.id,
-                    is_active: active,
+                    is_active: active
                 });
 
                 const [id] = await conn('persons_filters').insert(filterEntry);
@@ -678,6 +678,7 @@ function putAvailability(req, res) {
             }
 
             const person = await getPerson(person_token);
+
             if (!person) {
                 res.json(
                     {
@@ -787,6 +788,7 @@ function putMode(req, res) {
             }
 
             const filterItems = filterData.items;
+
             const existingItem = Object.values(filterItems).find(
                 (item) => item[mapping.column] === mode.id,
             );
@@ -800,12 +802,13 @@ function putMode(req, res) {
                     person_id: person.id,
                     [mapping.column]: soloMode.id,
                     is_negative: false,
-                    filterData,
+                    filterData
                 });
 
                 const [soloId] = await conn('persons_filters').insert(soloEntry);
 
                 soloEntry.mode_token = 'mode-solo';
+
                 filterItems[soloId] = {
                     ...soloEntry,
                     id: soloId,
@@ -1138,6 +1141,7 @@ function putReviewRating(req, res) {
 
             // Get person
             let person = await getPerson(person_token);
+
             if (!person) {
                 res.json(
                     {

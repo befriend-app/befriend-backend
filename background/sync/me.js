@@ -430,9 +430,9 @@ function syncMe() {
         }
 
         if (!network_self) {
-            console.error('Error getting own network', e);
+            console.error('Error getting own network');
             await timeoutAwait(5000);
-            return reject(e);
+            return reject();
         }
 
         try {

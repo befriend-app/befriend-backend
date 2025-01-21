@@ -84,6 +84,7 @@ module.exports = {
                 persons: 'sync_persons',
                 persons_modes: 'sync_persons_modes',
                 persons_me: 'sync_persons_me',
+                persons_filters: 'sync_persons_filters',
             },
         },
         system: {},

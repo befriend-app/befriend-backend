@@ -20,9 +20,9 @@ const filterMappings = {
     availability: {
         token: 'availability',
         name: 'Availability',
-        table: 'persons_availability',
+        filters_table: 'persons_availability',
         multi: true,
-        is_notifications: true,
+        is_notifications: true
     },
     activity_types: {
         token: 'activity_types',
@@ -300,7 +300,7 @@ const filterMappings = {
         multi: true,
         importance: true,
         is_school_work: true,
-        is_sub: true,
+        is_sub: true
     },
     work_roles: {
         token: 'work_roles',

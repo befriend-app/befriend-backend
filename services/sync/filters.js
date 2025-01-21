@@ -3,17 +3,38 @@ const { getNetworkSelf } = require('../network');
 const { timeNow } = require('../shared');
 const { results_limit, data_since_ms_extra } = require('./common');
 const { filterMappings} = require('../../services/filters');
+const { getFilters } = require('../filters');
 
-function syncFilters (req, res) {
+function getFilterMap(item) {
+    for(let k in item) {
+        if(['person_id', 'filter_id'].includes(k)) {
+            continue;
+        }
+
+        let v = item[k];
+
+        if(k.endsWith('_id') && v) {
+            for(let f in filterMappings) {
+                if(k === filterMappings[f].column) {
+                    return filterMappings[f];
+                }
+            }
+        }
+    }
+
+    return null;
+}
+
+function syncFilters (inputs) {
     return new Promise(async (resolve, reject) => {
         try {
             let conn = await dbService.conn();
             let my_network = await getNetworkSelf();
 
-            let request_sent = req.query.request_sent ? parseInt(req.query.request_sent) : null;
-            let data_since_timestamp = req.query.data_since ? parseInt(req.query.data_since) : null;
-            let prev_data_since = req.query.prev_data_since ? parseInt(req.query.prev_data_since) : null;
-            let pagination_updated = req.query.pagination_updated ? parseInt(req.query.pagination_updated) : null;
+            let request_sent = inputs.request_sent ? parseInt(inputs.request_sent) : null;
+            let data_since_timestamp = inputs.data_since ? parseInt(inputs.data_since) : null;
+            let prev_data_since = inputs.prev_data_since ? parseInt(inputs.prev_data_since) : null;
+            let pagination_updated = inputs.pagination_updated ? parseInt(inputs.pagination_updated) : null;
 
             if (!request_sent) {
                 return reject({
@@ -31,90 +52,200 @@ function syncFilters (req, res) {
 
             let timestamp_updated = prev_data_since || data_since_timestamp_w_extra;
 
-            // Query all filter tables
-            let qryDict = {};
+            let filters_qry = conn('persons AS p')
+                .select(
+                    'p.id AS person_id',
+                    'p.person_token',
+                    'pf.*'
+                )
+                .where('p.network_id', my_network.id)
+                .join('persons_filters AS pf', 'pf.person_id', '=', 'p.id')
+                .orderBy('pf.updated', 'desc')
+                .limit(results_limit);
 
-            // Process filters table and data
-            for(let filter_key in filterMappings) {
-                let mapping = filterMappings[filter_key];
+            let availability_qry = conn('persons AS p')
+                .select(
+                    'p.id AS person_id',
+                    'p.person_token',
+                    'pa.day_of_week',
+                    'pa.is_day',
+                    'pa.is_time',
+                    'pa.start_time',
+                    'pa.end_time',
+                    'pa.is_overnight',
+                    'pa.is_any_time',
+                    'pa.is_active',
+                    'pa.updated',
+                    'pa.deleted',
+                )
+                .where('p.network_id', my_network.id)
+                .join('persons_availability AS pa', 'pa.person_id', '=', 'p.id')
+                .orderBy('pa.updated', 'desc')
+                .limit(results_limit);
 
-                // Skip sub-filters as they're handled by parent
-                if (mapping.is_sub) {
-                    continue;
-                }
+            let networks_qry = conn('persons AS p')
+                .select(
+                    'p.id AS person_id',
+                    'p.person_token',
+                    'pfn.network_id',
+                    'pfn.is_all_verified',
+                    'pfn.is_any_network',
+                    'pfn.is_active',
+                    'pfn.updated',
+                    'pfn.deleted',
+                )
+                .where('p.network_id', my_network.id)
+                .join('persons_filters_networks AS pfn', 'pfn.person_id', '=', 'p.id')
+                .orderBy('pfn.updated', 'desc')
+                .limit(results_limit);
 
-                qryDict[filter_key] = conn('persons AS p')
-                    .select(
-                        'p.id AS person_id',
-                        'p.person_token',
-                        'pf.id',
-                        'pf.filter_id',
-                        'pf.is_send',
-                        'pf.is_receive',
-                        'pf.is_active',
-                        'pf.is_negative',
-                        'pf.filter_value',
-                        'pf.filter_value_min',
-                        'pf.filter_value_max',
-                        'pf.importance',
-                        'pf.secondary_level',
-                        'pf.updated',
-                        'pf.deleted'
-                    )
-                    .where('p.network_id', my_network.id)
-                    .join('persons_filters AS pf', 'pf.person_id', '=', 'p.id')
-                    .whereIn('pf.filter_id', function() {
-                        this.select('id')
-                            .from('filters')
-                            .where('token', filter_key);
-                    })
-                    .orderBy('pf.updated', 'desc')
-                    .limit(results_limit);
-
-                if (timestamp_updated) {
-                    qryDict[filter_key] = qryDict[filter_key].where('pf.updated', '>', timestamp_updated);
-                }
-
-                if (pagination_updated) {
-                    qryDict[filter_key] = qryDict[filter_key].where('pf.updated', '<=', pagination_updated);
-                }
+            if (timestamp_updated) {
+                filters_qry = filters_qry.where('pf.updated', '>', timestamp_updated);
+                availability_qry = availability_qry.where('pa.updated', '>', timestamp_updated);
+                networks_qry = networks_qry.where('pfn.updated', '>', timestamp_updated);
             }
 
-            // Execute all queries
-            for(let filter_key in qryDict) {
-                qryDict[filter_key] = await qryDict[filter_key];
+            if (pagination_updated) {
+                filters_qry = filters_qry.where('pf.updated', '<=', pagination_updated);
+                availability_qry = availability_qry.where('pa.updated', '<=', pagination_updated);
+                networks_qry = networks_qry.where('pfn.updated', '<=', pagination_updated);
             }
 
-            // Process results into organized format
-            let persons = {};
+            filters_qry = await filters_qry;
+            availability_qry = await availability_qry;
+            networks_qry = await networks_qry;
 
-            for(let filter_key in qryDict) {
-                let items = qryDict[filter_key];
+            //organize lookups
+            let filtersLookup = await getFilters();
+            let tablesLookup = {};
+            let tablesIds = {};
 
-                for(let item of items) {
-                    if (!persons[item.person_token]) {
-                        persons[item.person_token] = {
-                            person_token: item.person_token,
-                            filters: {}
-                        };
+            for(let item of filters_qry) {
+                let filterMapping = getFilterMap(item);
+
+                if(filterMapping) {
+                    if(!(filterMapping.table in tablesIds)) {
+                        tablesIds[filterMapping.table] = {};
                     }
 
-                    let filterData = {
-                        id: item.id,
-                        filter_id: item.filter_id,
+                    //id of item on dynamic table
+                    tablesIds[filterMapping.table][item[filterMapping.column]] = true;
+                }
+            }
+
+            for(let table in tablesIds) {
+                let qry = await conn(table)
+                    .whereIn('id', Object.keys(tablesIds[table]))
+                    .select('id', 'token');
+
+                tablesLookup[table] = {};
+
+                for(let item of qry) {
+                    tablesLookup[table][item.id] = item.token;
+                }
+            }
+
+            // Organize return object
+            let persons = {};
+
+            //1st loop - parent structure
+            for(let item of filters_qry) {
+                let person_filters = persons[item.person_token];
+
+                if (!person_filters) {
+                    person_filters = persons[item.person_token] = {
+                        person_token: item.person_token,
+                        filters: {}
+                    };
+                }
+
+                let filter = filtersLookup.byId[item.filter_id];
+
+                let filterMapping = getFilterMap(item);
+
+                if(filterMapping?.column) {
+                    let filterItem = tablesLookup[filterMapping.table][item[filterMapping.column]];
+
+                    if(filterItem) {
+                        continue;
+                    }
+                }
+
+                if(!(person_filters.filters[filter.token])) {
+                    person_filters.filters[filter.token] = {};
+                }
+
+                person_filters.filters[filter.token] = {
+                    filter_token: filter.token,
+                    is_send: item.is_send,
+                    is_receive: item.is_receive,
+                    is_active: item.is_active,
+                    updated: item.updated,
+                    deleted: item.deleted,
+                    items: {}
+                };
+            }
+
+            //2nd loop - items structure
+            for(let item of filters_qry) {
+                let person_filters = persons[item.person_token];
+
+                if (!person_filters) {
+                    person_filters = persons[item.person_token] = {
+                        person_token: item.person_token,
+                        filters: {}
+                    };
+                }
+
+                let filter = filtersLookup.byId[item.filter_id];
+
+                if(!(person_filters.filters[filter.token])) {
+                    person_filters.filters[filter.token] = {
+                        filter_token: filter.token,
                         is_send: item.is_send,
                         is_receive: item.is_receive,
                         is_active: item.is_active,
-                        is_negative: item.is_negative,
                         updated: item.updated,
-                        deleted: item.deleted
+                        deleted: item.deleted,
+                        items: {}
+                    }
+                }
+
+                let filterMapping = getFilterMap(item);
+
+                if(filterMapping?.column) {
+                    let itemToken = tablesLookup[filterMapping.table][item[filterMapping.column]];
+
+                    if(!itemToken) {
+                        continue;
+                    }
+
+                    let filterData = {
+                        token: itemToken,
+                        is_negative: item.is_negative,
+                        is_active: item.is_active,
+                        is_send: item.is_send,
+                        is_receive: item.is_receive,
+                        updated: item.updated,
+                        deleted: item.deleted,
                     };
 
-                    // Add optional fields if present
-                    if (item.filter_value !== null) filterData.filter_value = item.filter_value;
-                    if (item.filter_value_min !== null) filterData.filter_value_min = item.filter_value_min;
-                    if (item.filter_value_max !== null) filterData.filter_value_max = item.filter_value_max;
-                    if (item.importance !== null) filterData.importance = item.importance;
+                    if (item.filter_value !== null) {
+                        filterData.filter_value = item.filter_value;
+                    }
+
+                    if (item.filter_value_min !== null) {
+                        filterData.filter_value_min = item.filter_value_min;
+                    }
+
+                    if (item.filter_value_max !== null) {
+                        filterData.filter_value_max = item.filter_value_max;
+                    }
+
+                    if (item.importance !== null) {
+                        filterData.importance = item.importance;
+                    }
+
                     if (item.secondary_level !== null) {
                         try {
                             filterData.secondary_level = JSON.parse(item.secondary_level);
@@ -123,18 +254,17 @@ function syncFilters (req, res) {
                         }
                     }
 
-                    persons[item.person_token].filters[filter_key] = filterData;
+                    person_filters.filters[filter.token].items[itemToken] = filterData;
                 }
             }
 
-            // Calculate next pagination cursor
             const lastTimestamps = [];
 
-            for(let filter_key in qryDict) {
-                const filterResults = qryDict[filter_key];
+            let filters_data = [filters_qry, availability_qry, networks_qry];
 
-                if (filterResults.length === results_limit) {
-                    lastTimestamps.push(filterResults[filterResults.length - 1].updated);
+            for(let results of filters_data) {
+                if (results.length === results_limit) {
+                    lastTimestamps.push(results[results.length - 1].updated);
                 }
             }
 

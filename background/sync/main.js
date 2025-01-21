@@ -1,3 +1,4 @@
+const filtersSync = require('./filters');
 const personsSync = require('./persons');
 const meSync = require('./me');
 
@@ -15,6 +16,7 @@ const runInterval = 60 * 30 * 1000; //every 30 minutes
         try {
             await personsSync.main();
             await meSync.main();
+            await filtersSync.main();
         } catch(e) {
             console.error(e);
         }

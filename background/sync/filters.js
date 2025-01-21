@@ -17,46 +17,12 @@ const {
     getURL,
     joinPaths,
 } = require('../../services/shared');
+const { getFilters } = require('../../services/filters');
 
 let batch_process = 1000;
 let defaultTimeout = 20000;
 
-let tableLookup = {};
-
-function getTableInfo(table_name) {
-    if(table_name in tableLookup) {
-        return tableLookup[table_name];
-    }
-
-    for(let k in sectionsData) {
-        let sectionData = sectionsData[k];
-
-        for(let t in sectionData.tables) {
-            let tableData = sectionData.tables[t];
-
-            if(tableData.user.name === table_name) {
-                let data = {
-                    section_key: k,
-                    table_key: t,
-                    is_favorable: tableData.isFavorable,
-                    source_table: tableData.data.name,
-                    col_id: tableData.user.cols.id,
-                    col_token: tableData.user.cols.token || null,
-                    col_secondary: tableData.user.cols.secondary || null,
-                    cache_key: sectionData.cacheKeys?.[t].byHash || null,
-                    cache_key_hash: sectionData.cacheKeys?.[t].byHashKey || null,
-                    data_fn: sectionData.functions?.data || null
-                };
-
-                tableLookup[table_name] = data;
-
-                return data;
-            }
-        }
-    }
-}
-
-function processMe(network_id, persons) {
+function processFilters(network_id, persons) {
     return new Promise(async (resolve, reject) => {
         if (!persons || !persons.length) {
             return resolve();
@@ -65,74 +31,8 @@ function processMe(network_id, persons) {
         try {
             let conn = await dbService.conn();
 
-            let schemaItemsLookup = {};
-            let lookup_pipelines = {};
+            let filtersLookup = await getFilters();
 
-            for(let person of persons) {
-                for(let section in person.me) {
-                    if(!(schemaItemsLookup[section])) {
-                        schemaItemsLookup[section] = {
-                            byId: {},
-                            byToken: {}
-                        };
-
-                        lookup_pipelines[section] = cacheService.startPipeline();
-                    }
-
-                    let section_table = getTableInfo(section);
-
-                    let items = person.me[section];
-
-                    for(let token in items) {
-                        let item = items[token];
-
-                        if(section_table.cache_key) {
-                            lookup_pipelines[section].hGet(section_table.cache_key, item.token);
-                        } else if(section_table.cache_key_hash) {
-                            lookup_pipelines[section].hGet(section_table.cache_key_hash(item.hash_token), item.token);
-                        }
-                    }
-                }
-            }
-
-            schemaItemsLookup.persons_sections = await getAllSections(true);
-
-            for(let section in lookup_pipelines) {
-                try {
-                     let results = await cacheService.execPipeline(lookup_pipelines[section]);
-
-                     for(let result of results) {
-                         result = JSON.parse(result);
-                         schemaItemsLookup[section].byId[result.id] = result;
-                         schemaItemsLookup[section].byToken[result.token] = result;
-                     }
-                } catch(e) {
-                    console.error(e);
-                }
-            }
-
-            //get remaining lookup data
-            for(let section in schemaItemsLookup) {
-                let tableInfo = getTableInfo(section);
-                let items = schemaItemsLookup[section].byId;
-
-                if(!Object.keys(items).length && tableInfo.data_fn) {
-                    try {
-                         let options = await meService[tableInfo.data_fn]({
-                             options_only: true
-                         });
-
-                         for(let option of options) {
-                             schemaItemsLookup[section].byId[option.id] = option;
-                             schemaItemsLookup[section].byToken[option.token] = option;
-                         }
-                    } catch(e) {
-                        console.error(e);
-                    }
-                }
-            }
-
-            //batch process/insert/update
             let batches = [];
 
             for (let i = 0; i < persons.length; i += batch_process) {
@@ -142,73 +42,8 @@ function processMe(network_id, persons) {
             let t = timeNow();
 
             for (let batch of batches) {
-                function organizeItemsCache(table, items) {
-                    if(table === 'persons_sections') {
-                        return;
-                    }
-
-                    //prepare for cache
-                    let tableInfo = getTableInfo(table);
-
-                    for(let item of items) {
-                        let person_token = personsIdTokenMap[item.person_id];
-                        let person_cache = persons_cache[person_token];
-
-                        if(!(person_cache[tableInfo.section_key])) {
-                            person_cache[tableInfo.section_key] = {};
-                        }
-
-                        let item_id = item[tableInfo.col_id];
-
-                        let db_item = schemaItemsLookup[table].byId[item_id];
-
-                        if(!db_item) {
-                            console.warn("No me item");
-                            continue;
-                        }
-
-                        let cache_item = person_cache[tableInfo.section_key][db_item.token] = {
-                            id: item.id,
-                            [tableInfo.col_id]: db_item.id,
-                            token: db_item.token,
-                            table_key: tableInfo.table_key,
-                            ...(tableInfo.col_secondary && { secondary: item[tableInfo.col_secondary] || null }),
-                            created: item.created,
-                            updated: item.updated,
-                        }
-
-                        if(db_item.name) {
-                            cache_item.name = db_item.name;
-                        }
-
-                        if(item.is_favorite) {
-                            cache_item.is_favorite = item.is_favorite || null;
-                            cache_item.favorite_position = item.favorite_position || null;
-                        }
-
-                        if(tableInfo.col_secondary) {
-                            cache_item.secondary = item[tableInfo.col_secondary] || null;
-                        }
-                    }
-                }
-
-                let pipeline = cacheService.startPipeline();
-
-                //setup table inserts/updates
-                let batch_insert = {
-                    persons_sections: []
-                };
-
-                let batch_update = {
-                    persons_sections: []
-                };
-
-                for(let person of batch) {
-                    for(let table in person.me) {
-                        batch_insert[table] = [];
-                        batch_update[table] = [];
-                    }
-                }
+                let batch_insert = {};
+                let batch_update = {};
 
                 const batchPersonTokens = batch.map(p => p.person_token);
 
@@ -216,189 +51,125 @@ function processMe(network_id, persons) {
                     .whereIn('person_token', batchPersonTokens)
                     .select('id', 'person_token', 'updated');
 
-                const existingPersonsIds = existingPersons.map(p => p.id);
-
-                //lookup maps
-                let personsIdTokenMap = {};
+                // Create lookup maps
                 let personsLookup = {};
 
                 for (const person of existingPersons) {
                     personsLookup[person.person_token] = person;
-                    personsIdTokenMap[person.id] = person.person_token;
                 }
 
-                //Existing data for all tables
-                let existingData = {};
-                let existingDataLookup = {};
+                // Get existing filter data
+                let existingFilters = await conn('persons_filters')
+                    .whereIn('person_id', existingPersons.map(p => p.id))
+                    .select('*');
 
-                for (let table in batch_insert) {
-                    existingData[table] = await conn(table)
-                        .whereIn('person_id', existingPersonsIds)
-                        .select('*');
-                }
+                // Organize existing filters by person and filter
+                let existingFiltersLookup = {};
 
-                for(let table_name in existingData) {
-                    existingDataLookup[table_name] = {};
+                for (let filter of existingFilters) {
+                    let person = existingPersons.find(p => p.id === filter.person_id);
 
-                    let tableInfo = getTableInfo(table_name);
-                    let item_col = tableInfo?.col_id;
-
-                    if(table_name === 'persons_sections') {
-                        item_col = 'section_id';
+                    if (!person) {
+                        continue;
                     }
 
-                    for(let item of existingData[table_name]) {
-                        let person_token = personsIdTokenMap[item.person_id];
-
-                        if(!person_token) {
-                            console.warn("No person token");
-                            continue;
-                        }
-
-                        if(!(person_token in existingDataLookup[table_name])) {
-                            existingDataLookup[table_name][person_token] = {};
-                        }
-
-                        let db_item = schemaItemsLookup[table_name].byId[item[item_col]]
-
-                        if(!db_item) {
-                            console.warn("No db item");
-                            continue;
-                        }
-
-                        existingDataLookup[table_name][person_token][db_item.token] = item;
+                    if (!existingFiltersLookup[person.person_token]) {
+                        existingFiltersLookup[person.person_token] = {};
                     }
+
+                    let filterToken = Object.values(filtersLookup.byId).find(f => f.id === filter.filter_id)?.token;
+
+                    if (!filterToken) {
+                        continue;
+                    }
+
+                    existingFiltersLookup[person.person_token][filterToken] = filter;
                 }
 
-                let persons_cache = {};
-
-                // Process each person
+                // Process each person's filters
                 for (let person of batch) {
-                    let person_token = person.person_token;
-
-                    let existingPerson = personsLookup[person_token];
+                    let existingPerson = personsLookup[person.person_token];
 
                     if (!existingPerson) {
                         continue;
                     }
 
-                    let person_cache = persons_cache[person_token] = {
-                        active: {}
-                    };
+                    // Process filters
+                    if (person.filters) {
+                        for (let [filter_token, filter_data] of Object.entries(person.filters)) {
+                            let filter = filtersLookup.byToken[filter_token];
 
-                    if (person.sections) {
-                        for (const [token, section] of Object.entries(person.sections)) {
-                            let db_item = schemaItemsLookup.persons_sections.byToken[token];
-
-                            if(!db_item) {
-                                console.warn("No section item");
+                            if (!filter) {
                                 continue;
                             }
 
-                            let existingSection = existingDataLookup.persons_sections[person_token]?.[token];
+                            let existingFilter = existingFiltersLookup[person.person_token]?.[filter_token];
 
-                            let sectionData = {
+                            let filterData = {
                                 person_id: existingPerson.id,
-                                section_id: db_item.id,
-                                position: section.position,
-                                updated: section.updated,
-                                deleted: section.deleted || null
+                                filter_id: filter.id,
+                                is_send: filter_data.is_send,
+                                is_receive: filter_data.is_receive,
+                                is_active: filter_data.is_active,
+                                is_negative: filter_data.is_negative,
+                                updated: filter_data.updated,
+                                deleted: filter_data.deleted
                             };
 
-                            if (existingSection) {
-                                if (section.updated > existingSection.updated) {
-                                    sectionData.id = existingSection.id;
-                                    batch_update.persons_sections.push(sectionData);
+                            // Add optional fields if present
+                            if ('filter_value' in filter_data) filterData.filter_value = filter_data.filter_value;
+                            if ('filter_value_min' in filter_data) filterData.filter_value_min = filter_data.filter_value_min;
+                            if ('filter_value_max' in filter_data) filterData.filter_value_max = filter_data.filter_value_max;
+                            if ('importance' in filter_data) filterData.importance = filter_data.importance;
+                            if ('secondary_level' in filter_data) {
+                                filterData.secondary_level = typeof filter_data.secondary_level === 'string' ?
+                                    filter_data.secondary_level :
+                                    JSON.stringify(filter_data.secondary_level);
+                            }
+
+                            if (!batch_insert[filter_token]) {
+                                batch_insert[filter_token] = [];
+                                batch_update[filter_token] = [];
+                            }
+
+                            if (existingFilter) {
+                                if (filter_data.updated > existingFilter.updated) {
+                                    filterData.id = existingFilter.id;
+                                    batch_update[filter_token].push(filterData);
                                 }
                             } else {
-                                sectionData.created = timeNow();
-                                batch_insert.persons_sections.push(sectionData);
-                            }
-
-                            //prepare sections for cache
-                            person_cache['active'][token] = sectionData;
-                        }
-                    }
-
-                    // Process me data
-                    if (person.me) {
-                        for (let [table, items] of Object.entries(person.me)) {
-                            let tableInfo = getTableInfo(table);
-
-                            for (let [token, item] of Object.entries(items)) {
-                                let db_item = schemaItemsLookup[table].byToken[token];
-
-                                if(!db_item) {
-                                    console.warn("No me item");
-                                    continue;
-                                }
-
-                                let existingItem = existingDataLookup[table][person_token]?.[token];
-
-                                let itemData = {
-                                    person_id: existingPerson.id,
-                                    updated: item.updated,
-                                    deleted: item.deleted
-                                };
-
-                                itemData[tableInfo.col_id] = db_item.id;
-
-                                if(tableInfo.col_token) {
-                                    itemData[tableInfo.col_token] = token;
-                                }
-
-                                if(tableInfo.is_favorable) {
-                                    itemData.is_favorite = item.is_favorite || null;
-                                    itemData.favorite_position = item.favorite_position || null;
-                                }
-
-                                if(tableInfo.col_secondary) {
-                                    itemData[tableInfo.col_secondary] = item[tableInfo.col_secondary];
-                                }
-
-                                if(item.hash_token) {
-                                    itemData.hash_token = item.hash_token;
-                                }
-
-                                if (existingItem) {
-                                    if (item.updated > existingItem.updated) {
-                                        itemData.id = existingItem.id;
-                                        batch_update[table].push(itemData);
-                                    }
-                                } else {
-                                    itemData.created = timeNow();
-                                    batch_insert[table].push(itemData);
-                                }
+                                filterData.created = timeNow();
+                                batch_insert[filter_token].push(filterData);
                             }
                         }
                     }
                 }
 
-                for (const [table, items] of Object.entries(batch_insert)) {
+                // Execute batch operations
+                for (const [filter_token, items] of Object.entries(batch_insert)) {
                     if (items.length) {
-                        await batchInsert(table, items, true);
-                        
-                        organizeItemsCache(table, items);
+                        await batchInsert('persons_filters', items, true);
                     }
                 }
 
-                for (const [table, items] of Object.entries(batch_update)) {
+                for (const [filter_token, items] of Object.entries(batch_update)) {
                     if (items.length) {
-                        await batchUpdate(table, items);
-
-                        organizeItemsCache(table, items);
+                        await batchUpdate('persons_filters', items);
                     }
                 }
 
-                for(let person_token in persons_cache) {
-                    let sections = persons_cache[person_token];
+                // Update caches
+                let pipeline = cacheService.startPipeline();
 
-                    let cache_key = cacheService.keys.person_sections(person_token);
+                for (let person of batch) {
+                    if (!person.filters) {
+                        continue;
+                    }
 
-                    for(let section in sections) {
-                        let data = sections[section];
+                    let cache_key = cacheService.keys.person_filters(person.person_token);
 
-                        pipeline.hSet(cache_key, section, JSON.stringify(data));
+                    for (let [filter_token, filter_data] of Object.entries(person.filters)) {
+                        pipeline.hSet(cache_key, filter_token, JSON.stringify(filter_data));
                     }
                 }
 
@@ -408,6 +179,7 @@ function processMe(network_id, persons) {
             console.log({
                 process_time: timeNow() - t
             });
+
         } catch (e) {
             console.error(e);
             return reject(e);
@@ -417,8 +189,8 @@ function processMe(network_id, persons) {
     });
 }
 
-function syncMe() {
-    let sync_name = systemKeys.sync.network.persons_me;
+function syncFilters() {
+    let sync_name = systemKeys.sync.network.persons_filters;
 
     return new Promise(async (resolve, reject) => {
         let conn, networks, network_self;
@@ -430,7 +202,7 @@ function syncMe() {
         }
 
         if (!network_self) {
-            console.error('Error getting own network', e);
+            console.error('Error getting own network');
             await timeoutAwait(5000);
             return reject(e);
         }
@@ -450,16 +222,13 @@ function syncMe() {
         if (networks) {
             for (let network of networks) {
                 try {
-                    //in case of error, do not save new last timestamp
                     let skipSaveTimestamps = false;
 
-                    //if error with one network, catch error and continue to next network
                     let timestamps = {
                         current: timeNow(),
                         last: null,
                     };
 
-                    //request latest data only on subsequent syncs
                     let sync_qry = await conn('sync')
                         .where('network_id', network.id)
                         .where('sync_process', sync_name)
@@ -469,9 +238,8 @@ function syncMe() {
                         timestamps.last = sync_qry.last_updated;
                     }
 
-                    let sync_url = getURL(network.api_domain, joinPaths('sync', 'persons/me'));
+                    let sync_url = getURL(network.api_domain, joinPaths('sync', 'persons/filters'));
 
-                    //security_key
                     let secret_key_to_qry = await conn('networks_secret_keys')
                         .where('network_id', network.id)
                         .where('is_active', true)
@@ -498,9 +266,8 @@ function syncMe() {
                         continue;
                     }
 
-                    await processMe(network.id, response.data.persons);
+                    await processFilters(network.id, response.data.persons);
 
-                    //handle paging, ~10,000 results
                     while (response.data.pagination_updated) {
                         try {
                             response = await axiosInstance.get(sync_url, {
@@ -517,7 +284,7 @@ function syncMe() {
                                 break;
                             }
 
-                            await processMe(network.id, response.data.persons);
+                            await processFilters(network.id, response.data.persons);
                         } catch (e) {
                             console.error(e);
                             skipSaveTimestamps = true;
@@ -525,22 +292,22 @@ function syncMe() {
                         }
                     }
 
-                    //todo remove
-                    if (0 && !skipSaveTimestamps) {
-                        //update sync table
+                    if (!skipSaveTimestamps) {
+                        // Update sync table
+                        //todo
                         if (sync_qry) {
-                            await conn('sync').where('id', sync_qry.id).update({
-                                last_updated: timestamps.current,
-                                updated: timeNow(),
-                            });
+                            // await conn('sync').where('id', sync_qry.id).update({
+                            //     last_updated: timestamps.current,
+                            //     updated: timeNow(),
+                            // });
                         } else {
-                            await conn('sync').insert({
-                                sync_process: sync_name,
-                                network_id: network.id,
-                                last_updated: timestamps.current,
-                                created: timeNow(),
-                                updated: timeNow(),
-                            });
+                            // await conn('sync').insert({
+                            //     network_id: network.id,
+                            //     sync_process: sync_name,
+                            //     last_updated: timestamps.current,
+                            //     created: timeNow(),
+                            //     updated: timeNow(),
+                            // });
                         }
                     }
                 } catch (e) {
@@ -560,7 +327,7 @@ function main() {
         try {
             await cacheService.init();
 
-            await syncMe();
+            await syncFilters();
         } catch(e) {
             console.error(e);
         }

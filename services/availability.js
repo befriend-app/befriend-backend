@@ -197,6 +197,7 @@ function saveAvailabilityData(person, availabilityData) {
                     frontendIds.push(record.frontend_id || null);
                     delete record.frontend_id;
                 }
+
                 await dbService.batchInsert('persons_availability', recordsToInsert, true);
 
                 for (let i = 0; i < recordsToInsert.length; i++) {
