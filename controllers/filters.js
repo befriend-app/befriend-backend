@@ -1,7 +1,7 @@
 const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 const { getPerson, minAge, maxAge } = require('../services/persons');
-const { timeNow } = require('../services/shared');
+const { timeNow, generateToken } = require('../services/shared');
 const {
     getGenders,
     getInstruments,
@@ -46,6 +46,7 @@ function createFilterEntry(filter_id, props = {}) {
 
         return {
             filter_id,
+            token: generateToken(10),
             is_send: filterData.is_send,
             is_receive: filterData.is_receive,
             is_active: filterData.is_active,
@@ -59,6 +60,7 @@ function createFilterEntry(filter_id, props = {}) {
     // default
     return {
         filter_id,
+        token: generateToken(10),
         is_send: true,
         is_receive: true,
         is_negative: false,
