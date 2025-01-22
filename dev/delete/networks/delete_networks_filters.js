@@ -9,7 +9,7 @@ loadScriptEnv();
 
 function main() {
     return new Promise(async (resolve, reject) => {
-        console.log('Delete: networks->me');
+        console.log('Delete: networks->filters');
 
         if (isProdApp()) {
             console.error('App env: [prod]', 'exiting');
@@ -53,7 +53,7 @@ function main() {
                 let chunk = persons.slice(i, i + bulk_delete_count);
 
                 let ids = chunk.map(x => x.id);
-                let tokens = chunk.map(x => x.person_token);
+
                 let grids = {};
 
                 for(let p of chunk) {
@@ -64,19 +64,17 @@ function main() {
                     }
                 }
 
-                for(let table of syncMe.tables) {
+                let tables = ['persons_filters', 'persons_availability', 'persons_filters_networks'];
+
+                for(let table of tables) {
                     await knex(table)
                         .whereIn('person_id', ids)
                         .delete();
                 }
-
-                await knex('persons_sections')
-                    .whereIn('person_id', ids)
-                    .delete();
             }
 
             try {
-                await knex('sync').where('sync_process', systemKeys.sync.network.persons_me).delete();
+                await knex('sync').where('sync_process', systemKeys.sync.network.persons_filters).delete();
             } catch (e) {
                 console.error(e);
             }

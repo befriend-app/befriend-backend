@@ -37,6 +37,9 @@ function main() {
                 connection: connection,
             });
 
+            await require('./delete_networks_filters').main();
+            await require('./delete_networks_me').main();
+
             let network_self = await knex('networks')
                 .where('is_self', true)
                 .first();
