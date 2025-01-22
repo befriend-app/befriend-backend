@@ -252,7 +252,7 @@ function handleFilterUpdate(req, res, filterType) {
                         .update({
                             is_negative: false,
                             updated: now,
-                            deleted: true,
+                            deleted: now,
                         });
 
                 // Update cache
@@ -400,6 +400,7 @@ function putActive(req, res) {
                     if(!exists_qry) {
                         let [id] = await conn('persons_filters')
                             .insert({
+                                token: generateToken(10),
                                 person_id: person.id,
                                 filter_id: filter.id,
                                 is_active: active,
@@ -679,6 +680,7 @@ function putSendReceive(req, res) {
             });
         } catch (e) {
             console.error(e);
+
             res.json(
                 {
                     message: 'Error updating filter send/receive state',
@@ -728,7 +730,7 @@ function putAvailability(req, res) {
             console.error('Error in putAvailability:', error);
             res.json(
                 {
-                    message: error.message || 'Error updating availability',
+                    message: error?.message || 'Error updating availability',
                     success: false,
                 },
                 400,
@@ -999,6 +1001,7 @@ function putNetworks(req, res) {
                 });
 
                 const [id] = await conn(mapping.filters_table).insert({
+                    token: generateToken(10),
                     person_id: person.id,
                     created: now,
                     updated: now,
@@ -1713,6 +1716,7 @@ function putActivityTypes(req, res) {
 
                     // Create new item if not active
                     const newItem = {
+                        token: generateToken(10),
                         filter_id: filter.id,
                         person_id: person.id,
                         activity_type_id: activityTypeId,
