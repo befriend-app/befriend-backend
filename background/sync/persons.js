@@ -575,6 +575,8 @@ function updatePersonsCount() {
         } catch (e) {
             console.error(e);
         }
+
+        resolve();
     });
 }
 
