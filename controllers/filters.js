@@ -195,6 +195,7 @@ function handleFilterUpdate(req, res, filterType) {
 
             // Get person
             const person = await getPerson(person_token);
+
             if (!person) {
                 res.json(
                     {
@@ -413,6 +414,7 @@ function putActive(req, res) {
                                 token: generateToken(10),
                                 person_id: person.id,
                                 filter_id: filter.id,
+                                is_parent: true,
                                 is_active: active,
                                 created: now,
                                 updated: now
@@ -449,7 +451,10 @@ function putActive(req, res) {
                     is_active: active
                 });
 
-                const [id] = await conn('persons_filters').insert(filterEntry);
+                const [id] = await conn('persons_filters').insert({
+                    ...filterEntry,
+                    is_parent: true,
+                });
 
                 filterData = mapping.multi
                     ? {
@@ -619,6 +624,7 @@ function putSendReceive(req, res) {
 
             // Get person
             let person = await getPerson(person_token);
+
             if (!person) {
                 res.json(
                     {
@@ -661,7 +667,11 @@ function putSendReceive(req, res) {
                     is_receive: type === 'receive' ? enabled : true,
                 });
 
-                const [id] = await conn('persons_filters').insert(filterEntry);
+                const [id] = await conn('persons_filters')
+                    .insert({
+                        ...filterEntry,
+                        is_parent: true,
+                    });
 
                 filterData = mapping.multi
                     ? {
@@ -819,7 +829,10 @@ function putMode(req, res) {
                     person_id: person.id,
                 });
 
-                const [id] = await conn('persons_filters').insert(baseEntry);
+                const [id] = await conn('persons_filters').insert({
+                    ...baseEntry,
+                    is_parent: true
+                });
 
                 filterData = {
                     ...baseEntry,
@@ -835,6 +848,7 @@ function putMode(req, res) {
             const existingItem = Object.values(filterItems).find(
                 (item) => item[mapping.column] === mode.id,
             );
+
             const existingSolo = Object.values(filterItems).find(
                 (item) => item[mapping.column] === soloMode?.id,
             );
@@ -1220,7 +1234,10 @@ function putReviewRating(req, res) {
                     filter_value: parseFloat(rating.toFixed(1)),
                 });
 
-                const [id] = await conn('persons_filters').insert(filterEntry);
+                const [id] = await conn('persons_filters').insert({
+                    ...filterEntry,
+                    is_parent: true,
+                });
 
                 filterData = {
                     ...filterEntry,
@@ -1322,7 +1339,10 @@ function putAge(req, res) {
                     filter_value_max: max_age_value,
                 });
 
-                const [id] = await conn('persons_filters').insert(filterEntry);
+                const [id] = await conn('persons_filters').insert({
+                    ...filterEntry,
+                    is_parent: true
+                });
 
                 filterData = {
                     ...filterEntry,
@@ -1405,7 +1425,10 @@ function putGender(req, res) {
                 });
 
                 // Create base filter entry in database
-                const [id] = await conn('persons_filters').insert(baseEntry);
+                const [id] = await conn('persons_filters').insert({
+                    ...baseEntry,
+                    is_parent: true,
+                });
 
                 filterData = {
                     ...baseEntry,
@@ -1578,6 +1601,7 @@ function putDistance(req, res) {
 
             // Get person
             let person = await getPerson(person_token);
+
             if (!person) {
                 res.json(
                     {
@@ -1609,7 +1633,10 @@ function putDistance(req, res) {
                     filter_value: distance,
                 });
 
-                const [id] = await conn('persons_filters').insert(filterEntry);
+                const [id] = await conn('persons_filters').insert({
+                    ...filterEntry,
+                    is_parent: true
+                });
 
                 filterData = {
                     ...filterEntry,
@@ -3300,6 +3327,7 @@ function putSports(req, res) {
             }
 
             let person = await getPerson(person_token);
+
             if (!person) {
                 res.json(
                     {

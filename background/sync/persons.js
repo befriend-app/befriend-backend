@@ -30,11 +30,15 @@ function processPersons(network_id, persons) {
         let person_data = structuredClone(new_data);
 
         //grid
-        if(!prev_grid || prev_grid.token !== grid.token) {
-            person_data.grid = {
-                id: grid.id,
-                token: grid.token
-            };
+        if(grid) {
+            if(!prev_grid || prev_grid.token !== grid.token) {
+                person_data.grid = {
+                    id: grid.id,
+                    token: grid.token
+                };
+            }
+        } else {
+            person_data.grid = {};
         }
 
         //modes

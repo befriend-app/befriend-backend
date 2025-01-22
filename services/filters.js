@@ -62,7 +62,6 @@ const filterMappings = {
         single: true,
         is_notifications: true,
         is_sub: true,
-        parent: 'reviews'
     },
     reviews_safety: {
         token: 'reviews_safety',
@@ -70,7 +69,6 @@ const filterMappings = {
         single: true,
         is_notifications: true,
         is_sub: true,
-        parent: 'reviews'
     },
     reviews_trust: {
         token: 'reviews_trust',
@@ -78,7 +76,6 @@ const filterMappings = {
         single: true,
         is_notifications: true,
         is_sub: true,
-        parent: 'reviews'
     },
     reviews_timeliness: {
         token: 'reviews_timeliness',
@@ -86,7 +83,6 @@ const filterMappings = {
         single: true,
         is_notifications: true,
         is_sub: true,
-        parent: 'reviews'
     },
     reviews_friendliness: {
         token: 'reviews_friendliness',
@@ -94,7 +90,6 @@ const filterMappings = {
         single: true,
         is_notifications: true,
         is_sub: true,
-        parent: 'reviews'
     },
     reviews_fun: {
         token: 'reviews_fun',
@@ -102,7 +97,6 @@ const filterMappings = {
         single: true,
         is_notifications: true,
         is_sub: true,
-        parent: 'reviews'
     },
     verifications: {
         token: 'verifications',
@@ -116,7 +110,6 @@ const filterMappings = {
         single: true,
         is_notifications: true,
         is_sub: true,
-        parent: 'verifications'
     },
     verification_linkedin: {
         token: 'verification_linkedin',
@@ -124,7 +117,6 @@ const filterMappings = {
         single: true,
         is_notifications: true,
         is_sub: true,
-        parent: 'verifications'
     },
     verification_dl: {
         token: 'verification_dl',
@@ -132,7 +124,6 @@ const filterMappings = {
         single: true,
         is_notifications: true,
         is_sub: true,
-        parent: 'verifications'
     },
     verification_cc: {
         token: 'verification_cc',
@@ -140,7 +131,6 @@ const filterMappings = {
         single: true,
         is_notifications: true,
         is_sub: true,
-        parent: 'verifications'
     },
     verification_video: {
         token: 'verification_video',
@@ -148,7 +138,6 @@ const filterMappings = {
         single: true,
         is_notifications: true,
         is_sub: true,
-        parent: 'verifications'
     },
     verification_mailer: {
         token: 'verification_mailer',
@@ -156,7 +145,6 @@ const filterMappings = {
         single: true,
         is_notifications: true,
         is_sub: true,
-        parent: 'verifications'
     },
     distance: {
         token: 'distance',
@@ -183,10 +171,12 @@ const filterMappings = {
         token: 'movies',
         name: 'Movies',
         table: 'movies',
+        table_key: 'movies',
         column: 'movie_id',
         multi: true,
         importance: true,
         is_interests: true,
+
         cache: {
             type: 'hash',
             key: cacheService.keys.movies,
@@ -196,12 +186,13 @@ const filterMappings = {
         token: 'movie_genres',
         name: 'Movie Genres',
         table: 'movie_genres',
+        table_key: 'genres',
         column: 'movie_genre_id',
         multi: true,
         importance: true,
         is_interests: true,
         is_sub: true,
-        parent: 'movies',
+        parent_cache: 'movies',
         cache: {
             type: 'hash',
             key: cacheService.keys.movie_genres,
@@ -211,6 +202,7 @@ const filterMappings = {
         token: 'tv_shows',
         name: 'TV Shows',
         table: 'tv_shows',
+        table_key: 'shows',
         column: 'tv_show_id',
         multi: true,
         importance: true,
@@ -224,12 +216,13 @@ const filterMappings = {
         token: 'tv_show_genres',
         name: 'TV Show Genres',
         table: 'tv_genres',
+        table_key: 'genres',
         column: 'tv_show_genre_id',
         multi: true,
         importance: true,
         is_interests: true,
         is_sub: true,
-        parent: 'tv_shows',
+        parent_cache: 'tv_shows',
         cache: {
             type: 'hash',
             key: cacheService.keys.tv_genres,
@@ -250,12 +243,13 @@ const filterMappings = {
         token: 'sports_play',
         name: 'Play',
         table: 'sports',
+        table_key: 'play',
         column: 'sport_play_id',
         multi: true,
         importance: true,
         is_interests: true,
         is_sub: true,
-        parent: 'sports',
+        parent_cache: 'sports',
         cache: {
             type: 'hash',
             key: cacheService.keys.sports,
@@ -265,27 +259,29 @@ const filterMappings = {
         token: 'sports_league',
         name: 'Leagues',
         table: 'sports_leagues',
+        table_key: 'leagues',
         column: 'sport_league_id',
         multi: true,
         importance: true,
         is_interests: true,
         is_sub: true,
-        parent: 'sports',
+        parent_cache: 'sports',
         cache: {
             type: 'hash',
             key: cacheService.keys.sports_leagues,
         }
     },
     sports_teams: {
-        token: 'sport_team',
+        token: 'sports_team',
         name: 'Teams',
         table: 'sports_teams',
+        table_key: 'teams',
         column: 'sport_team_id',
         multi: true,
         importance: true,
         is_interests: true,
         is_sub: true,
-        parent: 'sports',
+        parent_cache: 'sports',
         cache: {
             type: 'hash',
             key: cacheService.keys.sports_teams,
@@ -302,12 +298,13 @@ const filterMappings = {
         token: 'music_artists',
         name: 'Music Artists',
         table: 'music_artists',
+        table_key: 'artists',
         column: 'music_artist_id',
         multi: true,
         importance: true,
         is_interests: true,
         is_sub: true,
-        parent: 'music',
+        parent_cache: 'music',
         cache: {
             type: 'hash',
             key: cacheService.keys.music_artists,
@@ -317,12 +314,13 @@ const filterMappings = {
         token: 'music_genres',
         name: 'Music Genres',
         table: 'music_genres',
+        table_key: 'genres',
         column: 'music_genre_id',
         multi: true,
         importance: true,
         is_interests: true,
         is_sub: true,
-        parent: 'music',
+        parent_cache: 'music',
         cache: {
             type: 'hash',
             key: cacheService.keys.music_genres,
@@ -365,12 +363,13 @@ const filterMappings = {
         token: 'work_industries',
         name: 'Industry',
         table: 'work_industries',
+        table_key: 'industries',
         column: 'work_industry_id',
         multi: true,
         importance: true,
         is_school_work: true,
         is_sub: true,
-        parent: 'work',
+        parent_cache: 'work',
         cache: {
             type: 'hash',
             key: cacheService.keys.work_industries,
@@ -380,12 +379,13 @@ const filterMappings = {
         token: 'work_roles',
         name: 'Role',
         table: 'work_roles',
+        table_key: 'roles',
         column: 'work_role_id',
         multi: true,
         importance: true,
         is_school_work: true,
         is_sub: true,
-        parent: 'work',
+        parent_cache: 'work',
         cache: {
             type: 'hash',
             key: cacheService.keys.work_roles,
