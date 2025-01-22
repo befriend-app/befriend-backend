@@ -7,7 +7,7 @@ exports.up = async function(knex) {
         table.string('token').notNullable().after('person_id');
     });
 
-    await knex.schema.alterTable('persons_networks', (table) => {
+    await knex.schema.alterTable('persons_filters_networks', (table) => {
         table.string('token').notNullable().after('person_id');
     });
 };
@@ -21,7 +21,7 @@ exports.down = async function(knex) {
         table.dropColumn('token');
     });
 
-    await knex.schema.alterTable('persons_networks', (table) => {
+    await knex.schema.alterTable('persons_filters_networks', (table) => {
         table.dropColumn('token');
     });
 };
