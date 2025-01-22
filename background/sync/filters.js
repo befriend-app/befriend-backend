@@ -58,13 +58,11 @@ function getFilterMapByItem(item) {
     return null;
 }
 
-function processFilters(network_id, persons) {
+function processMain(persons) {
     return new Promise(async (resolve, reject) => {
-        if (!persons?.length) {
-            return resolve();
-        }
-
         try {
+            persons = Object.values(persons);
+
             let conn = await dbService.conn();
 
             let schemaItemsLookup = {};
@@ -75,44 +73,50 @@ function processFilters(network_id, persons) {
             let filtersLookup = await getFilters();
 
             for(let person of persons) {
-                for(let section in person.filters) {
-                    let filterMapping = getMappingInfo(section);
+                for(let token in person) {
+                    let item = person[token];
+                    let item_token = item.item_token;
 
-                    if(!(schemaItemsLookup[section])) {
-                        schemaItemsLookup[section] = {
+                    let filterMapping = getMappingInfo(item.filter_token);
+
+                    if(!filterMapping) {
+                        console.warn("Filter not found");
+                        continue;
+                    }
+
+                    if(!(schemaItemsLookup[item.filter_token])) {
+                        schemaItemsLookup[item.filter_token] = {
                             byId: {},
                             byToken: {}
                         };
 
-                        duplicateTracker[section] = {};
+                        duplicateTracker[item.filter_token] = {};
 
                         if(filterMapping.cache) {
-                            lookup_pipelines[section] = cacheService.startPipeline();
+                            lookup_pipelines[item.filter_token] = cacheService.startPipeline();
                         } else {
-                            lookup_db[section] = {};
+                            lookup_db[item.filter_token] = {};
                         }
                     }
 
-                    let items = person.filters[section].items || {};
+                    if(!item_token) {
+                        continue;
+                    }
 
-                    for(let token in items) {
-                        let item = items[token];
+                    if(item_token in duplicateTracker[item.filter_token]) {
+                        continue;
+                    }
 
-                        if(token in duplicateTracker[section]) {
-                            continue;
+                    duplicateTracker[item.filter_token][item_token] = true;
+
+                    if(filterMapping.cache) {
+                        if(filterMapping.cache.type === 'hash') {
+                            lookup_pipelines[item.filter_token].hGet(filterMapping.cache.key, item_token);
+                        } else if(filterMapping.cache.type === 'hash_token') {
+                            lookup_pipelines[item.filter_token].hGet(filterMapping.cache.key(item.hash_token), item_token);
                         }
-
-                        duplicateTracker[section][token] = true;
-
-                        if(filterMapping.cache) {
-                            if(filterMapping.cache.type === 'hash') {
-                                lookup_pipelines[section].hGet(filterMapping.cache.key, item.token);
-                            } else if(filterMapping.cache.type === 'hash_token') {
-                                lookup_pipelines[section].hGet(filterMapping.cache.key(item.hash_token), item.token);
-                            }
-                        } else {
-                            lookup_db[section][token] = true;
-                        }
+                    } else {
+                        lookup_db[item.filter_token][item_token] = true;
                     }
                 }
             }
@@ -210,42 +214,14 @@ function processFilters(network_id, persons) {
                         continue;
                     }
 
-                    let person_ref, filter_ref;
-
-                    person_ref = existingDataLookup.filters[person_token];
+                    let person_ref = existingDataLookup.filters[person_token];
 
                     if(!person_ref) {
                         person_ref = existingDataLookup.filters[person_token] = {};
                     }
 
-                    let filter = filtersLookup.byId[item.filter_id];
-
-                    filter_ref = person_ref[filter.token];
-
-                    if(!filter_ref) {
-                        filter_ref = person_ref[filter.token] = {
-                            items: {}
-                        };
-                    }
-
-                    let filterMapping = getMappingInfo(item);
-
-                    if(filterMapping) {
-                        console.log();
-                    } else {
-                        filter_ref.is_active = item.is_active;
-                        filter_ref.is_send = item.is_send;
-                        filter_ref.is_receive = item.is_receive;
-                        filter_ref.updated = item.updated;
-                        filter_ref.deleted = item.deleted;
-                    }
+                    person_ref[item.token] = item;
                 }
-
-                //availability
-
-                //networks
-
-                let persons_cache = {};
 
                 // Process each person
                 for (let person of batch) {
@@ -255,8 +231,6 @@ function processFilters(network_id, persons) {
                     if (!existingPerson) {
                         continue;
                     }
-
-                    let person_cache = persons_cache[person.person_token] = {};
 
                     if (person.filters) {
                         for (let [filterKey, filterData] of Object.entries(person.filters)) {
@@ -271,10 +245,10 @@ function processFilters(network_id, persons) {
                                 continue;
                             }
 
-                            let existingItem = existingDataLookup.filters[person_token]?.[filterKey];
+                            let existingItem = existingDataLookup.filters[person_token]?.[filterData.token];
 
-                            // Initialize cache for this filter
                             let parentEntry = {
+                                token: filterData.token,
                                 person_id: existingPerson.id,
                                 filter_id: filter.id,
                                 is_send: filterData.is_send,
@@ -284,19 +258,6 @@ function processFilters(network_id, persons) {
                                 deleted: filterData.deleted,
                             };
 
-                            person_cache[filterKey] = {
-                                is_send: filterData.is_send,
-                                is_receive: filterData.is_receive,
-                                is_active: filterData.is_active,
-                                updated: filterData.updated,
-                                deleted: filterData.deleted,
-                                items: {}
-                            };
-
-                            if(!filterData.updated) {
-                                debugger;
-                            }
-
                             if (existingItem) {
                                 if (filterData.updated > existingItem.updated) {
                                     parentEntry.id = existingItem.id;
@@ -305,32 +266,6 @@ function processFilters(network_id, persons) {
                             } else {
                                 parentEntry.created = timeNow();
                                 batch_insert.persons_filters.push(parentEntry);
-                            }
-
-                            if (filterKey === 'availability') {
-                                // continue;
-                                // processAvailabilityFilter(
-                                //     person,
-                                //     existingPerson,
-                                //     filterData,
-                                //     batch_insert.persons_availability,
-                                //     batch_update.persons_availability,
-                                //     person_cache[filterKey]
-                                // );
-                                // continue;
-                            }
-
-                            if (filterKey === 'networks') {
-                                // continue;
-                                // processNetworksFilter(
-                                //     person,
-                                //     existingPerson,
-                                //     filterData,
-                                //     batch_insert.persons_filters_networks,
-                                //     batch_update.persons_filters_networks,
-                                //     person_cache[filterKey]
-                                // );
-                                // continue;
                             }
 
                             if (filterData.items) {
@@ -345,6 +280,7 @@ function processFilters(network_id, persons) {
                                     let existingItem = existingDataLookup.filters[person_token]?.items?.[itemToken];
 
                                     let filterEntry = {
+                                        token: item.token,
                                         [filterMapping.column]: db_item.id,
                                         person_id: existingPerson.id,
                                         filter_id: filter.id,
@@ -381,18 +317,12 @@ function processFilters(network_id, persons) {
                                         filterEntry.created = timeNow();
                                         batch_insert.persons_filters.push(filterEntry);
                                     }
-
-                                    person_cache[filterKey].items[itemToken] = {
-                                        ...filterEntry,
-                                        token: itemToken
-                                    };
                                 }
                             }
                         }
                     }
                 }
 
-                // Perform batch operations
                 for (const [table, items] of Object.entries(batch_insert)) {
                     if (items.length) {
                         await batchInsert(table, items, true);
@@ -404,25 +334,50 @@ function processFilters(network_id, persons) {
                         await batchUpdate(table, items);
                     }
                 }
-
-                // Update cache
-                let pipeline = cacheService.startPipeline();
-
-                for (let person_token in persons_cache) {
-                    let filters = persons_cache[person_token];
-
-                    for (let filter_key in filters) {
-                        let cache_key = cacheService.keys.person_filters(person_token);
-                        pipeline.hSet(
-                            cache_key,
-                            filter_key,
-                            JSON.stringify(filters[filter_key])
-                        );
-                    }
-                }
-
-                await cacheService.execPipeline(pipeline);
             }
+        } catch(e) {
+            console.error(e);
+            return reject(e);
+        }
+
+        resolve();
+    });
+}
+
+function processAvailability() {
+    return new Promise(async (resolve, reject) => {
+                
+    });
+}
+
+function processNetworks() {
+    return new Promise(async (resolve, reject) => {
+                
+    });
+}
+
+function processFilters(persons_filters) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let hasPersons = false;
+
+            for(let k in persons_filters) {
+                let persons = persons_filters[k];
+
+                if(Object.keys(persons).length) {
+                    hasPersons = true;
+                }
+            }
+
+            if(!hasPersons) {
+                return resolve();
+            }
+            
+            await processMain(persons_filters.filters);
+
+            // await processAvailability(persons_filters.availability);
+            //
+            // await processNetworks(persons_filters.networks);
         } catch (e) {
             console.error('Error in processFilters:', e);
             return reject(e);
@@ -574,7 +529,7 @@ function syncFilters() {
                         continue;
                     }
 
-                    await processFilters(network.id, response.data.persons);
+                    await processFilters(response.data.filters);
 
                     while (response.data.pagination_updated) {
                         try {
@@ -592,7 +547,7 @@ function syncFilters() {
                                 break;
                             }
 
-                            await processFilters(network.id, response.data.persons);
+                            await processFilters(response.data.filters);
                         } catch (e) {
                             console.error(e);
                             skipSaveTimestamps = true;

@@ -168,12 +168,27 @@ function syncFilters (inputs) {
             }
 
             //organize return object
-            let persons = {};
+            let persons_filters = {};
 
-            let filters_data = [filters_qry, availability_qry, networks_qry];
+            let filters_data = [
+                {
+                    name: 'filters',
+                    results: filters_qry
+                },
+                {
+                    name: 'availability',
+                    results: availability_qry
+                },
+                {
+                    name: 'networks',
+                    results: networks_qry
+                }
+            ];
 
-            for(let qry of filters_data) {
-                for(let item of qry) {
+            for(let data of filters_data) {
+                let persons_data = persons_filters[data.name] = {};
+
+                for(let item of data.results) {
                     //add filter token
                     if(item.filter_id) {
                         item.filter_token = filtersLookup.byId[item.filter_id].token;
@@ -188,11 +203,11 @@ function syncFilters (inputs) {
 
                     let person_token = item.person_token;
 
-                    if(!persons[person_token]) {
-                        persons[person_token] = {};
+                    if(!persons_data[person_token]) {
+                        persons_data[person_token] = {};
                     }
 
-                    persons[person_token][item.token] = item;
+                    persons_data[person_token][item.token] = item;
 
                     //delete unneeded cols
                     delete item.id;
@@ -208,7 +223,9 @@ function syncFilters (inputs) {
 
             const lastTimestamps = [];
 
-            for(let results of filters_data) {
+            for(let data of filters_data) {
+                let results = data.results;
+
                 if (results.length === results_limit) {
                     lastTimestamps.push(results[results.length - 1].updated);
                 }
@@ -219,7 +236,7 @@ function syncFilters (inputs) {
             return resolve({
                 pagination_updated: return_pagination_updated,
                 prev_data_since: prev_data_since || data_since_timestamp_w_extra,
-                persons: Object.values(persons)
+                filters: persons_filters
             });
         } catch (e) {
             console.error('Error syncing persons filters:', e);

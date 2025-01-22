@@ -56,7 +56,7 @@ function getTableInfo(table_name) {
     }
 }
 
-function processMe(network_id, persons) {
+function processMe(persons) {
     return new Promise(async (resolve, reject) => {
         if (!persons?.length) {
             return resolve();
@@ -507,7 +507,7 @@ function syncMe() {
                         continue;
                     }
 
-                    await processMe(network.id, response.data.persons);
+                    await processMe(response.data.persons);
 
                     //handle paging, ~10,000 results
                     while (response.data.pagination_updated) {
@@ -526,7 +526,7 @@ function syncMe() {
                                 break;
                             }
 
-                            await processMe(network.id, response.data.persons);
+                            await processMe(response.data.persons);
                         } catch (e) {
                             console.error(e);
                             skipSaveTimestamps = true;
