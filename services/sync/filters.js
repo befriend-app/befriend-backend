@@ -247,6 +247,7 @@ function syncFilters (inputs) {
                         is_active: item.is_active,
                         is_send: item.is_send,
                         is_receive: item.is_receive,
+                        hash_token: item.hash_token || null,
                         updated: item.updated,
                         deleted: item.deleted,
                     };
@@ -331,7 +332,7 @@ function syncFilters (inputs) {
                 if (!network_filter) {
                     network_filter = person_filters.filters['networks'] = {
                         filter_token: 'networks',
-                        updated_2: item.updated,
+                        updated: item.updated,
                         items: {}
                     };
                 }
@@ -352,7 +353,7 @@ function syncFilters (inputs) {
                 } else {
                     network_filter.is_all_verified = item.is_all_verified;
                     network_filter.is_any_network = item.is_any_network;
-                    network_filter.updated_2 = item.updated;
+                    network_filter.updated = item.updated;
                 }
             }
 

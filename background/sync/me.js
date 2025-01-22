@@ -58,7 +58,7 @@ function getTableInfo(table_name) {
 
 function processMe(network_id, persons) {
     return new Promise(async (resolve, reject) => {
-        if (!persons || !persons.length) {
+        if (!persons?.length) {
             return resolve();
         }
 
@@ -66,6 +66,7 @@ function processMe(network_id, persons) {
             let conn = await dbService.conn();
 
             let schemaItemsLookup = {};
+            let duplicateTracker = {};
             let lookup_pipelines = {};
 
             for(let person of persons) {
@@ -76,6 +77,8 @@ function processMe(network_id, persons) {
                             byToken: {}
                         };
 
+                        duplicateTracker[section] = {};
+
                         lookup_pipelines[section] = cacheService.startPipeline();
                     }
 
@@ -85,6 +88,12 @@ function processMe(network_id, persons) {
 
                     for(let token in items) {
                         let item = items[token];
+
+                        if(token in duplicateTracker[section]) {
+                            continue;
+                        }
+
+                        duplicateTracker[section][token] = true;
 
                         if(section_table.cache_key) {
                             lookup_pipelines[section].hGet(section_table.cache_key, item.token);

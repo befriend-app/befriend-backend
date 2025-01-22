@@ -62,6 +62,7 @@ const filterMappings = {
         single: true,
         is_notifications: true,
         is_sub: true,
+        parent: 'reviews'
     },
     reviews_safety: {
         token: 'reviews_safety',
@@ -69,6 +70,7 @@ const filterMappings = {
         single: true,
         is_notifications: true,
         is_sub: true,
+        parent: 'reviews'
     },
     reviews_trust: {
         token: 'reviews_trust',
@@ -76,6 +78,7 @@ const filterMappings = {
         single: true,
         is_notifications: true,
         is_sub: true,
+        parent: 'reviews'
     },
     reviews_timeliness: {
         token: 'reviews_timeliness',
@@ -83,6 +86,7 @@ const filterMappings = {
         single: true,
         is_notifications: true,
         is_sub: true,
+        parent: 'reviews'
     },
     reviews_friendliness: {
         token: 'reviews_friendliness',
@@ -90,6 +94,7 @@ const filterMappings = {
         single: true,
         is_notifications: true,
         is_sub: true,
+        parent: 'reviews'
     },
     reviews_fun: {
         token: 'reviews_fun',
@@ -97,6 +102,7 @@ const filterMappings = {
         single: true,
         is_notifications: true,
         is_sub: true,
+        parent: 'reviews'
     },
     verifications: {
         token: 'verifications',
@@ -110,6 +116,7 @@ const filterMappings = {
         single: true,
         is_notifications: true,
         is_sub: true,
+        parent: 'verifications'
     },
     verification_linkedin: {
         token: 'verification_linkedin',
@@ -117,6 +124,7 @@ const filterMappings = {
         single: true,
         is_notifications: true,
         is_sub: true,
+        parent: 'verifications'
     },
     verification_dl: {
         token: 'verification_dl',
@@ -124,6 +132,7 @@ const filterMappings = {
         single: true,
         is_notifications: true,
         is_sub: true,
+        parent: 'verifications'
     },
     verification_cc: {
         token: 'verification_cc',
@@ -131,6 +140,7 @@ const filterMappings = {
         single: true,
         is_notifications: true,
         is_sub: true,
+        parent: 'verifications'
     },
     verification_video: {
         token: 'verification_video',
@@ -138,6 +148,7 @@ const filterMappings = {
         single: true,
         is_notifications: true,
         is_sub: true,
+        parent: 'verifications'
     },
     verification_mailer: {
         token: 'verification_mailer',
@@ -145,6 +156,7 @@ const filterMappings = {
         single: true,
         is_notifications: true,
         is_sub: true,
+        parent: 'verifications'
     },
     distance: {
         token: 'distance',
@@ -175,6 +187,10 @@ const filterMappings = {
         multi: true,
         importance: true,
         is_interests: true,
+        cache: {
+            type: 'hash',
+            key: cacheService.keys.movies,
+        }
     },
     movie_genres: {
         token: 'movie_genres',
@@ -185,6 +201,11 @@ const filterMappings = {
         importance: true,
         is_interests: true,
         is_sub: true,
+        parent: 'movies',
+        cache: {
+            type: 'hash',
+            key: cacheService.keys.movie_genres,
+        }
     },
     tv_shows: {
         token: 'tv_shows',
@@ -194,6 +215,10 @@ const filterMappings = {
         multi: true,
         importance: true,
         is_interests: true,
+        cache: {
+            type: 'hash',
+            key: cacheService.keys.tv_shows,
+        }
     },
     tv_show_genres: {
         token: 'tv_show_genres',
@@ -204,6 +229,11 @@ const filterMappings = {
         importance: true,
         is_interests: true,
         is_sub: true,
+        parent: 'tv_shows',
+        cache: {
+            type: 'hash',
+            key: cacheService.keys.tv_genres,
+        }
     },
     sports: {
         token: 'sports',
@@ -211,6 +241,10 @@ const filterMappings = {
         multi: true,
         importance: true,
         is_interests: true,
+        cache: {
+            type: 'hash',
+            key: cacheService.keys.sports,
+        }
     },
     sports_play: {
         token: 'sports_play',
@@ -221,6 +255,11 @@ const filterMappings = {
         importance: true,
         is_interests: true,
         is_sub: true,
+        parent: 'sports',
+        cache: {
+            type: 'hash',
+            key: cacheService.keys.sports,
+        }
     },
     sports_leagues: {
         token: 'sports_league',
@@ -231,6 +270,11 @@ const filterMappings = {
         importance: true,
         is_interests: true,
         is_sub: true,
+        parent: 'sports',
+        cache: {
+            type: 'hash',
+            key: cacheService.keys.sports_leagues,
+        }
     },
     sports_teams: {
         token: 'sport_team',
@@ -241,6 +285,11 @@ const filterMappings = {
         importance: true,
         is_interests: true,
         is_sub: true,
+        parent: 'sports',
+        cache: {
+            type: 'hash',
+            key: cacheService.keys.sports_teams,
+        }
     },
     music: {
         token: 'music',
@@ -258,6 +307,11 @@ const filterMappings = {
         importance: true,
         is_interests: true,
         is_sub: true,
+        parent: 'music',
+        cache: {
+            type: 'hash',
+            key: cacheService.keys.music_artists,
+        }
     },
     music_genres: {
         token: 'music_genres',
@@ -268,6 +322,11 @@ const filterMappings = {
         importance: true,
         is_interests: true,
         is_sub: true,
+        parent: 'music',
+        cache: {
+            type: 'hash',
+            key: cacheService.keys.music_genres,
+        }
     },
     instruments: {
         token: 'instruments',
@@ -277,6 +336,10 @@ const filterMappings = {
         multi: true,
         importance: true,
         is_interests: true,
+        cache: {
+            type: 'hash',
+            key: cacheService.keys.instruments,
+        }
     },
     schools: {
         token: 'schools',
@@ -286,6 +349,10 @@ const filterMappings = {
         multi: true,
         importance: true,
         is_school_work: true,
+        cache: {
+            type: 'hash_token',
+            key: cacheService.keys.schools_country,
+        }
     },
     work: {
         token: 'work',
@@ -302,7 +369,12 @@ const filterMappings = {
         multi: true,
         importance: true,
         is_school_work: true,
-        is_sub: true
+        is_sub: true,
+        parent: 'work',
+        cache: {
+            type: 'hash',
+            key: cacheService.keys.work_industries,
+        }
     },
     work_roles: {
         token: 'work_roles',
@@ -313,6 +385,11 @@ const filterMappings = {
         importance: true,
         is_school_work: true,
         is_sub: true,
+        parent: 'work',
+        cache: {
+            type: 'hash',
+            key: cacheService.keys.work_roles,
+        }
     },
     life_stages: {
         token: 'life_stages',

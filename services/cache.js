@@ -14,7 +14,7 @@ const standardKeys = {
 };
 
 const filterKeys = {
-    modes: 'modes',
+    modes: 'modes'
 };
 
 const sectionKeys = {
