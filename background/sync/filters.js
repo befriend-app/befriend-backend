@@ -38,6 +38,14 @@ function getMappingInfo(filter_token) {
     return null;
 }
 
+function getFilterMapByToken(filter_token) {
+    for(let f in filterMappings) {
+        if(filter_token === filterMappings[f].token) {
+            return filterMappings[f];
+        }
+    }
+}
+
 function getFilterMapByItem(item) {
     for(let k in item) {
         if(['person_id', 'filter_id'].includes(k)) {
@@ -61,7 +69,8 @@ function getFilterMapByItem(item) {
 function processMain(persons) {
     return new Promise(async (resolve, reject) => {
         try {
-            persons = Object.values(persons);
+            let batch_insert = [];
+            let batch_update = [];
 
             let conn = await dbService.conn();
 
@@ -72,7 +81,9 @@ function processMain(persons) {
 
             let filtersLookup = await getFilters();
 
-            for(let person of persons) {
+            for(let person_token in persons) {
+                let person = persons[person_token];
+
                 for(let token in person) {
                     let item = person[token];
                     let item_token = item.item_token;
@@ -156,184 +167,137 @@ function processMain(persons) {
                 }
             }
 
-            let batches = [];
+            //organize persons lookup
+            let batchPersonTokens = Object.keys(persons);
 
-            for (let i = 0; i < persons.length; i += batch_process) {
-                batches.push(persons.slice(i, i + batch_process));
+            let existingPersons = await conn('persons')
+                .whereIn('person_token', batchPersonTokens)
+                .select('id', 'person_token', 'updated');
+
+            let personsIdTokenMap = {};
+            let personsLookup = {};
+
+            for (let person of existingPersons) {
+                personsLookup[person.person_token] = person;
+                personsIdTokenMap[person.id] = person.person_token;
             }
 
-            for (let batch of batches) {
-                let batch_insert = {
-                    persons_filters: [],
-                    persons_availability: [],
-                    persons_filters_networks: []
-                };
+            const existingPersonIds = existingPersons.map(p => p.id);
 
-                let batch_update = {
-                    persons_filters: [],
-                    persons_availability: [],
-                    persons_filters_networks: []
-                };
+            let existingData = await conn('persons_filters')
+                .whereIn('person_id', existingPersonIds)
+                .select('*');
 
-                const batchPersonTokens = batch.map(p => p.person_token);
+            let existingDataLookup = {};
 
-                const existingPersons = await conn('persons')
-                    .whereIn('person_token', batchPersonTokens)
-                    .select('id', 'person_token', 'updated');
+            for(let item of existingData) {
+                let person_token = personsIdTokenMap[item.person_id];
 
-                let personsIdTokenMap = {};
-                let personsLookup = {};
-
-                for (const person of existingPersons) {
-                    personsLookup[person.person_token] = person;
-                    personsIdTokenMap[person.id] = person.person_token;
+                if(!person_token) {
+                    console.warn("No person token");
+                    continue;
                 }
 
-                const existingPersonIds = existingPersons.map(p => p.id);
-
-                // Get existing filters for all tables
-                let existingData = {};
-                let existingDataLookup = {};
-
-                for(let table in batch_insert) {
-                    existingData[table] = await conn(table)
-                        .whereIn('person_id', existingPersonIds)
-                        .select('*');
+                if(!existingDataLookup[person_token]) {
+                    existingDataLookup[person_token] = {};
                 }
 
-                //filters
-                existingDataLookup.filters = {};
+                existingDataLookup[person_token][item.token] = item;
+            }
 
-                let filters_rows = existingData.persons_filters;
+            // Process each person
+            for (let person_token in persons) {
+                let filters = persons[person_token];
+                let existingPerson = personsLookup[person_token];
 
-                for(let item of filters_rows) {
-                    let person_token = personsIdTokenMap[item.person_id];
+                if (!existingPerson) {
+                    continue;
+                }
 
-                    if(!person_token) {
-                        console.warn("No person token");
+                for(let token in filters) {
+                    let item = filters[token];
+
+                    let filter = filtersLookup.byToken[item.filter_token];
+                    let filterMapping = getFilterMapByToken(item.filter_token);
+
+                    if (!filter || !filterMapping) {
                         continue;
                     }
 
-                    let person_ref = existingDataLookup.filters[person_token];
+                    let column_name = filterMapping.column;
+                    let item_id = null;
 
-                    if(!person_ref) {
-                        person_ref = existingDataLookup.filters[person_token] = {};
-                    }
+                    if (item.item_token) {
+                        let lookupTable = schemaItemsLookup[item.filter_token];
 
-                    person_ref[item.token] = item;
-                }
-
-                // Process each person
-                for (let person of batch) {
-                    let person_token = person.person_token;
-                    let existingPerson = personsLookup[person_token];
-
-                    if (!existingPerson) {
-                        continue;
-                    }
-
-                    if (person.filters) {
-                        for (let [filterKey, filterData] of Object.entries(person.filters)) {
-                            if (!filterData) {
-                                continue;
-                            }
-
-                            let filter = filtersLookup.byToken[filterKey];
-                            let filterMapping = filterMappings[filterKey];
-
-                            if (!filter || !filterMapping) {
-                                continue;
-                            }
-
-                            let existingItem = existingDataLookup.filters[person_token]?.[filterData.token];
-
-                            let parentEntry = {
-                                token: filterData.token,
-                                person_id: existingPerson.id,
-                                filter_id: filter.id,
-                                is_send: filterData.is_send,
-                                is_receive: filterData.is_receive,
-                                is_active: filterData.is_active,
-                                updated: filterData.updated,
-                                deleted: filterData.deleted,
-                            };
-
-                            if (existingItem) {
-                                if (filterData.updated > existingItem.updated) {
-                                    parentEntry.id = existingItem.id;
-                                    batch_update.persons_filters.push(parentEntry);
-                                }
-                            } else {
-                                parentEntry.created = timeNow();
-                                batch_insert.persons_filters.push(parentEntry);
-                            }
-
-                            if (filterData.items) {
-                                for (let [itemToken, item] of Object.entries(filterData.items)) {
-                                    let db_item = schemaItemsLookup[filterKey].byToken[itemToken];
-
-                                    if(!db_item) {
-                                        console.warn("No section item");
-                                        continue;
-                                    }
-
-                                    let existingItem = existingDataLookup.filters[person_token]?.items?.[itemToken];
-
-                                    let filterEntry = {
-                                        token: item.token,
-                                        [filterMapping.column]: db_item.id,
-                                        person_id: existingPerson.id,
-                                        filter_id: filter.id,
-                                        is_active: item.is_active,
-                                        is_send: item.is_send,
-                                        is_receive: item.is_receive,
-                                        is_negative: item.is_negative || false,
-                                        updated: timeNow(),
-                                        deleted: item.deleted || null
-                                    };
-
-                                    if (item.filter_value !== undefined) {
-                                        filterEntry.filter_value = item.filter_value;
-                                    }
-                                    if (item.filter_value_min !== undefined) {
-                                        filterEntry.filter_value_min = item.filter_value_min;
-                                    }
-                                    if (item.filter_value_max !== undefined) {
-                                        filterEntry.filter_value_max = item.filter_value_max;
-                                    }
-                                    if (item.importance !== undefined) {
-                                        filterEntry.importance = item.importance;
-                                    }
-                                    if (item.secondary_level !== undefined) {
-                                        filterEntry.secondary_level = JSON.stringify(item.secondary_level);
-                                    }
-
-                                    if (existingItem) {
-                                        if (item.updated > existingItem.updated) {
-                                            filterEntry.id = existingItem.id;
-                                            batch_update.persons_filters.push(filterEntry);
-                                        }
-                                    } else {
-                                        filterEntry.created = timeNow();
-                                        batch_insert.persons_filters.push(filterEntry);
-                                    }
-                                }
-                            }
+                        if (!lookupTable || !lookupTable.byToken[item.item_token]) {
+                            console.warn("No schema item found for token:", item.item_token);
+                            continue;
                         }
-                    }
-                }
 
-                for (const [table, items] of Object.entries(batch_insert)) {
-                    if (items.length) {
-                        await batchInsert(table, items, true);
+                        item_id = lookupTable.byToken[item.item_token].id;
                     }
-                }
 
-                for (const [table, items] of Object.entries(batch_update)) {
-                    if (items.length) {
-                        await batchUpdate(table, items);
+                    let existingItem = existingDataLookup[person_token]?.[item.token];
+
+                    let entry = {
+                        token: item.token,
+                        person_id: existingPerson.id,
+                        filter_id: filter.id,
+                        is_send: item.is_send,
+                        is_receive: item.is_receive,
+                        is_active: item.is_active,
+                        is_negative: item.is_negative || false,
+                        updated: item.updated,
+                        deleted: item.deleted
+                    };
+
+                    if (item_id) {
+                        entry[column_name] = item_id;
+                    }
+
+                    if (item.filter_value !== undefined) {
+                        entry.filter_value = item.filter_value;
+                    }
+
+                    if (item.filter_value_min !== undefined) {
+                        entry.filter_value_min = item.filter_value_min;
+                    }
+
+                    if (item.filter_value_max !== undefined) {
+                        entry.filter_value_max = item.filter_value_max;
+                    }
+
+                    if (item.importance !== undefined) {
+                        entry.importance = item.importance;
+                    }
+
+                    if (item.secondary_level !== undefined) {
+                        entry.secondary_level = item.secondary_level || null;
+                    }
+
+                    if (item.hash_token !== undefined) {
+                        entry.hash_token = item.hash_token;
+                    }
+
+                    if (existingItem) {
+                        if (item.updated > existingItem.updated) {
+                            entry.id = existingItem.id;
+                            batch_update.push(entry);
+                        }
+                    } else {
+                        entry.created = timeNow();
+                        batch_insert.push(entry);
                     }
                 }
+            }
+
+            if(batch_insert.length) {
+                await batchInsert('persons_filters', batch_insert, true);
+            }
+
+            if(batch_update.length) {
+                await batchUpdate('persons_filters', batch_update);
             }
         } catch(e) {
             console.error(e);
