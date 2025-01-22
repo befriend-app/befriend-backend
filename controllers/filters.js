@@ -251,6 +251,7 @@ function handleFilterUpdate(req, res, filterType) {
                         .where('filter_id', filter.id)
                         .update({
                             is_negative: false,
+                            is_any: true,
                             updated: now,
                             deleted: now,
                         });
@@ -275,6 +276,15 @@ function handleFilterUpdate(req, res, filterType) {
 
                 if (existingItem) {
                     id = existingItem.id;
+
+                    //set any to false
+                    await conn('persons_filters')
+                        .where('person_id', person.id)
+                        .where('filter_id', filter.id)
+                        .update({
+                            is_any: false,
+                            updated: now
+                        });
 
                     // Update existing item
                     await conn('persons_filters')
@@ -1369,6 +1379,7 @@ function putGender(req, res) {
             }
 
             let person = await getPerson(person_token);
+
             if (!person) {
                 res.json(
                     {

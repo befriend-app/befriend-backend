@@ -120,6 +120,7 @@ function processMain(persons) {
 
                     duplicateTracker[item.filter_token][item_token] = true;
 
+                    //split data lookup between cache/db for large/small data sets
                     if(filterMapping.cache) {
                         if(filterMapping.cache.type === 'hash') {
                             lookup_pipelines[item.filter_token].hGet(filterMapping.cache.key, item_token);
