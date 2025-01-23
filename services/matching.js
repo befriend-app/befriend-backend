@@ -40,6 +40,29 @@ let interestScoreThresholds = {
     super: 100,
 };
 
+let debugging = {
+    on: true,
+    filters: [
+        // 'online',
+        // 'networks',
+        // 'modes',
+        // 'verifications',
+        // 'genders',
+        // 'distance',
+        // 'ages',
+        // 'reviews',
+        // 'availability',
+    ]
+}
+
+function skipDebugFilter(filter) {
+    if(!debugging.on) {
+        return false;
+    }
+
+    return !(debugging.filters.includes(filter));
+}
+
 function getMatches(me, params = {}) {
     let { activity, send_only, counts_only } = params;
 
@@ -97,7 +120,7 @@ function getMatches(me, params = {}) {
                 await getGridTokens();
 
                 console.log({
-                    grid_tokens: timeNow() - t,
+                    time_grid_tokens: timeNow() - t,
                 });
 
                 t = timeNow();
@@ -109,7 +132,7 @@ function getMatches(me, params = {}) {
                 });
 
                 console.log({
-                    person_tokens: timeNow() - t,
+                    time_person_tokens: timeNow() - t,
                 });
 
                 await filterOnlineStatus();
@@ -423,6 +446,10 @@ function getMatches(me, params = {}) {
     function filterOnlineStatus() {
         return new Promise(async (resolve, reject) => {
             try {
+                if(skipDebugFilter('online')) {
+                    return resolve();
+                }
+
                 let pipeline_offline = cacheService.startPipeline();
 
                 for (let grid_token of neighbor_grid_tokens) {
@@ -496,6 +523,10 @@ function getMatches(me, params = {}) {
         // b) if receiving person has specific networks selected and sending person's network matches
 
         return new Promise(async (resolve, reject) => {
+            if(skipDebugFilter('networks')) {
+                return resolve();
+            }
+
             try {
                 let allNetworks = await getNetworksForFilters();
                 let network_token = allNetworks.networks?.find(
@@ -565,6 +596,10 @@ function getMatches(me, params = {}) {
 
     function filterModes() {
         return new Promise(async (resolve, reject) => {
+            if(skipDebugFilter('modes')) {
+                return resolve();
+            }
+
             try {
                 // Get all modes, not just excluded ones
                 let modeTypes = Object.values((await getModes())?.byId);
@@ -701,6 +736,10 @@ function getMatches(me, params = {}) {
 
     function filterVerifications() {
         return new Promise(async (resolve, reject) => {
+            if(skipDebugFilter('verifications')) {
+                return resolve();
+            }
+
             try {
                 const verificationTypes = ['in_person', 'linkedin'];
 
@@ -836,6 +875,10 @@ function getMatches(me, params = {}) {
 
     function filterGenders() {
         return new Promise(async (resolve, reject) => {
+            if(skipDebugFilter('genders')) {
+                return resolve();
+            }
+
             //bi-directional gender filtering
             try {
                 let gendersLookup = await getGendersLookup();
@@ -999,6 +1042,10 @@ function getMatches(me, params = {}) {
 
     function filterDistance() {
         return new Promise(async (resolve, reject) => {
+            if(skipDebugFilter('distance')) {
+                return resolve();
+            }
+
             try {
                 //default to current location
                 let my_location = {
@@ -1209,6 +1256,10 @@ function getMatches(me, params = {}) {
 
     function filterAges() {
         return new Promise(async (resolve, reject) => {
+            if(skipDebugFilter('ages')) {
+                return resolve();
+            }
+
             try {
                 let my_age_filter = my_filters.ages;
 
@@ -1303,6 +1354,10 @@ function getMatches(me, params = {}) {
 
     function filterReviews() {
         return new Promise(async (resolve, reject) => {
+            if(skipDebugFilter('reviews')) {
+                return resolve();
+            }
+
             try {
                 let myReviewsFilter = my_filters.reviews;
 
@@ -1623,6 +1678,10 @@ function getMatches(me, params = {}) {
 
     function filterPersonsAvailability() {
         return new Promise(async (resolve, reject) => {
+            if(skipDebugFilter('availability')) {
+                return resolve();
+            }
+
             try {
                 let pipeline = cacheService.startPipeline();
 
@@ -1679,6 +1738,10 @@ function getMatches(me, params = {}) {
 
     function filterSection(sectionKey, getOptions, isMultiSelect) {
         return new Promise(async (resolve, reject) => {
+            if(skipDebugFilter(sectionKey)) {
+                return resolve();
+            }
+
             try {
                 let options = await getOptions();
                 let cache_key = cacheService.keys.person_sections(my_token);
@@ -2003,13 +2066,13 @@ function getMatches(me, params = {}) {
             am_available = isPersonAvailable(me, my_filters.availability);
 
             console.log({
-                my_filters: timeNow() - t,
+                time_my_filters: timeNow() - t
             });
 
             await processStage1();
 
             console.log({
-                stage_1: timeNow() - t,
+                time_stage_1: timeNow() - t,
             });
 
             t = timeNow();
@@ -2036,7 +2099,7 @@ function getMatches(me, params = {}) {
             await processStage2();
 
             console.log({
-                stage_2: timeNow() - t,
+                time_stage_2: timeNow() - t,
             });
 
             t = timeNow();
@@ -2044,7 +2107,7 @@ function getMatches(me, params = {}) {
             await matchInterests();
 
             console.log({
-                filter_interests: timeNow() - t,
+                time_filter_interests: timeNow() - t,
             });
 
             t = timeNow();
