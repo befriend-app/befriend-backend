@@ -22,6 +22,8 @@ let defaultTimeout = 20000;
 
 let filterMapLookup = {};
 
+let debug_mode = false;
+
 function getMappingInfo(filter_token) {
     if(filter_token in filterMapLookup) {
         return filterMapLookup[filter_token];
@@ -66,14 +68,16 @@ function getFilterMapByItem(item) {
     return null;
 }
 
-function processMain(persons, cache_persons) {
+function processMain(persons, updated_persons_filters) {
     return new Promise(async (resolve, reject) => {
         try {
             let batch_insert = [];
             let batch_update = [];
 
             let conn = await dbService.conn();
+            let schema = await dbService.getSchema('persons_filters');
 
+            let processTokens = {};
             let schemaItemsLookup = {};
             let duplicateTracker = {};
             let lookup_pipelines = {};
@@ -86,6 +90,13 @@ function processMain(persons, cache_persons) {
 
                 for(let token in person) {
                     let item = person[token];
+
+                    if(!item.token) {
+                        continue;
+                    }
+
+                    processTokens[item.token] = true;
+
                     let item_token = item.item_token;
 
                     let filterMapping = getMappingInfo(item.filter_token);
@@ -168,6 +179,10 @@ function processMain(persons, cache_persons) {
                 }
             }
 
+            let existingData = await conn('persons_filters')
+                .whereIn('token', Object.keys(processTokens))
+                .select('*');
+
             //organize persons lookup
             let batchPersonTokens = Object.keys(persons);
 
@@ -182,12 +197,6 @@ function processMain(persons, cache_persons) {
                 personsLookup[person.person_token] = person;
                 personsIdTokenMap[person.id] = person.person_token;
             }
-
-            const existingPersonIds = existingPersons.map(p => p.id);
-
-            let existingData = await conn('persons_filters')
-                .whereIn('person_id', existingPersonIds)
-                .select('*');
 
             let existingDataLookup = {};
 
@@ -206,7 +215,6 @@ function processMain(persons, cache_persons) {
                 existingDataLookup[person_token][item.token] = item;
             }
 
-            // Process each person
             for (let person_token in persons) {
                 let filters = persons[person_token];
                 let existingPerson = personsLookup[person_token];
@@ -251,6 +259,12 @@ function processMain(persons, cache_persons) {
                         is_active: item.is_active,
                         is_negative: item.is_negative || false,
                         is_any: item.is_any || false,
+                        filter_value: typeof item.filter_value !== 'undefined' ? item.filter_value : null,
+                        filter_value_min: typeof item.filter_value_min !== 'undefined' ? item.filter_value_min : null,
+                        filter_value_max: typeof item.filter_value_max !== 'undefined' ? item.filter_value_max : null,
+                        importance: typeof item.importance !== 'undefined' ? item.importance : null,
+                        secondary_level: typeof item.secondary_level !== 'undefined' ? item.secondary_level : null,
+                        hash_token: typeof item.hash_token !== 'undefined' ? item.hash_token : null,
                         updated: item.updated,
                         deleted: item.deleted || null
                     };
@@ -259,41 +273,45 @@ function processMain(persons, cache_persons) {
                         entry[column_name] = item_id;
                     }
 
-                    if (item.filter_value !== undefined) {
-                        entry.filter_value = item.filter_value;
-                    }
-
-                    if (item.filter_value_min !== undefined) {
-                        entry.filter_value_min = item.filter_value_min;
-                    }
-
-                    if (item.filter_value_max !== undefined) {
-                        entry.filter_value_max = item.filter_value_max;
-                    }
-
-                    if (item.importance !== undefined) {
-                        entry.importance = item.importance;
-                    }
-
-                    if (item.secondary_level !== undefined) {
-                        entry.secondary_level = item.secondary_level || null;
-                    }
-
-                    if (item.hash_token !== undefined) {
-                        entry.hash_token = item.hash_token;
-                    }
-
                     if (existingItem) {
                         if (item.updated > existingItem.updated) {
+                            //include all cols on table for batch update
+                            for(let col in schema) {
+                                if(['created'].includes(col)) {
+                                    continue;
+                                }
+
+                                if(!(col in entry)) {
+                                    entry[col] = schema[col].defaultValue;
+                                }
+                            }
+
                             entry.id = existingItem.id;
                             batch_update.push(entry);
 
-                            //update existing data
                             existingDataLookup[person_token][item.token] = entry;
+
+                            if(!(person_token in updated_persons_filters)) {
+                                updated_persons_filters[person_token] = {
+                                    person_id: entry.person_id,
+                                    filters: {}
+                                };
+                            }
+
+                            updated_persons_filters[person_token].filters[filterMapping.token] = true;
                         }
                     } else {
                         entry.created = timeNow();
                         batch_insert.push(entry);
+
+                        if(!(person_token in updated_persons_filters)) {
+                            updated_persons_filters[person_token] = {
+                                person_id: entry.person_id,
+                                filters: {}
+                            };
+                        }
+
+                        updated_persons_filters[person_token].filters[filterMapping.token] = true;
                     }
                 }
             }
@@ -315,15 +333,103 @@ function processMain(persons, cache_persons) {
             if(batch_update.length) {
                 await batchUpdate('persons_filters', batch_update);
             }
+        } catch(e) {
+            console.error(e);
+            return reject(e);
+        }
+
+        resolve();
+    });
+}
+
+function processAvailability() {
+    return new Promise(async (resolve, reject) => {
+                
+    });
+}
+
+function processNetworks() {
+    return new Promise(async (resolve, reject) => {
+                
+    });
+}
+
+function updateCacheMain(persons) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            if(!Object.keys(persons).length) {
+                return resolve();
+            }
+
+            let conn = await dbService.conn();
+            let filtersLookup = await getFilters();
 
             // organize cache
-            // 1st loop - parent
+            let persons_ids = {};
+            let personsIdTokenMap = {};
+
+            for(let person_token in persons) {
+                let p = persons[person_token];
+
+                persons_ids[p.person_id] = true;
+                personsIdTokenMap[p.person_id] = person_token;
+            }
+
+            let filters_data = await conn('persons_filters')
+                .whereIn('person_id', Object.keys(persons_ids));
+
+            let organized_filters = {};
+            let organized_update = {};
+
+            for(let row of filters_data) {
+                let person_token = personsIdTokenMap[row.person_id];
+
+                if(!organized_filters[person_token]) {
+                    organized_filters[person_token] = {};
+                }
+
+                let filter = filtersLookup.byId[row.filter_id];
+
+                let filterMap = getFilterMapByToken(filter.token);
+
+                if(!filterMap) {
+                    console.warn("Missing filter map");
+                    continue;
+                }
+
+                if(!organized_filters[person_token][filter.token]) {
+                    organized_filters[person_token][filter.token] = {};
+                }
+
+                organized_filters[person_token][filter.token][row.token] = row;
+            }
+
+            for(let person_token in persons) {
+                let p = persons[person_token];
+
+                organized_update[person_token] = {};
+
+                for(let filter_token in p.filters) {
+                    if(organized_filters[person_token]?.[filter_token]) {
+                        organized_update[person_token][filter_token] = organized_filters[person_token][filter_token];
+                    } else {
+                        console.warn("Person filter missing in existing data");
+                    }
+                }
+            }
+
+            for(let person_token in organized_update) {
+
+            }
+
+            return resolve();
 
             let persons_parent_tracker = {};
 
+            // 1st loop - parent
             for(let person_token in existingDataLookup) {
-                if(!cache_persons[person_token]) {
-                    cache_persons[person_token] = {};
+                if(!updated_persons_filters[person_token]) {
+                    updated_persons_filters[person_token] = {};
                 }
 
                 if(!persons_parent_tracker[person_token]) {
@@ -342,7 +448,7 @@ function processMain(persons, cache_persons) {
                     if(item.is_parent) {
                         persons_parent_tracker[person_token][filter_key] = true;
 
-                        let parent = cache_persons[person_token][filter_key] = {
+                        updated_persons_filters[person_token][filter_key] = {
                             id: item.id,
                             is_active: item.is_active ? 1 : 0,
                             is_any: item.is_any ? 1 : 0,
@@ -372,7 +478,7 @@ function processMain(persons, cache_persons) {
 
                     //missing parent setup
                     if(!persons_parent_tracker[person_token]?.[filter_key]) {
-                        cache_persons[person_token][filter_key] = {
+                        updated_persons_filters[person_token][filter_key] = {
                             id: item.id,
                             is_active: 1,
                             is_send: 1,
@@ -397,14 +503,21 @@ function processMain(persons, cache_persons) {
                     let filter_key = filterInfo?.parent_cache || filter.token;
 
                     if(!item.is_parent) {
-                        let items = cache_persons[person_token][filter_key].items;
+                        let items = updated_persons_filters[person_token][filter_key].items;
 
                         let item_extra = {};
 
                         let filter_map = getFilterMapByItem(item);
 
                         if(filter_map) {
-                            let item_data = schemaItemsLookup[filter_map.token].byId[item[filter_map.column]];
+                            let item_data;
+
+                            try {
+                                item_data = schemaItemsLookup[filter_map.token].byId[item[filter_map.column]];
+                            } catch(e) {
+                                console.error(e);
+                                continue;
+                            }
 
                             if(item_data) {
                                 item_extra = {
@@ -430,6 +543,23 @@ function processMain(persons, cache_persons) {
                     }
                 }
             }
+
+            let pipeline = cacheService.startPipeline();
+
+            for(let person_token in updated_persons_filters) {
+                let person = updated_persons_filters[person_token];
+
+                for(let filter_name in person) {
+                    let filter = person[filter_name];
+                    pipeline.hSet(cacheService.keys.person_filters(person_token), filter_name, JSON.stringify(filter));
+                }
+            }
+
+            try {
+                await cacheService.execPipeline(pipeline);
+            } catch(e) {
+                console.error(e);
+            }
         } catch(e) {
             console.error(e);
             return reject(e);
@@ -439,19 +569,7 @@ function processMain(persons, cache_persons) {
     });
 }
 
-function processAvailability() {
-    return new Promise(async (resolve, reject) => {
-                
-    });
-}
-
-function processNetworks() {
-    return new Promise(async (resolve, reject) => {
-                
-    });
-}
-
-function processFilters(persons_filters, cache_persons) {
+function processFilters(persons_filters, updated_persons_filters) {
     return new Promise(async (resolve, reject) => {
         try {
             let hasPersons = false;
@@ -468,7 +586,7 @@ function processFilters(persons_filters, cache_persons) {
                 return resolve();
             }
             
-            await processMain(persons_filters.filters, cache_persons);
+            await processMain(persons_filters.filters, updated_persons_filters);
 
             // await processAvailability(persons_filters.availability);
             //
@@ -580,7 +698,7 @@ function syncFilters() {
         if (networks) {
             for (let network of networks) {
                 try {
-                    let cache_persons = {};
+                    let updated_persons_filters = {};
 
                     let skipSaveTimestamps = false;
 
@@ -594,7 +712,7 @@ function syncFilters() {
                         .where('sync_process', sync_name)
                         .first();
 
-                    if (sync_qry) {
+                    if (sync_qry && !debug_mode) {
                         timestamps.last = sync_qry.last_updated;
                     }
 
@@ -626,7 +744,7 @@ function syncFilters() {
                         continue;
                     }
 
-                    await processFilters(response.data.filters, cache_persons);
+                    await processFilters(response.data.filters, updated_persons_filters);
 
                     while (response.data.pagination_updated) {
                         try {
@@ -644,7 +762,7 @@ function syncFilters() {
                                 break;
                             }
 
-                            await processFilters(response.data.filters, cache_persons);
+                            await processFilters(response.data.filters, updated_persons_filters);
                         } catch (e) {
                             console.error(e);
                             skipSaveTimestamps = true;
@@ -653,39 +771,27 @@ function syncFilters() {
                     }
 
                     //update cache once all data is processed for network
-                    let pipeline = cacheService.startPipeline();
-
-                    for(let person_token in cache_persons) {
-                        let person = cache_persons[person_token];
-
-                        for(let filter_name in person) {
-                            let filter = person[filter_name];
-                            pipeline.hSet(cacheService.keys.person_filters(person_token), filter_name, JSON.stringify(filter));
-                        }
-                    }
-
-                    try {
-                         await cacheService.execPipeline(pipeline);
-                    } catch(e) {
-                        console.error(e);
-                    }
+                    await updateCacheMain(updated_persons_filters);
 
                     if (!skipSaveTimestamps) {
                         // Update sync table
-                        //todo
-                        if (sync_qry) {
-                            // await conn('sync').where('id', sync_qry.id).update({
-                            //     last_updated: timestamps.current,
-                            //     updated: timeNow(),
-                            // });
-                        } else {
-                            // await conn('sync').insert({
-                            //     network_id: network.id,
-                            //     sync_process: sync_name,
-                            //     last_updated: timestamps.current,
-                            //     created: timeNow(),
-                            //     updated: timeNow(),
-                            // });
+                        if(!debug_mode) {
+                            if (sync_qry) {
+                                await conn('sync').where('id', sync_qry.id)
+                                    .update({
+                                        last_updated: timestamps.current,
+                                        updated: timeNow(),
+                                    });
+                            } else {
+                                await conn('sync')
+                                    .insert({
+                                        network_id: network.id,
+                                        sync_process: sync_name,
+                                        last_updated: timestamps.current,
+                                        created: timeNow(),
+                                        updated: timeNow(),
+                                    });
+                            }
                         }
                     }
                 } catch (e) {
