@@ -176,7 +176,6 @@ const filterMappings = {
         multi: true,
         importance: true,
         is_interests: true,
-
         cache: {
             type: 'hash',
             key: cacheService.keys.movies,
