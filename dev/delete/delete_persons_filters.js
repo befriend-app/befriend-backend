@@ -1,6 +1,8 @@
 const cacheService = require('../../services/cache');
+const dbService = require('../../services/db');
 const { loadScriptEnv, isProdApp, timeNow } = require('../../services/shared');
 const { deleteKeys } = require('../../services/cache');
+const { keys: systemKeys } = require('../../services/system');
 
 loadScriptEnv();
 
@@ -52,6 +54,11 @@ function main() {
             );
 
             await deleteKeys(person_keys);
+
+            let conn = await dbService.conn();
+
+            await conn('sync')
+                .where('sync_process', systemKeys.sync.network.persons_filters);
         }
 
         resolve();
