@@ -58,6 +58,7 @@ function saveAvailabilityData(person, availabilityData) {
                 if (dayRecord) {
                     let newDayData = {
                         id: dayRecord.id,
+                        token: dayRecord.token,
                         person_id: person.id,
                         day_of_week: parseInt(dayOfWeek),
                         is_day: true,
@@ -203,7 +204,13 @@ function saveAvailabilityData(person, availabilityData) {
                     delete record.frontend_id;
                 }
 
-                await dbService.batchInsert('persons_availability', recordsToInsert, true);
+                try {
+                    await dbService.batchInsert('persons_availability', recordsToInsert, true);
+                } catch(e) {
+                    console.error(e);
+                    return reject(e);
+                }
+
 
                 for (let i = 0; i < recordsToInsert.length; i++) {
                     let record = recordsToInsert[i];
@@ -216,11 +223,21 @@ function saveAvailabilityData(person, availabilityData) {
             }
 
             if (recordsToUpdate.length > 0) {
-                await dbService.batchUpdate('persons_availability', recordsToUpdate);
+                try {
+                    await dbService.batchUpdate('persons_availability', recordsToUpdate);
+                } catch(e) {
+                    console.error(e);
+                    return reject(e);
+                }
             }
 
             if (recordsToDelete.length > 0) {
-                await dbService.batchUpdate('persons_availability', recordsToDelete);
+                try {
+                    await dbService.batchUpdate('persons_availability', recordsToDelete);
+                } catch(e) {
+                    console.error(e);
+                    return reject(e);
+                }
             }
 
             // Update filter cache
