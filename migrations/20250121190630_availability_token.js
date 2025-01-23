@@ -1,14 +1,20 @@
 exports.up = async function(knex) {
     await knex.schema.alterTable('persons_filters', (table) => {
         table.string('token').notNullable().after('person_id');
+
+        table.index('token');
     });
 
     await knex.schema.alterTable('persons_availability', (table) => {
         table.string('token').notNullable().after('person_id');
+
+        table.index('token');
     });
 
     await knex.schema.alterTable('persons_filters_networks', (table) => {
         table.string('token').notNullable().after('person_id');
+
+        table.index('token');
     });
 };
 
