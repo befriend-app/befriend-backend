@@ -401,58 +401,34 @@ function putActive(req, res) {
             let now = timeNow();
 
             if (filterData) {
-                //add parent entry if not exists
-                if(!['availability'].includes(filter_token)) {
-                    let parent_check = await conn('persons_filters')
-                        .where('person_id', person.id)
-                        .where('filter_id', filter.id)
-                        .where('is_parent', 1)
-                        .first();
+                let parent_check = await conn('persons_filters')
+                    .where('person_id', person.id)
+                    .where('filter_id', filter.id)
+                    .where('is_parent', 1)
+                    .first();
 
-                    if(!parent_check) {
-                        let [id] = await conn('persons_filters')
-                            .insert({
-                                token: generateToken(10),
-                                person_id: person.id,
-                                filter_id: filter.id,
-                                is_parent: true,
-                                is_active: active,
-                                created: now,
-                                updated: now
-                            });
+                if(!parent_check) {
+                    let [id] = await conn('persons_filters')
+                        .insert({
+                            token: generateToken(10),
+                            person_id: person.id,
+                            filter_id: filter.id,
+                            is_parent: true,
+                            is_active: active,
+                            created: now,
+                            updated: now
+                        });
 
-                        filterData.id = id;
-                        filterData.is_send = true;
-                        filterData.is_receive = true;
-                    }
-                } else if(filter_token === 'availability') {
-                    let exists_qry = await conn('persons_filters')
-                        .where('person_id', person.id)
-                        .where('filter_id', filter.id)
-                        .first();
-
-                    if(!exists_qry) {
-                        let [id] = await conn('persons_filters')
-                            .insert({
-                                token: generateToken(10),
-                                person_id: person.id,
-                                filter_id: filter.id,
-                                is_parent: true,
-                                is_active: active,
-                                created: now,
-                                updated: now
-                            });
-
-                        filterData.id = id;
-                    } else {
-                        await conn('persons_filters')
-                            .where('person_id', person.id)
-                            .where('filter_id', filter.id)
-                            .update({
-                                is_active: active,
-                                updated: now,
-                            });
-                    }
+                    filterData.id = id;
+                    filterData.is_send = true;
+                    filterData.is_receive = true;
+                } else {
+                    await conn('persons_filters')
+                        .where('id', parent_check.id)
+                        .update({
+                            is_active: active,
+                            updated: now
+                        });
                 }
 
                 // Update cache
