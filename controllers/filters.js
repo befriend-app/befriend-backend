@@ -401,8 +401,31 @@ function putActive(req, res) {
             let now = timeNow();
 
             if (filterData) {
-                //custom for availability
-                if(filter_token === 'availability') {
+                //add parent entry if not exists
+                if(!['availability'].includes(filter_token)) {
+                    let parent_check = await conn('persons_filters')
+                        .where('person_id', person.id)
+                        .where('filter_id', filter.id)
+                        .where('is_parent', 1)
+                        .first();
+
+                    if(!parent_check) {
+                        let [id] = await conn('persons_filters')
+                            .insert({
+                                token: generateToken(10),
+                                person_id: person.id,
+                                filter_id: filter.id,
+                                is_parent: true,
+                                is_active: active,
+                                created: now,
+                                updated: now
+                            });
+
+                        filterData.id = id;
+                        filterData.is_send = true;
+                        filterData.is_receive = true;
+                    }
+                } else if(filter_token === 'availability') {
                     let exists_qry = await conn('persons_filters')
                         .where('person_id', person.id)
                         .where('filter_id', filter.id)
@@ -430,21 +453,12 @@ function putActive(req, res) {
                                 updated: now,
                             });
                     }
-                } else {
-                    //update all entries for this filter
-                    await conn('persons_filters')
-                        .where('person_id', person.id)
-                        .where('filter_id', filter.id)
-                        .update({
-                            is_active: active,
-                            updated: now,
-                        });
                 }
 
                 // Update cache
                 filterData.is_active = active;
                 filterData.updated = now;
-            } else {
+            } else { //no previous filter data
                 // Create new filter entry
                 const filterEntry = createFilterEntry(filter.id, {
                     person_id: person.id,
@@ -641,25 +655,50 @@ function putSendReceive(req, res) {
             let now = timeNow();
 
             if (filterData) {
-                let updateData = {
-                    updated: now,
-                };
-                updateData[type === 'send' ? 'is_send' : 'is_receive'] = enabled;
-
-                await conn('persons_filters')
+                let parent_check = await conn('persons_filters')
                     .where('person_id', person.id)
                     .where('filter_id', filter.id)
-                    .update(updateData);
+                    .where('is_parent', 1)
+                    .first();
+
+                if(!parent_check) {
+                    let data = {
+                        token: generateToken(10),
+                        person_id: person.id,
+                        filter_id: filter.id,
+                        is_parent: true,
+                        created: now,
+                        updated: now
+                    };
+
+                    if(type === 'send') {
+                        data.is_send = enabled;
+                        data.is_receive = true;
+                    } else {
+                        data.is_receive  = enabled;
+                        data.is_send = true;
+                    }
+
+                    let [id] = await conn('persons_filters')
+                        .insert(data);
+
+                    filterData.id = id;
+                    filterData.is_active = true;
+                } else {
+                    let updateData = {
+                        updated: now
+                    };
+
+                    updateData[type === 'send' ? 'is_send' : 'is_receive'] = enabled;
+
+                    await conn('persons_filters')
+                        .where('id', parent_check.id)
+                        .update(updateData);
+                }
 
                 // Update cache
                 filterData[type === 'send' ? 'is_send' : 'is_receive'] = enabled;
                 filterData.updated = now;
-
-                if (filterData.items) {
-                    for (let k in filterData.items) {
-                        filterData.items[k][type === 'send' ? 'is_send' : 'is_receive'] = enabled;
-                    }
-                }
             } else {
                 const filterEntry = createFilterEntry(filter.id, {
                     person_id: person.id,
