@@ -58,7 +58,8 @@ function main() {
             let conn = await dbService.conn();
 
             await conn('sync')
-                .where('sync_process', systemKeys.sync.network.persons_filters);
+                .where('sync_process', systemKeys.sync.network.persons_filters)
+                .delete();
         }
 
         resolve();
