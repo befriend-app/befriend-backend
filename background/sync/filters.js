@@ -354,6 +354,26 @@ function processNetworks() {
     });
 }
 
+function getSiblingTokens(token) {
+    let filterMap = getFilterMapByToken(token);
+
+    let parentToken = filterMap.parent_cache || filterMap.token;
+
+    let tokens = [];
+
+    for(let key in filterMappings) {
+        let map = filterMappings[key];
+
+        if(map.parent_cache === parentToken || map.token === parentToken) {
+            if(map.token !== token) {
+                tokens.push(map.token);
+            }
+        }
+    }
+
+    return tokens;
+}
+
 function updateCacheMain(persons) {
     return new Promise(async (resolve, reject) => {
         try {
@@ -405,140 +425,231 @@ function updateCacheMain(persons) {
             }
 
             for(let person_token in persons) {
-                let p = persons[person_token];
+                let person = persons[person_token];
 
                 organized_update[person_token] = {};
 
-                for(let filter_token in p.filters) {
+                for(let filter_token in person.filters) {
+                    //merge data from related tokens (i.e. movies and movie genres)
+                    let sibling_tokens = getSiblingTokens(filter_token);
+
                     if(organized_filters[person_token]?.[filter_token]) {
                         organized_update[person_token][filter_token] = organized_filters[person_token][filter_token];
                     } else {
                         console.warn("Person filter missing in existing data");
                     }
+
+                    for(let sibling_token of sibling_tokens) {
+                        if(organized_filters[person_token]?.[sibling_token]) {
+                            if(!organized_update[person_token][sibling_token]) {
+                                organized_update[person_token][sibling_token] = organized_filters[person_token][sibling_token];
+                            }
+                        }
+                    }
                 }
             }
 
-            for(let person_token in organized_update) {
+            //get lookup data for all needed items
+            let itemsLookup = {};
+            let dbLookup = {};
 
+            for(let person_token in organized_update) {
+                let filters = organized_update[person_token];
+
+                for(let filter_token in filters) {
+                    let rows = filters[filter_token];
+
+                    for(let token in rows) {
+                        let item = rows[token];
+
+                        let filterMapping = getMappingInfo(filter_token);
+
+                        if(!filterMapping) {
+                            console.warn("Filter not found");
+                            continue;
+                        }
+
+                        let item_id = item[filterMapping.column];
+
+                        if(!item_id) {
+                            continue;
+                        }
+
+                        if(!(itemsLookup[filter_token])) {
+                            itemsLookup[filter_token] = {
+                                byId: {},
+                                byToken: {}
+                            };
+
+                            dbLookup[filter_token] = {};
+                        }
+
+                        dbLookup[filter_token][item_id] = true;
+                    }
+                }
             }
 
-            return resolve();
+            for(let filter_token in dbLookup) {
+                let filterMapping = getMappingInfo(filter_token);
 
+                if(filterMapping.table) {
+                    try {
+                        let cols = ['id'];
+
+                        if(filterMapping.column_token) {
+                            cols.push(`${filterMapping.column_token} AS token`);
+                        } else {
+                            cols.push('token');
+                        }
+
+                        if(filterMapping.column_name) {
+                            cols.push(`${filterMapping.column_name} AS name`);
+                        } else {
+                            cols.push('name');
+                        }
+
+                        let data = await conn(filterMapping.table)
+                            .whereIn('id', Object.keys(dbLookup[filter_token]))
+                            .select(cols);
+
+                        for(let item of data) {
+                            itemsLookup[filter_token].byId[item.id] = item;
+                            itemsLookup[filter_token].byToken[item.token] = item;
+                        }
+                    } catch(e) {
+                        console.error(e);
+                    }
+                }
+            }
+
+            let persons_cache = {};
             let persons_parent_tracker = {};
 
             // 1st loop - parent
-            for(let person_token in existingDataLookup) {
-                if(!updated_persons_filters[person_token]) {
-                    updated_persons_filters[person_token] = {};
+            for(let person_token in organized_update) {
+                if(!persons_cache[person_token]) {
+                    persons_cache[person_token] = {};
                 }
 
                 if(!persons_parent_tracker[person_token]) {
                     persons_parent_tracker[person_token] = {};
                 }
 
-                let rows = existingDataLookup[person_token];
+                let filters = organized_update[person_token];
 
-                for(let token in rows) {
-                    let item = rows[token];
+                for(let filter_token in filters) {
+                    let rows = filters[filter_token];
 
-                    let filter = filtersLookup.byId[item.filter_id];
-                    let filterInfo = getMappingInfo(filter.token);
-                    let filter_key = filterInfo?.parent_cache || filter.token;
+                    for(let token in rows) {
+                        let item = rows[token];
 
-                    if(item.is_parent) {
-                        persons_parent_tracker[person_token][filter_key] = true;
+                        let filter = filtersLookup.byId[item.filter_id];
+                        let filterInfo = getMappingInfo(filter.token);
+                        let filter_key = filterInfo?.parent_cache || filter.token;
 
-                        updated_persons_filters[person_token][filter_key] = {
-                            id: item.id,
-                            is_active: item.is_active ? 1 : 0,
-                            is_any: item.is_any ? 1 : 0,
-                            is_send: item.is_send ? 1 : 0,
-                            is_receive: item.is_receive ? 1 : 0,
-                            filter_value: item.filter_value,
-                            filter_value_min: item.filter_value_min,
-                            filter_value_max: item.filter_value_max,
-                            updated: item.updated,
-                            items: {}
-                        };
+                        if(item.is_parent) {
+                            persons_parent_tracker[person_token][filter_key] = true;
+
+                            persons_cache[person_token][filter_key] = {
+                                id: item.id,
+                                is_active: item.is_active ? 1 : 0,
+                                is_any: item.is_any ? 1 : 0,
+                                is_send: item.is_send ? 1 : 0,
+                                is_receive: item.is_receive ? 1 : 0,
+                                filter_value: item.filter_value,
+                                filter_value_min: item.filter_value_min,
+                                filter_value_max: item.filter_value_max,
+                                updated: item.updated,
+                                items: {}
+                            };
+                        }
                     }
                 }
             }
 
             //2nd loop - parent check
-            for(let person_token in existingDataLookup) {
-                let rows = existingDataLookup[person_token];
+            for(let person_token in organized_update) {
+                let filters = organized_update[person_token];
 
-                for(let token in rows) {
-                    let item = rows[token];
+                for(let filter_token in filters) {
+                    let rows = filters[filter_token];
 
-                    let filter = filtersLookup.byId[item.filter_id];
-                    let filterInfo = getMappingInfo(filter.token);
+                    for(let token in rows) {
+                        let item = rows[token];
 
-                    let filter_key = filterInfo?.parent_cache || filter.token;
+                        let filter = filtersLookup.byId[item.filter_id];
+                        let filterInfo = getMappingInfo(filter.token);
 
-                    //missing parent setup
-                    if(!persons_parent_tracker[person_token]?.[filter_key]) {
-                        updated_persons_filters[person_token][filter_key] = {
-                            id: item.id,
-                            is_active: 1,
-                            is_send: 1,
-                            is_receive: 1,
-                            updated: item.updated,
-                            items: {}
-                        };
+                        let filter_key = filterInfo?.parent_cache || filter.token;
+
+                        //missing parent setup
+                        if(!persons_parent_tracker[person_token]?.[filter_key]) {
+                            persons_cache[person_token][filter_key] = {
+                                id: item.id,
+                                is_active: 1,
+                                is_send: 1,
+                                is_receive: 1,
+                                updated: item.updated,
+                                items: {}
+                            };
+                        }
                     }
                 }
             }
 
             //3rd loop - items
-            for(let person_token in existingDataLookup) {
-                let rows = existingDataLookup[person_token];
+            for(let person_token in organized_update) {
+                let filters = organized_update[person_token];
 
-                for(let token in rows) {
-                    let item = rows[token];
+                for(let filter_token in filters) {
+                    let rows = filters[filter_token];
 
-                    let filter = filtersLookup.byId[item.filter_id];
-                    let filterInfo = getMappingInfo(filter.token);
+                    for(let token in rows) {
+                        let item = rows[token];
 
-                    let filter_key = filterInfo?.parent_cache || filter.token;
+                        let filter = filtersLookup.byId[item.filter_id];
+                        let filterInfo = getMappingInfo(filter.token);
 
-                    if(!item.is_parent) {
-                        let items = updated_persons_filters[person_token][filter_key].items;
+                        let filter_key = filterInfo?.parent_cache || filter.token;
 
-                        let item_extra = {};
+                        if(!item.is_parent) {
+                            let items = persons_cache[person_token][filter_key].items;
 
-                        let filter_map = getFilterMapByItem(item);
+                            let item_extra = {};
 
-                        if(filter_map) {
-                            let item_data;
+                            let filter_map = getFilterMapByItem(item);
 
-                            try {
-                                item_data = schemaItemsLookup[filter_map.token].byId[item[filter_map.column]];
-                            } catch(e) {
-                                console.error(e);
-                                continue;
-                            }
+                            if(filter_map) {
+                                let item_data;
 
-                            if(item_data) {
-                                item_extra = {
-                                    token: item_data.token,
-                                    name: item_data.name
+                                try {
+                                    item_data = itemsLookup[filter_map.token].byId[item[filter_map.column]];
+                                } catch(e) {
+                                    console.error(e);
+                                    continue;
                                 }
 
-                                if(filter_map.table_key) {
-                                    item_extra.table_key = filter_map.table_key;
+                                if(item_data) {
+                                    item_extra = {
+                                        token: item_data.token,
+                                        name: item_data.name
+                                    }
+
+                                    if(filter_map.table_key) {
+                                        item_extra.table_key = filter_map.table_key;
+                                    }
                                 }
                             }
-                        }
 
-                        items[item.id] = {
-                            is_active: item.is_active ? 1 : 0,
-                            is_negative: item.is_negative ? 1 : 0,
-                            importance: item.importance,
-                            secondary: item.secondary_level ? JSON.parse(item.secondary_level) : null,
-                            updated: item.updated,
-                            deleted: item.deleted,
-                            ...item_extra
+                            items[item.id] = {
+                                is_active: item.is_active ? 1 : 0,
+                                is_negative: item.is_negative ? 1 : 0,
+                                importance: item.importance,
+                                secondary: item.secondary_level ? JSON.parse(item.secondary_level) : null,
+                                updated: item.updated,
+                                deleted: item.deleted,
+                                ...item_extra
+                            }
                         }
                     }
                 }
@@ -546,8 +657,8 @@ function updateCacheMain(persons) {
 
             let pipeline = cacheService.startPipeline();
 
-            for(let person_token in updated_persons_filters) {
-                let person = updated_persons_filters[person_token];
+            for(let person_token in persons_cache) {
+                let person = persons_cache[person_token];
 
                 for(let filter_name in person) {
                     let filter = person[filter_name];
