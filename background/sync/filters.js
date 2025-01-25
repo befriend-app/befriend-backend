@@ -3,7 +3,7 @@ const axios = require('axios');
 const cacheService = require('../../services/cache');
 const dbService = require('../../services/db');
 
-const { getNetworkSelf } = require('../../services/network');
+const { getNetworkSelf, getNetworksLookup } = require('../../services/network');
 const { keys: systemKeys } = require('../../services/system');
 const { batchInsert, batchUpdate } = require('../../services/db');
 
@@ -70,6 +70,10 @@ function getFilterMapByItem(item) {
 function processMain(persons, updated_persons_filters) {
     return new Promise(async (resolve, reject) => {
         try {
+            if(!persons || !Object.keys(persons).length) {
+                return resolve();
+            }
+
             let batch_insert = [];
             let batch_update = [];
 
@@ -344,6 +348,10 @@ function processMain(persons, updated_persons_filters) {
 function processAvailability(persons, updated_persons_availability) {
     return new Promise(async (resolve, reject) => {
         try {
+            if(!persons || !Object.keys(persons).length) {
+                return resolve();
+            }
+
             let batch_insert = [];
             let batch_update = [];
 
@@ -457,6 +465,123 @@ function processAvailability(persons, updated_persons_availability) {
     });
 }
 
+function processNetworks(persons, updated_persons_networks) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            if(!persons || !Object.keys(persons).length) {
+                return resolve();
+            }
+
+            let batch_insert = [];
+            let batch_update = [];
+
+            let networksLookup = await getNetworksLookup();
+            let conn = await dbService.conn();
+
+            let processTokens = {};
+
+            for(let person_token in persons) {
+                for(let token in persons[person_token]) {
+                    processTokens[token] = true;
+                }
+            }
+
+            let existingData = await conn('persons_filters_networks')
+                .whereIn('token', Object.keys(processTokens))
+                .select('*');
+
+            let batchPersonTokens = Object.keys(persons);
+
+            let existingPersons = await conn('persons')
+                .whereIn('person_token', batchPersonTokens)
+                .select('id', 'person_token', 'updated');
+
+            let personsLookup = {};
+            let personsIdTokenMap = {};
+
+            for(let person of existingPersons) {
+                personsLookup[person.person_token] = person;
+                personsIdTokenMap[person.id] = person.person_token;
+            }
+
+            let existingDataLookup = {};
+
+            for(let item of existingData) {
+                let person_token = personsIdTokenMap[item.person_id];
+
+                if(!person_token) {
+                    continue;
+                }
+
+                if(!existingDataLookup[person_token]) {
+                    existingDataLookup[person_token] = {};
+                }
+
+                existingDataLookup[person_token][item.token] = item;
+            }
+
+            for(let person_token in persons) {
+                let networkData = persons[person_token];
+                let existingPerson = personsLookup[person_token];
+
+                if(!existingPerson) {
+                    continue;
+                }
+
+                for(let token in networkData) {
+                    let item = networkData[token];
+                    let existingItem = existingDataLookup[person_token]?.[item.token];
+
+                    let network_id = item.network_token ? networksLookup.byToken[item.network_token] : null;
+
+                    let entry = {
+                        token: item.token,
+                        person_id: existingPerson.id,
+                        network_id: network_id || null,
+                        is_all_verified: item.is_all_verified || false,
+                        is_any_network: item.is_any_network || false,
+                        is_active: item.is_active,
+                        updated: item.updated,
+                        deleted: item.deleted || null
+                    };
+
+                    if(existingItem) {
+                        if(item.updated > existingItem.updated) {
+                            entry.id = existingItem.id;
+                            batch_update.push(entry);
+                            existingDataLookup[person_token][item.token] = entry;
+                        }
+                    } else {
+                        entry.created = timeNow();
+                        batch_insert.push(entry);
+
+                        if(!existingDataLookup[person_token]) {
+                            existingDataLookup[person_token] = {};
+                        }
+
+                        existingDataLookup[person_token][item.token] = entry;
+                    }
+                }
+            }
+
+            if(batch_insert.length) {
+                await batchInsert('persons_filters_networks', batch_insert, true);
+            }
+
+            if(batch_update.length) {
+                await batchUpdate('persons_filters_networks', batch_update);
+            }
+
+        } catch(e) {
+            console.error('Error in processNetworks:', e);
+            return reject(e);
+        }
+
+        resolve();
+    });
+}
+
+
 function updateCacheAvailability(persons) {
     return new Promise(async (resolve, reject) => {
         try {
@@ -481,17 +606,17 @@ function updateCacheAvailability(persons) {
 
             let filterAvailability = filtersLookup.byToken['availability'];
 
-            let availability_filters_data = await conn('persons_filters')
+            let availability_parent_data = await conn('persons_filters')
                 .where('filter_id', filterAvailability.id)
                 .whereIn('person_id', Object.keys(persons_ids));
 
-            let availability_data = await conn('persons_availability')
+            let availability_items_data = await conn('persons_availability')
                 .whereIn('person_id', Object.keys(persons_ids))
                 .whereNull('deleted');
 
             let organized_data = {};
 
-            for (let row of availability_filters_data) {
+            for (let row of availability_parent_data) {
                 let person_token = personsIdTokenMap[row.person_id];
 
                 if (!organized_data[person_token]) {
@@ -506,7 +631,7 @@ function updateCacheAvailability(persons) {
                 }
             }
 
-            for (let row of availability_data) {
+            for (let row of availability_items_data) {
                 let person_token = personsIdTokenMap[row.person_id];
 
                 if (!organized_data[person_token]) {
@@ -542,6 +667,95 @@ function updateCacheAvailability(persons) {
             return reject(e);
         }
 
+        resolve();
+    });
+}
+
+function updateCacheNetworks(persons) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            if (!Object.keys(persons).length) {
+                return resolve();
+            }
+
+            console.log("Update cache: networks");
+
+            let conn = await dbService.conn();
+
+            let filtersLookup = await getFilters();
+
+            let persons_ids = {};
+            let personsIdTokenMap = {};
+
+            for (let person_token in persons) {
+                let person_id = persons[person_token];
+                persons_ids[person_id] = true;
+                personsIdTokenMap[person_id] = person_token;
+            }
+
+            let filterNetworks = filtersLookup.byToken['networks'];
+
+            let networks_parent_data = await conn('persons_filters')
+                .where('filter_id', filterNetworks.id)
+                .whereIn('person_id', Object.keys(persons_ids));
+
+            let networks_items_data = await conn('persons_filters_networks')
+                .whereIn('person_id', Object.keys(persons_ids))
+                .whereNull('deleted');
+
+            let organized_data = {};
+
+            for (let row of networks_parent_data) {
+                let person_token = personsIdTokenMap[row.person_id];
+
+                if (!organized_data[person_token]) {
+                    organized_data[person_token] = {
+                        id: row.id,
+                        is_active: row.is_active ? 1 : 0,
+                        is_send: row.is_send ? 1 : 0,
+                        is_receive: row.is_receive ? 1 : 0,
+                        updated: row.updated,
+                        items: {}
+                    };
+                }
+            }
+
+            for (let row of networks_items_data) {
+                let person_token = personsIdTokenMap[row.person_id];
+
+                if (!organized_data[person_token]) {
+                    organized_data[person_token] = {
+                        is_active: true,
+                        is_send: true,
+                        is_receive: true,
+                        updated: timeNow(),
+                        items: {}
+                    };
+                }
+
+                organized_data[person_token].items[row.token] = row;
+            }
+
+            let pipeline = cacheService.startPipeline();
+
+            for (let person_token in organized_data) {
+                pipeline.hSet(
+                    cacheService.keys.person_filters(person_token),
+                    'networks',
+                    JSON.stringify(organized_data[person_token])
+                );
+            }
+
+            try {
+                await cacheService.execPipeline(pipeline);
+            } catch(e) {
+                console.error('Error updating networks cache:', e);
+            }
+
+        } catch(e) {
+            console.error('Error in updateCacheNetworks:', e);
+            return reject(e);
+        }
         resolve();
     });
 }
@@ -609,12 +823,6 @@ function updateFilterGridSets(persons) {
         }
 
         resolve();
-    });
-}
-
-function processNetworks() {
-    return new Promise(async (resolve, reject) => {
-                
     });
 }
 
@@ -982,7 +1190,7 @@ function processFilters(persons_filters, updated_persons) {
 
             await processAvailability(persons_filters.availability, updated_persons.availability);
 
-            // await processNetworks(persons_filters.networks);
+            await processNetworks(persons_filters.networks, updated_persons.networks);
         } catch (e) {
             console.error('Error in processFilters:', e);
             return reject(e);
@@ -990,71 +1198,6 @@ function processFilters(persons_filters, updated_persons) {
 
         resolve();
     });
-}
-
-function processAvailabilityFilter(person, existingPerson, filterData, batchInsert, batchUpdate, cacheData) {
-    const now = timeNow();
-
-    if (filterData.items) {
-        for (let [token, item] of Object.entries(filterData.items)) {
-            const availabilityEntry = {
-                person_id: existingPerson.id,
-                token: token,
-                day_of_week: item.day_of_week,
-                is_day: item.is_day,
-                is_time: item.is_time,
-                start_time: item.start_time,
-                end_time: item.end_time,
-                is_overnight: item.is_overnight,
-                is_any_time: item.is_any_time,
-                is_active: item.is_active,
-                updated: now,
-                deleted: item.deleted || null
-            };
-
-            if (item.id) {
-                availabilityEntry.id = item.id;
-                batchUpdate.push(availabilityEntry);
-            } else {
-                availabilityEntry.created = now;
-                batchInsert.push(availabilityEntry);
-            }
-
-            cacheData.items[token] = availabilityEntry;
-        }
-    }
-}
-
-function processNetworksFilter(person, existingPerson, filterData, batchInsert, batchUpdate, cacheData) {
-    const now = timeNow();
-
-    // Process base network filter settings
-    cacheData.is_all_verified = filterData.is_all_verified;
-    cacheData.is_any_network = filterData.is_any_network;
-
-    if (filterData.items) {
-        for (let [networkToken, item] of Object.entries(filterData.items)) {
-            const networkEntry = {
-                person_id: existingPerson.id,
-                network_token: networkToken,
-                is_active: item.is_active,
-                updated: now,
-                deleted: item.deleted || null,
-                is_all_verified: filterData.is_all_verified,
-                is_any_network: filterData.is_any_network
-            };
-
-            if (item.id) {
-                networkEntry.id = item.id;
-                batchUpdate.push(networkEntry);
-            } else {
-                networkEntry.created = now;
-                batchInsert.push(networkEntry);
-            }
-
-            cacheData.items[networkToken] = networkEntry;
-        }
-    }
 }
 
 function syncFilters() {
@@ -1173,20 +1316,24 @@ function syncFilters() {
                     //update cache once all data is processed for network
                     await updateCacheMain(updated_persons.filters);
 
-                    //merge availability from main filters into updated availability
+                    //merge availability/networks for cache
                     for(let person_token in updated_persons.filters) {
-                        if(person_token in updated_persons.availability) {
-                            continue;
-                        }
+                        for(let filter of ['availability', 'networks']) {
+                            if(person_token in updated_persons[filter]) {
+                                continue;
+                            }
 
-                        let person = updated_persons.filters[person_token];
+                            let person = updated_persons.filters[person_token];
 
-                        if('availability' in person.filters) {
-                            updated_persons.availability[person_token] = person.person_id;
+                            if(filter in person.filters) {
+                                updated_persons[filter][person_token] = person.person_id;
+                            }
                         }
                     }
 
                     await updateCacheAvailability(updated_persons.availability);
+
+                    await updateCacheNetworks(updated_persons.networks);
 
                     await updateFilterGridSets(updated_persons.filters);
 

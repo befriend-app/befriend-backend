@@ -8,8 +8,8 @@ module.exports = {
             // 'online',
             // 'availability',
             // 'activity_types',
-            'modes',
-            // 'networks',
+            // 'modes',
+            'networks',
             // 'reviews',
             // 'verifications',
 

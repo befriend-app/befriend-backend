@@ -128,13 +128,28 @@ function syncFilters (inputs) {
             availability_qry = await availability_qry;
             networks_qry = await networks_qry;
 
+            let filters_data = [
+                {
+                    name: 'filters',
+                    results: filters_qry
+                },
+                {
+                    name: 'availability',
+                    results: availability_qry
+                },
+                {
+                    name: 'networks',
+                    results: networks_qry
+                }
+            ];
+
             //organize lookups
             let filtersLookup = await getFilters();
             let networksLookup = await getNetworksLookup();
             let tablesLookup = {};
             let tablesIds = {};
 
-            //loop through all filters and find cols with ids and their respective tables
+            //find cols with ids and organize by their respective tables
             for(let item of filters_qry) {
                 let filterMapping = getFilterMapByItem(item);
 
@@ -171,52 +186,55 @@ function syncFilters (inputs) {
             //organize return object
             let persons_filters = {};
 
-            let filters_data = [
-                {
-                    name: 'filters',
-                    results: filters_qry
-                },
-                {
-                    name: 'availability',
-                    results: availability_qry
-                },
-                {
-                    name: 'networks',
-                    results: networks_qry
-                }
-            ];
-
             for(let data of filters_data) {
                 let persons_data = persons_filters[data.name] = {};
 
-                for(let item of data.results) {
-                    //add filter token
-                    if(item.filter_id) {
-                        item.filter_token = filtersLookup.byId[item.filter_id].token;
+                if(data.name === 'networks') {
+                    for(let item of data.results) {
+                        let person_token = item.person_token;
+
+                        if(!persons_data[person_token]) {
+                            persons_data[person_token] = {};
+                        }
+
+                        item.network_token = item.network_id ? networksLookup.byId[item.network_id]?.network_token : null;
+
+                        persons_data[person_token][item.token] = item;
+
+                        delete item.id;
+                        delete item.created;
+                        delete item.network_id;
                     }
+                } else {
+                    for(let item of data.results) {
+                        //add filter token
+                        if(item.filter_id) {
+                            item.filter_token = filtersLookup.byId[item.filter_id].token;
+                        }
 
-                    //add item token
-                    let filterMapping = getFilterMapByItem(item);
+                        //add item token
+                        let filterMapping = getFilterMapByItem(item);
 
-                    if(filterMapping?.column) {
-                        item.item_token = tablesLookup[filterMapping.table][item[filterMapping.column]] || null;
-                    }
+                        if(filterMapping?.column) {
+                            item.item_token = tablesLookup[filterMapping.table][item[filterMapping.column]] || null;
+                        }
 
-                    let person_token = item.person_token;
+                        let person_token = item.person_token;
 
-                    if(!persons_data[person_token]) {
-                        persons_data[person_token] = {};
-                    }
+                        if(!persons_data[person_token]) {
+                            persons_data[person_token] = {};
+                        }
 
-                    persons_data[person_token][item.token] = item;
+                        persons_data[person_token][item.token] = item;
 
-                    //delete unneeded cols
-                    delete item.id;
-                    delete item.created;
+                        //delete unneeded cols
+                        delete item.id;
+                        delete item.created;
 
-                    for(let k in item) {
-                        if(k.includes('_id')) {
-                            delete item[k];
+                        for(let k in item) {
+                            if(k.includes('_id')) {
+                                delete item[k];
+                            }
                         }
                     }
                 }

@@ -978,7 +978,6 @@ function putNetworks(req, res) {
             const { person_token, network_token, active, is_any_network, is_all_verified } =
                 req.body;
 
-            // Validate required fields
             if (typeof network_token !== 'string' || typeof active !== 'boolean') {
                 res.json(
                     {
@@ -989,7 +988,6 @@ function putNetworks(req, res) {
                 return resolve();
             }
 
-            // Get filter and mapping data
             let mapping = filterMappings.networks;
             let filters = await getFilters();
             let filter = filters.byToken[mapping.token];
@@ -1004,7 +1002,6 @@ function putNetworks(req, res) {
                 return resolve();
             }
 
-            // Get person
             let person = await getPerson(person_token);
 
             if (!person) {
@@ -1017,7 +1014,6 @@ function putNetworks(req, res) {
                 return resolve();
             }
 
-            // Get networks data
             let { networks } = await getNetworksForFilters();
 
             if (!networks?.length) {
@@ -1121,7 +1117,6 @@ function putNetworks(req, res) {
                 );
 
                 if (existingItem) {
-                    // Update existing item
                     existingItem.is_active = active;
                     existingItem.updated = now;
 
