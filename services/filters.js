@@ -15,6 +15,7 @@ const { getModes, getPersonExcludedModes } = require('./modes');
 const { getNetworksForFilters } = require('./network');
 const { getGendersLookup } = require('./genders');
 const { isNumeric } = require('./shared');
+const { getGridLookup } = require('./grid');
 
 const filterMappings = {
     availability: {
@@ -2036,6 +2037,32 @@ function batchUpdateGridSets(persons) {
         let hasPipelineAdd = false;
         let pipelineRem = cacheService.startPipeline();
         let pipelineAdd = cacheService.startPipeline();
+
+        //add grid token to person if not included
+        let missingPersonsGrid = {};
+
+        for(let personObj of persons) {
+            if(!personObj.grid?.token) {
+                missingPersonsGrid[personObj.person?.person_token] = true;
+            }
+        }
+
+        if(Object.keys(missingPersonsGrid).length) {
+            let conn = await dbService.conn();
+            let gridLookup = await getGridLookup();
+
+            let gridsQry = await conn('persons')
+                .whereIn('person_token', Object.keys(missingPersonsGrid))
+                .select('person_token', 'grid_id');
+
+            for(let person of gridsQry) {
+                let grid = gridLookup.byId[person.grid_id];
+
+                if(grid) {
+                    persons[person.person_token].grid = grid;
+                }
+            }
+        }
 
         for(let personObj of persons) {
             let grid_token = personObj.grid?.token;
