@@ -1,6 +1,7 @@
+const { isProdApp } = require('../services/shared');
 module.exports = {
     matching: {
-        on: true,
+        on: isProdApp() ? false : true,
         filters: [
             //notifications
 
@@ -32,7 +33,7 @@ module.exports = {
         }
     },
     sync: {
-        me: false,
-        filters: true
+        me: isProdApp() ? false : false,
+        filters: isProdApp() ? false : true
     }
 };
