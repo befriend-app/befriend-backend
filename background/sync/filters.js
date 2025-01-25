@@ -796,7 +796,8 @@ function updateFilterGridSets(persons) {
 
             for (let person_token of person_tokens) {
                 pipeline.hmGet(cacheService.keys.person(person_token), [
-                    'modes'
+                    'modes',
+                    'network_id'
                 ]);
             }
 
@@ -807,7 +808,8 @@ function updateFilterGridSets(persons) {
                     let person_token = person_tokens[i];
 
                     try {
-                         personsGrid[person_token].person.modes = JSON.parse(results[i][0]);
+                        personsGrid[person_token].person.modes = JSON.parse(results[i][0]);
+                        personsGrid[person_token].person.network_id = JSON.parse(results[i][1]);
                     } catch(e) {
                         console.error(e);
                     }

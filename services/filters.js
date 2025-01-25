@@ -12,7 +12,7 @@ const drinkingService = require('./drinking');
 const smokingService = require('./smoking');
 
 const { getModes, getPersonExcludedModes } = require('./modes');
-const { getNetworksForFilters } = require('./network');
+const { getNetworksForFilters, getNetworksLookup } = require('./network');
 const { getGendersLookup } = require('./genders');
 const { isNumeric } = require('./shared');
 const { getGridLookup } = require('./grid');
@@ -734,6 +734,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
         return new Promise(async (resolve, reject) => {
             try {
                 let allNetworks = await getNetworksForFilters();
+
                 let network_token = allNetworks.networks?.find(
                     (network) => network.id === person.network_id,
                 )?.network_token;
@@ -2518,6 +2519,7 @@ function batchUpdateGridSets(persons) {
                                         'send',
                                     ),
                                 );
+
                                 delKeysSet.add(
                                     cacheService.keys.persons_grid_exclude_send_receive(
                                         grid_token,
