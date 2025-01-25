@@ -2,15 +2,26 @@ module.exports = {
     matching: {
         on: true,
         filters: [
+            //notifications
+
             // 'online',
-            // 'networks',
+            // 'availability',
+            // 'activity_types',
             // 'modes',
+            // 'networks',
+            // 'reviews',
             // 'verifications',
+
+            //general
+
             // 'genders',
             // 'distance',
             // 'ages',
-            // 'reviews',
-            // 'availability',
+
+            //personal
+
+            //interests
+
         ],
         skipDebugFilter: function(filter) {
             if(!module.exports.matching.on) {
