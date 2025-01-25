@@ -14,7 +14,7 @@ const {
     getURL,
     joinPaths,
 } = require('../../services/shared');
-const { getFilters, filterMappings } = require('../../services/filters');
+const { getFilters, filterMappings, batchUpdateGridSets } = require('../../services/filters');
 
 let batch_process = 1000;
 let defaultTimeout = 20000;
@@ -341,9 +341,205 @@ function processMain(persons, updated_persons_filters) {
     });
 }
 
-function processAvailability() {
+function processAvailability(persons, updated_persons_availability) {
     return new Promise(async (resolve, reject) => {
-                
+        try {
+            let batch_insert = [];
+            let batch_update = [];
+
+            let conn = await dbService.conn();
+
+            let processTokens = {};
+
+            for (let person_token in persons) {
+                for (let token in persons[person_token]) {
+                    processTokens[token] = true;
+                }
+            }
+
+            let existingData = await conn('persons_availability')
+                .whereIn('token', Object.keys(processTokens))
+                .select('*');
+
+            let batchPersonTokens = Object.keys(persons);
+
+            let existingPersons = await conn('persons')
+                .whereIn('person_token', batchPersonTokens)
+                .select('id', 'person_token', 'updated');
+
+            let personsLookup = {};
+            let personsIdTokenMap = {};
+
+            for (let person of existingPersons) {
+                personsLookup[person.person_token] = person;
+                personsIdTokenMap[person.id] = person.person_token;
+            }
+
+            let existingDataLookup = {};
+
+            for (let item of existingData) {
+                let person_token = personsIdTokenMap[item.person_id];
+
+                if (!person_token) {
+                    continue;
+                }
+
+                if (!existingDataLookup[person_token]) {
+                    existingDataLookup[person_token] = {};
+                }
+
+                existingDataLookup[person_token][item.token] = item;
+            }
+
+            for (let person_token in persons) {
+                let availabilityData = persons[person_token];
+                let existingPerson = personsLookup[person_token];
+
+                if (!existingPerson) {
+                    continue;
+                }
+
+                for (let token in availabilityData) {
+                    let item = availabilityData[token];
+                    let existingItem = existingDataLookup[person_token]?.[item.token];
+
+                    let entry = {
+                        token: item.token,
+                        person_id: existingPerson.id,
+                        day_of_week: item.day_of_week,
+                        is_day: item.is_day,
+                        is_time: item.is_time,
+                        start_time: item.start_time,
+                        end_time: item.end_time,
+                        is_overnight: item.is_overnight,
+                        is_any_time: item.is_any_time,
+                        is_active: item.is_active,
+                        updated: item.updated,
+                        deleted: item.deleted || null
+                    };
+
+                    if (existingItem) {
+                        if (item.updated > existingItem.updated) {
+                            entry.id = existingItem.id;
+                            batch_update.push(entry);
+                            existingDataLookup[person_token][item.token] = entry;
+
+                            updated_persons_availability[person_token] = entry.person_id;
+                        }
+                    } else {
+                        entry.created = timeNow();
+                        batch_insert.push(entry);
+
+                        if (!existingDataLookup[person_token]) {
+                            existingDataLookup[person_token] = {};
+                        }
+
+                        existingDataLookup[person_token][item.token] = entry;
+
+                        updated_persons_availability[person_token] = entry.person_id;
+                    }
+                }
+            }
+
+            if (batch_insert.length) {
+                await batchInsert('persons_availability', batch_insert, true);
+            }
+
+            if (batch_update.length) {
+                await batchUpdate('persons_availability', batch_update);
+            }
+        } catch (e) {
+            console.error('Error in processAvailability:', e);
+            return reject(e);
+        }
+
+        resolve();
+    });
+}
+
+function updateCacheAvailability(persons) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            if (!Object.keys(persons).length) {
+                return resolve();
+            }
+
+            let conn = await dbService.conn();
+
+            let filtersLookup = await getFilters();
+
+            let persons_ids = {};
+            let personsIdTokenMap = {};
+
+            for (let person_token in persons) {
+                let p = persons[person_token];
+                persons_ids[p.person_id] = true;
+                personsIdTokenMap[p.person_id] = person_token;
+            }
+
+            let filterAvailability = filtersLookup.byToken['availability'];
+
+            let availability_filters_data = await conn('persons_filters')
+                .where('filter_id', filterAvailability.id)
+                .whereIn('person_id', Object.keys(persons_ids));
+
+            let availability_data = await conn('persons_availability')
+                .whereIn('person_id', Object.keys(persons_ids));
+
+            let organized_data = {};
+
+            for (let row of availability_filters_data) {
+                let person_token = personsIdTokenMap[row.person_id];
+
+                if (!organized_data[person_token]) {
+                    organized_data[person_token] = {
+                        id: row.id,
+                        is_active: row.is_active ? 1 : 0,
+                        is_send: row.is_send ? 1 : 0,
+                        is_receive: row.is_receive ? 1 : 0,
+                        updated: row.updated,
+                        items: {}
+                    };
+                }
+            }
+
+            for (let row of availability_data) {
+                let person_token = personsIdTokenMap[row.person_id];
+
+                if (!organized_data[person_token]) {
+                    organized_data[person_token] = {
+                        is_active: true,
+                        is_send: true,
+                        is_receive: true,
+                        updated: timeNow(),
+                        items: {}
+                    };
+                }
+
+                organized_data[person_token].items[row.token] = row;
+            }
+
+            let pipeline = cacheService.startPipeline();
+
+            for (let person_token in organized_data) {
+                pipeline.hSet(
+                    cacheService.keys.person_filters(person_token),
+                    'availability',
+                    JSON.stringify(organized_data[person_token])
+                );
+            }
+
+            try {
+                await cacheService.execPipeline(pipeline);
+            } catch (e) {
+                console.error('Error updating availability cache:', e);
+            }
+        } catch (e) {
+            console.error('Error in updateCacheAvailability:', e);
+            return reject(e);
+        }
+
+        resolve();
     });
 }
 
@@ -381,6 +577,7 @@ function updateCacheMain(persons) {
             }
 
             let conn = await dbService.conn();
+
             let filtersLookup = await getFilters();
 
             // organize cache
@@ -679,7 +876,7 @@ function updateCacheMain(persons) {
     });
 }
 
-function processFilters(persons_filters, updated_persons_filters) {
+function processFilters(persons_filters, updated_persons) {
     return new Promise(async (resolve, reject) => {
         try {
             let hasPersons = false;
@@ -696,10 +893,10 @@ function processFilters(persons_filters, updated_persons_filters) {
                 return resolve();
             }
             
-            await processMain(persons_filters.filters, updated_persons_filters);
+            await processMain(persons_filters.filters, updated_persons.filters);
 
-            // await processAvailability(persons_filters.availability);
-            //
+            await processAvailability(persons_filters.availability, updated_persons.availability);
+
             // await processNetworks(persons_filters.networks);
         } catch (e) {
             console.error('Error in processFilters:', e);
@@ -812,7 +1009,11 @@ function syncFilters() {
                 try {
                     let t = timeNow();
 
-                    let updated_persons_filters = {};
+                    let updated_persons = {
+                        filters: {},
+                        availability: {},
+                        networks: {}
+                    };
 
                     let skipSaveTimestamps = false;
 
@@ -858,7 +1059,7 @@ function syncFilters() {
                         continue;
                     }
 
-                    await processFilters(response.data.filters, updated_persons_filters);
+                    await processFilters(response.data.filters, updated_persons);
 
                     while (response.data.pagination_updated) {
                         try {
@@ -876,7 +1077,7 @@ function syncFilters() {
                                 break;
                             }
 
-                            await processFilters(response.data.filters, updated_persons_filters);
+                            await processFilters(response.data.filters, updated_persons);
                         } catch (e) {
                             console.error(e);
                             skipSaveTimestamps = true;
@@ -885,10 +1086,10 @@ function syncFilters() {
                     }
 
                     //update cache once all data is processed for network
-                    await updateCacheMain(updated_persons_filters);
+                    await updateCacheMain(updated_persons.filters);
+                    await updateCacheAvailability(updated_persons.availability);
 
                     if (!skipSaveTimestamps && !debug_sync_enabled) {
-                        // Update sync table
                         if (sync_qry) {
                             await conn('sync').where('id', sync_qry.id)
                                 .update({
