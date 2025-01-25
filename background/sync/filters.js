@@ -472,9 +472,9 @@ function updateCacheAvailability(persons) {
             let personsIdTokenMap = {};
 
             for (let person_token in persons) {
-                let p = persons[person_token];
-                persons_ids[p.person_id] = true;
-                personsIdTokenMap[p.person_id] = person_token;
+                let person_id = persons[person_token];
+                persons_ids[person_id] = true;
+                personsIdTokenMap[person_id] = person_token;
             }
 
             let filterAvailability = filtersLookup.byToken['availability'];
@@ -484,7 +484,8 @@ function updateCacheAvailability(persons) {
                 .whereIn('person_id', Object.keys(persons_ids));
 
             let availability_data = await conn('persons_availability')
-                .whereIn('person_id', Object.keys(persons_ids));
+                .whereIn('person_id', Object.keys(persons_ids))
+                .whereNull('deleted');
 
             let organized_data = {};
 
@@ -856,9 +857,14 @@ function updateCacheMain(persons) {
             for(let person_token in persons_cache) {
                 let person = persons_cache[person_token];
 
-                for(let filter_name in person) {
-                    let filter = person[filter_name];
-                    pipeline.hSet(cacheService.keys.person_filters(person_token), filter_name, JSON.stringify(filter));
+                for(let filter_token in person) {
+                    //skip availability as it's handled afterwards
+                    if(filter_token === 'availability') {
+                        continue;
+                    }
+
+                    let filter = person[filter_token];
+                    pipeline.hSet(cacheService.keys.person_filters(person_token), filter_token, JSON.stringify(filter));
                 }
             }
 
@@ -1087,6 +1093,20 @@ function syncFilters() {
 
                     //update cache once all data is processed for network
                     await updateCacheMain(updated_persons.filters);
+
+                    //merge availability from main filters into updated availability
+                    for(let person_token in updated_persons.filters) {
+                        if(person_token in updated_persons.availability) {
+                            continue;
+                        }
+
+                        let person = updated_persons.filters[person_token];
+
+                        if('availability' in person.filters) {
+                            updated_persons.availability[person_token] = person.person_id;
+                        }
+                    }
+
                     await updateCacheAvailability(updated_persons.availability);
 
                     if (!skipSaveTimestamps && !debug_sync_enabled) {
