@@ -1793,18 +1793,15 @@ function putActivityTypes(req, res) {
                             updated: now,
                         });
 
-                    // Update cache directly for all items
                     for (let id in filterData.items) {
                         filterData.items[id].is_negative = false;
                         filterData.items[id].updated = now;
                     }
                 }
             } else {
-                // Execute batch operations
                 if (batchInserts.length) {
                     await dbService.batchInsert('persons_filters', batchInserts, true);
 
-                    // Update cache with new items
                     for (let item of batchInserts) {
                         filterData.items[item.id] = {
                             ...item,
@@ -1824,7 +1821,6 @@ function putActivityTypes(req, res) {
                 }
             }
 
-            // Update cache
             await cacheService.hSet(person_filter_cache_key, filter.token, filterData);
 
             res.json(filterData);

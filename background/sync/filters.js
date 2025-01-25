@@ -838,6 +838,10 @@ function updateCacheMain(persons) {
                                 }
                             }
 
+                            if(item.activity_type_id) {
+                                item_extra.activity_type_id = item.activity_type_id;
+                            }
+
                             items[item.id] = {
                                 is_active: item.is_active ? 1 : 0,
                                 is_negative: item.is_negative ? 1 : 0,
