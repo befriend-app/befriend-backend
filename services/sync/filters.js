@@ -134,6 +134,7 @@ function syncFilters (inputs) {
             let tablesLookup = {};
             let tablesIds = {};
 
+            //loop through all filters and find cols with ids and their respective tables
             for(let item of filters_qry) {
                 let filterMapping = getFilterMapByItem(item);
 

@@ -464,6 +464,8 @@ function updateCacheAvailability(persons) {
                 return resolve();
             }
 
+            console.log("Update cache: availability");
+
             let conn = await dbService.conn();
 
             let filtersLookup = await getFilters();
@@ -544,6 +546,72 @@ function updateCacheAvailability(persons) {
     });
 }
 
+function updateFilterGridSets(persons) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            console.log("Update grid sets: filters");
+
+            //prepare grid set updates
+            let personsGrid = {};
+
+            for(let person_token in persons) {
+                let person = persons[person_token];
+
+                for(let filter_token in person.filters) {
+                    if(filter_token === 'availability') {
+                        continue;
+                    }
+
+                    if(!personsGrid[person_token]) {
+                        personsGrid[person_token] = {
+                            person: {
+                                person_token
+                            },
+                            filter_tokens: []
+                        }
+                    }
+
+                    personsGrid[person_token].filter_tokens.push(filter_token);
+                }
+            }
+
+            //add modes selected to person object
+            let pipeline = cacheService.startPipeline();
+
+            let person_tokens = Object.keys(personsGrid);
+
+            for (let person_token of person_tokens) {
+                pipeline.hmGet(cacheService.keys.person(person_token), [
+                    'modes'
+                ]);
+            }
+
+            try {
+                let results = await cacheService.execPipeline(pipeline);
+
+                for(let i = 0; i < results.length; i++) {
+                    let person_token = person_tokens[i];
+
+                    try {
+                         personsGrid[person_token].person.modes = JSON.parse(results[i][0]);
+                    } catch(e) {
+                        console.error(e);
+                    }
+                }
+            } catch(e) {
+                console.error(e);
+            }
+
+            await batchUpdateGridSets(personsGrid);
+        } catch(e) {
+            console.error(e);
+            return reject(e);
+        }
+
+        resolve();
+    });
+}
+
 function processNetworks() {
     return new Promise(async (resolve, reject) => {
                 
@@ -576,6 +644,8 @@ function updateCacheMain(persons) {
             if(!Object.keys(persons).length) {
                 return resolve();
             }
+
+            console.log("Update cache: filters");
 
             let conn = await dbService.conn();
 
@@ -840,6 +910,11 @@ function updateCacheMain(persons) {
 
                             if(item.activity_type_id) {
                                 item_extra.activity_type_id = item.activity_type_id;
+                            }
+
+                            if(filter.token === 'modes') {
+                                item_extra.mode_token = item_extra.token;
+                                delete item_extra.token;
                             }
 
                             items[item.id] = {
@@ -1112,6 +1187,8 @@ function syncFilters() {
                     }
 
                     await updateCacheAvailability(updated_persons.availability);
+
+                    await updateFilterGridSets(updated_persons.filters);
 
                     if (!skipSaveTimestamps && !debug_sync_enabled) {
                         if (sync_qry) {

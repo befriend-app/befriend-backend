@@ -935,6 +935,7 @@ function putMode(req, res) {
                 const [id] = await conn('persons_filters').insert(filterEntry);
 
                 filterEntry.mode_token = mode_token;
+
                 filterItems[id] = {
                     ...filterEntry,
                     id,

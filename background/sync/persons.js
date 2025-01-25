@@ -299,7 +299,7 @@ function processPersons(network_id, persons) {
 
                     let t = timeNow();
 
-                    await batchUpdateGridSets(Object.values(personsGrids));
+                    await batchUpdateGridSets(personsGrids);
 
                     console.log({
                         grid_sets_time: timeNow() - t

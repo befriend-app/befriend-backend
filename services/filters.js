@@ -681,14 +681,18 @@ function getPersonsFiltersBatch(persons) {
         try {
             let pipeline = cacheService.startPipeline();
 
-            for(let personObj of persons) {
-                pipeline.hGetAll(cacheService.keys.person_filters(personObj.person.person_token));
+            let person_tokens = Object.keys(persons);
+
+            for(let person_token of person_tokens) {
+                pipeline.hGetAll(cacheService.keys.person_filters(person_token));
             }
 
             let results = await cacheService.execPipeline(pipeline);
 
-            for(let i = 0; i < persons.length; i++) {
-                persons[i].filters = cacheService.parseHashData(results[i]);
+            for(let i = 0; i < person_tokens.length; i++) {
+                let person_token = person_tokens[i];
+
+                persons[person_token].filters = cacheService.parseHashData(results[i]);
             }
 
             resolve();
@@ -951,6 +955,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                             'send',
                         ),
                     );
+
                     delKeysSet.add(
                         cacheService.keys.persons_grid_exclude_send_receive(
                             prev_grid_token,
@@ -2016,7 +2021,7 @@ function batchUpdateGridSets(persons) {
     return new Promise(async (resolve, reject) => {
         let modes, genders, allNetworks;
 
-        if (!persons?.length) {
+        if (!Object.keys(persons).length) {
             return resolve();
         }
 
@@ -2041,14 +2046,17 @@ function batchUpdateGridSets(persons) {
         //add grid token to person if not included
         let missingPersonsGrid = {};
 
-        for(let personObj of persons) {
+        for(let person_token in persons) {
+            let personObj = persons[person_token];
+
             if(!personObj.grid?.token) {
-                missingPersonsGrid[personObj.person?.person_token] = true;
+                missingPersonsGrid[person_token] = true;
             }
         }
 
         if(Object.keys(missingPersonsGrid).length) {
             let conn = await dbService.conn();
+
             let gridLookup = await getGridLookup();
 
             let gridsQry = await conn('persons')
@@ -2064,9 +2072,15 @@ function batchUpdateGridSets(persons) {
             }
         }
 
-        for(let personObj of persons) {
+        for(let person_token in persons) {
+            let personObj = persons[person_token];
             let grid_token = personObj.grid?.token;
+
             let prev_grid_token = personObj.prev_grid?.token;
+
+            if(!grid_token && !prev_grid_token) {
+                continue;
+            }
 
             let person = personObj.person;
             let filters = personObj.filters;
