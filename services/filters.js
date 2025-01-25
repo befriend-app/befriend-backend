@@ -2038,8 +2038,6 @@ function batchUpdateGridSets(persons) {
         let pipelineAdd = cacheService.startPipeline();
 
         for(let personObj of persons) {
-            let addKeysSet, delKeysSet, keysDelSorted, keysAddSorted;
-
             let grid_token = personObj.grid?.token;
             let prev_grid_token = personObj.prev_grid?.token;
 
@@ -2047,11 +2045,11 @@ function batchUpdateGridSets(persons) {
             let filters = personObj.filters;
             let filter_tokens = personObj.filter_tokens;
 
-            addKeysSet = new Set();
-            delKeysSet = new Set();
+            let addKeysSet = new Set();
+            let delKeysSet = new Set();
 
-            keysAddSorted = new Set();
-            keysDelSorted = new Set();
+            let keysAddSorted = new Set();
+            let keysDelSorted = new Set();
 
             function updateAll() {
                 return new Promise(async (resolve, reject) => {

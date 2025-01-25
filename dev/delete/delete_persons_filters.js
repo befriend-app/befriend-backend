@@ -1,6 +1,6 @@
 const cacheService = require('../../services/cache');
 const dbService = require('../../services/db');
-const { loadScriptEnv, isProdApp, timeNow } = require('../../services/shared');
+const { loadScriptEnv, isProdApp } = require('../../services/shared');
 const { deleteKeys } = require('../../services/cache');
 const { keys: systemKeys } = require('../../services/system');
 

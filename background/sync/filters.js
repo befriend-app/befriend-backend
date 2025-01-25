@@ -15,14 +15,13 @@ const {
     joinPaths,
 } = require('../../services/shared');
 const { getFilters, filterMappings } = require('../../services/filters');
-const { filter } = require('lodash');
 
 let batch_process = 1000;
 let defaultTimeout = 20000;
 
 let filterMapLookup = {};
 
-let debug_mode = false;
+let debug_sync_enabled = require('../../dev/debug').sync.filters;
 
 function getMappingInfo(filter_token) {
     if(filter_token in filterMapLookup) {
@@ -777,6 +776,8 @@ function processNetworksFilter(person, existingPerson, filterData, batchInsert, 
 }
 
 function syncFilters() {
+    console.log("Sync: filters");
+
     let sync_name = systemKeys.sync.network.persons_filters;
 
     return new Promise(async (resolve, reject) => {
@@ -809,6 +810,8 @@ function syncFilters() {
         if (networks) {
             for (let network of networks) {
                 try {
+                    let t = timeNow();
+
                     let updated_persons_filters = {};
 
                     let skipSaveTimestamps = false;
@@ -823,7 +826,7 @@ function syncFilters() {
                         .where('sync_process', sync_name)
                         .first();
 
-                    if (sync_qry && !debug_mode) {
+                    if (sync_qry && !debug_sync_enabled) {
                         timestamps.last = sync_qry.last_updated;
                     }
 
@@ -884,27 +887,29 @@ function syncFilters() {
                     //update cache once all data is processed for network
                     await updateCacheMain(updated_persons_filters);
 
-                    if (!skipSaveTimestamps) {
+                    if (!skipSaveTimestamps && !debug_sync_enabled) {
                         // Update sync table
-                        if(!debug_mode) {
-                            if (sync_qry) {
-                                await conn('sync').where('id', sync_qry.id)
-                                    .update({
-                                        last_updated: timestamps.current,
-                                        updated: timeNow(),
-                                    });
-                            } else {
-                                await conn('sync')
-                                    .insert({
-                                        network_id: network.id,
-                                        sync_process: sync_name,
-                                        last_updated: timestamps.current,
-                                        created: timeNow(),
-                                        updated: timeNow(),
-                                    });
-                            }
+                        if (sync_qry) {
+                            await conn('sync').where('id', sync_qry.id)
+                                .update({
+                                    last_updated: timestamps.current,
+                                    updated: timeNow(),
+                                });
+                        } else {
+                            await conn('sync')
+                                .insert({
+                                    network_id: network.id,
+                                    sync_process: sync_name,
+                                    last_updated: timestamps.current,
+                                    created: timeNow(),
+                                    updated: timeNow(),
+                                });
                         }
                     }
+
+                    console.log({
+                        process_time: timeNow() - t
+                    });
                 } catch (e) {
                     console.error(e);
                 }

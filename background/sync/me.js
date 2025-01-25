@@ -23,6 +23,8 @@ let defaultTimeout = 20000;
 
 let tableLookup = {};
 
+let debug_sync_enabled = require('../../dev/debug').sync.me;
+
 function getTableInfo(table_name) {
     if(table_name in tableLookup) {
         return tableLookup[table_name];
@@ -147,8 +149,6 @@ function processMe(persons) {
             for (let i = 0; i < persons.length; i += batch_process) {
                 batches.push(persons.slice(i, i + batch_process));
             }
-
-            let t = timeNow();
 
             for (let batch of batches) {
                 function organizeItemsCache(table, items) {
@@ -413,10 +413,6 @@ function processMe(persons) {
 
                 await cacheService.execPipeline(pipeline);
             }
-
-            console.log({
-                process_time: timeNow() - t
-            });
         } catch (e) {
             console.error(e);
             return reject(e);
@@ -427,6 +423,8 @@ function processMe(persons) {
 }
 
 function syncMe() {
+    console.log("Sync: me");
+
     let sync_name = systemKeys.sync.network.persons_me;
 
     return new Promise(async (resolve, reject) => {
@@ -459,6 +457,8 @@ function syncMe() {
         if (networks) {
             for (let network of networks) {
                 try {
+                    let ts = timeNow();
+
                     //in case of error, do not save new last timestamp
                     let skipSaveTimestamps = false;
 
@@ -474,7 +474,7 @@ function syncMe() {
                         .where('sync_process', sync_name)
                         .first();
 
-                    if (sync_qry) {
+                    if (sync_qry && !debug_sync_enabled) {
                         timestamps.last = sync_qry.last_updated;
                     }
 
@@ -535,7 +535,7 @@ function syncMe() {
                     }
 
                     //todo remove
-                    if (0 && !skipSaveTimestamps) {
+                    if (!skipSaveTimestamps && !debug_sync_enabled) {
                         //update sync table
                         if (sync_qry) {
                             await conn('sync').where('id', sync_qry.id).update({
@@ -552,6 +552,10 @@ function syncMe() {
                             });
                         }
                     }
+
+                    console.log({
+                        process_time: timeNow() - ts,
+                    });
                 } catch (e) {
                     console.error(e);
                 }

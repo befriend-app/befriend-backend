@@ -94,8 +94,6 @@ function processPersons(network_id, persons) {
                 batches.push(persons.slice(i, i + batch_process));
             }
 
-            let t = timeNow();
-
             for (let batch of batches) {
                 let pipeline = cacheService.startPipeline();
                 let prev_modes_pipeline = cacheService.startPipeline();
@@ -308,10 +306,6 @@ function processPersons(network_id, persons) {
                     });
                 }
             }
-
-            console.log({
-                process_time: timeNow() - t
-            });
         } catch (e) {
             console.error(e);
             return reject(e);
@@ -585,7 +579,10 @@ function updatePersonsCount() {
 }
 
 function syncPersons() {
+    console.log("Sync: persons");
+
     let sync_name = systemKeys.sync.network.persons;
+
 
     return new Promise(async (resolve, reject) => {
         let conn, networks, network_self;
@@ -619,6 +616,8 @@ function syncPersons() {
         if (networks) {
             for (let network of networks) {
                 try {
+                    let t = timeNow();
+
                     //in case of error, do not save new last timestamp
                     let skipSaveTimestamps = false;
 
@@ -711,6 +710,10 @@ function syncPersons() {
                             });
                         }
                     }
+
+                    console.log({
+                        process_time: timeNow() - t
+                    });
                 } catch (e) {
                     console.error(e);
                 }

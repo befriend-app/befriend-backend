@@ -5,6 +5,8 @@ let gridService = require('../services/grid');
 let reviewService = require('../services/reviews');
 let sectionsData = require('../services/sections_data');
 
+let { skipDebugFilter } = require('../dev/debug').matching;
+
 const {
     filterMappings,
     getPersonFilters,
@@ -40,28 +42,6 @@ let interestScoreThresholds = {
     super: 100,
 };
 
-let debugging = {
-    on: true,
-    filters: [
-        // 'online',
-        // 'networks',
-        // 'modes',
-        // 'verifications',
-        // 'genders',
-        // 'distance',
-        // 'ages',
-        // 'reviews',
-        // 'availability',
-    ]
-}
-
-function skipDebugFilter(filter) {
-    if(!debugging.on) {
-        return false;
-    }
-
-    return !(debugging.filters.includes(filter));
-}
 
 function getMatches(me, params = {}) {
     let { activity, send_only, counts_only } = params;
