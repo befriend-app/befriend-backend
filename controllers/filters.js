@@ -34,6 +34,7 @@ let sectionsData = require('../services/sections_data');
 const { getNetworksForFilters } = require('../services/network');
 const { getModes } = require('../services/modes');
 const matchingService = require('../services/matching');
+const { getGendersLookup } = require('../services/genders');
 
 function createFilterEntry(filter_id, props = {}) {
     const now = timeNow();
@@ -1421,8 +1422,8 @@ function putGender(req, res) {
                 return resolve();
             }
 
-            let genders = await getGenders(true);
-            let anyOption = genders.find((item) => item.token === 'any');
+            let gendersLookup = await getGendersLookup();
+            let anyOption = gendersLookup.byToken['any'];
 
             let conn = await dbService.conn();
             let person_filter_cache_key = cacheService.keys.person_filters(person_token);
@@ -1436,10 +1437,11 @@ function putGender(req, res) {
                 });
 
                 // Create base filter entry in database
-                const [id] = await conn('persons_filters').insert({
-                    ...baseEntry,
-                    is_parent: true,
-                });
+                const [id] = await conn('persons_filters')
+                    .insert({
+                        ...baseEntry,
+                        is_parent: true,
+                    });
 
                 filterData = {
                     ...baseEntry,
@@ -1454,16 +1456,18 @@ function putGender(req, res) {
 
             // Get existing 'any' selection if it exists
             const existingAny = Object.values(filterItems).find(
-                (item) => item[mapping.column] === anyOption.id,
+                (item) => item[mapping.column_token] && item[mapping.column_token] === anyOption.gender_token,
             );
 
             // Handle 'any' gender selection
             if (gender_token === 'any' && active) {
                 // Mark all non-any items as negative
-                await conn('persons_filters').whereIn('id', Object.keys(filterData.items)).update({
-                    is_negative: true,
-                    updated: now,
-                });
+                await conn('persons_filters')
+                    .whereIn('id', Object.keys(filterData.items))
+                    .update({
+                        is_negative: true,
+                        updated: now,
+                    });
 
                 for (let id in filterData.items) {
                     filterData.items[id].is_negative = true;
@@ -1472,10 +1476,12 @@ function putGender(req, res) {
 
                 // Create or update 'any' entry
                 if (existingAny) {
-                    await conn('persons_filters').where('id', existingAny.id).update({
-                        is_negative: false,
-                        updated: now,
-                    });
+                    await conn('persons_filters')
+                        .where('id', existingAny.id)
+                        .update({
+                            is_negative: false,
+                            updated: now,
+                        });
 
                     existingAny.is_negative = false;
                     existingAny.updated = now;
@@ -1491,6 +1497,7 @@ function putGender(req, res) {
 
                     filterData.items[id] = {
                         ...anyEntry,
+                        [mapping.column_token]: anyOption.gender_token,
                         id,
                     };
                 }
@@ -1498,7 +1505,7 @@ function putGender(req, res) {
             // Handle specific gender selection
             else {
                 // Find matching gender from data
-                let gender = genders.find((g) => g.token === gender_token);
+                let gender = gendersLookup.byToken[gender_token];
 
                 if (!gender) {
                     res.json(
@@ -1512,10 +1519,12 @@ function putGender(req, res) {
 
                 // Mark 'any' selection as negative if it exists
                 if (existingAny) {
-                    await conn('persons_filters').where('id', existingAny.id).update({
-                        is_negative: true,
-                        updated: now,
-                    });
+                    await conn('persons_filters')
+                        .where('id', existingAny.id)
+                        .update({
+                            is_negative: true,
+                            updated: now,
+                        });
 
                     existingAny.is_negative = true;
                     existingAny.updated = now;
@@ -1523,15 +1532,17 @@ function putGender(req, res) {
 
                 // Check for existing selection
                 const existingItem = Object.values(filterData.items).find(
-                    (item) => item[mapping.column] === gender.id,
+                    (item) => item[mapping.column_token] && item[mapping.column_token] === gender_token,
                 );
 
                 if (existingItem) {
                     // Update existing entry
-                    await conn('persons_filters').where('id', existingItem.id).update({
-                        is_negative: !active,
-                        updated: now,
-                    });
+                    await conn('persons_filters')
+                        .where('id', existingItem.id)
+                        .update({
+                            is_negative: !active,
+                            updated: now
+                        });
 
                     existingItem.is_negative = !active;
                     existingItem.updated = now;
@@ -1543,10 +1554,12 @@ function putGender(req, res) {
                         is_negative: !active,
                     });
 
-                    const [id] = await conn('persons_filters').insert(filterEntry);
+                    const [id] = await conn('persons_filters')
+                        .insert(filterEntry);
 
                     filterData.items[id] = {
                         ...filterEntry,
+                        [mapping.column_token]: gender_token,
                         id,
                     };
                 }

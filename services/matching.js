@@ -1043,6 +1043,7 @@ function getMatches(me, params = {}) {
                             if (!personsExcludeSend[gender_token]) {
                                 personsExcludeSend[gender_token] = {};
                             }
+
                             if (!personsExcludeReceive[gender_token]) {
                                 personsExcludeReceive[gender_token] = {};
                             }

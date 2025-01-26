@@ -1481,25 +1481,25 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                     return resolve();
                 }
 
-                let anyId = genders.byToken['any']?.id;
+                let anyToken = genders.byToken['any']?.gender_token;
 
                 let anyItem = Object.values(genderFilter.items).find(
-                    (item) => item.gender_id === anyId,
+                    (item) => item.gender_token === anyToken,
                 );
 
                 let isAnySelected = anyItem?.is_active && !anyItem.is_negative && !anyItem.deleted;
 
                 //if any is selected, do not add self to excluded gender sets
                 if (!isAnySelected && genderFilter.is_active) {
-                    for (let gender_id in genders.byId) {
-                        let gender = genders.byId[gender_id];
+                    for (let gender_token in genders.byToken) {
+                        let gender = genders.byToken[gender_token];
 
                         if (gender.gender_token === 'any') {
                             continue;
                         }
 
                         let genderItem = Object.values(genderFilter.items).find(
-                            (item) => item.gender_id === parseInt(gender_id),
+                            (item) => item.gender_token === gender_token,
                         );
 
                         if (genderFilter.is_send) {
@@ -1514,7 +1514,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                                         grid_token,
                                         `genders:${gender.gender_token}`,
                                         'send',
-                                    ),
+                                    )
                                 );
                             }
                         }
@@ -2068,18 +2068,18 @@ function batchUpdateGridSets(persons) {
     }
 
     return new Promise(async (resolve, reject) => {
-        let modes, genders, allNetworks;
+        let modesLookup, gendersLookup, networksLookup;
 
         if (!Object.keys(persons).length) {
             return resolve();
         }
 
         try {
-            modes = await getModes();
+            modesLookup = await getModes();
 
-            genders = await getGendersLookup();
+            gendersLookup = await getGendersLookup();
 
-            allNetworks = await getNetworksForFilters();
+            networksLookup = await getNetworksLookup();
 
             await getPersonsFiltersBatch(persons);
         } catch (e) {
@@ -2396,7 +2396,7 @@ function batchUpdateGridSets(persons) {
                     try {
                         let excluded_modes = await getPersonExcludedModes(person, filters);
 
-                        for (let mode of Object.values(modes.byId) || {}) {
+                        for (let mode of Object.values(modesLookup.byId) || {}) {
                             //person sets
                             delKeysSet.add(
                                 cacheService.keys.persons_grid_set(grid_token, mode.token)
@@ -2481,9 +2481,7 @@ function batchUpdateGridSets(persons) {
             function updateNetworks() {
                 return new Promise(async (resolve, reject) => {
                     try {
-                        let network_token = allNetworks.networks?.find(
-                            (network) => network.id === person.network_id,
-                        )?.network_token;
+                        let network_token = networksLookup.byId[person.network_id]?.network_token;
 
                         if (!network_token) {
                             console.error('Network token not found');
@@ -2514,7 +2512,7 @@ function batchUpdateGridSets(persons) {
                         }
 
                         if (networksFilter.is_all_verified) {
-                            for (let network of allNetworks.networks) {
+                            for (let network of Object.values(networksLookup.byToken)) {
                                 if (network.network_token === network_token) {
                                     continue;
                                 }
@@ -2531,7 +2529,7 @@ function batchUpdateGridSets(persons) {
                             }
                         }
 
-                        for (let network of allNetworks.networks) {
+                        for (let network of Object.values(networksFilter.byToken)) {
                             if (network.network_token === network_token) {
                                 continue;
                             }
@@ -2614,7 +2612,7 @@ function batchUpdateGridSets(persons) {
                         }
 
                         if (prev_grid_token) {
-                            for (let network of allNetworks.networks) {
+                            for (let network of Object.values(networksLookup.byToken)) {
                                 delKeysSet.add(
                                     cacheService.keys.persons_grid_exclude_send_receive(
                                         prev_grid_token,
@@ -2622,6 +2620,7 @@ function batchUpdateGridSets(persons) {
                                         'send',
                                     ),
                                 );
+
                                 delKeysSet.add(
                                     cacheService.keys.persons_grid_exclude_send_receive(
                                         prev_grid_token,
@@ -2833,9 +2832,9 @@ function batchUpdateGridSets(persons) {
                     try {
                         let genderFilter = filters?.genders;
 
-                        let person_gender = genders.byId[person.gender_id];
+                        let person_gender = gendersLookup.byId[person.gender_id];
 
-                        for (let gender_token in genders.byToken) {
+                        for (let gender_token in gendersLookup.byToken) {
                             if (gender_token !== 'any') {
                                 if (prev_grid_token) {
                                     delKeysSet.add(
@@ -2901,25 +2900,25 @@ function batchUpdateGridSets(persons) {
                             return resolve();
                         }
 
-                        let anyId = genders.byToken['any']?.id;
+                        let anyToken = gendersLookup.byToken['any']?.gender_token;
 
                         let anyItem = Object.values(genderFilter.items).find(
-                            (item) => item.gender_id === anyId,
+                            (item) => item.gender_token === anyToken,
                         );
 
                         let isAnySelected = anyItem?.is_active && !anyItem.is_negative && !anyItem.deleted;
 
                         //if any is selected, do not add self to excluded gender sets
                         if (!isAnySelected && genderFilter.is_active) {
-                            for (let gender_id in genders.byId) {
-                                let gender = genders.byId[gender_id];
+                            for (let gender_token in gendersLookup.byToken) {
+                                let gender = gendersLookup.byToken[gender_token];
 
                                 if (gender.gender_token === 'any') {
                                     continue;
                                 }
 
                                 let genderItem = Object.values(genderFilter.items).find(
-                                    (item) => item.gender_id === parseInt(gender_id),
+                                    (item) => item.gender_token === gender_token
                                 );
 
                                 if (genderFilter.is_send) {

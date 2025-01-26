@@ -15,6 +15,7 @@ const {
     joinPaths,
 } = require('../../services/shared');
 const { getFilters, filterMappings, batchUpdateGridSets } = require('../../services/filters');
+const { getGendersLookup } = require('../../services/genders');
 
 let batch_process = 1000;
 let defaultTimeout = 20000;
@@ -23,48 +24,222 @@ let filterMapLookup = {};
 
 let debug_sync_enabled = require('../../dev/debug').sync.filters;
 
-function getMappingInfo(filter_token) {
-    if(filter_token in filterMapLookup) {
-        return filterMapLookup[filter_token];
-    }
 
-    for(let k in filterMappings) {
-        let filterMapping = filterMappings[k];
+function main() {
+    loadScriptEnv();
 
-        if(filterMapping.token === filter_token) {
-            return filterMapping;
+    return new Promise(async (resolve, reject) => {
+        try {
+            await cacheService.init();
+
+            await syncFilters();
+        } catch(e) {
+            console.error(e);
         }
-    }
 
-    return null;
+        resolve();
+    });
 }
 
-function getFilterMapByToken(filter_token) {
-    for(let f in filterMappings) {
-        if(filter_token === filterMappings[f].token) {
-            return filterMappings[f];
+function syncFilters() {
+    console.log("Sync: filters");
+
+    let sync_name = systemKeys.sync.network.persons_filters;
+
+
+    return new Promise(async (resolve, reject) => {
+        let conn, networks, network_self;
+
+        try {
+            network_self = await getNetworkSelf();
+        } catch(e) {
+            console.error(e);
         }
-    }
-}
 
-function getFilterMapByItem(item) {
-    for(let k in item) {
-        if(['person_id', 'filter_id'].includes(k)) {
-            continue;
+        if (!network_self) {
+            console.error('Error getting own network');
+            await timeoutAwait(5000);
+            return reject(e);
         }
 
-        let v = item[k];
+        try {
+            conn = await dbService.conn();
 
-        if(k.endsWith('_id') && v) {
-            for(let f in filterMappings) {
-                if(k === filterMappings[f].column) {
-                    return filterMappings[f];
+            networks = await conn('networks')
+                .where('is_self', false)
+                .where('keys_exchanged', true)
+                .where('is_online', true)
+                .where('is_blocked', false);
+        } catch (e) {
+            console.error(e);
+        }
+
+        if (networks) {
+            for (let network of networks) {
+                try {
+                    let t = timeNow();
+
+                    let updated_persons = {
+                        filters: {},
+                        availability: {},
+                        networks: {}
+                    };
+
+                    let skipSaveTimestamps = false;
+
+                    let timestamps = {
+                        current: timeNow(),
+                        last: null
+                    };
+
+                    let sync_qry = await conn('sync')
+                        .where('network_id', network.id)
+                        .where('sync_process', sync_name)
+                        .first();
+
+                    if (sync_qry && !debug_sync_enabled) {
+                        timestamps.last = sync_qry.last_updated;
+                    }
+
+                    let sync_url = getURL(network.api_domain, joinPaths('sync', 'persons/filters'));
+
+                    let secret_key_to_qry = await conn('networks_secret_keys')
+                        .where('network_id', network.id)
+                        .where('is_active', true)
+                        .first();
+
+                    if (!secret_key_to_qry) {
+                        continue;
+                    }
+
+                    const axiosInstance = axios.create({
+                        timeout: defaultTimeout
+                    });
+
+                    let response = await axiosInstance.get(sync_url, {
+                        params: {
+                            secret_key: secret_key_to_qry.secret_key_to,
+                            network_token: network_self.network_token,
+                            data_since: timestamps.last,
+                            request_sent: timeNow(),
+                        }
+                    });
+
+                    if (response.status !== 202) {
+                        continue;
+                    }
+
+                    await processFilters(response.data.filters, updated_persons);
+
+                    while (response.data.pagination_updated) {
+                        try {
+                            response = await axiosInstance.get(sync_url, {
+                                params: {
+                                    secret_key: secret_key_to_qry.secret_key_to,
+                                    network_token: network_self.network_token,
+                                    pagination_updated: response.data.pagination_updated,
+                                    prev_data_since: response.data.prev_data_since,
+                                    request_sent: timeNow(),
+                                }
+                            });
+
+                            if (response.status !== 202) {
+                                break;
+                            }
+
+                            await processFilters(response.data.filters, updated_persons);
+                        } catch (e) {
+                            console.error(e);
+                            skipSaveTimestamps = true;
+                            break;
+                        }
+                    }
+
+                    //update cache once all data is processed for network
+                    await updateCacheMain(updated_persons.filters);
+
+                    //merge availability/networks for cache
+                    for(let person_token in updated_persons.filters) {
+                        for(let filter of ['availability', 'networks']) {
+                            if(person_token in updated_persons[filter]) {
+                                continue;
+                            }
+
+                            let person = updated_persons.filters[person_token];
+
+                            if(filter in person.filters) {
+                                updated_persons[filter][person_token] = person.person_id;
+                            }
+                        }
+                    }
+
+                    await updateCacheAvailability(updated_persons.availability);
+
+                    await updateCacheNetworks(updated_persons.networks);
+
+                    await updateFilterGridSets(updated_persons.filters);
+
+                    if (!skipSaveTimestamps && !debug_sync_enabled) {
+                        if (sync_qry) {
+                            await conn('sync').where('id', sync_qry.id)
+                                .update({
+                                    last_updated: timestamps.current,
+                                    updated: timeNow(),
+                                });
+                        } else {
+                            await conn('sync')
+                                .insert({
+                                    network_id: network.id,
+                                    sync_process: sync_name,
+                                    last_updated: timestamps.current,
+                                    created: timeNow(),
+                                    updated: timeNow(),
+                                });
+                        }
+                    }
+
+                    console.log({
+                        process_time: timeNow() - t
+                    });
+                } catch (e) {
+                    console.error(e);
                 }
             }
         }
-    }
 
-    return null;
+        resolve();
+    });
+}
+
+function processFilters(persons_filters, updated_persons) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let hasPersons = false;
+
+            for(let k in persons_filters) {
+                let persons = persons_filters[k];
+
+                if(Object.keys(persons).length) {
+                    hasPersons = true;
+                }
+            }
+
+            if(!hasPersons) {
+                return resolve();
+            }
+
+            await processMain(persons_filters.filters, updated_persons.filters);
+
+            await processAvailability(persons_filters.availability, updated_persons.availability);
+
+            await processNetworks(persons_filters.networks, updated_persons.networks);
+        } catch (e) {
+            console.error('Error in processFilters:', e);
+            return reject(e);
+        }
+
+        resolve();
+    });
 }
 
 function processMain(persons, updated_persons_filters) {
@@ -581,273 +756,6 @@ function processNetworks(persons, updated_persons_networks) {
     });
 }
 
-
-function updateCacheAvailability(persons) {
-    return new Promise(async (resolve, reject) => {
-        try {
-            if (!Object.keys(persons).length) {
-                return resolve();
-            }
-
-            console.log("Update cache: availability");
-
-            let conn = await dbService.conn();
-
-            let filtersLookup = await getFilters();
-
-            let persons_ids = {};
-            let personsIdTokenMap = {};
-
-            for (let person_token in persons) {
-                let person_id = persons[person_token];
-                persons_ids[person_id] = true;
-                personsIdTokenMap[person_id] = person_token;
-            }
-
-            let filterAvailability = filtersLookup.byToken['availability'];
-
-            let availability_parent_data = await conn('persons_filters')
-                .where('filter_id', filterAvailability.id)
-                .whereIn('person_id', Object.keys(persons_ids));
-
-            let availability_items_data = await conn('persons_availability')
-                .whereIn('person_id', Object.keys(persons_ids))
-                .whereNull('deleted');
-
-            let organized_data = {};
-
-            for (let row of availability_parent_data) {
-                let person_token = personsIdTokenMap[row.person_id];
-
-                if (!organized_data[person_token]) {
-                    organized_data[person_token] = {
-                        id: row.id,
-                        is_active: row.is_active ? 1 : 0,
-                        is_send: row.is_send ? 1 : 0,
-                        is_receive: row.is_receive ? 1 : 0,
-                        updated: row.updated,
-                        items: {}
-                    };
-                }
-            }
-
-            for (let row of availability_items_data) {
-                let person_token = personsIdTokenMap[row.person_id];
-
-                if (!organized_data[person_token]) {
-                    organized_data[person_token] = {
-                        is_active: true,
-                        is_send: true,
-                        is_receive: true,
-                        updated: timeNow(),
-                        items: {}
-                    };
-                }
-
-                organized_data[person_token].items[row.token] = row;
-            }
-
-            let pipeline = cacheService.startPipeline();
-
-            for (let person_token in organized_data) {
-                pipeline.hSet(
-                    cacheService.keys.person_filters(person_token),
-                    'availability',
-                    JSON.stringify(organized_data[person_token])
-                );
-            }
-
-            try {
-                await cacheService.execPipeline(pipeline);
-            } catch (e) {
-                console.error('Error updating availability cache:', e);
-            }
-        } catch (e) {
-            console.error('Error in updateCacheAvailability:', e);
-            return reject(e);
-        }
-
-        resolve();
-    });
-}
-
-function updateCacheNetworks(persons) {
-    return new Promise(async (resolve, reject) => {
-        try {
-            if (!Object.keys(persons).length) {
-                return resolve();
-            }
-
-            console.log("Update cache: networks");
-
-            let conn = await dbService.conn();
-
-            let filtersLookup = await getFilters();
-
-            let persons_ids = {};
-            let personsIdTokenMap = {};
-
-            for (let person_token in persons) {
-                let person_id = persons[person_token];
-                persons_ids[person_id] = true;
-                personsIdTokenMap[person_id] = person_token;
-            }
-
-            let filterNetworks = filtersLookup.byToken['networks'];
-
-            let networks_parent_data = await conn('persons_filters')
-                .where('filter_id', filterNetworks.id)
-                .whereIn('person_id', Object.keys(persons_ids));
-
-            let networks_items_data = await conn('persons_filters_networks')
-                .whereIn('person_id', Object.keys(persons_ids))
-                .whereNull('deleted');
-
-            let organized_data = {};
-
-            for (let row of networks_parent_data) {
-                let person_token = personsIdTokenMap[row.person_id];
-
-                if (!organized_data[person_token]) {
-                    organized_data[person_token] = {
-                        id: row.id,
-                        is_active: row.is_active ? 1 : 0,
-                        is_send: row.is_send ? 1 : 0,
-                        is_receive: row.is_receive ? 1 : 0,
-                        updated: row.updated,
-                        items: {}
-                    };
-                }
-            }
-
-            for (let row of networks_items_data) {
-                let person_token = personsIdTokenMap[row.person_id];
-
-                if (!organized_data[person_token]) {
-                    organized_data[person_token] = {
-                        is_active: true,
-                        is_send: true,
-                        is_receive: true,
-                        updated: timeNow(),
-                        items: {}
-                    };
-                }
-
-                organized_data[person_token].items[row.token] = row;
-            }
-
-            let pipeline = cacheService.startPipeline();
-
-            for (let person_token in organized_data) {
-                pipeline.hSet(
-                    cacheService.keys.person_filters(person_token),
-                    'networks',
-                    JSON.stringify(organized_data[person_token])
-                );
-            }
-
-            try {
-                await cacheService.execPipeline(pipeline);
-            } catch(e) {
-                console.error('Error updating networks cache:', e);
-            }
-
-        } catch(e) {
-            console.error('Error in updateCacheNetworks:', e);
-            return reject(e);
-        }
-        resolve();
-    });
-}
-
-function updateFilterGridSets(persons) {
-    return new Promise(async (resolve, reject) => {
-        try {
-            console.log("Update grid sets: filters");
-
-            //prepare grid set updates
-            let personsGrid = {};
-
-            for(let person_token in persons) {
-                let person = persons[person_token];
-
-                for(let filter_token in person.filters) {
-                    if(filter_token === 'availability') {
-                        continue;
-                    }
-
-                    if(!personsGrid[person_token]) {
-                        personsGrid[person_token] = {
-                            person: {
-                                person_token
-                            },
-                            filter_tokens: []
-                        }
-                    }
-
-                    personsGrid[person_token].filter_tokens.push(filter_token);
-                }
-            }
-
-            //add modes selected to person object
-            let pipeline = cacheService.startPipeline();
-
-            let person_tokens = Object.keys(personsGrid);
-
-            for (let person_token of person_tokens) {
-                pipeline.hmGet(cacheService.keys.person(person_token), [
-                    'modes',
-                    'network_id'
-                ]);
-            }
-
-            try {
-                let results = await cacheService.execPipeline(pipeline);
-
-                for(let i = 0; i < results.length; i++) {
-                    let person_token = person_tokens[i];
-
-                    try {
-                        personsGrid[person_token].person.modes = JSON.parse(results[i][0]);
-                        personsGrid[person_token].person.network_id = JSON.parse(results[i][1]);
-                    } catch(e) {
-                        console.error(e);
-                    }
-                }
-            } catch(e) {
-                console.error(e);
-            }
-
-            await batchUpdateGridSets(personsGrid);
-        } catch(e) {
-            console.error(e);
-            return reject(e);
-        }
-
-        resolve();
-    });
-}
-
-function getSiblingTokens(token) {
-    let filterMap = getFilterMapByToken(token);
-
-    let parentToken = filterMap.parent_cache || filterMap.token;
-
-    let tokens = [];
-
-    for(let key in filterMappings) {
-        let map = filterMappings[key];
-
-        if(map.parent_cache === parentToken || map.token === parentToken) {
-            if(map.token !== token) {
-                tokens.push(map.token);
-            }
-        }
-    }
-
-    return tokens;
-}
-
 function updateCacheMain(persons) {
     return new Promise(async (resolve, reject) => {
         try {
@@ -860,6 +768,7 @@ function updateCacheMain(persons) {
             let conn = await dbService.conn();
 
             let filtersLookup = await getFilters();
+            let gendersLookup = await getGendersLookup();
 
             // organize cache
             let persons_ids = {};
@@ -1127,6 +1036,11 @@ function updateCacheMain(persons) {
                                 delete item_extra.token;
                             }
 
+                            if(filter.token === 'genders') {
+                                item_extra.gender_token = item_extra.token;
+                                delete item_extra.token;
+                            }
+
                             items[item.id] = {
                                 is_active: item.is_active ? 1 : 0,
                                 is_negative: item.is_negative ? 1 : 0,
@@ -1171,30 +1085,88 @@ function updateCacheMain(persons) {
     });
 }
 
-function processFilters(persons_filters, updated_persons) {
+function updateCacheAvailability(persons) {
     return new Promise(async (resolve, reject) => {
         try {
-            let hasPersons = false;
-
-            for(let k in persons_filters) {
-                let persons = persons_filters[k];
-
-                if(Object.keys(persons).length) {
-                    hasPersons = true;
-                }
-            }
-
-            if(!hasPersons) {
+            if (!Object.keys(persons).length) {
                 return resolve();
             }
-            
-            await processMain(persons_filters.filters, updated_persons.filters);
 
-            await processAvailability(persons_filters.availability, updated_persons.availability);
+            console.log("Update cache: availability");
 
-            await processNetworks(persons_filters.networks, updated_persons.networks);
+            let conn = await dbService.conn();
+
+            let filtersLookup = await getFilters();
+
+            let persons_ids = {};
+            let personsIdTokenMap = {};
+
+            for (let person_token in persons) {
+                let person_id = persons[person_token];
+                persons_ids[person_id] = true;
+                personsIdTokenMap[person_id] = person_token;
+            }
+
+            let filterAvailability = filtersLookup.byToken['availability'];
+
+            let availability_parent_data = await conn('persons_filters')
+                .where('filter_id', filterAvailability.id)
+                .whereIn('person_id', Object.keys(persons_ids));
+
+            let availability_items_data = await conn('persons_availability')
+                .whereIn('person_id', Object.keys(persons_ids))
+                .whereNull('deleted');
+
+            let organized_data = {};
+
+            for (let row of availability_parent_data) {
+                let person_token = personsIdTokenMap[row.person_id];
+
+                if (!organized_data[person_token]) {
+                    organized_data[person_token] = {
+                        id: row.id,
+                        is_active: row.is_active ? 1 : 0,
+                        is_send: row.is_send ? 1 : 0,
+                        is_receive: row.is_receive ? 1 : 0,
+                        updated: row.updated,
+                        items: {}
+                    };
+                }
+            }
+
+            for (let row of availability_items_data) {
+                let person_token = personsIdTokenMap[row.person_id];
+
+                if (!organized_data[person_token]) {
+                    organized_data[person_token] = {
+                        is_active: true,
+                        is_send: true,
+                        is_receive: true,
+                        updated: timeNow(),
+                        items: {}
+                    };
+                }
+
+                organized_data[person_token].items[row.token] = row;
+            }
+
+            let pipeline = cacheService.startPipeline();
+
+            for (let person_token in organized_data) {
+                pipeline.hSet(
+                    cacheService.keys.person_filters(person_token),
+                    'availability',
+                    JSON.stringify(organized_data[person_token])
+                );
+            }
+
+            try {
+                await cacheService.execPipeline(pipeline);
+            } catch (e) {
+                console.error('Error updating availability cache:', e);
+            }
         } catch (e) {
-            console.error('Error in processFilters:', e);
+            console.error('Error in updateCacheAvailability:', e);
             return reject(e);
         }
 
@@ -1202,189 +1174,227 @@ function processFilters(persons_filters, updated_persons) {
     });
 }
 
-function syncFilters() {
-    console.log("Sync: filters");
-
-    let sync_name = systemKeys.sync.network.persons_filters;
-
+function updateCacheNetworks(persons) {
     return new Promise(async (resolve, reject) => {
-        let conn, networks, network_self;
-
         try {
-            network_self = await getNetworkSelf();
+            if (!Object.keys(persons).length) {
+                return resolve();
+            }
+
+            console.log("Update cache: networks");
+
+            let conn = await dbService.conn();
+
+            let filtersLookup = await getFilters();
+
+            let persons_ids = {};
+            let personsIdTokenMap = {};
+
+            for (let person_token in persons) {
+                let person_id = persons[person_token];
+                persons_ids[person_id] = true;
+                personsIdTokenMap[person_id] = person_token;
+            }
+
+            let filterNetworks = filtersLookup.byToken['networks'];
+
+            let networks_parent_data = await conn('persons_filters')
+                .where('filter_id', filterNetworks.id)
+                .whereIn('person_id', Object.keys(persons_ids));
+
+            let networks_items_data = await conn('persons_filters_networks')
+                .whereIn('person_id', Object.keys(persons_ids))
+                .whereNull('deleted');
+
+            let organized_data = {};
+
+            for (let row of networks_parent_data) {
+                let person_token = personsIdTokenMap[row.person_id];
+
+                if (!organized_data[person_token]) {
+                    organized_data[person_token] = {
+                        id: row.id,
+                        is_active: row.is_active ? 1 : 0,
+                        is_send: row.is_send ? 1 : 0,
+                        is_receive: row.is_receive ? 1 : 0,
+                        updated: row.updated,
+                        items: {}
+                    };
+                }
+            }
+
+            for (let row of networks_items_data) {
+                let person_token = personsIdTokenMap[row.person_id];
+
+                if (!organized_data[person_token]) {
+                    organized_data[person_token] = {
+                        is_active: true,
+                        is_send: true,
+                        is_receive: true,
+                        updated: timeNow(),
+                        items: {}
+                    };
+                }
+
+                organized_data[person_token].items[row.token] = row;
+            }
+
+            let pipeline = cacheService.startPipeline();
+
+            for (let person_token in organized_data) {
+                pipeline.hSet(
+                    cacheService.keys.person_filters(person_token),
+                    'networks',
+                    JSON.stringify(organized_data[person_token])
+                );
+            }
+
+            try {
+                await cacheService.execPipeline(pipeline);
+            } catch(e) {
+                console.error('Error updating networks cache:', e);
+            }
+
+        } catch(e) {
+            console.error('Error in updateCacheNetworks:', e);
+            return reject(e);
+        }
+        resolve();
+    });
+}
+
+function updateFilterGridSets(persons) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            console.log("Update grid sets: filters");
+
+            //prepare grid set updates
+            let personsGrid = {};
+
+            for(let person_token in persons) {
+                let person = persons[person_token];
+
+                for(let filter_token in person.filters) {
+                    if(filter_token === 'availability') {
+                        continue;
+                    }
+
+                    if(!personsGrid[person_token]) {
+                        personsGrid[person_token] = {
+                            person: {
+                                person_token
+                            },
+                            filter_tokens: []
+                        }
+                    }
+
+                    personsGrid[person_token].filter_tokens.push(filter_token);
+                }
+            }
+
+            //add modes selected to person object
+            let pipeline = cacheService.startPipeline();
+
+            let person_tokens = Object.keys(personsGrid);
+
+            for (let person_token of person_tokens) {
+                pipeline.hmGet(cacheService.keys.person(person_token), [
+                    'modes',
+                    'network_id',
+                    'gender_id'
+                ]);
+            }
+
+            try {
+                let results = await cacheService.execPipeline(pipeline);
+
+                for(let i = 0; i < results.length; i++) {
+                    let person_token = person_tokens[i];
+
+                    try {
+                        personsGrid[person_token].person.modes = JSON.parse(results[i][0]);
+                        personsGrid[person_token].person.network_id = JSON.parse(results[i][1]);
+                        personsGrid[person_token].person.gender_id = JSON.parse(results[i][2]);
+                    } catch(e) {
+                        console.error(e);
+                    }
+                }
+            } catch(e) {
+                console.error(e);
+            }
+
+            await batchUpdateGridSets(personsGrid);
         } catch(e) {
             console.error(e);
-        }
-
-        if (!network_self) {
-            console.error('Error getting own network');
-            await timeoutAwait(5000);
             return reject(e);
         }
 
-        try {
-            conn = await dbService.conn();
+        resolve();
+    });
+}
 
-            networks = await conn('networks')
-                .where('is_self', false)
-                .where('keys_exchanged', true)
-                .where('is_online', true)
-                .where('is_blocked', false);
-        } catch (e) {
-            console.error(e);
+function getSiblingTokens(token) {
+    let filterMap = getFilterMapByToken(token);
+
+    let parentToken = filterMap.parent_cache || filterMap.token;
+
+    let tokens = [];
+
+    for(let key in filterMappings) {
+        let map = filterMappings[key];
+
+        if(map.parent_cache === parentToken || map.token === parentToken) {
+            if(map.token !== token) {
+                tokens.push(map.token);
+            }
+        }
+    }
+
+    return tokens;
+}
+
+function getMappingInfo(filter_token) {
+    if(filter_token in filterMapLookup) {
+        return filterMapLookup[filter_token];
+    }
+
+    for(let k in filterMappings) {
+        let filterMapping = filterMappings[k];
+
+        if(filterMapping.token === filter_token) {
+            return filterMapping;
+        }
+    }
+
+    return null;
+}
+
+function getFilterMapByToken(filter_token) {
+    for(let f in filterMappings) {
+        if(filter_token === filterMappings[f].token) {
+            return filterMappings[f];
+        }
+    }
+}
+
+function getFilterMapByItem(item) {
+    for(let k in item) {
+        if(['person_id', 'filter_id'].includes(k)) {
+            continue;
         }
 
-        if (networks) {
-            for (let network of networks) {
-                try {
-                    let t = timeNow();
+        let v = item[k];
 
-                    let updated_persons = {
-                        filters: {},
-                        availability: {},
-                        networks: {}
-                    };
-
-                    let skipSaveTimestamps = false;
-
-                    let timestamps = {
-                        current: timeNow(),
-                        last: null,
-                    };
-
-                    let sync_qry = await conn('sync')
-                        .where('network_id', network.id)
-                        .where('sync_process', sync_name)
-                        .first();
-
-                    if (sync_qry && !debug_sync_enabled) {
-                        timestamps.last = sync_qry.last_updated;
-                    }
-
-                    let sync_url = getURL(network.api_domain, joinPaths('sync', 'persons/filters'));
-
-                    let secret_key_to_qry = await conn('networks_secret_keys')
-                        .where('network_id', network.id)
-                        .where('is_active', true)
-                        .first();
-
-                    if (!secret_key_to_qry) {
-                        continue;
-                    }
-
-                    const axiosInstance = axios.create({
-                        timeout: defaultTimeout
-                    });
-
-                    let response = await axiosInstance.get(sync_url, {
-                        params: {
-                            secret_key: secret_key_to_qry.secret_key_to,
-                            network_token: network_self.network_token,
-                            data_since: timestamps.last,
-                            request_sent: timeNow(),
-                        }
-                    });
-
-                    if (response.status !== 202) {
-                        continue;
-                    }
-
-                    await processFilters(response.data.filters, updated_persons);
-
-                    while (response.data.pagination_updated) {
-                        try {
-                            response = await axiosInstance.get(sync_url, {
-                                params: {
-                                    secret_key: secret_key_to_qry.secret_key_to,
-                                    network_token: network_self.network_token,
-                                    pagination_updated: response.data.pagination_updated,
-                                    prev_data_since: response.data.prev_data_since,
-                                    request_sent: timeNow(),
-                                }
-                            });
-
-                            if (response.status !== 202) {
-                                break;
-                            }
-
-                            await processFilters(response.data.filters, updated_persons);
-                        } catch (e) {
-                            console.error(e);
-                            skipSaveTimestamps = true;
-                            break;
-                        }
-                    }
-
-                    //update cache once all data is processed for network
-                    await updateCacheMain(updated_persons.filters);
-
-                    //merge availability/networks for cache
-                    for(let person_token in updated_persons.filters) {
-                        for(let filter of ['availability', 'networks']) {
-                            if(person_token in updated_persons[filter]) {
-                                continue;
-                            }
-
-                            let person = updated_persons.filters[person_token];
-
-                            if(filter in person.filters) {
-                                updated_persons[filter][person_token] = person.person_id;
-                            }
-                        }
-                    }
-
-                    await updateCacheAvailability(updated_persons.availability);
-
-                    await updateCacheNetworks(updated_persons.networks);
-
-                    await updateFilterGridSets(updated_persons.filters);
-
-                    if (!skipSaveTimestamps && !debug_sync_enabled) {
-                        if (sync_qry) {
-                            await conn('sync').where('id', sync_qry.id)
-                                .update({
-                                    last_updated: timestamps.current,
-                                    updated: timeNow(),
-                                });
-                        } else {
-                            await conn('sync')
-                                .insert({
-                                    network_id: network.id,
-                                    sync_process: sync_name,
-                                    last_updated: timestamps.current,
-                                    created: timeNow(),
-                                    updated: timeNow(),
-                                });
-                        }
-                    }
-
-                    console.log({
-                        process_time: timeNow() - t
-                    });
-                } catch (e) {
-                    console.error(e);
+        if(k.endsWith('_id') && v) {
+            for(let f in filterMappings) {
+                if(k === filterMappings[f].column) {
+                    return filterMappings[f];
                 }
             }
         }
+    }
 
-        resolve();
-    });
-}
-
-function main() {
-    loadScriptEnv();
-
-    return new Promise(async (resolve, reject) => {
-        try {
-            await cacheService.init();
-
-            await syncFilters();
-        } catch(e) {
-            console.error(e);
-        }
-
-        resolve();
-    });
+    return null;
 }
 
 module.exports = {
