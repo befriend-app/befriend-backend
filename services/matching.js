@@ -1098,13 +1098,28 @@ function getMatches(me, params = {}) {
                             }
                         }
 
-                        // Exclude send if person has excluded my gender or I have excluded the person's gender
-                        if (
-                            token in personsExcludeReceive[myGender] ||
-                            my_token in personsExcludeSend[personGender]
-                        ) {
+                        if(!personGender) {
                             personsExclude.send[token] = true;
+
+                            if (!send_only) {
+                                personsExclude.receive[token] = true;
+                            }
+
+                            continue;
                         }
+
+                        // Exclude send if person has excluded my gender or I have excluded the person's gender
+                        try {
+                            if (
+                                token in personsExcludeReceive[myGender] ||
+                                my_token in personsExcludeSend[personGender]
+                            ) {
+                                personsExclude.send[token] = true;
+                            }
+                        } catch(e) {
+                            debugger;
+                        }
+
 
                         if (!send_only) {
                             // Exclude receive if person has excluded my gender or I have excluded the person's gender

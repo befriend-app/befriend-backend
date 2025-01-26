@@ -15,9 +15,9 @@ module.exports = {
 
             //general
 
-            // 'genders',
             // 'distance',
-            'ages',
+            // 'ages',
+            'genders',
 
             //personal
 

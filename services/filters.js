@@ -2028,6 +2028,45 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
 }
 
 function batchUpdateGridSets(persons) {
+    function addGridIfNeeded() {
+        return new Promise(async (resolve, reject) => {
+             try {
+                 //add grid token to person if not included
+                 let missingPersonsGrid = {};
+
+                 for(let person_token in persons) {
+                     let personObj = persons[person_token];
+
+                     if(!personObj.grid?.token) {
+                         missingPersonsGrid[person_token] = true;
+                     }
+                 }
+
+                 if(Object.keys(missingPersonsGrid).length) {
+                     let conn = await dbService.conn();
+
+                     let gridLookup = await getGridLookup();
+
+                     let gridsQry = await conn('persons')
+                         .whereIn('person_token', Object.keys(missingPersonsGrid))
+                         .select('person_token', 'grid_id');
+
+                     for(let person of gridsQry) {
+                         let grid = gridLookup.byId[person.grid_id];
+
+                         if(grid) {
+                             persons[person.person_token].grid = grid;
+                         }
+                     }
+                 }
+             } catch(e) {
+                 return reject(e);
+             }
+
+             resolve();
+        });
+    }
+
     return new Promise(async (resolve, reject) => {
         let modes, genders, allNetworks;
 
@@ -2053,33 +2092,10 @@ function batchUpdateGridSets(persons) {
         let pipelineRem = cacheService.startPipeline();
         let pipelineAdd = cacheService.startPipeline();
 
-        //add grid token to person if not included
-        let missingPersonsGrid = {};
-
-        for(let person_token in persons) {
-            let personObj = persons[person_token];
-
-            if(!personObj.grid?.token) {
-                missingPersonsGrid[person_token] = true;
-            }
-        }
-
-        if(Object.keys(missingPersonsGrid).length) {
-            let conn = await dbService.conn();
-
-            let gridLookup = await getGridLookup();
-
-            let gridsQry = await conn('persons')
-                .whereIn('person_token', Object.keys(missingPersonsGrid))
-                .select('person_token', 'grid_id');
-
-            for(let person of gridsQry) {
-                let grid = gridLookup.byId[person.grid_id];
-
-                if(grid) {
-                    persons[person.person_token].grid = grid;
-                }
-            }
+        try {
+             await addGridIfNeeded();
+        } catch(e) {
+            console.error(e);
         }
 
         for(let person_token in persons) {
