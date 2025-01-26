@@ -740,17 +740,25 @@ async function processAge() {
     let ts = timeNow();
 
     await helpers.processBatch(async (person) => {
-        if (Math.random() > 0.3) {
-            // 70% chance to set age filter
-            const minAge = Math.floor(Math.random() * 20) + 18; // 18-37
-            const maxAge = Math.floor(Math.random() * 40) + minAge; // minAge + (1-40)
+        if (Math.random() > 0.3) { // 70% chance to set age filter
+            let personAge = person.age || 30;
+
+            let yearsBefore = Math.floor(Math.random() * 20);
+            let yearsAfter = Math.floor(Math.random() * 20);
+
+            let minAge = Math.max(18, Math.min(80, personAge - yearsBefore));
+            let maxAge = Math.min(80, personAge + yearsAfter);
+
+            if(minAge === maxAge) {
+                minAge -= 10;
+            }
 
             try {
                 await axios.put(joinPaths(process.env.APP_URL, '/filters/age'), {
                     login_token: person.login_token,
                     person_token: person.person_token,
                     min_age: minAge,
-                    max_age: Math.min(maxAge, 80),
+                    max_age: maxAge
                 });
             } catch (error) {
                 console.error('Error setting age filter:', error.message);
