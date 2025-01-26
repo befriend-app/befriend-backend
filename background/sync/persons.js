@@ -71,9 +71,9 @@ function processPersons(network_id, persons) {
             }
 
             //merge new selected modes with prev modes data (synced through sequential process)
-            if(prev_data.modes) {
+            if(prev_data.prev_modes) {
                 person_data.modes = {
-                    ...prev_data.modes,
+                    ...prev_data.prev_modes,
                     selected: new_data.modes
                 }
             }
@@ -91,7 +91,8 @@ function processPersons(network_id, persons) {
             let conn = await dbService.conn();
 
             let gridLookup = await getGridLookup();
-            let genders = await getGendersLookup();
+            let gendersLookup = await getGendersLookup();
+            let networksLookup = await getNetworksLookup();
 
             //batch process/insert/update
             let batches = [];
@@ -110,14 +111,20 @@ function processPersons(network_id, persons) {
                 let existingPersonsDict = {};
                 let existingNetworksDict = {};
 
-                let networksLookup = await getNetworksLookup();
 
                 //check for existing persons
                 const batchPersonTokens = batch.map(p => p.person_token);
 
                 const existingPersons = await conn('persons')
                     .whereIn('person_token', batchPersonTokens)
-                    .select('id', 'person_token', 'updated', 'deleted');
+                    .select('*');
+                // .select(
+                //     'id', 'person_token', 'is_new', 'is_online',
+                //     'is_verified_in_person', 'is_verified_linkedin',
+                //     'network_id', 'grid_id', 'gender_id',
+                //     'reviews_count', 'rating_safety', 'rating_trust', 'rating_timeliness', 'rating_friendliness', 'rating_fun',
+                //     'age', 'updated', 'deleted',
+                // );
 
                 //organize lookup
                 for (const p of existingPersons) {
@@ -130,7 +137,7 @@ function processPersons(network_id, persons) {
 
                     for(let i = 0; i < existingPersons.length; i++) {
                         let person = existingPersons[i];
-                        existingPersonsDict[person.person_token].modes = JSON.parse(modes_results[i]) || null;
+                        existingPersonsDict[person.person_token].prev_modes = JSON.parse(modes_results[i]) || null;
                     }
                 } catch(e) {
                     console.error(e);
@@ -180,7 +187,7 @@ function processPersons(network_id, persons) {
 
                     let grid = gridLookup.byToken[person.grid_token];
                     let prev_grid = gridLookup.byId[existingPerson?.grid_id];
-                    let gender = genders.byToken[person.gender_token];
+                    let gender = gendersLookup.byToken[person.gender_token];
 
                     let person_data;
 
@@ -278,14 +285,18 @@ function processPersons(network_id, persons) {
                             personsGrids[person.person_token].filter_tokens.push('modes');
                         }
 
-                        personsGrids[person.person_token].filter_tokens.push('reviews');
+                        if(reviewsChanged(person_data, existingPerson)) {
+                            personsGrids[person.person_token].filter_tokens.push('reviews');
+                        }
 
-                        if(person.is_verified_in_person !== existingPerson.is_verified_in_person ||
-                            person.is_verified_linkedin !== existingPerson.is_verified_linkedin) {
+                        if(person.is_verified_in_person !== existingPerson?.is_verified_in_person ||
+                            person.is_verified_linkedin !== existingPerson?.is_verified_linkedin) {
                             personsGrids[person.person_token].filter_tokens.push('verifications');
                         }
 
-                        if(person.gender_id !== existingPerson.gender_id) {
+                        let existingGender = gendersLookup.byId[existingPerson?.gender_id];
+
+                        if(!existingGender || person.gender_token !== existingGender.gender_token) {
                             personsGrids[person.person_token].filter_tokens.push('genders');
                         }
                     }
@@ -331,6 +342,35 @@ function processPersons(network_id, persons) {
 
                     let t = timeNow();
 
+                    //add gender to person sections
+                    let genders_pipeline = cacheService.startPipeline();
+
+                    for(let person_token in personsGrids) {
+                        let person = personsGrids[person_token];
+
+                        if(person.filter_tokens.includes('genders')) {
+                            let gender = gendersLookup.byId[person.person.gender_id];
+
+                            if(gender) {
+                                let data = {
+                                    [gender.gender_token]: {
+                                        id: person.person.id,
+                                        token: gender.gender_token,
+                                        name: gender.gender_name
+                                    }
+                                };
+
+                                genders_pipeline.hSet(cacheService.keys.person_sections(person_token), 'genders', JSON.stringify(data));
+                            }
+                        }
+                    }
+
+                    try {
+                         await cacheService.execPipeline(genders_pipeline);
+                    } catch(e) {
+                        console.error(e);
+                    }
+
                     await batchUpdateGridSets(personsGrids);
 
                     console.log({
@@ -347,6 +387,15 @@ function processPersons(network_id, persons) {
     });
 }
 
+function reviewsChanged(newData, oldData) {
+    return newData.reviews_count !== oldData.reviews_count ||
+        newData.rating_safety !== oldData.rating_safety ||
+        newData.rating_trust !== oldData.rating_trust ||
+        newData.rating_timeliness !== oldData.rating_timeliness ||
+        newData.rating_friendliness !== oldData.rating_friendliness ||
+        newData.rating_fun !== oldData.rating_fun;
+}
+
 function processPersonsModes(network_id, persons_modes) {
     return new Promise(async (resolve, reject) => {
         if(!persons_modes?.length) {
@@ -361,7 +410,7 @@ function processPersonsModes(network_id, persons_modes) {
                 batches.push(persons_modes.slice(i, i + batch_process));
             }
 
-            let [genders, ages] = await Promise.all([
+            let [gendersLookup, agesLookup] = await Promise.all([
                 getGendersLookup(),
                 getKidsAgeLookup()
             ]);
@@ -420,7 +469,7 @@ function processPersonsModes(network_id, persons_modes) {
 
                     if (person.partner) {
                         const partner = person.partner;
-                        const gender = genders.byToken[partner.gender_token];
+                        const gender = gendersLookup.byToken[partner.gender_token];
 
                         let partnerData = {
                             person_id: existingPerson.id,
@@ -445,8 +494,8 @@ function processPersonsModes(network_id, persons_modes) {
 
                     if (person.kids && Object.keys(person.kids).length) {
                         for (const [kidToken, kid] of Object.entries(person.kids)) {
-                            const gender = genders.byToken[kid.gender_token];
-                            const age = ages.byToken[kid.age_token];
+                            const gender = gendersLookup.byToken[kid.gender_token];
+                            const age = agesLookup.byToken[kid.age_token];
 
                             const kidData = {
                                 person_id: existingPerson.id,
@@ -614,7 +663,6 @@ function syncPersons() {
     console.log("Sync: persons");
 
     let sync_name = systemKeys.sync.network.persons;
-
 
     return new Promise(async (resolve, reject) => {
         let conn, networks, network_self;
