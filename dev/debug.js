@@ -11,12 +11,12 @@ module.exports = {
             // 'modes',
             // 'networks',
             // 'reviews',
-            'verifications',
+            // 'verifications',
 
             //general
 
             // 'genders',
-            // 'distance',
+            'distance',
             // 'ages',
 
             //personal

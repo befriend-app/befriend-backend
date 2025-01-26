@@ -1223,8 +1223,8 @@ function getMatches(me, params = {}) {
                             true,
                         );
                     } else if (my_grid && their_grid) {
-                        //we'll later call the host network to help us
-                        //filter distance without revealing actual location
+                        //we'll call the host network during activity creation to help us
+                        //filter distance without revealing person's actual location across networks
 
                         if (my_grid.id === their_grid.id) {
                             distance_km = 0;
