@@ -1374,12 +1374,12 @@ function getMatches(me, params = {}) {
                     let their_age_filter = results[idx++];
 
                     try {
-                        if (their_age_filter) {
-                            their_age_filter = JSON.parse(their_age_filter);
-                        }
-
                         if (their_age) {
                             their_age = parseInt(their_age);
+                        }
+
+                        if (their_age_filter) {
+                            their_age_filter = JSON.parse(their_age_filter);
                         }
                     } catch (e) {
                         console.error('Error parsing age results:', e);
