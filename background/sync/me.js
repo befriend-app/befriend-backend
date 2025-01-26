@@ -246,6 +246,44 @@ function processMe(persons) {
                         .select('*');
                 }
 
+                //find missing schema items from existing data
+                for(let table_name in existingData) {
+                    let tableInfo = getTableInfo(table_name);
+                    let item_col = tableInfo?.col_id;
+
+                    if (table_name === 'persons_sections') {
+                        continue;
+                    }
+
+                    let missingIds = new Set();
+
+                    for (let item of existingData[table_name]) {
+                        if (!schemaItemsLookup[table_name]?.byId[item[item_col]]) {
+                            missingIds.add(item[item_col]);
+                        }
+                    }
+
+                    if (missingIds.size > 0) {
+                        if(tableInfo.source_table) {
+                            try {
+                                let options = await conn(tableInfo.source_table)
+                                    .whereIn('id', Array.from(missingIds));
+
+                                for (let option of options) {
+                                    schemaItemsLookup[table_name].byId[option.id] = option;
+                                    schemaItemsLookup[table_name].byToken[option.token] = option;
+                                }
+                            } catch(e) {
+                                console.error(e);
+                            }
+
+                        } else {
+                            console.warn("No table information for missing schema");
+                            continue;
+                        }
+                    }
+                }
+
                 for(let table_name in existingData) {
                     existingDataLookup[table_name] = {};
 
