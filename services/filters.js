@@ -790,6 +790,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                         continue;
                     }
 
+                    //filter not active/connect with any network
                     if (!networksFilter.is_active || networksFilter.is_any_network) {
                         delKeysSet.add(
                             cacheService.keys.persons_grid_exclude_send_receive(
@@ -807,7 +808,9 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                         );
                     } else {
                         //send
+
                         if (!networksFilter.is_send) {
+                            //send filter disabled
                             delKeysSet.add(
                                 cacheService.keys.persons_grid_exclude_send_receive(
                                     grid_token,
@@ -829,20 +832,21 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                                     cacheService.keys.persons_grid_exclude_send_receive(
                                         grid_token,
                                         `networks:${network.network_token}`,
+                                        'send',
                                     ),
-                                    'send',
                                 );
                             }
                         }
 
                         //receive
                         if (!networksFilter.is_receive) {
+                            //receive filter disabled
                             delKeysSet.add(
                                 cacheService.keys.persons_grid_exclude_send_receive(
                                     grid_token,
                                     `networks:${network.network_token}`,
+                                    'receive',
                                 ),
-                                'receive',
                             );
                         } else {
                             if (include_networks.has(network.network_token)) {
@@ -850,16 +854,16 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                                     cacheService.keys.persons_grid_exclude_send_receive(
                                         grid_token,
                                         `networks:${network.network_token}`,
-                                    ),
-                                    'receive',
+                                        'receive',
+                                    )
                                 );
                             } else if (exclude_networks.has(network.network_token)) {
                                 addKeysSet.add(
                                     cacheService.keys.persons_grid_exclude_send_receive(
                                         grid_token,
                                         `networks:${network.network_token}`,
-                                    ),
-                                    'receive',
+                                        'receive',
+                                    )
                                 );
                             }
                         }
@@ -2551,8 +2555,8 @@ function batchUpdateGridSets(persons) {
                                             cacheService.keys.persons_grid_exclude_send_receive(
                                                 grid_token,
                                                 `networks:${network.network_token}`,
+                                                'send',
                                             ),
-                                            'send',
                                         );
                                     }
                                 }
@@ -2563,8 +2567,8 @@ function batchUpdateGridSets(persons) {
                                         cacheService.keys.persons_grid_exclude_send_receive(
                                             grid_token,
                                             `networks:${network.network_token}`,
+                                            'receive',
                                         ),
-                                        'receive',
                                     );
                                 } else {
                                     if (include_networks.has(network.network_token)) {
@@ -2572,16 +2576,16 @@ function batchUpdateGridSets(persons) {
                                             cacheService.keys.persons_grid_exclude_send_receive(
                                                 grid_token,
                                                 `networks:${network.network_token}`,
+                                                'receive',
                                             ),
-                                            'receive',
                                         );
                                     } else if (exclude_networks.has(network.network_token)) {
                                         addKeysSet.add(
                                             cacheService.keys.persons_grid_exclude_send_receive(
                                                 grid_token,
                                                 `networks:${network.network_token}`,
+                                                'receive',
                                             ),
-                                            'receive',
                                         );
                                     }
                                 }

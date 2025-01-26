@@ -10,7 +10,7 @@ const {
     getURL,
     joinPaths,
 } = require('../../services/shared');
-const { getNetworkSelf } = require('../../services/network');
+const { getNetworkSelf, getNetworksLookup } = require('../../services/network');
 const { deleteKeys } = require('../../services/cache');
 const { getGendersLookup } = require('../../services/genders');
 const { keys: systemKeys } = require('../../services/system');
@@ -23,9 +23,11 @@ let persons_grid_filters = ['online', 'location', 'modes', 'reviews', 'verificat
 let batch_process = 1000;
 let defaultTimeout = 20000;
 
+let debug_sync_enabled = require('../../dev/debug').sync.filters;
+
 function processPersons(network_id, persons) {
     function preparePersonCache(new_data, prev_data, params = {}) {
-        let { grid, prev_grid } = params;
+        let { grid, prev_grid, networks } = params;
 
         let person_data = structuredClone(new_data);
 
@@ -45,6 +47,9 @@ function processPersons(network_id, persons) {
         person_data.modes = {
             selected: JSON.parse(new_data.modes) || []
         };
+
+        //networks
+        person_data.networks = networks;
 
         //reviews
         person_data.reviews = {
@@ -104,6 +109,8 @@ function processPersons(network_id, persons) {
                 let existingPersonsDict = {};
                 let existingNetworksDict = {};
 
+                let networksLookup = await getNetworksLookup();
+
                 //check for existing persons
                 const batchPersonTokens = batch.map(p => p.person_token);
 
@@ -132,13 +139,16 @@ function processPersons(network_id, persons) {
                 const existingPersonIds = existingPersons.map(p => p.id);
 
                 const existingNetworks = await conn('persons_networks')
-                    .where('network_id', network_id)
                     .whereIn('person_id', existingPersonIds)
-                    .select('person_id');
+                    .select('person_id', 'network_id');
 
                 //organize persons networks lookup
                 for (const network of existingNetworks) {
-                    existingNetworksDict[network.person_id] = true;
+                    if(!existingNetworksDict[network.person_id]) {
+                        existingNetworksDict[network.person_id] = {};
+                    }
+
+                    existingNetworksDict[network.person_id][network.network_id] = true;
                 }
 
                 for (let person of batch) {
@@ -148,6 +158,25 @@ function processPersons(network_id, persons) {
 
                     let existingPerson = existingPersonsDict[person.person_token];
 
+                    let networks = new Set();
+                    let currentNetworkToken = networksLookup.byId[network_id]?.network_token;
+
+                    if(currentNetworkToken) {
+                        networks.add(currentNetworkToken);
+                    }
+
+                    if(existingPerson && existingNetworksDict[existingPerson.id]) {
+                        for(let _network_id in existingNetworksDict[existingPerson.id]) {
+                            let token = networksLookup.byId[_network_id]?.network_token;
+
+                            if(token) {
+                                networks.add(token);
+                            }
+                        }
+                    }
+
+                    networks = Array.from(networks);
+
                     let grid = gridLookup.byToken[person.grid_token];
                     let prev_grid = gridLookup.byId[existingPerson?.grid_id];
                     let gender = genders.byToken[person.gender_token];
@@ -155,7 +184,7 @@ function processPersons(network_id, persons) {
                     let person_data;
 
                     if (!existingPerson) {
-                        if (person.deleted) {
+                        if(person.deleted) {
                             continue;
                         }
 
@@ -185,7 +214,8 @@ function processPersons(network_id, persons) {
                         personsToInsert.push(person_data);
 
                         let cache_person_data = preparePersonCache(person_data, null, {
-                            grid
+                            grid,
+                            networks
                         });
 
                         pipeline.hSet(cacheService.keys.person(person.person_token), cacheService.prepareSetHash(cache_person_data));
@@ -222,7 +252,8 @@ function processPersons(network_id, persons) {
 
                         let cache_person_data = preparePersonCache(person_data, existingPerson, {
                             grid,
-                            prev_grid
+                            prev_grid,
+                            networks
                         });
 
                         pipeline.hSet(cacheService.keys.person(person.person_token), cacheService.prepareSetHash(cache_person_data));
@@ -259,7 +290,7 @@ function processPersons(network_id, persons) {
                     }
 
                     //update persons networks
-                    if (existingPerson && !existingNetworksDict[existingPerson.id]) {
+                    if (existingPerson && !existingNetworksDict[existingPerson.id]?.[network_id]) {
                         networksToInsert.push({
                             person_id: existingPerson.id,
                             network_id: network_id,
@@ -274,7 +305,7 @@ function processPersons(network_id, persons) {
 
                     for(let p of personsToInsert) {
                         //append id to cloned grid person data
-                        personsGrids[p.person_token].person.id = p.id
+                        personsGrids[p.person_token].person.id = p.id;
 
                         //prepare persons_networks
                         networksToInsert.push({
@@ -282,7 +313,7 @@ function processPersons(network_id, persons) {
                             network_id: network_id,
                             created: timeNow(),
                             updated: timeNow()
-                        })
+                        });
                     }
                 }
 
@@ -633,7 +664,7 @@ function syncPersons() {
                         .where('sync_process', sync_name)
                         .first();
 
-                    if (sync_qry) {
+                    if (sync_qry && !debug_sync_enabled) {
                         timestamps.last = sync_qry.last_updated;
                     }
 
@@ -693,7 +724,7 @@ function syncPersons() {
                         }
                     }
 
-                    if (!skipSaveTimestamps) {
+                    if (!skipSaveTimestamps && !debug_sync_enabled) {
                         //update sync table
                         if (sync_qry) {
                             await conn('sync').where('id', sync_qry.id).update({

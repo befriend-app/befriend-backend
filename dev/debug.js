@@ -33,6 +33,7 @@ module.exports = {
         }
     },
     sync: {
+        persons: isProdApp() ? false : true,
         me: isProdApp() ? false : false,
         filters: isProdApp() ? false : true
     }

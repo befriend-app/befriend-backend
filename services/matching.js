@@ -468,15 +468,18 @@ function getMatches(me, params = {}) {
     function filterNetworks() {
         //send
         // if filter is off, match with anybody that:
+
         // 1) is on the same network
         // 2) receiving person has their networks filter disabled
         // 3) has their receive notifications filter disabled
         // 4) has any network selected
         // 5) has verified networks selected and both are on verified networks
         // 6) this person's network is in receiving person's list of allowed networks
+
         // if filter is on and send is on, match with anybody that:
+
         // 7) is on the same network
-        // 8) if this person any network selected, any receiving person that has their networks filter or receive filter disabled or any network selected
+        // 8) if this person's any network is selected, any receiving person that has their networks filter or receive filter disabled or any network selected
         // 9) if verified networks selected, any receiving person that has their networks filter or receive filter disabled and is on a verified network
         // 10) if verified networks selected, any receiving person that is on a verified network and has verified networks selected
         // 11) if verified networks selected, any receiving person that is on a verified network and has this person's network in their list of allowed networks
@@ -509,6 +512,7 @@ function getMatches(me, params = {}) {
 
             try {
                 let allNetworks = await getNetworksForFilters();
+
                 let network_token = allNetworks.networks?.find(
                     (network) => network.id === me.network_id,
                 )?.network_token;

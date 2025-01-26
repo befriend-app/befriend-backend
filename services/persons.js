@@ -3,6 +3,7 @@ const dbService = require('../services/db');
 const { timeNow } = require('../services/shared');
 const { updateGridSets } = require('../services/filters');
 const { getGridLookup } = require('./grid');
+const { getNetworksLookup } = require('./network');
 
 module.exports = {
     minAge: 18,
@@ -59,6 +60,24 @@ module.exports = {
 
                 //devices
                 person.devices = await conn('persons_devices').where('person_id', person.id);
+
+                //networks
+                let networks = new Set();
+
+                let networks_qry = await conn('persons_networks')
+                    .where('person_id', person.id);
+
+                let networksLookup = await getNetworksLookup();
+
+                for(let network of networks_qry) {
+                    let token = networksLookup.byId[network.network_id]?.network_token;
+
+                    if(token) {
+                        networks.add(token);
+                    }
+                }
+
+                person.networks = Array.from(networks);
 
                 //modes
                 let modes = [];
