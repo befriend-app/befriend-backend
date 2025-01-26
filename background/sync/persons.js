@@ -4,11 +4,12 @@ const cacheService = require('../../services/cache');
 const dbService = require('../../services/db');
 
 const {
+    floatOrNull,
+    getURL,
+    joinPaths,
     loadScriptEnv,
     timeoutAwait,
     timeNow,
-    getURL,
-    joinPaths,
 } = require('../../services/shared');
 const { getNetworkSelf, getNetworksLookup } = require('../../services/network');
 const { deleteKeys } = require('../../services/cache');
@@ -54,11 +55,11 @@ function processPersons(network_id, persons) {
         //reviews
         person_data.reviews = {
             count: person_data.reviews_count || 0,
-            safety: person_data.rating_safety,
-            trust: person_data.rating_trust,
-            timeliness: person_data.rating_timeliness,
-            friendliness: person_data.rating_friendliness,
-            fun: person_data.rating_fun,
+            safety: floatOrNull(person_data.rating_safety),
+            trust: floatOrNull(person_data.rating_trust),
+            timeliness: floatOrNull(person_data.rating_timeliness),
+            friendliness: floatOrNull(person_data.rating_friendliness),
+            fun: floatOrNull(person_data.rating_fun),
         };
 
         if(prev_data) {

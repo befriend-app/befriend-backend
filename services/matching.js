@@ -1464,6 +1464,7 @@ function getMatches(me, params = {}) {
                     myReviewsFilter.is_active &&
                     !myNewReviewsFilter?.is_active &&
                     myNewReviewsFilter?.is_send;
+
                 let me_exclude_receive_new =
                     myReviewsFilter.is_active &&
                     !myNewReviewsFilter?.is_active &&
@@ -1610,6 +1611,7 @@ function getMatches(me, params = {}) {
                             if (!persons_ratings[person_token]) {
                                 persons_ratings[person_token] = {};
                             }
+
                             persons_ratings[person_token][type] = person.score;
                         }
 
@@ -1679,8 +1681,8 @@ function getMatches(me, params = {}) {
                     let exclude_send = false;
                     let exclude_receive = false;
 
-                    let myRatings = me.reviews;
-                    let personRatings = persons_ratings[token];
+                    let myRatings = me.reviews || {};
+                    let personRatings = persons_ratings[token] || {};
 
                     // Bi-directional send/receive filter settings
                     if (!auto_include.send) {

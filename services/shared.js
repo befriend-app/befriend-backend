@@ -294,6 +294,14 @@ function downloadURL(url, output_path) {
     });
 }
 
+function floatOrNull(value) {
+    if(isNumeric(value)) {
+        return parseFloat(value);
+    }
+
+    return null;
+}
+
 function formatNumberLength(num, length) {
     let r = '' + num;
 
@@ -1245,6 +1253,7 @@ module.exports = {
     dateTimeNow: dateTimeNow,
     deleteFile: deleteFile,
     downloadURL: downloadURL,
+    floatOrNull: floatOrNull,
     formatNumberLength: formatNumberLength,
     formatObjectTypes: formatObjectTypes,
     generateToken: generateToken,

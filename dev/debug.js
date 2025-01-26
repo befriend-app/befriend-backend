@@ -9,8 +9,8 @@ module.exports = {
             // 'availability',
             // 'activity_types',
             // 'modes',
-            'networks',
-            // 'reviews',
+            // 'networks',
+            'reviews',
             // 'verifications',
 
             //general
@@ -33,8 +33,8 @@ module.exports = {
         }
     },
     sync: {
-        persons: isProdApp() ? false : true,
+        persons: isProdApp() ? false : false,
         me: isProdApp() ? false : false,
-        filters: isProdApp() ? false : true
+        filters: isProdApp() ? false : false
     }
 };
