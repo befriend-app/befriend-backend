@@ -733,11 +733,9 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
     function updateNetworks() {
         return new Promise(async (resolve, reject) => {
             try {
-                let allNetworks = await getNetworksForFilters();
+                let networksLookup = await getNetworksLookup();
 
-                let network_token = allNetworks.networks?.find(
-                    (network) => network.id === person.network_id,
-                )?.network_token;
+                let network_token = networksLookup.byId[person.network_id]?.network_token;
 
                 if (!network_token) {
                     console.error('Network token not found');
@@ -768,7 +766,9 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                 }
 
                 if (networksFilter.is_all_verified) {
-                    for (let network of allNetworks.networks) {
+                    for (let k in networksLookup.byId) {
+                        let network = networksLookup.byId[k];
+
                         if (network.network_token === network_token) {
                             continue;
                         }
@@ -785,7 +785,9 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                     }
                 }
 
-                for (let network of allNetworks.networks) {
+                for (let k in networksLookup.byId) {
+                    let network = networksLookup.byId[k];
+
                     if (network.network_token === network_token) {
                         continue;
                     }
@@ -799,6 +801,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                                 'send',
                             ),
                         );
+
                         delKeysSet.add(
                             cacheService.keys.persons_grid_exclude_send_receive(
                                 grid_token,
@@ -871,7 +874,9 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                 }
 
                 if (prev_grid_token) {
-                    for (let network of allNetworks.networks) {
+                    for (let k in networksLookup.byId) {
+                        let network = networksLookup.byId[k];
+
                         delKeysSet.add(
                             cacheService.keys.persons_grid_exclude_send_receive(
                                 prev_grid_token,

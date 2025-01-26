@@ -15,7 +15,7 @@ const {
     getPersonalSections,
 } = require('./filters');
 const { kms_per_mile, timeNow, isNumeric, calculateDistanceMeters } = require('./shared');
-const { getNetworksForFilters } = require('./network');
+const { getNetworksForFilters, getNetworksLookup } = require('./network');
 const { getModes, getPersonExcludedModes } = require('./modes');
 const { getGendersLookup } = require('./genders');
 const { getDrinking } = require('./drinking');
@@ -117,8 +117,6 @@ function getMatches(me, params = {}) {
 
                 await filterOnlineStatus();
 
-                await filterNetworks();
-
                 await filterModes();
 
                 await filterVerifications();
@@ -177,6 +175,8 @@ function getMatches(me, params = {}) {
         return new Promise(async (resolve, reject) => {
             try {
                 let t = timeNow();
+
+                await filterNetworks();
 
                 await filterDistance();
 
@@ -511,55 +511,104 @@ function getMatches(me, params = {}) {
             }
 
             try {
-                let allNetworks = await getNetworksForFilters();
+                let networksLookup = await getNetworksLookup();
 
-                let network_token = allNetworks.networks?.find(
-                    (network) => network.id === me.network_id,
-                )?.network_token;
+                let my_network_token = networksLookup.byId[me.network_id]?.network_token;
 
-                if (!network_token) {
+                if (!my_network_token) {
                     return resolve();
                 }
 
-                let pipeline = cacheService.startPipeline();
+                let networks = Object.values(networksLookup.byId);
 
-                for (let grid_token of neighbor_grid_tokens) {
-                    if (!send_only) {
-                        pipeline.sMembers(
+                let persons_networks_pipeline = cacheService.startPipeline();
+                let persons_excluded_pipeline = cacheService.startPipeline();
+
+                let network_person_tokens = Object.keys(persons_not_excluded_after_stage_1);
+
+                for(let person_token of network_person_tokens) {
+                    persons_networks_pipeline.hGet(cacheService.keys.person(person_token), 'networks');
+                }
+
+                let persons_networks_results = await cacheService.execPipeline(persons_networks_pipeline);
+
+                let networks_persons = {};
+
+                for(let i = 0; i < persons_networks_results.length; i++) {
+                    let person_token = network_person_tokens[i];
+                    let person_networks = JSON.parse(persons_networks_results[i]);
+
+                    if(person_networks) {
+                        for(let network_token of person_networks) {
+                            if(!(networks_persons[network_token])) {
+                                networks_persons[network_token] = {};
+                            }
+
+                            networks_persons[network_token][person_token] = true;
+                        }
+                    }
+                }
+
+                for(let network of networks) {
+                    //skip excluding own network
+                    if(my_network_token === network.network_token) {
+                        continue;
+                    }
+
+                    for (let grid_token of neighbor_grid_tokens) {
+                        if (!send_only) {
+                            persons_excluded_pipeline.sMembers(
+                                cacheService.keys.persons_grid_exclude_send_receive(
+                                    grid_token,
+                                    `networks:${network.network_token}`,
+                                    'send',
+                                ),
+                            );
+                        }
+
+                        persons_excluded_pipeline.sMembers(
                             cacheService.keys.persons_grid_exclude_send_receive(
                                 grid_token,
-                                `networks:${network_token}`,
-                                'send',
+                                `networks:${network.network_token}`,
+                                'receive',
                             ),
                         );
                     }
-
-                    pipeline.sMembers(
-                        cacheService.keys.persons_grid_exclude_send_receive(
-                            grid_token,
-                            `networks:${network_token}`,
-                            'receive',
-                        ),
-                    );
                 }
 
-                let results = await cacheService.execPipeline(pipeline);
+                let excluded_results = await cacheService.execPipeline(persons_excluded_pipeline);
 
                 let idx = 0;
 
-                for (let grid_token of neighbor_grid_tokens) {
-                    if (!send_only) {
-                        let personsExcludeSend = results[idx++];
+                let networks_persons_exclude = {};
 
-                        for (let token of personsExcludeSend) {
-                            exclude.receive[token] = true;
-                        }
+                for(let network of networks) {
+                    //skip excluding own network
+                    if(my_network_token === network.network_token) {
+                        continue;
                     }
 
-                    let personsExcludeReceive = results[idx++];
+                    if(!networks_persons_exclude[network.network_token]) {
+                        networks_persons_exclude[network.network_token] = {
+                            send: {},
+                            receive: {}
+                        };
+                    }
 
-                    for (let token of personsExcludeReceive) {
-                        exclude.send[token] = true;
+                    for (let grid_token of neighbor_grid_tokens) {
+                        if (!send_only) {
+                            let personsExcludeSend = excluded_results[idx++] || [];
+
+                            for(let token of personsExcludeSend) {
+                                networks_persons_exclude[network.network_token].send[token] = true;
+                            }
+                        }
+
+                        let personsExcludeReceive = excluded_results[idx++] || [];
+
+                        for(let token of personsExcludeReceive) {
+                            networks_persons_exclude[network.network_token].receive[token] = true;
+                        }
                     }
                 }
 

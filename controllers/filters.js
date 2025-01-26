@@ -1112,7 +1112,7 @@ function putNetworks(req, res) {
                     return resolve();
                 }
 
-                const existingItem = Object.values(filterData.items).find(
+                let existingItem = Object.values(filterData.items).find(
                     (item) => item.network_token === network_token,
                 );
 
