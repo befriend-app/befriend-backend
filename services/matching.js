@@ -512,7 +512,6 @@ function getMatches(me, params = {}) {
 
             try {
                 let networksLookup = await getNetworksLookup();
-
                 let my_network_token = networksLookup.byId[me.network_id]?.network_token;
 
                 if (!my_network_token) {
@@ -520,7 +519,6 @@ function getMatches(me, params = {}) {
                 }
 
                 let networks = Object.values(networksLookup.byId);
-
                 let persons_networks_pipeline = cacheService.startPipeline();
                 let persons_excluded_pipeline = cacheService.startPipeline();
 
@@ -533,24 +531,25 @@ function getMatches(me, params = {}) {
                 let persons_networks_results = await cacheService.execPipeline(persons_networks_pipeline);
 
                 let networks_persons = {};
+                let persons_networks = {};
 
                 for(let i = 0; i < persons_networks_results.length; i++) {
                     let person_token = network_person_tokens[i];
-                    let person_networks = JSON.parse(persons_networks_results[i]);
+                    let person_networks_list = JSON.parse(persons_networks_results[i]) || [];
 
-                    if(person_networks) {
-                        for(let network_token of person_networks) {
-                            if(!(networks_persons[network_token])) {
-                                networks_persons[network_token] = {};
-                            }
+                    persons_networks[person_token] = person_networks_list;
 
-                            networks_persons[network_token][person_token] = true;
+                    for(let network_token of person_networks_list) {
+                        if(!networks_persons[network_token]) {
+                            networks_persons[network_token] = {};
                         }
+
+                        networks_persons[network_token][person_token] = true;
                     }
                 }
 
+                // Get exclusion data for each network
                 for(let network of networks) {
-                    //skip excluding own network
                     if(my_network_token === network.network_token) {
                         continue;
                     }
@@ -577,13 +576,11 @@ function getMatches(me, params = {}) {
                 }
 
                 let excluded_results = await cacheService.execPipeline(persons_excluded_pipeline);
-
                 let idx = 0;
-
                 let networks_persons_exclude = {};
 
+                // Process exclusion results
                 for(let network of networks) {
-                    //skip excluding own network
                     if(my_network_token === network.network_token) {
                         continue;
                     }
@@ -600,14 +597,77 @@ function getMatches(me, params = {}) {
                             let personsExcludeSending = excluded_results[idx++] || [];
 
                             for(let token of personsExcludeSending) {
-                                networks_persons_exclude[network.network_token].receive[token] = true;
+                                networks_persons_exclude[network.network_token].send[token] = true;
                             }
                         }
 
                         let personsExcludeReceiving = excluded_results[idx++] || [];
 
                         for(let token of personsExcludeReceiving) {
-                            networks_persons_exclude[network.network_token].send[token] = true;
+                            networks_persons_exclude[network.network_token].receive[token] = true;
+                        }
+                    }
+                }
+
+                let my_networks = me.networks;
+
+                let me_networks_exclude = {
+                    send: new Set(),
+                    receive: new Set()
+                };
+
+                for(let network_token in networks_persons_exclude) {
+                    let data = networks_persons_exclude[network_token];
+
+                    if(my_token in data.send) {
+                        me_networks_exclude.send.add(network_token);
+                    }
+
+                    if(my_token in data.receive) {
+                        me_networks_exclude.receive.add(network_token);
+                    }
+                }
+
+                me_networks_exclude.send = Array.from(me_networks_exclude.send);
+                me_networks_exclude.receive = Array.from(me_networks_exclude.receive);
+
+                for(let person_token in persons_networks) {
+                    //me sending
+                    //bi-directional
+
+                    //exclude sending to this person if all of their networks are excluded by me
+                    let their_networks_excluded_by_me = persons_networks[person_token].every(network_token =>
+                        me_networks_exclude.send.includes(network_token)
+                    );
+
+                    //check if this person has excluded sending to all of my networks
+                    let my_networks_excluded_by_them = my_networks.every(network_token => {
+                        if(network_token in networks_persons_exclude) {
+                            return person_token in networks_persons_exclude[network_token].receive;
+                        }
+                        return false;
+                    });
+
+                    if(their_networks_excluded_by_me || my_networks_excluded_by_them) {
+                        personsExclude.send[person_token] = true;
+                    }
+
+                    //same as above, receiving
+                    if(!send_only) {
+                        their_networks_excluded_by_me = persons_networks[person_token].every(network_token =>
+                            me_networks_exclude.receive.includes(network_token)
+                        );
+
+                        my_networks_excluded_by_them = my_networks.every(network_token => {
+                            if(network_token in networks_persons_exclude) {
+                                return person_token in networks_persons_exclude[network_token].send;
+                            }
+
+                            return false;
+                        });
+
+                        if(their_networks_excluded_by_me || my_networks_excluded_by_them) {
+                            personsExclude.receive[person_token] = true;
                         }
                     }
                 }
