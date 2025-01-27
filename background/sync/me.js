@@ -17,6 +17,7 @@ const {
     getURL,
     joinPaths,
 } = require('../../services/shared');
+const { batchUpdateGridSets } = require('../../services/filters');
 
 let batch_process = 1000;
 let defaultTimeout = 20000;
@@ -160,6 +161,11 @@ function processMe(persons) {
                     let tableInfo = getTableInfo(table);
 
                     for(let item of items) {
+                        //do not save deleted item to cache
+                        if(item.deleted) {
+                            continue;
+                        }
+
                         let person_token = personsIdTokenMap[item.person_id];
                         let person_cache = persons_cache[person_token];
 
@@ -182,7 +188,6 @@ function processMe(persons) {
                             token: db_item.token,
                             table_key: tableInfo.table_key,
                             ...(tableInfo.col_secondary && { secondary: item[tableInfo.col_secondary] || null }),
-                            created: item.created,
                             updated: item.updated,
                         }
 
@@ -421,11 +426,13 @@ function processMe(persons) {
                     }
                 }
 
+                let prepareCache = {};
+
                 for (const [table, items] of Object.entries(batch_insert)) {
                     if (items.length) {
                         await batchInsert(table, items, true);
-                        
-                        organizeItemsCache(table, items);
+
+                        prepareCache[table] = items;
                     }
                 }
 
@@ -433,11 +440,45 @@ function processMe(persons) {
                     if (items.length) {
                         await batchUpdate(table, items);
 
-                        organizeItemsCache(table, items);
+                        if(prepareCache[table]) {
+                            prepareCache[table] = prepareCache[table].concat(items);
+                        } else {
+                            prepareCache[table] = items;
+                        }
                     }
                 }
 
+                for(let table in prepareCache) {
+                    let items = prepareCache[table];
+
+                    let items_prepared = {};
+
+                    for(let item of items) {
+                        items_prepared[item.id] = item;
+                    }
+
+                    if(existingData[table]) {
+                        for(let item of existingData[table]) {
+                            if(!(item.id in items_prepared)) {
+                                items_prepared[item.id] = item;
+                            }
+                        }
+                    }
+
+                    organizeItemsCache(table, Object.values(items_prepared));
+                }
+
+                let personsGrids = {};
+
                 for(let person_token in persons_cache) {
+                    personsGrids[person_token] = {
+                        person: {
+                            person_token
+                        },
+                        items: {},
+                        filter_tokens: []
+                    }
+
                     let sections = persons_cache[person_token];
 
                     let cache_key = cacheService.keys.person_sections(person_token);
@@ -446,10 +487,17 @@ function processMe(persons) {
                         let data = sections[section];
 
                         pipeline.hSet(cache_key, section, JSON.stringify(data));
+
+                        if(section !== 'active') {
+                            personsGrids[person_token].items[section] = data;
+                            personsGrids[person_token].filter_tokens.push(section);
+                        }
                     }
                 }
 
                 await cacheService.execPipeline(pipeline);
+
+                await batchUpdateGridSets(personsGrids);
             }
         } catch (e) {
             console.error(e);
