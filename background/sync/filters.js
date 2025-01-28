@@ -1043,6 +1043,7 @@ function updateCacheMain(persons) {
                             }
 
                             items[item.id] = {
+                                id: item.id,
                                 is_active: item.is_active ? 1 : 0,
                                 is_negative: item.is_negative ? 1 : 0,
                                 importance: item.importance,
