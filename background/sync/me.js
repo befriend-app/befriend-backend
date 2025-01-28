@@ -426,10 +426,12 @@ function processMe(persons) {
                     }
                 }
 
+                let hasChange = false;
                 let prepareCache = {};
 
                 for (const [table, items] of Object.entries(batch_insert)) {
                     if (items.length) {
+                        hasChange = true;
                         await batchInsert(table, items, true);
 
                         prepareCache[table] = items;
@@ -438,6 +440,7 @@ function processMe(persons) {
 
                 for (const [table, items] of Object.entries(batch_update)) {
                     if (items.length) {
+                        hasChange = true;
                         await batchUpdate(table, items);
 
                         if(prepareCache[table]) {
@@ -446,6 +449,10 @@ function processMe(persons) {
                             prepareCache[table] = items;
                         }
                     }
+                }
+
+                if(!hasChange) {
+                    return resolve();
                 }
 
                 for(let table in prepareCache) {

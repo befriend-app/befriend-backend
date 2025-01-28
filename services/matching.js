@@ -1935,6 +1935,7 @@ function getMatches(me, params = {}) {
                         if (!excludeSend[option.token]) {
                             excludeSend[option.token] = {};
                         }
+
                         if (!excludeReceive[option.token]) {
                             excludeReceive[option.token] = {};
                         }
