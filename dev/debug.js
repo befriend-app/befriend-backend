@@ -21,8 +21,8 @@ module.exports = {
 
             //personal
             // 'life_stages',
-            'relationships'
-            // 'languages',
+            // 'relationships'
+            'languages',
 
             //interests
 
