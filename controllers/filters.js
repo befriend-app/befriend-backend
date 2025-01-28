@@ -149,6 +149,62 @@ function getMatches(req, res) {
     });
 }
 
+function ensureParentEntry(person, filter, filterData = null) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let conn = await dbService.conn();
+
+            const parentCheck = await conn('persons_filters')
+                .where('person_id', person.id)
+                .where('filter_id', filter.id)
+                .where('is_parent', 1)
+                .first();
+
+            if (!parentCheck) {
+                const parentEntry = createFilterEntry(filter.id, {
+                    person_id: person.id,
+                    is_parent: true,
+                    is_send: filterData?.is_send ?? true,
+                    is_receive: filterData?.is_receive ?? true,
+                    is_active: filterData?.is_active ?? true
+                });
+
+                const [parentId] = await conn('persons_filters').insert(parentEntry);
+
+                if (!filterData) {
+                    filterData = {
+                        ...parentEntry,
+                        id: parentId,
+                        items: {}
+                    };
+                } else {
+                    filterData.id = parentId;
+                }
+            } else if (!filterData) {
+                // If parent exists but no filterData, create filterData from parent
+                filterData = {
+                    filter_id: filter.id,
+                    id: parentCheck.id,
+                    is_send: parentCheck.is_send,
+                    is_receive: parentCheck.is_receive,
+                    is_active: parentCheck.is_active,
+                    is_negative: parentCheck.is_negative ?? false,
+                    items: {}
+                };
+            }
+
+            if(!filterData.items) {
+                filterData.items = {};
+            }
+
+            return resolve(filterData);
+        } catch(e) {
+            console.error(e);
+            return reject(e);
+        }
+    });
+}
+
 function handleFilterUpdate(req, res, filterType) {
     function getFilterTypeStr() {
         if (filterType.toLowerCase().startsWith('relationship')) {
@@ -231,46 +287,7 @@ function handleFilterUpdate(req, res, filterType) {
             let filterData = await getPersonFilterForKey(person, filter.token);
             const now = timeNow();
 
-            const parentCheck = await conn('persons_filters')
-                .where('person_id', person.id)
-                .where('filter_id', filter.id)
-                .where('is_parent', 1)
-                .first();
-
-            if (!parentCheck) {
-                const parentEntry = createFilterEntry(filter.id, {
-                    person_id: person.id,
-                    is_parent: true,
-                    is_send: filterData?.is_send ?? true,
-                    is_receive: filterData?.is_receive ?? true,
-                    is_active: filterData?.is_active ?? true
-                });
-
-                const [parentId] = await conn('persons_filters').insert(parentEntry);
-
-                if (!filterData) {
-                    filterData = {
-                        ...parentEntry,
-                        id: parentId,
-                        items: {}
-                    };
-                } else {
-                    filterData.id = parentId;
-                }
-            }
-
-            if (!filterData) {
-                const baseEntry = createFilterEntry(filter.id, {
-                    person_id: person.id,
-                });
-
-                filterData = {
-                    ...baseEntry,
-                    items: {},
-                };
-            } else if (!filterData.items) {
-                filterData.items = {};
-            }
+            filterData = await ensureParentEntry(person, filter, filterData);
 
             if (token === 'any') {
                 // Handle 'any' selection - clear all existing filters
@@ -2186,6 +2203,7 @@ function putMovies(req, res) {
             }
 
             let person = await getPerson(person_token);
+
             if (!person) {
                 res.json(
                     {
@@ -2215,19 +2233,7 @@ function putMovies(req, res) {
             let filterData = await getPersonFilterForKey(person, personFilterKey);
             let now = timeNow();
 
-            // Initialize filter structure if it doesn't exist
-            if (!filterData) {
-                const baseEntry = createFilterEntry(filter.id, {
-                    person_id: person.id,
-                });
-
-                filterData = {
-                    ...baseEntry,
-                    items: {},
-                };
-            } else if (!filterData.items) {
-                filterData.items = {};
-            }
+            filterData = await ensureParentEntry(person, filter, filterData);
 
             if (token === 'any') {
                 // Handle 'any' selection - clear all existing filters for table key
@@ -2459,19 +2465,7 @@ function putTvShows(req, res) {
             let filterData = await getPersonFilterForKey(person, personFilterKey);
             let now = timeNow();
 
-            // Initialize filter structure if it doesn't exist
-            if (!filterData) {
-                const baseEntry = createFilterEntry(filter.id, {
-                    person_id: person.id,
-                });
-
-                filterData = {
-                    ...baseEntry,
-                    items: {},
-                };
-            } else if (!filterData.items) {
-                filterData.items = {};
-            }
+            filterData = await ensureParentEntry(person, filter, filterData);
 
             if (token === 'any') {
                 // Handle 'any' selection - clear all existing filters for table key
@@ -2688,19 +2682,7 @@ function putInstruments(req, res) {
             let filterData = await getPersonFilterForKey(person, filter.token);
             let now = timeNow();
 
-            // Initialize filter structure if it doesn't exist
-            if (!filterData) {
-                const baseEntry = createFilterEntry(filter.id, {
-                    person_id: person.id,
-                });
-
-                filterData = {
-                    ...baseEntry,
-                    items: {},
-                };
-            } else if (!filterData.items) {
-                filterData.items = {};
-            }
+            filterData = await ensureParentEntry(person, filter, filterData);
 
             if (token === 'any') {
                 // Handle 'any' selection - clear all existing filters
@@ -2919,19 +2901,7 @@ function putWork(req, res) {
             let filterData = await getPersonFilterForKey(person, personFilterKey);
             let now = timeNow();
 
-            // Initialize filter structure if it doesn't exist
-            if (!filterData) {
-                const baseEntry = createFilterEntry(filter.id, {
-                    person_id: person.id,
-                });
-
-                filterData = {
-                    ...baseEntry,
-                    items: {},
-                };
-            } else if (!filterData.items) {
-                filterData.items = {};
-            }
+            filterData = await ensureParentEntry(person, filter, filterData);
 
             if (token === 'any') {
                 // Handle 'any' selection - clear all existing filters for table key
@@ -3156,19 +3126,7 @@ function putMusic(req, res) {
             let filterData = await getPersonFilterForKey(person, personFilterKey);
             let now = timeNow();
 
-            // Initialize filter structure if it doesn't exist
-            if (!filterData) {
-                const baseEntry = createFilterEntry(filter.id, {
-                    person_id: person.id,
-                });
-
-                filterData = {
-                    ...baseEntry,
-                    items: {},
-                };
-            } else if (!filterData.items) {
-                filterData.items = {};
-            }
+            filterData = await ensureParentEntry(person, filter, filterData);
 
             if (token === 'any') {
                 // Handle 'any' selection - clear all existing filters for table key
@@ -3404,19 +3362,7 @@ function putSports(req, res) {
             let filterData = await getPersonFilterForKey(person, personFilterKey);
             let now = timeNow();
 
-            // Initialize filter structure if it doesn't exist
-            if (!filterData) {
-                const baseEntry = createFilterEntry(filter.id, {
-                    person_id: person.id,
-                });
-
-                filterData = {
-                    ...baseEntry,
-                    items: {},
-                };
-            } else if (!filterData.items) {
-                filterData.items = {};
-            }
+            filterData = await ensureParentEntry(person, filter, filterData);
 
             if (token === 'any') {
                 // Handle 'any' selection - clear all existing filters for table key
