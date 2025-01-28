@@ -231,7 +231,34 @@ function handleFilterUpdate(req, res, filterType) {
             let filterData = await getPersonFilterForKey(person, filter.token);
             const now = timeNow();
 
-            // Initialize filter structure if it doesn't exist
+            const parentCheck = await conn('persons_filters')
+                .where('person_id', person.id)
+                .where('filter_id', filter.id)
+                .where('is_parent', 1)
+                .first();
+
+            if (!parentCheck) {
+                const parentEntry = createFilterEntry(filter.id, {
+                    person_id: person.id,
+                    is_parent: true,
+                    is_send: filterData?.is_send ?? true,
+                    is_receive: filterData?.is_receive ?? true,
+                    is_active: filterData?.is_active ?? true
+                });
+
+                const [parentId] = await conn('persons_filters').insert(parentEntry);
+
+                if (!filterData) {
+                    filterData = {
+                        ...parentEntry,
+                        id: parentId,
+                        items: {}
+                    };
+                } else {
+                    filterData.id = parentId;
+                }
+            }
+
             if (!filterData) {
                 const baseEntry = createFilterEntry(filter.id, {
                     person_id: person.id,
