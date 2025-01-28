@@ -1922,6 +1922,68 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
         });
     }
 
+    function updateAll() {
+        return new Promise(async (resolve, reject) => {
+            try {
+                await updateOnline();
+
+                await updateLocation();
+
+                await updateModes();
+
+                await updateNetworks();
+
+                await updateReviews();
+
+                await updateVerifications();
+
+                await updateGenders();
+
+                //personal
+                await updateMultiFilter(
+                    'life_stages',
+                    lifeStageService.getLifeStages,
+                    lifeStageService.importance.default,
+                );
+
+                await updateMultiFilter(
+                    'relationships',
+                    relationshipService.getRelationshipStatus,
+                    relationshipService.importance.default,
+                );
+
+                await updateSingleFilter(
+                    'politics',
+                    politicsService.getPolitics,
+                    politicsService.importance.default,
+                );
+
+                await updateMultiFilter(
+                    'religion',
+                    religionService.getReligions,
+                    religionService.importance.default,
+                );
+
+                await updateSingleFilter(
+                    'drinking',
+                    drinkingService.getDrinking,
+                    drinkingService.importance.default,
+                );
+
+                await updateSingleFilter(
+                    'smoking',
+                    smokingService.getSmoking,
+                    smokingService.importance.default,
+                );
+
+                resolve();
+            } catch(e) {
+                console.error(e);
+                return reject(e);
+            }
+        });
+    }
+
     return new Promise(async (resolve, reject) => {
         if (!person) {
             return reject();
@@ -1963,56 +2025,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
         pipelineAdd = cacheService.startPipeline();
 
         if (prev_grid_token) {
-            await updateOnline();
-
-            await updateLocation();
-
-            await updateModes();
-
-            await updateNetworks();
-
-            await updateReviews();
-
-            await updateVerifications();
-
-            await updateGenders();
-
-            //personal
-            await updateMultiFilter(
-                'life_stages',
-                lifeStageService.getLifeStages,
-                lifeStageService.importance.default,
-            );
-
-            await updateMultiFilter(
-                'relationships',
-                relationshipService.getRelationshipStatus,
-                relationshipService.importance.default,
-            );
-
-            await updateSingleFilter(
-                'politics',
-                politicsService.getPolitics,
-                politicsService.importance.default,
-            );
-
-            await updateMultiFilter(
-                'religion',
-                religionService.getReligions,
-                religionService.importance.default,
-            );
-
-            await updateSingleFilter(
-                'drinking',
-                drinkingService.getDrinking,
-                drinkingService.importance.default,
-            );
-
-            await updateSingleFilter(
-                'smoking',
-                smokingService.getSmoking,
-                smokingService.importance.default,
-            );
+            await updateAll();
         } else {
             if (filter_token === 'online') {
                 await updateOnline();
