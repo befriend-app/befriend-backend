@@ -997,6 +997,7 @@ async function processButtonSection({
     sectionKey,
     tableKey,
     getOptionsFunc,
+    options,
     multiSelect = false,
     exclusive = null,
     minSelect = 1,
@@ -1008,7 +1009,9 @@ async function processButtonSection({
 
     try {
         // Get options using the provided function
-        const options = await getOptionsFunc();
+        if(!options) {
+            options = await getOptionsFunc();
+        }
 
         await helpers.processBatch(sectionKey, async (person) => {
             if (!helpers.isSectionActive(person, sectionKey)) {
@@ -1102,12 +1105,16 @@ async function processRelationshipStatus() {
 }
 
 async function processLanguages() {
+    let options = await meService.getLanguages({ options_only: true });
+
+    let languages = options.slice(0, 5);
+
     await processButtonSection({
         sectionKey: 'languages',
-        getOptionsFunc: () => meService.getLanguages({ options_only: true }),
+        options: languages,
         multiSelect: true,
         minSelect: 1,
-        maxSelect: 3,
+        maxSelect: 2,
         selectChance: 0.8,
     });
 }

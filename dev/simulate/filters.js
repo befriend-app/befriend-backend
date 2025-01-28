@@ -1830,9 +1830,11 @@ async function processLanguages() {
     await helpers.processBatch(async (person) => {
         if (Math.random() > 0.3) {
             //70% chance to set
-            //Select 1-4 random languages
+            //Select 1-2 random languages from top 5
 
-            let personOptions = shuffleFunc(options).slice(0, Math.floor(Math.random() * 4) + 1);
+            let languages = options.slice(0, 5);
+
+            let personOptions = shuffleFunc(languages).slice(0, Math.floor(Math.random() * 2) + 1);
 
             for (let option of personOptions) {
                 try {
