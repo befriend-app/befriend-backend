@@ -22,7 +22,11 @@ module.exports = {
             //personal
             // 'life_stages',
             // 'relationships'
-            'languages',
+            // 'languages',
+            // 'politics',
+            // 'religion',
+            // 'drinking',
+            // 'smoking',
 
             //interests
 
