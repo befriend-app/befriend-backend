@@ -29,6 +29,7 @@ const { minAge, maxAge } = require('./persons');
 const { token } = require('morgan');
 const { getActivityPlace } = require('./places');
 const { getGridLookup } = require('./grid');
+const { getLanguages } = require('./languages');
 
 const DEFAULT_DISTANCE_MILES = 20;
 const MAX_PERSONS_PROCESS = 1000;
@@ -126,6 +127,8 @@ function getMatches(me, params = {}) {
                 await filterSection('life_stages', getLifeStages, true);
 
                 await filterSection('relationships', getRelationshipStatus, true);
+
+                await filterSection('languages', getLanguages, true);
 
                 await filterSection('politics', getPolitics, false);
 

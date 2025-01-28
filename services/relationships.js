@@ -3,7 +3,7 @@ const dbService = require('./db');
 
 module.exports = {
     importance: {
-        default: 8,
+        default: 7,
     },
     data: null,
     getRelationshipStatus: function () {

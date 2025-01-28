@@ -5,6 +5,7 @@ const reviewsService = require('../services/reviews');
 
 const lifeStageService = require('./life_stages');
 const relationshipService = require('./relationships');
+const languagesService = require('../services/languages');
 const politicsService = require('./politics');
 const religionService = require('./religion');
 
@@ -465,7 +466,8 @@ const personalFiltersMap = {
         importance: {
             default: lifeStageService.importance.default,
             threshold: 8
-        }
+        },
+        is_multi: true
     },
     'relationships': {
         key: 'relationships',
@@ -473,7 +475,17 @@ const personalFiltersMap = {
         importance: {
             default: relationshipService.importance.default,
             threshold: 8
-        }
+        },
+        is_multi: true
+    },
+    'languages': {
+        key: 'languages',
+        options_fn: languagesService.getLanguages,
+        importance: {
+            default: languagesService.importance.default,
+            threshold: 8
+        },
+        is_multi: true
     },
     'politics': {
         key: 'politics',
@@ -481,7 +493,8 @@ const personalFiltersMap = {
         importance: {
             default: politicsService.importance.default,
             threshold: 8
-        }
+        },
+        is_single: true
     },
     'religion': {
         key: 'religion',
@@ -489,7 +502,8 @@ const personalFiltersMap = {
         importance: {
             default: religionService.importance.default,
             threshold: 8
-        }
+        },
+        is_multi: true
     },
     'drinking': {
         key: 'drinking',
@@ -497,7 +511,8 @@ const personalFiltersMap = {
         importance: {
             default: drinkingService.importance.default,
             threshold: 8
-        }
+        },
+        is_single: true
     },
     'smoking': {
         key: 'smoking',
@@ -505,7 +520,8 @@ const personalFiltersMap = {
         importance: {
             default: smokingService.importance.default,
             threshold: 8
-        }
+        },
+        is_single: true
     }
 };
 
@@ -1952,6 +1968,12 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                     relationshipService.importance.default,
                 );
 
+                await updateMultiFilter(
+                    'languages',
+                    languagesService.getLanguages,
+                    languagesService.importance.default,
+                );
+
                 await updateSingleFilter(
                     'politics',
                     politicsService.getPolitics,
@@ -2068,6 +2090,14 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                     'relationships',
                     relationshipService.getRelationshipStatus,
                     relationshipService.importance.default,
+                );
+            }
+
+            if (filter_token.startsWith('language')) {
+                await updateMultiFilter(
+                    'languages',
+                    languagesService.getLanguages,
+                    languagesService.importance.default,
                 );
             }
 
@@ -2278,6 +2308,17 @@ function batchUpdateGridSets(persons) {
                     await updateVerifications();
 
                     await updateGenders();
+
+                    for(let k in personalFiltersMap) {
+                        let data = personalFiltersMap[k];
+
+                        if(data.is_single) {
+                            await updateSingleFilter(data.key);
+                        } else if(data.is_multi) {
+                            await updateMultiFilter(data.key);
+                        }
+                    }
+
                     resolve();
                 });
             }
@@ -3113,8 +3154,14 @@ function batchUpdateGridSets(persons) {
             function updateMultiFilter(sectionKey) {
                 return new Promise(async (resolve, reject) => {
                     try {
+                        let section_data;
                         let section_options = sectionsOptionsLookup[sectionKey];
-                        let section_data = personObj.items[sectionKey];
+
+                        try {
+                            section_data = personObj.items[sectionKey] || {};
+                        } catch(e) {
+                            debugger;
+                        }
 
                         let filter = personObj.filters[sectionKey];
 
@@ -3170,7 +3217,7 @@ function batchUpdateGridSets(persons) {
                             );
                         }
 
-                        // Add person's section items to grid sets
+                        //selected person options
                         for (let key in section_data) {
                             let item = section_data[key];
 
@@ -3248,6 +3295,143 @@ function batchUpdateGridSets(persons) {
                 });
             }
 
+            function updateSingleFilter(sectionKey) {
+                return new Promise(async (resolve, reject) => {
+                    try {
+                        let section_options = sectionsOptionsLookup[sectionKey];
+                        let section_data = personObj.items[sectionKey] || {};
+
+                        let filter = personObj.filters[sectionKey];
+
+                        if (!filter) {
+                            //try key without s
+                            filter = personObj.filters[sectionKey.substring(0, sectionKey.length - 1)];
+                        }
+
+                        // Clear existing keys for this grid
+                        for (let option of section_options) {
+                            if (prev_grid_token) {
+                                delKeysSet.add(
+                                    cacheService.keys.persons_grid_set(
+                                        prev_grid_token,
+                                        `${sectionKey}:${option.token}`,
+                                    ),
+                                );
+                                delKeysSet.add(
+                                    cacheService.keys.persons_grid_exclude_send_receive(
+                                        prev_grid_token,
+                                        `${sectionKey}:${option.token}`,
+                                        'send',
+                                    ),
+                                );
+                                delKeysSet.add(
+                                    cacheService.keys.persons_grid_exclude_send_receive(
+                                        prev_grid_token,
+                                        `${sectionKey}:${option.token}`,
+                                        'receive',
+                                    ),
+                                );
+                            }
+
+                            delKeysSet.add(
+                                cacheService.keys.persons_grid_set(
+                                    grid_token,
+                                    `${sectionKey}:${option.token}`,
+                                ),
+                            );
+                            delKeysSet.add(
+                                cacheService.keys.persons_grid_exclude_send_receive(
+                                    grid_token,
+                                    `${sectionKey}:${option.token}`,
+                                    'send',
+                                ),
+                            );
+                            delKeysSet.add(
+                                cacheService.keys.persons_grid_exclude_send_receive(
+                                    grid_token,
+                                    `${sectionKey}:${option.token}`,
+                                    'receive',
+                                ),
+                            );
+                        }
+
+                        // Add person's current selection to grid sets
+                        if (Object.keys(section_data).length) {
+                            let item = Object.values(section_data)[0];
+
+                            if(!item.deleted) {
+                                addKeysSet.add(
+                                    cacheService.keys.persons_grid_set(
+                                        grid_token,
+                                        `${sectionKey}:${item.token}`,
+                                    ),
+                                );
+                            }
+                        }
+
+                        if (!filter?.is_active || filter.is_any) {
+                            return resolve();
+                        }
+
+                        let added_tokens = [];
+                        let is_high_importance = false;
+
+                        // Check selected filters for importance
+                        let filterItems = Object.values(filter.items);
+                        let default_importance = personalFiltersMap[sectionKey].importance.default;
+                        let importance_threshold = personalFiltersMap[sectionKey].importance.threshold;
+
+                        for (let item of filterItems) {
+                            if (item.is_active && !item.is_negative && !item.deleted) {
+                                added_tokens.push(item.token);
+
+                                let importance = isNumeric(item.importance)
+                                    ? item.importance
+                                    : default_importance;
+
+                                if (importance >= importance_threshold) {
+                                    is_high_importance = true;
+                                }
+                            }
+                        }
+
+                        // If high importance filters are set, exclude non-matching options
+                        if (is_high_importance) {
+                            for (let option of section_options) {
+                                if (!added_tokens.includes(option.token)) {
+                                    // Apply send exclusions
+                                    if (filter.is_send) {
+                                        addKeysSet.add(
+                                            cacheService.keys.persons_grid_exclude_send_receive(
+                                                grid_token,
+                                                `${sectionKey}:${option.token}`,
+                                                'send',
+                                            ),
+                                        );
+                                    }
+
+                                    // Apply receive exclusions
+                                    if (filter.is_receive) {
+                                        addKeysSet.add(
+                                            cacheService.keys.persons_grid_exclude_send_receive(
+                                                grid_token,
+                                                `${sectionKey}:${option.token}`,
+                                                'receive',
+                                            ),
+                                        );
+                                    }
+                                }
+                            }
+                        }
+
+                        resolve();
+                    } catch (e) {
+                        console.error(`Error in update ${sectionKey}:`, e);
+                        reject(e);
+                    }
+                });
+            }
+
             if (prev_grid_token) {
                 await updateAll();
             } else {
@@ -3280,10 +3464,18 @@ function batchUpdateGridSets(persons) {
                         await updateGenders();
                     }
 
-                    if(filter_token === 'life_stages') {
-                        await updateMultiFilter(
-                            filter_token
-                        );
+                    for(let k in personalFiltersMap) {
+                        let data = personalFiltersMap[k];
+
+                        if(filter_token === data.key) {
+                            if(data.is_single) {
+                                await updateSingleFilter(filter_token);
+                            } else if(data.is_multi) {
+                                await updateMultiFilter(filter_token);
+                            }
+
+                            break;
+                        }
                     }
                 }
             }
