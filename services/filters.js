@@ -2275,6 +2275,11 @@ function batchUpdateGridSets(persons) {
 
         for(let person_token in persons) {
             let personObj = persons[person_token];
+
+            if(!personObj.items) {
+                personObj.items = {};
+            }
+
             let grid_token = personObj.grid?.token;
 
             let prev_grid_token = personObj.prev_grid?.token;
@@ -3157,11 +3162,7 @@ function batchUpdateGridSets(persons) {
                         let section_data;
                         let section_options = sectionsOptionsLookup[sectionKey];
 
-                        try {
-                            section_data = personObj.items[sectionKey] || {};
-                        } catch(e) {
-                            debugger;
-                        }
+                        section_data = personObj.items[sectionKey] || {};
 
                         let filter = personObj.filters[sectionKey];
 
