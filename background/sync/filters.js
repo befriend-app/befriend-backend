@@ -1018,7 +1018,8 @@ function updateCacheMain(persons) {
                                 if(item_data) {
                                     item_extra = {
                                         token: item_data.token,
-                                        name: item_data.name
+                                        name: item_data.name,
+                                        [filter_map.column]: item[filter_map.column]
                                     }
 
                                     if(filter_map.table_key) {
