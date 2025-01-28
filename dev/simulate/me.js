@@ -410,6 +410,7 @@ async function processLocation() {
                         person_token: person.person_token,
                         lat: newLocation.lat,
                         lon: newLocation.lon,
+                        force_update: true
                     });
                 } catch (error) {
                     console.error(
@@ -1166,6 +1167,8 @@ async function main(qty) {
     }
 
     await getPersonsLogins();
+
+    return await processLocation();
 
     await processSections();
 

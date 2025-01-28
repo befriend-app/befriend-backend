@@ -137,6 +137,7 @@ module.exports = {
                 let person_token = req.body.person_token;
                 let lat = req.body.lat;
                 let lon = req.body.lon;
+                let force_update = req.body.force_update;
 
                 if (!isLatValid(lat) || !isLonValid(lon)) {
                     res.json(
@@ -223,7 +224,7 @@ module.exports = {
                 //person obj
                 await savePerson(person_token, me);
 
-                if (!prev_grid_token || prev_grid_token !== grid.token) {
+                if (!prev_grid_token || prev_grid_token !== grid.token || force_update) {
                     await updateGridSets(me, null, 'location', prev_grid_token);
                 }
 
