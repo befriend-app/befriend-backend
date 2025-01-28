@@ -20,7 +20,9 @@ module.exports = {
             // 'genders',
 
             //personal
-            'life_stages',
+            // 'life_stages',
+            'relationships'
+            // 'languages',
 
             //interests
 

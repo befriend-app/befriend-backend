@@ -4,7 +4,7 @@ loadScriptEnv();
 
 function main(is_me) {
     return new Promise(async (resolve, reject) => {
-        console.log('Delete: me');
+        console.log('Delete: me + filters');
 
         if (isProdApp()) {
             console.error('App env: [prod]', 'exiting');
