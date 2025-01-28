@@ -137,6 +137,8 @@ function main() {
                 await knex('sync').where('sync_process', systemKeys.sync.network.persons).delete();
                 await knex('sync').where('sync_process', systemKeys.sync.network.persons_modes).delete();
                 await knex('sync').where('sync_process', systemKeys.sync.network.persons_me).delete();
+                await knex('sync').where('sync_process', systemKeys.sync.network.persons_filters).delete();
+
             } catch (e) {
                 console.error(e);
             }

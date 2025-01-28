@@ -17,9 +17,10 @@ module.exports = {
 
             // 'distance',
             // 'ages',
-            'genders',
+            // 'genders',
 
             //personal
+            'life_stages',
 
             //interests
 
