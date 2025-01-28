@@ -1168,7 +1168,7 @@ async function main(qty) {
 
     await getPersonsLogins();
 
-    return await processLocation();
+    await processLocation();
 
     await processSections();
 

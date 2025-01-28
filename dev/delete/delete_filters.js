@@ -52,55 +52,7 @@ function main() {
 
             await cacheService.deleteKeys(keys);
 
-            let gridLookup = await getGridLookup();
-
-            let persons = await knex('persons')
-                .select('id', 'person_token', 'grid_id');
-
-            let bulk_delete_count = 50000;
-
-            for (let i = 0; i < persons.length; i += bulk_delete_count) {
-                let chunk = persons.slice(i, i + bulk_delete_count);
-
-                let grids = {};
-
-                for(let p of chunk) {
-                    let grid = gridLookup.byId[p.grid_id];
-
-                    if(grid) {
-                        grids[grid.token] = true;
-                    }
-                }
-
-                let pipeline = cacheService.startPipeline();
-
-                //clean up grid sets
-                for(let grid in grids) {
-                    let sorted_keys = await cacheService.getKeysWithPrefix(cacheService.keys.persons_grid_sorted(grid, ''));
-                    let set_keys = await cacheService.getKeysWithPrefix(cacheService.keys.persons_grid_set(grid, ''));
-                    let exclude_keys = await cacheService.getKeysWithPrefix(`persons:grid:${grid}:exclude`);
-                    let send_receive = await cacheService.getKeysWithPrefix(cacheService.keys.persons_grid_send_receive(grid, 'verifications'));
-                    let srem_keys = set_keys.concat(exclude_keys).concat(send_receive);
-
-                    let grid_rest_keys = await cacheService.getKeysWithPrefix(`persons:grid:${grid}`);
-
-                    for(let key of sorted_keys) {
-                        pipeline.del(key);
-                    }
-
-                    for(let key of srem_keys) {
-                        pipeline.del(key);
-                    }
-
-                    for(let key of grid_rest_keys) {
-                        if(!(sorted_keys.includes(key))) {
-                            pipeline.del(key);
-                        }
-                    }
-                }
-
-                await cacheService.execPipeline(pipeline);
-            }
+            await require('./delete_grid_sets').main();
 
             await knex('sync').where('sync_process', systemKeys.sync.network.persons_filters).delete();
         }

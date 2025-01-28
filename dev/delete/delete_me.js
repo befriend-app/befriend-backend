@@ -1,6 +1,6 @@
 const cacheService = require('../../services/cache');
-const db = require('../../services/db');
 const { loadScriptEnv, isProdApp } = require('../../services/shared');
+const { keys: systemKeys } = require('../../services/system');
 
 loadScriptEnv();
 
@@ -58,7 +58,6 @@ function main(is_me) {
                 'persons_tv_genres',
                 'persons_tv_shows',
                 'persons_sections',
-                'me_sections',
             ];
 
             for (let table of tables) {
@@ -67,19 +66,13 @@ function main(is_me) {
 
             let keys = await cacheService.getKeysWithPrefix(`persons:me`);
 
-            keys.push(cacheService.keys.me_sections);
-
             await cacheService.deleteKeys(keys);
 
-            await cacheService.deleteKeys(Object.values(cacheService.keys.sectionKeys));
-
-            await cacheService.deleteKeys(
-                await cacheService.getKeysWithPrefix(cacheService.keys.languages_country('')),
-            );
-        }
-
-        if (is_me) {
-            await require('../../setup/me/sections').main();
+            try {
+                await knex('sync').where('sync_process', systemKeys.sync.network.persons_me).delete();
+            } catch (e) {
+                console.error(e);
+            }
         }
 
         resolve();
