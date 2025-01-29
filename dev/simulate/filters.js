@@ -2121,8 +2121,6 @@ async function main(qty) {
 
     await getPersonsLogins();
 
-    return await processImportance();
-
     // notifications
     await processAvailability();
 
