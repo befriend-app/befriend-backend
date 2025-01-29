@@ -567,6 +567,32 @@ function getFilters() {
     });
 }
 
+function getParentFilter(mapping, filter) {
+    return new Promise(async (resolve, reject) => {
+        if(!mapping.parent_cache) {
+            return resolve(filter);
+        }
+
+        try {
+            let map = filterMappings[mapping.parent_cache];
+
+            let filters = await getFilters();
+
+            let parentFilter = filters.byToken[map.token];
+
+            if(parentFilter) {
+                return resolve(parentFilter);
+            }
+
+            resolve(filter);
+        } catch(e) {
+            console.error(e);
+            return reject(e);
+        }
+    });
+
+}
+
 function processFilterRows(rows) {
     return new Promise(async (resolve, reject) => {
         try {
@@ -3559,6 +3585,7 @@ module.exports = {
     filters: null,
     filterMappings,
     getFilters,
+    getParentFilter,
     getPersonFilters,
     getPersonFilterForKey,
     getInterestSections,

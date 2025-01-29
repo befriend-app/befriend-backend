@@ -19,7 +19,7 @@ const {
     getFilters,
     getPersonFilterForKey,
     getPersonFilters,
-    updateGridSets,
+    updateGridSets, getParentFilter,
 } = require('../services/filters');
 const { getActivityTypesMapping } = require('../services/activities');
 const { getLifeStages } = require('../services/life_stages');
@@ -2107,8 +2107,6 @@ function putMovies(req, res) {
 
             const { person_token, table_key, token, active, is_delete } = req.body;
 
-            let personFilterKey = 'movies';
-
             if (!token) {
                 res.json(
                     {
@@ -2180,6 +2178,7 @@ function putMovies(req, res) {
             }
 
             let filters = await getFilters();
+
             let filter = filters.byToken[mapping.token];
 
             if (!filter) {
@@ -2228,12 +2227,14 @@ function putMovies(req, res) {
                 return resolve();
             }
 
+            let parentFilter = await getParentFilter(mapping, filter);
+
             let conn = await dbService.conn();
             let person_filter_cache_key = cacheService.keys.person_filters(person_token);
-            let filterData = await getPersonFilterForKey(person, personFilterKey);
+            let filterData = await getPersonFilterForKey(person, parentFilter.token);
             let now = timeNow();
 
-            filterData = await ensureParentEntry(person, filter, filterData);
+            filterData = await ensureParentEntry(person, parentFilter, filterData);
 
             if (token === 'any') {
                 // Handle 'any' selection - clear all existing filters for table key
@@ -2312,7 +2313,7 @@ function putMovies(req, res) {
                 }
             }
 
-            await cacheService.hSet(person_filter_cache_key, personFilterKey, filterData);
+            await cacheService.hSet(person_filter_cache_key, parentFilter.token, filterData);
 
             res.json({
                 id: id,
@@ -2339,8 +2340,6 @@ function putTvShows(req, res) {
             let id;
 
             const { person_token, table_key, token, active, is_delete } = req.body;
-
-            let personFilterKey = 'tv_shows';
 
             if (!token) {
                 res.json(
@@ -2460,12 +2459,14 @@ function putTvShows(req, res) {
                 return resolve();
             }
 
+            let parentFilter = await getParentFilter(mapping, filter);
+
             let conn = await dbService.conn();
             let person_filter_cache_key = cacheService.keys.person_filters(person_token);
-            let filterData = await getPersonFilterForKey(person, personFilterKey);
+            let filterData = await getPersonFilterForKey(person, parentFilter.token);
             let now = timeNow();
 
-            filterData = await ensureParentEntry(person, filter, filterData);
+            filterData = await ensureParentEntry(person, parentFilter, filterData);
 
             if (token === 'any') {
                 // Handle 'any' selection - clear all existing filters for table key
@@ -2544,7 +2545,7 @@ function putTvShows(req, res) {
                 }
             }
 
-            await cacheService.hSet(person_filter_cache_key, personFilterKey, filterData);
+            await cacheService.hSet(person_filter_cache_key, parentFilter.token, filterData);
 
             res.json({
                 id: id,
@@ -2793,8 +2794,6 @@ function putWork(req, res) {
 
             const { person_token, table_key, token, active, is_delete } = req.body;
 
-            let personFilterKey = 'work';
-
             if (!token) {
                 res.json(
                     {
@@ -2896,12 +2895,14 @@ function putWork(req, res) {
                 return resolve();
             }
 
+            let parentFilter = await getParentFilter(mapping, filter);
+
             let conn = await dbService.conn();
             let person_filter_cache_key = cacheService.keys.person_filters(person_token);
-            let filterData = await getPersonFilterForKey(person, personFilterKey);
+            let filterData = await getPersonFilterForKey(person, parentFilter.token);
             let now = timeNow();
 
-            filterData = await ensureParentEntry(person, filter, filterData);
+            filterData = await ensureParentEntry(person, parentFilter, filterData);
 
             if (token === 'any') {
                 // Handle 'any' selection - clear all existing filters for table key
@@ -2980,7 +2981,7 @@ function putWork(req, res) {
                 }
             }
 
-            await cacheService.hSet(person_filter_cache_key, personFilterKey, filterData);
+            await cacheService.hSet(person_filter_cache_key, parentFilter.token, filterData);
 
             res.json({
                 id: id,
@@ -3006,8 +3007,6 @@ function putMusic(req, res) {
             let id;
 
             const { person_token, table_key, token, active, is_delete } = req.body;
-
-            let personFilterKey = 'music';
 
             if (!token) {
                 res.json(
@@ -3121,12 +3120,14 @@ function putMusic(req, res) {
                 return resolve();
             }
 
+            let parentFilter = await getParentFilter(mapping, filter);
+
             let conn = await dbService.conn();
             let person_filter_cache_key = cacheService.keys.person_filters(person_token);
-            let filterData = await getPersonFilterForKey(person, personFilterKey);
+            let filterData = await getPersonFilterForKey(person, parentFilter.token);
             let now = timeNow();
 
-            filterData = await ensureParentEntry(person, filter, filterData);
+            filterData = await ensureParentEntry(person, parentFilter, filterData);
 
             if (token === 'any') {
                 // Handle 'any' selection - clear all existing filters for table key
@@ -3205,7 +3206,7 @@ function putMusic(req, res) {
                 }
             }
 
-            await cacheService.hSet(person_filter_cache_key, personFilterKey, filterData);
+            await cacheService.hSet(person_filter_cache_key, parentFilter.token, filterData);
 
             res.json({
                 id: id,
@@ -3231,8 +3232,6 @@ function putSports(req, res) {
             let id;
 
             const { person_token, table_key, token, active, is_delete, secondary } = req.body;
-
-            let personFilterKey = 'sports';
 
             if (!token) {
                 res.json(
@@ -3318,6 +3317,7 @@ function putSports(req, res) {
                     },
                     400,
                 );
+
                 return resolve();
             }
 
@@ -3357,12 +3357,14 @@ function putSports(req, res) {
                 return resolve();
             }
 
+            let parentFilter = await getParentFilter(mapping, filter);
+
             let conn = await dbService.conn();
             let person_filter_cache_key = cacheService.keys.person_filters(person_token);
-            let filterData = await getPersonFilterForKey(person, personFilterKey);
+            let filterData = await getPersonFilterForKey(person, parentFilter.token);
             let now = timeNow();
 
-            filterData = await ensureParentEntry(person, filter, filterData);
+            filterData = await ensureParentEntry(person, parentFilter, filterData);
 
             if (token === 'any') {
                 // Handle 'any' selection - clear all existing filters for table key
@@ -3452,7 +3454,7 @@ function putSports(req, res) {
                 }
             }
 
-            await cacheService.hSet(person_filter_cache_key, personFilterKey, filterData);
+            await cacheService.hSet(person_filter_cache_key, parentFilter.token, filterData);
 
             res.json({
                 id: id,

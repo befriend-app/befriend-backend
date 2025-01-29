@@ -2412,10 +2412,6 @@ function organizePersonInterests(sections, myInterests, otherPersonInterests) {
         }
 
         for (let item_token in myMergedItems[section.token]) {
-            // if(item_token === 'mls') {
-            //     debugger;
-            // }
-
             let myItem = myMergedItems[section.token][item_token];
             let theirItem = theirMergedItems[section.token][item_token];
 
@@ -2433,6 +2429,10 @@ function organizePersonInterests(sections, myInterests, otherPersonInterests) {
                 theirItem.filter.is_active &&
                 !theirItem.filter.is_negative &&
                 !theirItem.filter.deleted;
+
+            // if(item_token === 'mls') {
+            //     debugger;
+            // }
 
             // Only proceed if there's at least one type of match
             if (!(isMyItem || isTheirItem || isMyFilter || isTheirFilter)) {
