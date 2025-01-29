@@ -289,7 +289,7 @@ function getMatches(me, params = {}) {
                     let person_sections = results[idx++];
 
                     try {
-                        person_sections = cacheService.parseHashData(person_sections[person_token]);
+                        person_sections = cacheService.parseHashData(person_sections);
 
                         for(let s in person_sections) {
                             if(s === 'active') {
