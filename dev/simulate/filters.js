@@ -221,82 +221,116 @@ async function processImportance() {
 
     let items = await conn('persons_filters');
 
-    let process_chunks = [];
+    let itemsByPerson = {};
 
-    for (let i = 0; i < items.length; i += parallelCount) {
-        process_chunks.push(items.slice(i, i + parallelCount));
+    for(let item of items) {
+        if (!itemsByPerson[item.person_id]) {
+            itemsByPerson[item.person_id] = [];
+        }
+
+        itemsByPerson[item.person_id].push(item);
     }
 
     let processed = 0;
+    let totalItems = items.length;
 
-    for (let chunk of process_chunks) {
+    let activePersons = {};
+
+    async function processItem(item) {
+        if (processed % 100 === 0) {
+            console.log({
+                importance: `${processed + 1}/${totalItems}`,
+            });
+        }
+        processed++;
+
+        try {
+            let item_has_col = importance_cols.some((col) => item[col]);
+
+            if (!item_has_col) {
+                return;
+            }
+
+            let filter = filters.byId[item.filter_id];
+
+            if (!filter) {
+                console.error('No filter found');
+                return;
+            }
+
+            let person = personsLookup[item.person_id];
+
+            if (!person) {
+                console.error('No person found');
+                return;
+            }
+
+            if (Math.random() > 0.3) {
+                let importance =
+                    Math.random() < 0.8
+                        ? Math.floor(Math.random() * 6) + 5
+                        : Math.floor(Math.random() * 5) + 2;
+
+                let section = filter.token;
+
+                if (section.startsWith('movie')) {
+                    section = 'movies';
+                } else if (section.startsWith('tv')) {
+                    section = 'tv_shows';
+                } else if (section.startsWith('sport')) {
+                    section = 'sports';
+                } else if (section.startsWith('music')) {
+                    section = 'music';
+                } else if (section.startsWith('work')) {
+                    section = 'work';
+                }
+
+                let r = await axios.put(
+                    joinPaths(process.env.APP_URL, '/filters/importance'),
+                    {
+                        login_token: person.login_token,
+                        person_token: person.person_token,
+                        filter_item_id: item.id,
+                        section: section,
+                        importance: Math.min(importance, 10),
+                    },
+                );
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async function processPersonItems(personId, items) {
+        if (activePersons[personId]) {
+            return;
+        }
+
+        activePersons[personId] = true;
+
+        try {
+            // Process all items for this person sequentially
+            for (const item of items) {
+                await processItem(item);
+            }
+        } finally {
+            delete activePersons[personId];
+        }
+    }
+
+    let personIds = Object.keys(itemsByPerson);
+    let personChunks = [];
+
+    for (let i = 0; i < personIds.length; i += parallelCount) {
+        personChunks.push(personIds.slice(i, i + parallelCount));
+    }
+
+    for (let personChunk of personChunks) {
         await Promise.all(
-            chunk.map(async (item) => {
-                if (processed % 100 === 0) {
-                    console.log({
-                        importance: `${processed + 1}/${items.length}`,
-                    });
-                }
-
-                processed++;
-
-                try {
-                    let item_has_col = importance_cols.some((col) => item[col]);
-
-                    if (!item_has_col) {
-                        return;
-                    }
-
-                    let filter = filters.byId[item.filter_id];
-
-                    if (!filter) {
-                        console.error('No filter found');
-                        return;
-                    }
-
-                    let person = personsLookup[item.person_id];
-
-                    if (!person) {
-                        console.error('No person found');
-                        return;
-                    }
-
-                    if (Math.random() > 0.3) {
-                        //70% chance of setting importance
-                        let importance =
-                            Math.random() < 0.8 //skewed towards higher importance
-                                ? Math.floor(Math.random() * 6) + 5
-                                : Math.floor(Math.random() * 5) + 2;
-
-                        let section = filter.token;
-
-                        if (section.startsWith('movie')) {
-                            section = 'movies';
-                        } else if (section.startsWith('tv')) {
-                            section = 'tv_shows';
-                        } else if (section.startsWith('sport')) {
-                            section = 'sports';
-                        } else if (section.startsWith('music')) {
-                            section = 'music';
-                        } else if (section.startsWith('work')) {
-                            section = 'work';
-                        }
-
-                        let r = await axios.put(
-                            joinPaths(process.env.APP_URL, '/filters/importance'),
-                            {
-                                login_token: person.login_token,
-                                person_token: person.person_token,
-                                filter_item_id: item.id,
-                                section: section,
-                                importance: Math.min(importance, 10),
-                            },
-                        );
-                    }
-                } catch (e) {
-                    console.error(e);
-                }
-            }),
+            personChunk.map(async (personId) => {
+                let personItems = itemsByPerson[personId];
+                await processPersonItems(personId, personItems);
+            })
         );
     }
 }
@@ -2086,6 +2120,8 @@ async function main(qty) {
     }
 
     await getPersonsLogins();
+
+    return await processImportance();
 
     // notifications
     await processAvailability();
