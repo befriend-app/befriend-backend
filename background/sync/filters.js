@@ -725,6 +725,8 @@ function processNetworks(persons, updated_persons_networks) {
                             entry.id = existingItem.id;
                             batch_update.push(entry);
                             existingDataLookup[person_token][item.token] = entry;
+
+                            updated_persons_networks[person_token] = entry.person_id;
                         }
                     } else {
                         entry.created = timeNow();
@@ -735,6 +737,8 @@ function processNetworks(persons, updated_persons_networks) {
                         }
 
                         existingDataLookup[person_token][item.token] = entry;
+
+                        updated_persons_networks[person_token] = entry.person_id;
                     }
                 }
             }
