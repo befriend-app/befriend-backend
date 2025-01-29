@@ -757,6 +757,24 @@ function processNetworks(persons, updated_persons_networks) {
 }
 
 function updateCacheMain(persons) {
+    function getParentItem(person, parent_key) {
+        let section = person[parent_key];
+
+        if(!section) {
+            return null;
+        }
+
+        for(let k in section) {
+            let item = section[k];
+
+            if(item.is_parent) {
+                return item;
+            }
+        }
+
+        return null;
+    }
+
     return new Promise(async (resolve, reject) => {
         try {
             if(!Object.keys(persons).length) {
@@ -768,7 +786,6 @@ function updateCacheMain(persons) {
             let conn = await dbService.conn();
 
             let filtersLookup = await getFilters();
-            let gendersLookup = await getGendersLookup();
 
             // organize cache
             let persons_ids = {};
@@ -928,24 +945,29 @@ function updateCacheMain(persons) {
 
                     for(let token in rows) {
                         let item = rows[token];
+                        let parent_item = item;
 
                         let filter = filtersLookup.byId[item.filter_id];
                         let filterInfo = getMappingInfo(filter.token);
                         let filter_key = filterInfo?.parent_cache || filter.token;
 
-                        if(item.is_parent) {
+                        if(filterInfo?.parent_cache && filterInfo.parent_cache !== filter.token) {
+                            parent_item = getParentItem(organized_update[person_token], filterInfo.parent_cache);
+                        }
+
+                        if(parent_item.is_parent) {
                             persons_parent_tracker[person_token][filter_key] = true;
 
                             persons_cache[person_token][filter_key] = {
-                                id: item.id,
-                                is_active: item.is_active ? 1 : 0,
-                                is_any: item.is_any ? 1 : 0,
-                                is_send: item.is_send ? 1 : 0,
-                                is_receive: item.is_receive ? 1 : 0,
-                                filter_value: item.filter_value,
-                                filter_value_min: item.filter_value_min,
-                                filter_value_max: item.filter_value_max,
-                                updated: item.updated,
+                                id: parent_item.id,
+                                is_active: parent_item.is_active ? 1 : 0,
+                                is_any: parent_item.is_any ? 1 : 0,
+                                is_send: parent_item.is_send ? 1 : 0,
+                                is_receive: parent_item.is_receive ? 1 : 0,
+                                filter_value: parent_item.filter_value,
+                                filter_value_min: parent_item.filter_value_min,
+                                filter_value_max: parent_item.filter_value_max,
+                                updated: parent_item.updated,
                                 items: {}
                             };
                         }
