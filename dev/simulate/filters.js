@@ -102,7 +102,7 @@ async function getPersonsLogins() {
             chunk.map(async (person) => {
                 if (processed % 100 === 0) {
                     console.log({
-                        processing: `${processed + 1}/${persons.length}`,
+                        logins: `${processed + 1}/${persons.length}`,
                     });
                 }
 
@@ -234,7 +234,7 @@ async function processImportance() {
             chunk.map(async (item) => {
                 if (processed % 100 === 0) {
                     console.log({
-                        processing: `${processed + 1}/${items.length}`,
+                        importance: `${processed + 1}/${items.length}`,
                     });
                 }
 
