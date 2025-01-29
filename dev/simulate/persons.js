@@ -20,11 +20,17 @@ loadScriptEnv();
 
 let args = yargs.argv;
 
-let num_persons = 1000;
+let numPersons = 1000;
 
-if (args._ && args._.length) {
-    num_persons = args._[0];
+if(args.n) {
+    numPersons = args.n;
+} else if (args._ && args._.length) {
+    numPersons = args._[0];
 }
+
+console.log({
+    numPersons,
+});
 
 let max_request_count = 1000;
 
@@ -34,7 +40,7 @@ async function addPersons() {
     let conn = await dbService.conn();
 
     let current_count = 0;
-    max_request_count = Math.min(num_persons, max_request_count);
+    max_request_count = Math.min(numPersons, max_request_count);
 
     let genders = await conn('genders');
 
@@ -48,14 +54,14 @@ async function addPersons() {
         let prev_highest_id = (await conn('persons').orderBy('id', 'desc').first())?.id || null;
 
         let r = await axios.get(
-            `https://randomuser.me/api/?results=${Math.min(num_persons, max_request_count)}`,
+            `https://randomuser.me/api/?results=${Math.min(numPersons, max_request_count)}`,
         );
 
         let results = r.data.results;
 
         let person_password = await encryptionService.hash('password');
 
-        while (current_count < num_persons) {
+        while (current_count < numPersons) {
             let batch_insert = [];
             let person_network_insert = [];
 
@@ -184,7 +190,7 @@ async function updateAge() {
 
 async function main(qty) {
     if(qty) {
-        num_persons = qty;
+        numPersons = qty;
     }
 
     self_network = await getNetworkSelf();

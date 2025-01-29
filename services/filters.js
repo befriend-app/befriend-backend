@@ -3186,7 +3186,7 @@ function batchUpdateGridSets(persons) {
                 return new Promise(async (resolve, reject) => {
                     try {
                         let section_data;
-                        let section_options = sectionsOptionsLookup[sectionKey];
+                        let section_options = sectionsOptionsLookup[sectionKey] || [];
 
                         section_data = personObj.items[sectionKey] || {};
 
@@ -3325,7 +3325,7 @@ function batchUpdateGridSets(persons) {
             function updateSingleFilter(sectionKey) {
                 return new Promise(async (resolve, reject) => {
                     try {
-                        let section_options = sectionsOptionsLookup[sectionKey];
+                        let section_options = sectionsOptionsLookup[sectionKey] || [];
                         let section_data = personObj.items[sectionKey] || {};
 
                         let filter = personObj.filters[sectionKey];

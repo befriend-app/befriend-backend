@@ -26,12 +26,23 @@ let conn, self_network, persons;
 
 let args = yargs.argv;
 
-let num_persons = 1000;
+let numPersons = 1000;
 let parallelCount = 20;
 
-if (args._ && args._.length) {
-    num_persons = args._[0];
+if(args.n) {
+    numPersons = args.n;
+} else if (args._ && args._.length) {
+    numPersons = args._[0];
 }
+
+if(args.p) {
+    parallelCount = args.p;
+}
+
+console.log({
+    numPersons,
+    parallelCount
+});
 
 let chunks = [];
 
@@ -163,7 +174,7 @@ async function getPersonsLogins() {
 
     let ts = timeNow();
 
-    persons = await conn('persons').where('network_id', self_network.id).limit(num_persons);
+    persons = await conn('persons').where('network_id', self_network.id).limit(numPersons);
 
     let persons_logins = await conn('persons_login_tokens').whereIn(
         'person_id',
@@ -1030,12 +1041,14 @@ async function processButtonSection({
                 ? Math.floor(Math.random() * (maxSelect - minSelect + 1)) + minSelect
                 : 1;
 
-            // Only proceed with chance of selection
-            if (Math.random() > selectChance) return;
+            if (Math.random() > selectChance) {
+                return;
+            }
 
             // If exclusive option exists and is selected (30% chance)
             if (exclusive && Math.random() > 0.7) {
-                const exclusiveOption = options.find((opt) => opt.token === exclusive);
+                let exclusiveOption = options.find((opt) => opt.token === exclusive);
+
                 if (exclusiveOption) {
                     await axios.post(joinPaths(process.env.APP_URL, '/me/sections/items/select'), {
                         login_token: person.login_token,
@@ -1046,6 +1059,7 @@ async function processButtonSection({
                         is_select: true,
                     });
                 }
+
                 return;
             }
 
@@ -1160,7 +1174,7 @@ async function processSmoking() {
 
 async function main(qty) {
     if(qty) {
-        num_persons = qty;
+        numPersons = qty;
     }
 
     conn = await dbService.conn();

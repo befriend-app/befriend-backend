@@ -911,23 +911,26 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
             }
 
             // Get person and validate section
-            const person = await getPerson(person_token);
+            let person = await getPerson(person_token);
+
             if (!person) {
                 return reject('Person not found');
             }
 
             const sectionData = sectionsData[section_key];
+
             if (sectionData?.type?.name !== 'buttons') {
                 return reject('Invalid section type');
             }
 
-            const userTableData = sectionData.tables[table_key]?.user;
+            let userTableData = sectionData.tables[table_key]?.user;
+
             if (!userTableData) {
                 return reject('Invalid table configuration');
             }
 
             // Validate item token exists in options
-            const options = await module.exports[sectionData.functions.data]({
+            let options = await module.exports[sectionData.functions.data]({
                 options_only: true,
             });
 
@@ -935,17 +938,17 @@ function selectSectionOptionItem(person_token, section_key, table_key, item_toke
                 return reject('Options not found');
             }
 
-            const itemOption = options.find((option) => option.token === item_token);
+            let itemOption = options.find((option) => option.token === item_token);
 
             if (!itemOption) {
                 return reject('Invalid item token');
             }
 
             // Setup common variables
-            const conn = await dbService.conn();
-            const now = timeNow();
-            const person_id_col = userTableData?.cols?.person_id || 'person_id';
-            const cache_key = cacheService.keys.person_sections(person.person_token);
+            let conn = await dbService.conn();
+            let now = timeNow();
+            let person_id_col = userTableData?.cols?.person_id || 'person_id';
+            let cache_key = cacheService.keys.person_sections(person.person_token);
             let cache_data = (await cacheService.hGetItem(cache_key, section_key)) || {};
             let response_data = null;
 

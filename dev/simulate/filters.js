@@ -17,12 +17,23 @@ let conn, self_network, persons;
 
 let args = yargs.argv;
 
-let num_persons = 1000;
+let numPersons = 1000;
 let parallelCount = 30;
 
-if (args._ && args._.length) {
-    num_persons = args._[0];
+if(args.n) {
+    numPersons = args.n;
+} else if (args._ && args._.length) {
+    numPersons = args._[0];
 }
+
+if(args.p) {
+    parallelCount = args.p;
+}
+
+console.log({
+    numPersons,
+    parallelCount
+});
 
 let chunks = [];
 let personsLookup = {};
@@ -79,7 +90,7 @@ async function getPersonsLogins() {
 
     let ts = timeNow();
 
-    persons = await conn('persons').where('network_id', self_network.id).limit(num_persons);
+    persons = await conn('persons').where('network_id', self_network.id).limit(numPersons);
 
     let persons_logins = await conn('persons_login_tokens').whereIn(
         'person_id',
@@ -2106,7 +2117,7 @@ async function processSmoking() {
 
 async function main(qty) {
     if(qty) {
-        num_persons = qty;
+        numPersons = qty;
     }
 
     conn = await dbService.conn();
