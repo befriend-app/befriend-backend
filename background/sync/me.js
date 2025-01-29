@@ -72,6 +72,8 @@ function processMe(persons) {
             let duplicateTracker = {};
             let lookup_pipelines = {};
 
+            schemaItemsLookup.persons_sections = await getAllSections(true);
+
             for(let person of persons) {
                 for(let section in person.me) {
                     if(!(schemaItemsLookup[section])) {
@@ -106,8 +108,6 @@ function processMe(persons) {
                     }
                 }
             }
-
-            schemaItemsLookup.persons_sections = await getAllSections(true);
 
             for(let section in lookup_pipelines) {
                 try {
@@ -152,11 +152,42 @@ function processMe(persons) {
             }
 
             for (let batch of batches) {
-                function organizeItemsCache(table, items) {
-                    if(table === 'persons_sections') {
-                        return;
-                    }
+                function organizeSectionsCache(items) {
+                    for(let id in items) {
+                        let item = items[id];
 
+                        if(item.deleted) {
+                            continue;
+                        }
+
+                        let section = schemaItemsLookup.persons_sections.byId[item.section_id];
+
+                        if(!section) {
+                            console.warn("No section item");
+                            continue;
+                        }
+
+                        let person_token = personsIdTokenMap[item.person_id];
+                        let person_cache = persons_cache[person_token];
+
+                        if(!(person_cache.active)) {
+                            person_cache.active = {};
+                        }
+
+                        if(!person_cache.active[section.token]) {
+                            person_cache.active[section.token] = {
+                                id: item.id,
+                                person_id: item.person_id,
+                                section_id: item.section_id,
+                                position: item.position,
+                                updated: item.updated,
+                                deleted: item.deleted
+                            }
+                        }
+                    }
+                }
+
+                function organizeItemsCache(table, items) {
                     //prepare for cache
                     let tableInfo = getTableInfo(table);
 
@@ -472,7 +503,11 @@ function processMe(persons) {
                         }
                     }
 
-                    organizeItemsCache(table, Object.values(items_prepared));
+                    if(table === 'persons_sections') {
+                        organizeSectionsCache(items_prepared);
+                    } else {
+                        organizeItemsCache(table, Object.values(items_prepared));
+                    }
                 }
 
                 let personsGrids = {};
