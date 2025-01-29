@@ -255,6 +255,7 @@ function getMatches(me, params = {}) {
                     }
 
                     personsInterests[person_token] = {
+                        person_token,
                         sections: {},
                         filters: {},
                         matches: {
@@ -2411,6 +2412,10 @@ function organizePersonInterests(sections, myInterests, otherPersonInterests) {
         }
 
         for (let item_token in myMergedItems[section.token]) {
+            // if(item_token === 'mls') {
+            //     debugger;
+            // }
+
             let myItem = myMergedItems[section.token][item_token];
             let theirItem = theirMergedItems[section.token][item_token];
 
