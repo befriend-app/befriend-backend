@@ -249,6 +249,11 @@ function processMain(persons, updated_persons_filters) {
                 return resolve();
             }
 
+            if(persons.length > 50000) {
+                console.error("Response too large, check network data");
+                return resolve();
+            }
+
             let batch_insert = [];
             let batch_update = [];
 
@@ -527,6 +532,11 @@ function processAvailability(persons, updated_persons_availability) {
                 return resolve();
             }
 
+            if(persons.length > 50000) {
+                console.error("Response too large, check network data");
+                return resolve();
+            }
+
             let batch_insert = [];
             let batch_update = [];
 
@@ -644,6 +654,11 @@ function processNetworks(persons, updated_persons_networks) {
     return new Promise(async (resolve, reject) => {
         try {
             if(!persons || !Object.keys(persons).length) {
+                return resolve();
+            }
+
+            if(persons.length > 50000) {
+                console.error("Response too large, check network data");
                 return resolve();
             }
 

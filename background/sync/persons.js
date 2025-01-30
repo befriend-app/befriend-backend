@@ -87,12 +87,16 @@ function processPersons(network_id, persons) {
             return resolve();
         }
 
+        if(persons.length > 50000) {
+            console.error("Response too large, check network data");
+            return resolve();
+        }
+
         try {
             let conn = await dbService.conn();
 
             let gridLookup = await getGridLookup();
             let gendersLookup = await getGendersLookup();
-            let networksLookup = await getNetworksLookup();
 
             //batch process/insert/update
             let batches = [];
@@ -323,6 +327,11 @@ function reviewsChanged(newData, oldData) {
 function processPersonsModes(network_id, persons_modes) {
     return new Promise(async (resolve, reject) => {
         if(!persons_modes?.length) {
+            return resolve();
+        }
+
+        if(persons_modes.length > 50000) {
+            console.error("Response too large, check network data");
             return resolve();
         }
 

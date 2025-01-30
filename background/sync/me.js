@@ -59,22 +59,59 @@ function getTableInfo(table_name) {
     }
 }
 
-function processMe(persons) {
+function processMe(network_id, persons) {
     return new Promise(async (resolve, reject) => {
         if (!persons?.length) {
+            return resolve();
+        }
+
+        if(persons.length > 50000) {
+            console.error("Response too large, check network data");
             return resolve();
         }
 
         try {
             let conn = await dbService.conn();
 
+            let batchPersonTokens = [];
             let schemaItemsLookup = {};
             let duplicateTracker = {};
-            let lookup_pipelines = {};
+            let lookupPipelines = {};
+            let personsDict = {};
+            let invalidPersons = {};
+            let validPersons = [];
 
             schemaItemsLookup.persons_sections = await getAllSections(true);
 
+            //validate provided persons
             for(let person of persons) {
+                batchPersonTokens.push(person.person_token);
+                personsDict[person.person_token] = person;
+            }
+
+            let existingNetworksPersons = await conn('networks_persons AS np')
+                .join('persons AS p', 'p.id', '=', 'np.person_id')
+                .where('network_id', network_id)
+                .whereIn('person_token', batchPersonTokens)
+                .select('p.id', 'p.person_token', 'p.updated');
+
+            let personsIdTokenMap = {};
+            let personsLookup = {};
+
+            for(let person of existingNetworksPersons) {
+                personsLookup[person.person_token] = person;
+                personsIdTokenMap[person.id] = person.person_token;
+            }
+
+            for(let person of persons) {
+                if(personsLookup[person.person_token]) {
+                    validPersons.push(personsDict[person.person_token]);
+                } else {
+                    invalidPersons[person.person_token] = true;
+                }
+            }
+
+            for(let person of validPersons) {
                 for(let section in person.me) {
                     if(!(schemaItemsLookup[section])) {
                         schemaItemsLookup[section] = {
@@ -84,7 +121,7 @@ function processMe(persons) {
 
                         duplicateTracker[section] = {};
 
-                        lookup_pipelines[section] = cacheService.startPipeline();
+                        lookupPipelines[section] = cacheService.startPipeline();
                     }
 
                     let section_table = getTableInfo(section);
@@ -101,17 +138,17 @@ function processMe(persons) {
                         duplicateTracker[section][token] = true;
 
                         if(section_table.cache_key) {
-                            lookup_pipelines[section].hGet(section_table.cache_key, item.token);
+                            lookupPipelines[section].hGet(section_table.cache_key, item.token);
                         } else if(section_table.cache_key_hash) {
-                            lookup_pipelines[section].hGet(section_table.cache_key_hash(item.hash_token), item.token);
+                            lookupPipelines[section].hGet(section_table.cache_key_hash(item.hash_token), item.token);
                         }
                     }
                 }
             }
 
-            for(let section in lookup_pipelines) {
+            for(let section in lookupPipelines) {
                 try {
-                     let results = await cacheService.execPipeline(lookup_pipelines[section]);
+                     let results = await cacheService.execPipeline(lookupPipelines[section]);
 
                      for(let result of results) {
                          result = JSON.parse(result);
@@ -147,8 +184,8 @@ function processMe(persons) {
             //batch process/insert/update
             let batches = [];
 
-            for (let i = 0; i < persons.length; i += batch_process) {
-                batches.push(persons.slice(i, i + batch_process));
+            for (let i = 0; i < validPersons.length; i += batch_process) {
+                batches.push(validPersons.slice(i, i + batch_process));
             }
 
             for (let batch of batches) {
@@ -255,21 +292,11 @@ function processMe(persons) {
                     }
                 }
 
-                const batchPersonTokens = batch.map(p => p.person_token);
+                let existingPersonsIds = [];
 
-                const existingPersons = await conn('persons')
-                    .whereIn('person_token', batchPersonTokens)
-                    .select('id', 'person_token', 'updated');
-
-                const existingPersonsIds = existingPersons.map(p => p.id);
-
-                //lookup maps
-                let personsIdTokenMap = {};
-                let personsLookup = {};
-
-                for (const person of existingPersons) {
-                    personsLookup[person.person_token] = person;
-                    personsIdTokenMap[person.id] = person.person_token;
+                for(let p of batch) {
+                    let person = personsLookup[p.person_token];
+                    existingPersonsIds.push(person.id);
                 }
 
                 //Existing data for all tables
@@ -635,7 +662,7 @@ function syncMe() {
                         continue;
                     }
 
-                    await processMe(response.data.persons);
+                    await processMe(network.id, response.data.persons);
 
                     //handle paging, ~10,000 results
                     while (response.data.pagination_updated) {
@@ -654,7 +681,7 @@ function syncMe() {
                                 break;
                             }
 
-                            await processMe(response.data.persons);
+                            await processMe(network.id, response.data.persons);
                         } catch (e) {
                             console.error(e);
                             skipSaveTimestamps = true;
