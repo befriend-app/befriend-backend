@@ -129,7 +129,7 @@ function syncFilters() {
                         continue;
                     }
 
-                    await processFilters(response.data.filters, updated_persons);
+                    await processFilters(network.id, response.data.filters, updated_persons);
 
                     while (response.data.pagination_updated) {
                         try {
@@ -147,7 +147,7 @@ function syncFilters() {
                                 break;
                             }
 
-                            await processFilters(response.data.filters, updated_persons);
+                            await processFilters(network.id, response.data.filters, updated_persons);
                         } catch (e) {
                             console.error(e);
                             skipSaveTimestamps = true;
@@ -211,7 +211,7 @@ function syncFilters() {
     });
 }
 
-function processFilters(persons_filters, updated_persons) {
+function processFilters(network_id, persons_filters, updated_persons) {
     return new Promise(async (resolve, reject) => {
         try {
             let hasPersons = false;
@@ -226,6 +226,50 @@ function processFilters(persons_filters, updated_persons) {
 
             if(!hasPersons) {
                 return resolve();
+            }
+
+            //ensure this network has permission to provide updated data for these persons
+            let conn = await dbService.conn();
+            let batchPersonTokens = new Set();
+
+            for (let type in persons_filters) {
+                for (let person_token in persons_filters[type]) {
+                    batchPersonTokens.add(person_token);
+                }
+            }
+
+            let validNetworkPersons = await conn('networks_persons AS np')
+                .join('persons AS p', 'p.id', '=', 'np.person_id')
+                .where('network_id', network_id)
+                .where('np.is_active', true)
+                .whereIn('person_token', Array.from(batchPersonTokens))
+                .whereNull('np.deleted')
+                .select('p.person_token');
+
+            let validPersonsLookup = {};
+
+            for(let vnp of validNetworkPersons) {
+                validPersonsLookup[vnp.person_token] = true;
+            }
+
+            let invalidPersons = {};
+
+            for (let type in persons_filters) {
+                let filteredPersons = {};
+
+                for (let person_token in persons_filters[type]) {
+                    if (person_token in validPersonsLookup) {
+                        filteredPersons[person_token] = persons_filters[type][person_token];
+                    } else {
+                        if(!invalidPersons[person_token]) {
+                            invalidPersons[person_token] = [];
+                        }
+
+                        invalidPersons[person_token].push(type);
+                    }
+                }
+
+                persons_filters[type] = filteredPersons;
             }
 
             await processMain(persons_filters.filters, updated_persons.filters);
