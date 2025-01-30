@@ -6,6 +6,47 @@ const { getGendersLookup } = require('../genders');
 const { getKidsAgeLookup } = require('../modes');
 const { results_limit, data_since_ms_extra } = require('./common');
 
+function createPerson(network, inputs) {
+    return new Promise(async (resolve, reject) => {
+        try {
+             let conn = await dbService.conn();
+
+             let person_check = await conn('persons')
+                 .where('person_token', inputs.person_token)
+                 .first();
+
+             if(person_check) {
+                 return reject({
+                     message: 'Person already known'
+                 });
+             }
+
+             let [id] = await conn('persons')
+                 .insert({
+                     is_person_known: true,
+                     registration_network_id: network.id,
+                     person_token: inputs.person_token,
+                     created: timeNow(),
+                     updated: inputs.updated - 1 //this ensures sync will work
+                 });
+
+             await conn('networks_persons')
+                 .insert({
+                     network_id: network.id,
+                     person_id: id,
+                     is_active: true,
+                     created: timeNow(),
+                     updated: timeNow()
+                 });
+
+            resolve();
+        } catch(e) {
+            console.error(e);
+            return reject(e);
+        }
+    });
+}
+
 function syncPersons (inputs) {
     return new Promise(async (resolve, reject) => {
         //returns persons on this network
@@ -298,6 +339,7 @@ function syncModes(inputs) {
 }
 
 module.exports = {
+    createPerson,
     syncPersons,
     syncModes
 };

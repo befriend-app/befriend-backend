@@ -5,15 +5,17 @@
 exports.up = async function(knex) {
     await knex.schema.dropTableIfExists('persons_networks');
 
+    await knex.schema.dropTableIfExists('networks_persons');
+
     await knex.schema.createTable('networks_persons', (table) => {
         table.bigIncrements('id').unsigned().primary();
         table.integer('network_id').unsigned().notNullable();
         table.bigInteger('person_id').unsigned().notNullable();
         table.boolean('is_active').defaultTo(true).notNullable();
 
-        table.integer('created').notNullable();
-        table.integer('updated').notNullable();
-        table.integer('deleted').nullable();
+        table.bigInteger('created').notNullable();
+        table.bigInteger('updated').notNullable();
+        table.bigInteger('deleted').nullable();
 
         table.index('network_id');
         table.index('person_id');
@@ -33,6 +35,7 @@ exports.up = async function(knex) {
 
     await knex.schema.alterTable('persons', (table) => {
         table.integer('registration_network_id').unsigned().notNullable().after('id').comment('First network person registered with');
+        table.boolean('is_person_known').defaultTo(false).notNullable().after('person_token');
 
         table.foreign('registration_network_id').references('id').inTable('networks');
     });
@@ -70,5 +73,6 @@ exports.down = async function(knex) {
     await knex.schema.alterTable('persons', (table) => {
         table.dropForeign('registration_network_id');
         table.dropColumn('registration_network_id');
+        table.dropColumn('is_person_known');
     });
 };

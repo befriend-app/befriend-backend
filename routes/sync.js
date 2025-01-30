@@ -4,6 +4,18 @@ const syncController = require('../controllers/sync');
 
 router.use(require('../middleware/sync'));
 
+router.post('/persons', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await syncController.createPerson(req, res);
+        } catch (e) {
+            console.error(e);
+        }
+
+        resolve();
+    });
+});
+
 router.get('/persons', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
