@@ -69,7 +69,9 @@ function syncFilters (inputs) {
                     'p.person_token',
                     'pf.*'
                 )
-                .where('p.network_id', my_network.id)
+                .where('np.network_id', my_network.id)
+                .where('np.is_active', true)
+                .join('networks_persons AS np', 'np.person_id', '=', 'p.id')
                 .join('persons_filters AS pf', 'pf.person_id', '=', 'p.id')
                 .orderBy('pf.updated', 'desc')
                 .limit(results_limit);
@@ -90,7 +92,9 @@ function syncFilters (inputs) {
                     'pa.updated',
                     'pa.deleted',
                 )
-                .where('p.network_id', my_network.id)
+                .where('np.network_id', my_network.id)
+                .where('np.is_active', true)
+                .join('networks_persons AS np', 'np.person_id', '=', 'p.id')
                 .join('persons_availability AS pa', 'pa.person_id', '=', 'p.id')
                 .orderBy('pa.updated', 'desc')
                 .limit(results_limit);
@@ -107,7 +111,9 @@ function syncFilters (inputs) {
                     'pfn.updated',
                     'pfn.deleted',
                 )
-                .where('p.network_id', my_network.id)
+                .where('np.network_id', my_network.id)
+                .where('np.is_active', true)
+                .join('networks_persons AS np', 'np.person_id', '=', 'p.id')
                 .join('persons_filters_networks AS pfn', 'pfn.person_id', '=', 'p.id')
                 .orderBy('pfn.updated', 'desc')
                 .limit(results_limit);

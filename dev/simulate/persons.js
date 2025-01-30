@@ -63,7 +63,7 @@ async function addPersons() {
 
         while (current_count < numPersons) {
             let batch_insert = [];
-            let person_network_insert = [];
+            let networks_persons_insert = [];
 
             for (let i = 0; i < results.length; i++) {
                 let id = i + 1 + current_count;
@@ -86,8 +86,8 @@ async function addPersons() {
                 // let lon = getRandomInRange(-180, 180, 4);
 
                 let person_insert = {
+                    registration_network_id: self_network.id,
                     person_token: generateToken(),
-                    network_id: self_network.id,
                     first_name: person.name.first,
                     last_name: person.name.last,
                     gender_id: gender_id,
@@ -112,7 +112,7 @@ async function addPersons() {
             await batchInsert('persons', batch_insert, true);
 
             for (let person of batch_insert) {
-                person_network_insert.push({
+                networks_persons_insert.push({
                     person_id: person.id,
                     network_id: self_network.id,
                     created: timeNow(),
@@ -121,7 +121,7 @@ async function addPersons() {
             }
 
             try {
-                await batchInsert('persons_networks', person_network_insert);
+                await batchInsert('networks_persons', networks_persons_insert);
             } catch (e) {
                 console.error(e);
             }
@@ -145,9 +145,9 @@ function updatePersonsCount() {
             let conn = await dbService.conn();
 
             let persons = await conn('persons')
-                .where('network_id', network_self.id)
+                .where('registration_network_id', network_self.id)
                 .whereNull('deleted')
-                .select('id', 'network_id');
+                .select('id', 'registration_network_id');
 
             await conn('networks').where('id', network_self.id).update({
                 persons_count: persons.length,

@@ -38,9 +38,11 @@ function syncPersons (inputs) {
             let data_since_timestamp_w_extra = null;
 
             //results in reverse order
-            let persons_qry = conn('persons')
-                .where('network_id', my_network.id) //my network's persons
-                .orderBy('id', 'desc')
+            let persons_qry = conn('persons AS p')
+                .join('networks_persons AS np', 'np.person_id', '=', 'p.id')
+                .where('np.network_id', my_network.id)
+                .where('np.is_active', true)
+                .orderBy('p.id', 'desc')
                 .limit(results_limit)
                 .select(
                     'person_token',
@@ -60,8 +62,8 @@ function syncPersons (inputs) {
                     'rating_fun',
                     'age',
                     'is_blocked',
-                    'updated',
-                    'deleted',
+                    'p.updated',
+                    'p.deleted',
                 );
 
             if(data_since_timestamp) {
@@ -173,7 +175,8 @@ function syncModes(inputs) {
                     'pp.updated',
                     'pp.deleted'
                 )
-                .where('p.network_id', my_network.id)
+                .where('np.network_id', my_network.id)
+                .join('networks_persons AS np', 'np.person_id', '=', 'p.id')
                 .join('persons_partner AS pp', 'pp.person_id', '=', 'p.id')
                 .orderBy('pp.updated', 'desc')
                 .limit(results_limit);
@@ -189,7 +192,8 @@ function syncModes(inputs) {
                     'pk.updated',
                     'pk.deleted',
                 )
-                .where('p.network_id', my_network.id)
+                .where('np.network_id', my_network.id)
+                .join('networks_persons AS np', 'np.person_id', '=', 'p.id')
                 .join('persons_kids AS pk', 'pk.person_id', '=', 'p.id')
                 .orderBy('pk.updated', 'desc')
                 .limit(results_limit);

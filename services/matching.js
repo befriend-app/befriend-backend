@@ -516,6 +516,8 @@ function getMatches(me, params = {}) {
 
             try {
                 let networksLookup = await getNetworksLookup();
+
+                //todo check
                 let my_network_token = networksLookup.byId[me.network_id]?.network_token;
 
                 if (!my_network_token) {

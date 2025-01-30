@@ -46,12 +46,12 @@ function main() {
 
             let bulk_delete_count = 50000;
 
-            await knex('persons_networks')
+            await knex('networks_persons')
                 .whereNot('network_id', network_self.id)
                 .delete();
 
             let persons = await knex('persons')
-                .whereNot('network_id', network_self.id)
+                .whereNot('registration_network_id', network_self.id)
                 .select('id', 'person_token', 'grid_id');
 
             let gridLookup = await getGridLookup();

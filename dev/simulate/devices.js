@@ -58,7 +58,7 @@ async function getPersonsLogins() {
 
     let ts = timeNow();
 
-    persons = await conn('persons').where('network_id', self_network.id).limit(num_persons);
+    persons = await conn('persons').where('registration_network_id', self_network.id).limit(num_persons);
 
     let persons_logins = await conn('persons_login_tokens').whereIn(
         'person_id',

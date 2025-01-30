@@ -448,12 +448,13 @@ function getNetworksForFilters() {
                 { byId: {}, byToken: {} },
             );
 
-            let networks_persons = await conn('persons_networks AS pn')
-                .join('persons AS p', 'p.id', '=', 'pn.person_id')
-                .whereNull('pn.deleted')
+            let networks_persons = await conn('networks_persons AS np')
+                .join('persons AS p', 'p.id', '=', 'np.person_id')
+                .whereNull('np.deleted')
                 .whereNull('p.deleted')
+                .where('np.is_active', 1)
                 .where('p.is_blocked', 0)
-                .select('pn.id', 'pn.network_id', 'pn.person_id');
+                .select('np.id', 'np.network_id', 'np.person_id');
 
             // Initialize dictionaries to store person IDs in buckets of 1 million
             let bucketSize = 1000 * 1000;
@@ -477,6 +478,7 @@ function getNetworksForFilters() {
                     if (!verifiedPersonsBuckets[bucketIndex]) {
                         verifiedPersonsBuckets[bucketIndex] = new Set();
                     }
+
                     verifiedPersonsBuckets[bucketIndex].add(person.person_id);
                 }
             }

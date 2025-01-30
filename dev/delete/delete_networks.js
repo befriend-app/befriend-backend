@@ -36,7 +36,7 @@ function main() {
             //delete activities
             let tables = [
                 'persons_filters_networks',
-                'persons_networks',
+                'networks_persons',
                 'networks_secret_keys',
                 'networks',
             ];

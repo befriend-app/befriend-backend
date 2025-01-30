@@ -110,23 +110,38 @@ function processPersons(network_id, persons) {
                 let personsGrids = {};
                 let existingPersonsDict = {};
                 let existingNetworksDict = {};
+                let invalidNetworkPersons = {};
 
-
-                //check for existing persons
+                //get existing persons for provided tokens
                 const batchPersonTokens = batch.map(p => p.person_token);
 
                 const existingPersons = await conn('persons')
                     .whereIn('person_token', batchPersonTokens)
                     .select('*');
-                // .select(
-                //     'id', 'person_token', 'is_new', 'is_online',
-                //     'is_verified_in_person', 'is_verified_linkedin',
-                //     'network_id', 'grid_id', 'gender_id',
-                //     'reviews_count', 'rating_safety', 'rating_trust', 'rating_timeliness', 'rating_friendliness', 'rating_fun',
-                //     'age', 'updated', 'deleted',
-                // );
 
-                //organize lookup
+                //get existing person->network relationship data
+                const existingPersonIds = existingPersons.map(p => p.id);
+
+                const existingNetworks = await conn('networks_persons')
+                    .whereIn('person_id', existingPersonIds)
+                    .orderBy('updated')
+                    .select('person_id', 'network_id');
+
+                //organize persons networks lookup
+                for (const network of existingNetworks) {
+                    if(!existingNetworksDict[network.person_id]) {
+                        existingNetworksDict[network.person_id] = {};
+                    }
+
+                    existingNetworksDict[network.person_id][network.network_id] = true;
+                }
+
+                //ensure this network has permission to provide updated data for these persons
+                for(let person of existingPersons) {
+
+                }
+
+                //organize lookup, get previous modes
                 for (const p of existingPersons) {
                     existingPersonsDict[p.person_token] = p;
                     prev_modes_pipeline.hGet(cacheService.keys.person(p.person_token), 'modes');
@@ -141,22 +156,6 @@ function processPersons(network_id, persons) {
                     }
                 } catch(e) {
                     console.error(e);
-                }
-
-                //check for existing persons networks
-                const existingPersonIds = existingPersons.map(p => p.id);
-
-                const existingNetworks = await conn('persons_networks')
-                    .whereIn('person_id', existingPersonIds)
-                    .select('person_id', 'network_id');
-
-                //organize persons networks lookup
-                for (const network of existingNetworks) {
-                    if(!existingNetworksDict[network.person_id]) {
-                        existingNetworksDict[network.person_id] = {};
-                    }
-
-                    existingNetworksDict[network.person_id][network.network_id] = true;
                 }
 
                 for (let person of batch) {
@@ -626,12 +625,12 @@ function updatePersonsCount() {
 
             let conn = await dbService.conn();
 
-            let networks_persons = await conn('persons_networks AS pn')
-                .join('persons AS p', 'p.id', '=', 'pn.person_id')
-                .where('pn.network_id', '<>', network_self.id)
-                .whereNull('pn.deleted')
+            let networks_persons = await conn('networks_persons AS np')
+                .join('persons AS p', 'p.id', '=', 'np.person_id')
+                .where('np.network_id', '<>', network_self.id)
+                .whereNull('np.deleted')
                 .whereNull('p.deleted')
-                .select('pn.id', 'pn.network_id', 'pn.person_id');
+                .select('np.id', 'np.network_id', 'np.person_id');
 
             let network_count = {};
 

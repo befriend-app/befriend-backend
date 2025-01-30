@@ -105,10 +105,10 @@ function syncMe (inputs) {
                 }
 
                 qryDict[table] = conn('persons AS p')
-                    .select(
-                        select_cols
-                    )
-                    .where('p.network_id', my_network.id)
+                    .select(select_cols)
+                    .where('np.network_id', my_network.id)
+                    .where('np.is_active', true)
+                    .join('networks_persons AS np', 'np.person_id', '=', 'p.id')
                     .join(`${table} AS t`, 't.person_id', '=', 'p.id')
                     .join(`${tableData.source_table} AS st`, `t.${tableData.col_id}`, '=', 'st.id')
                     .orderBy('t.updated', 'desc')
@@ -132,7 +132,9 @@ function syncMe (inputs) {
                     't.updated',
                     't.deleted'
                 )
-                .where('p.network_id', my_network.id)
+                .where('np.network_id', my_network.id)
+                .where('np.is_active', true)
+                .join('networks_persons AS np', 'np.person_id', '=', 'p.id')
                 .join(`persons_sections AS t`, 't.person_id', '=', 'p.id')
                 .join(`me_sections AS st`, `t.section_id`, '=', 'st.id')
                 .orderBy('t.updated', 'desc')
@@ -223,6 +225,7 @@ function syncMe (inputs) {
             });
         } catch (e) {
             console.error('Error syncing me:', e);
+
             return reject({
                 message: 'Error syncing me'
             });

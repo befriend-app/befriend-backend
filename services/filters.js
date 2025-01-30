@@ -884,6 +884,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
             try {
                 let networksLookup = await getNetworksLookup();
 
+                //todo check
                 let network_token = networksLookup.byId[person.network_id]?.network_token;
 
                 if (!network_token) {
@@ -2698,6 +2699,8 @@ function batchUpdateGridSets(persons) {
             function updateNetworks() {
                 return new Promise(async (resolve, reject) => {
                     try {
+                        //todo check
+                        //todo multiple joined networks
                         let network_token = networksLookup.byId[person.network_id]?.network_token;
 
                         if (!network_token) {

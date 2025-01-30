@@ -23,10 +23,12 @@ function processUpdate() {
 
             while (hasMorePersons) {
                 try {
-                    let persons = await conn('persons')
-                        .where('network_id', my_network.id)
-                        .orderBy('id')
-                        .select('id', 'person_token', 'birth_date', 'age')
+                    let persons = await conn('persons AS p')
+                        .join('networks_persons AS np', 'np.person_id', '=', 'p.id')
+                        .where('np.network_id', my_network.id)
+                        .where('is_active', true)
+                        .orderBy('p.id')
+                        .select('p.id', 'person_token', 'birth_date', 'age')
                         .offset(offset)
                         .limit(BATCH_SIZE);
 

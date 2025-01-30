@@ -64,7 +64,7 @@ module.exports = {
                 //networks
                 let networks = new Set();
 
-                let networks_qry = await conn('persons_networks')
+                let networks_qry = await conn('networks_persons')
                     .where('person_id', person.id);
 
                 let networksLookup = await getNetworksLookup();
