@@ -1,6 +1,6 @@
 const dbService = require('../db');
 const { getNetworkSelf } = require('../network');
-const { timeNow } = require('../shared');
+const { timeNow, isNumeric } = require('../shared');
 const { getGridLookup } = require('../grid');
 const { getGendersLookup } = require('../genders');
 const { getKidsAgeLookup } = require('../modes');
@@ -9,6 +9,12 @@ const { results_limit, data_since_ms_extra } = require('./common');
 function createPerson(network, inputs) {
     return new Promise(async (resolve, reject) => {
         try {
+            if(typeof inputs.person_token !== 'string' || !isNumeric(inputs.updated)) {
+                return reject({
+                    message: 'Person token and updated fields required'
+                });
+            }
+
              let conn = await dbService.conn();
 
              let person_check = await conn('persons')

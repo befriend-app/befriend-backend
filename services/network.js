@@ -55,7 +55,7 @@ function init() {
 
             try {
                 let env_lines = env_data.split('\n');
-                network_token = generateToken(24);
+                network_token = generateToken(12);
                 module.exports.token = network_token;
 
                 let token_line = `${env_network_key}=${network_token}`;

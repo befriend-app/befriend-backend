@@ -104,46 +104,57 @@ function processPersons(network_id, persons) {
             for (let batch of batches) {
                 let pipeline = cacheService.startPipeline();
                 let prev_modes_pipeline = cacheService.startPipeline();
-                let personsToInsert = [];
                 let personsToUpdate = [];
-                let networksToInsert = [];
                 let personsGrids = {};
                 let existingPersonsDict = {};
                 let existingNetworksDict = {};
-                let invalidNetworkPersons = {};
+                let invalidPersons = {};
 
                 //get existing persons for provided tokens
-                const batchPersonTokens = batch.map(p => p.person_token);
+                let batchPersonTokens = [];
+                let batchPersonTokensDict = {};
 
-                const existingPersons = await conn('persons')
+                for(let person of batch) {
+                    batchPersonTokens.push(person.person_token);
+                    batchPersonTokensDict[person.person_id] = true;
+                }
+
+                let existingPersons = await conn('networks_persons AS np')
+                    .join('persons AS p', 'p.id', '=', 'np.person_id')
+                    .where('network_id', network_id)
                     .whereIn('person_token', batchPersonTokens)
-                    .select('*');
+                    .select('p.*');
 
-                //get existing person->network relationship data
-                const existingPersonIds = existingPersons.map(p => p.id);
+                let existingPersonIds = [];
 
-                const existingNetworks = await conn('networks_persons')
+                for(let person of existingPersons) {
+                    existingPersonIds.push(person.id);
+                    existingPersonsDict[person.person_token] = person;
+                }
+
+                let existingNetworks = await conn('networks_persons AS np')
+                    .join('networks AS n', 'np.network_id', '=', 'n.id')
                     .whereIn('person_id', existingPersonIds)
-                    .orderBy('updated')
-                    .select('person_id', 'network_id');
+                    .where('np.is_active', 1)
+                    .select('network_token', 'person_id');
 
-                //organize persons networks lookup
-                for (const network of existingNetworks) {
-                    if(!existingNetworksDict[network.person_id]) {
-                        existingNetworksDict[network.person_id] = {};
+                for(let np of existingNetworks) {
+                    if(!existingNetworksDict[np.person_id]) {
+                        existingNetworksDict[np.person_id] = new Set();
                     }
 
-                    existingNetworksDict[network.person_id][network.network_id] = true;
+                    existingNetworksDict[np.person_id].add(np.network_token);
                 }
 
                 //ensure this network has permission to provide updated data for these persons
-                for(let person of existingPersons) {
-
+                for(let person of batch) {
+                    if(!existingPersonsDict[person.person_token]) {
+                        invalidPersons[person.person_token] = true;
+                    }
                 }
 
                 //organize lookup, get previous modes
-                for (const p of existingPersons) {
-                    existingPersonsDict[p.person_token] = p;
+                for (let p of existingPersons) {
                     prev_modes_pipeline.hGet(cacheService.keys.person(p.person_token), 'modes');
                 }
 
@@ -165,22 +176,11 @@ function processPersons(network_id, persons) {
 
                     let existingPerson = existingPersonsDict[person.person_token];
 
-                    let networks = new Set();
-                    let currentNetworkToken = networksLookup.byId[network_id]?.network_token;
-
-                    if(currentNetworkToken) {
-                        networks.add(currentNetworkToken);
+                    if(!existingPerson) {
+                        continue;
                     }
 
-                    if(existingPerson && existingNetworksDict[existingPerson.id]) {
-                        for(let _network_id in existingNetworksDict[existingPerson.id]) {
-                            let token = networksLookup.byId[_network_id]?.network_token;
-
-                            if(token) {
-                                networks.add(token);
-                            }
-                        }
-                    }
+                    let networks = existingNetworksDict[existingPerson.id] ? Array.from(existingNetworksDict[existingPerson.id]) : [];
 
                     networks = Array.from(networks);
 
@@ -190,49 +190,7 @@ function processPersons(network_id, persons) {
 
                     let person_data;
 
-                    if (!existingPerson) {
-                        if(person.deleted) {
-                            continue;
-                        }
-
-                        person_data = {
-                            network_id,
-                            grid_id: grid?.id || null,
-                            gender_id: gender?.id || null,
-                            person_token: person.person_token,
-                            modes: person.modes,
-                            is_new: person.is_new,
-                            is_verified_in_person: person.is_verified_in_person,
-                            is_verified_linkedin: person.is_verified_linkedin,
-                            is_online: person.is_online,
-                            timezone: person.timezone,
-                            reviews_count: person.reviews_count,
-                            rating_safety: person.rating_safety,
-                            rating_trust: person.rating_trust,
-                            rating_timeliness: person.rating_timeliness,
-                            rating_friendliness: person.rating_friendliness,
-                            rating_fun: person.rating_fun,
-                            age: person.age,
-                            is_blocked: person.is_blocked,
-                            created: timeNow(),
-                            updated: person.updated
-                        };
-
-                        personsToInsert.push(person_data);
-
-                        let cache_person_data = preparePersonCache(person_data, null, {
-                            grid,
-                            networks
-                        });
-
-                        pipeline.hSet(cacheService.keys.person(person.person_token), cacheService.prepareSetHash(cache_person_data));
-
-                        personsGrids[person.person_token] = {
-                            person: cache_person_data,
-                            filter_tokens: persons_grid_filters,
-                            grid
-                        };
-                    } else if (person.updated > existingPerson.updated) {
+                    if (person.updated > existingPerson.updated) {
                         person_data = {
                             id: existingPerson.id,
                             grid_id: grid?.id || null,
@@ -299,44 +257,11 @@ function processPersons(network_id, persons) {
                             personsGrids[person.person_token].filter_tokens.push('genders');
                         }
                     }
-
-                    //update persons networks
-                    if (existingPerson && !existingNetworksDict[existingPerson.id]?.[network_id]) {
-                        networksToInsert.push({
-                            person_id: existingPerson.id,
-                            network_id: network_id,
-                            created: timeNow(),
-                            updated: timeNow()
-                        });
-                    }
-                }
-
-                if (personsToInsert.length) {
-                    await batchInsert('persons', personsToInsert, true);
-
-                    for(let p of personsToInsert) {
-                        //append id to cloned grid person data
-                        personsGrids[p.person_token].person.id = p.id;
-
-                        //prepare persons_networks
-                        networksToInsert.push({
-                            person_id: p.id,
-                            network_id: network_id,
-                            created: timeNow(),
-                            updated: timeNow()
-                        });
-                    }
                 }
 
                 if (personsToUpdate.length) {
                     await batchUpdate('persons', personsToUpdate);
-                }
 
-                if (networksToInsert.length) {
-                    await batchInsert('persons_networks', networksToInsert);
-                }
-
-                if(personsToInsert.length || personsToUpdate.length) {
                     await cacheService.execPipeline(pipeline);
 
                     let t = timeNow();
@@ -365,7 +290,7 @@ function processPersons(network_id, persons) {
                     }
 
                     try {
-                         await cacheService.execPipeline(genders_pipeline);
+                        await cacheService.execPipeline(genders_pipeline);
                     } catch(e) {
                         console.error(e);
                     }
