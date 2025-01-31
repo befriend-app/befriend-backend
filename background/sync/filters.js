@@ -129,7 +129,11 @@ function syncFilters() {
                         continue;
                     }
 
-                    await processFilters(network.id, response.data.filters, updated_persons);
+                    let success = await processFilters(network.id, response.data.filters, updated_persons);
+
+                    if(!success) {
+                        skipSaveTimestamps = true;
+                    }
 
                     while (response.data.pagination_updated) {
                         try {
@@ -147,7 +151,11 @@ function syncFilters() {
                                 break;
                             }
 
-                            await processFilters(network.id, response.data.filters, updated_persons);
+                            let success = await processFilters(network.id, response.data.filters, updated_persons);
+
+                            if(!success) {
+                                skipSaveTimestamps = true;
+                            }
                         } catch (e) {
                             console.error(e);
                             skipSaveTimestamps = true;
@@ -215,6 +223,7 @@ function processFilters(network_id, persons_filters, updated_persons) {
     return new Promise(async (resolve, reject) => {
         try {
             let hasPersons = false;
+            let hasInvalidPersons = false;
 
             for(let k in persons_filters) {
                 let persons = persons_filters[k];
@@ -261,6 +270,8 @@ function processFilters(network_id, persons_filters, updated_persons) {
                     if (person_token in validPersonsLookup) {
                         filteredPersons[person_token] = persons_filters[type][person_token];
                     } else {
+                        hasInvalidPersons = true;
+
                         if(!invalidPersons[person_token]) {
                             invalidPersons[person_token] = [];
                         }
@@ -270,6 +281,12 @@ function processFilters(network_id, persons_filters, updated_persons) {
                 }
 
                 persons_filters[type] = filteredPersons;
+            }
+
+            if (Object.keys(invalidPersons).length) {
+                console.warn({
+                    invalid_persons_count: Object.keys(invalidPersons).length,
+                });
             }
 
             await processMain(persons_filters.filters, updated_persons.filters);

@@ -95,6 +95,8 @@ function processPersons(network_id, persons) {
             return resolve();
         }
 
+        let has_invalid_persons = false;
+
         try {
             let conn = await dbService.conn();
 
@@ -157,7 +159,14 @@ function processPersons(network_id, persons) {
                 for(let person of batch) {
                     if(!existingPersonsDict[person.person_token]) {
                         invalidPersons[person.person_token] = true;
+                        has_invalid_persons = true;
                     }
+                }
+
+                if(Object.keys(invalidPersons).length) {
+                    console.warn({
+                        invalid_persons_count: Object.keys(invalidPersons).length,
+                    });
                 }
 
                 //organize lookup, get previous modes
@@ -323,7 +332,7 @@ function processPersons(network_id, persons) {
             return reject(e);
         }
 
-        return resolve();
+        return resolve(!has_invalid_persons);
     });
 }
 
@@ -346,6 +355,8 @@ function processPersonsModes(network_id, persons_modes) {
             console.error("Response too large, check network data");
             return resolve();
         }
+
+        let has_invalid_persons = false;
 
         try {
             let conn = await dbService.conn();
@@ -391,6 +402,7 @@ function processPersonsModes(network_id, persons_modes) {
                 let personsLookup = {};
                 let existingPartnersLookup = {};
                 let existingKidsLookup = {};
+                let invalidPersons = {};
 
                 for (const person of existingPersons) {
                     personsLookup[person.person_token] = person;
@@ -403,6 +415,19 @@ function processPersonsModes(network_id, persons_modes) {
 
                 for(let k of existingPersonsKids) {
                     existingKidsLookup[k.token] = k;
+                }
+
+                for (let person of batch) {
+                    if (!personsLookup[person.person_token]) {
+                        invalidPersons[person.person_token] = true;
+                        has_invalid_persons = true;
+                    }
+                }
+
+                if (Object.keys(invalidPersons).length) {
+                    console.warn({
+                        invalid_persons_count: Object.keys(invalidPersons).length,
+                    });
                 }
 
                 for (let person of batch) {
@@ -556,7 +581,7 @@ function processPersonsModes(network_id, persons_modes) {
             return reject(e);
         }
 
-         resolve();
+         resolve(!has_invalid_persons);
     });
 }
 
@@ -691,7 +716,11 @@ function syncPersons() {
                         continue;
                     }
 
-                    await processPersons(network.id, response.data.persons);
+                    let success = await processPersons(network.id, response.data.persons);
+
+                    if(!success) {
+                        skipSaveTimestamps = true;
+                    }
 
                     //handle paging, ~10,000 results
                     while (response.data.last_person_token) {
@@ -710,7 +739,11 @@ function syncPersons() {
                                 break;
                             }
 
-                            await processPersons(network.id, response.data.persons);
+                            let success = await processPersons(network.id, response.data.persons);
+
+                            if(!success) {
+                                skipSaveTimestamps = true;
+                            }
                         } catch (e) {
                             console.error(e);
                             skipSaveTimestamps = true;
@@ -821,7 +854,11 @@ function syncPersonsModes() {
                         continue;
                     }
 
-                    await processPersonsModes(network.id, response.data.persons_modes);
+                    let success = await processPersonsModes(network.id, response.data.persons_modes);
+
+                    if(!success) {
+                        skipSaveTimestamps = true;
+                    }
 
                     // Handle pagination
                     while (response.data.pagination_updated) {
@@ -840,7 +877,11 @@ function syncPersonsModes() {
                                 break;
                             }
 
-                            await processPersonsModes(network.id, response.data.persons_modes);
+                            let success = await processPersonsModes(network.id, response.data.persons_modes);
+
+                            if(!success) {
+                                skipSaveTimestamps = true;
+                            }
                         } catch (e) {
                             console.error('Error in pagination:', e);
                             skipSaveTimestamps = true;

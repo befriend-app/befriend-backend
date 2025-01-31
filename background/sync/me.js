@@ -70,6 +70,8 @@ function processMe(network_id, persons) {
             return resolve();
         }
 
+        let has_invalid_persons = false;
+
         try {
             let conn = await dbService.conn();
 
@@ -108,7 +110,14 @@ function processMe(network_id, persons) {
                     validPersons.push(personsDict[person.person_token]);
                 } else {
                     invalidPersons[person.person_token] = true;
+                    has_invalid_persons = true;
                 }
+            }
+
+            if (Object.keys(invalidPersons).length) {
+                console.warn({
+                    invalid_persons_count: Object.keys(invalidPersons).length,
+                });
             }
 
             for(let person of validPersons) {
@@ -573,7 +582,7 @@ function processMe(network_id, persons) {
             return reject(e);
         }
 
-        resolve();
+        resolve(!has_invalid_persons);
     });
 }
 
@@ -662,7 +671,11 @@ function syncMe() {
                         continue;
                     }
 
-                    await processMe(network.id, response.data.persons);
+                    let success = await processMe(network.id, response.data.persons);
+
+                    if (!success) {
+                        skipSaveTimestamps = true;
+                    }
 
                     //handle paging, ~10,000 results
                     while (response.data.pagination_updated) {
@@ -681,7 +694,11 @@ function syncMe() {
                                 break;
                             }
 
-                            await processMe(network.id, response.data.persons);
+                            let success = await processMe(network.id, response.data.persons);
+
+                            if (!success) {
+                                skipSaveTimestamps = true;
+                            }
                         } catch (e) {
                             console.error(e);
                             skipSaveTimestamps = true;
