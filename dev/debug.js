@@ -1,4 +1,5 @@
 const { isProdApp } = require('../services/shared');
+
 module.exports = {
     matching: {
         on: isProdApp() ? false : true,
@@ -16,7 +17,7 @@ module.exports = {
             //general
 
             // 'distance',
-            'ages',
+            // 'ages',
             // 'genders',
 
             //personal
@@ -40,7 +41,8 @@ module.exports = {
         }
     },
     sync: {
-        persons: isProdApp() ? false : true,
+        networks_persons: isProdApp() ? false : false,
+        persons: isProdApp() ? false : false,
         me: isProdApp() ? false : false,
         filters: isProdApp() ? false : false
     }

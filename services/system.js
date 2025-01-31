@@ -81,6 +81,7 @@ module.exports = {
                 },
             },
             network: {
+                networks_persons: 'sync_networks_persons',
                 persons: 'sync_persons',
                 persons_modes: 'sync_persons_modes',
                 persons_me: 'sync_persons_me',
