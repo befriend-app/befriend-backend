@@ -856,7 +856,7 @@ function getPersonsItemsBatch(persons) {
 }
 
 function updateGridSets(person, person_filters = null, filter_token, prev_grid_token = null) {
-    let grid_token, addKeysSet, delKeysSet, keysDelSorted, keysAddSorted, pipelineRem, pipelineAdd;
+    let grid_token, sectionsOptionsLookup, addKeysSet, delKeysSet, keysDelSorted, keysAddSorted, pipelineRem, pipelineAdd;
 
     function updateOnline() {
         if (prev_grid_token) {
@@ -885,14 +885,10 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
     function updateNetworks() {
         return new Promise(async (resolve, reject) => {
             try {
-                let networksLookup = await getNetworksLookup();
+                let network_tokens = person.networks;
 
-                //todo check
-                let network_token = networksLookup.byId[person.network_id]?.network_token;
-
-                if (!network_token) {
-                    console.error('Network token not found');
-
+                if (!network_tokens?.length) {
+                    console.error('Network token(s) not found');
                     return resolve();
                 }
 
@@ -902,30 +898,26 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                     return resolve();
                 }
 
+                let networksLookup = await getNetworksLookup();
+
                 let include_networks = new Set();
                 let exclude_networks = new Set();
 
                 for (let item of Object.values(networksFilter.items || {})) {
-                    //skip own network
-                    if (item.network_token === network_token) {
-                        continue;
-                    }
-
-                    if (item.is_active) {
+                    //check if network is in person's network(s) list
+                    if (network_tokens.includes(item.network_token)) {
                         include_networks.add(item.network_token);
                     } else {
-                        exclude_networks.add(item.network_token);
+                        if (item.is_active) {
+                            include_networks.add(item.network_token);
+                        } else {
+                            exclude_networks.add(item.network_token);
+                        }
                     }
                 }
 
                 if (networksFilter.is_all_verified) {
-                    for (let k in networksLookup.byId) {
-                        let network = networksLookup.byId[k];
-
-                        if (network.network_token === network_token) {
-                            continue;
-                        }
-
+                    for (let network of Object.values(networksLookup.byToken)) {
                         if (network.is_verified) {
                             if (exclude_networks.has(network.network_token)) {
                                 exclude_networks.delete(network.network_token);
@@ -938,15 +930,11 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                     }
                 }
 
-                for (let k in networksLookup.byId) {
-                    let network = networksLookup.byId[k];
+                for (let network of Object.values(networksLookup.byToken)) {
+                    let is_own_network = network_tokens.includes(network.network_token);
 
-                    if (network.network_token === network_token) {
-                        continue;
-                    }
-
-                    //filter not active/connect with any network
-                    if (!networksFilter.is_active || networksFilter.is_any_network) {
+                    //own network/filter not active/connect with any network
+                    if (is_own_network || !networksFilter.is_active || networksFilter.is_any_network) {
                         delKeysSet.add(
                             cacheService.keys.persons_grid_exclude_send_receive(
                                 grid_token,
@@ -963,7 +951,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                             ),
                         );
                     } else {
-                        //send
+                        //send/receive
 
                         if (!networksFilter.is_send) {
                             //send filter disabled
@@ -1027,9 +1015,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                 }
 
                 if (prev_grid_token) {
-                    for (let k in networksLookup.byId) {
-                        let network = networksLookup.byId[k];
-
+                    for (let network of Object.values(networksLookup.byToken)) {
                         delKeysSet.add(
                             cacheService.keys.persons_grid_exclude_send_receive(
                                 prev_grid_token,
@@ -1699,10 +1685,14 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
         });
     }
 
-    function updateMultiFilter(sectionKey, getOptions, default_importance = 5, importance_threshold = 8) {
+    function updateMultiFilter(sectionKey) {
         return new Promise(async (resolve, reject) => {
             try {
-                let section_options = await getOptions();
+                let section_options = sectionsOptionsLookup[sectionKey] || {};
+
+                let default_importance = personalFiltersMap[sectionKey].importance.default;
+                let importance_threshold = personalFiltersMap[sectionKey].importance.threshold;
+
                 let cache_key = cacheService.keys.person_sections(person.person_token);
                 let section_data = (await cacheService.hGetItem(cache_key, sectionKey)) || {};
 
@@ -1835,10 +1825,14 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
         });
     }
 
-    function updateSingleFilter(sectionKey, getOptions, default_importance = 5, importance_threshold = 8) {
+    function updateSingleFilter(sectionKey) {
         return new Promise(async (resolve, reject) => {
             try {
-                let section_options = await getOptions();
+                let section_options = sectionsOptionsLookup[sectionKey] || {};
+
+                let default_importance = personalFiltersMap[sectionKey].importance.default;
+                let importance_threshold = personalFiltersMap[sectionKey].importance.threshold;
+
                 let cache_key = cacheService.keys.person_sections(person.person_token);
                 let section_data = (await cacheService.hGetItem(cache_key, sectionKey)) || {};
 
@@ -1972,61 +1966,23 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
         return new Promise(async (resolve, reject) => {
             try {
                 await updateOnline();
-
                 await updateLocation();
-
                 await updateModes();
-
                 await updateNetworks();
-
                 await updateReviews();
-
                 await updateVerifications();
-
                 await updateGenders();
 
-                //personal
-                await updateMultiFilter(
-                    'life_stages',
-                    lifeStageService.getLifeStages,
-                    lifeStageService.importance.default,
-                );
+                //personal filters
+                for(let k in personalFiltersMap) {
+                    let data = personalFiltersMap[k];
 
-                await updateMultiFilter(
-                    'relationships',
-                    relationshipService.getRelationshipStatus,
-                    relationshipService.importance.default,
-                );
-
-                await updateMultiFilter(
-                    'languages',
-                    languagesService.getLanguages,
-                    languagesService.importance.default,
-                );
-
-                await updateSingleFilter(
-                    'politics',
-                    politicsService.getPolitics,
-                    politicsService.importance.default,
-                );
-
-                await updateMultiFilter(
-                    'religion',
-                    religionService.getReligions,
-                    religionService.importance.default,
-                );
-
-                await updateSingleFilter(
-                    'drinking',
-                    drinkingService.getDrinking,
-                    drinkingService.importance.default,
-                );
-
-                await updateSingleFilter(
-                    'smoking',
-                    smokingService.getSmoking,
-                    smokingService.importance.default,
-                );
+                    if(data.is_single) {
+                        await updateSingleFilter(data.key);
+                    } else if(data.is_multi) {
+                        await updateMultiFilter(data.key);
+                    }
+                }
 
                 resolve();
             } catch(e) {
@@ -2065,6 +2021,13 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
         } catch (e) {
             console.error(e);
             return reject();
+        }
+
+        //get data options needed for single/multi filters
+        for(let key in personalFiltersMap) {
+            if(prev_grid_token || key.includes(filter_token) || filter_token.includes(key)) {
+                sectionsOptionsLookup[filter_token] = await personalFiltersMap[filter_token].options_fn();
+            }
         }
 
         addKeysSet = new Set();
@@ -2107,60 +2070,17 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                 await updateGenders();
             }
 
-            if (filter_token.startsWith('life_stage')) {
-                await updateMultiFilter(
-                    'life_stages',
-                    lifeStageService.getLifeStages,
-                    lifeStageService.importance.default,
-                );
-            }
+            for(let k in personalFiltersMap) {
+                let data = personalFiltersMap[k];
 
-            if (filter_token.startsWith('relationships')) {
-                await updateMultiFilter(
-                    'relationships',
-                    relationshipService.getRelationshipStatus,
-                    relationshipService.importance.default,
-                );
-            }
-
-            if (filter_token.startsWith('language')) {
-                await updateMultiFilter(
-                    'languages',
-                    languagesService.getLanguages,
-                    languagesService.importance.default,
-                );
-            }
-
-            if (filter_token.startsWith('politic')) {
-                await updateSingleFilter(
-                    'politics',
-                    politicsService.getPolitics,
-                    politicsService.importance.default,
-                );
-            }
-
-            if (filter_token.startsWith('religion')) {
-                await updateMultiFilter(
-                    'religion',
-                    religionService.getReligions,
-                    religionService.importance.default,
-                );
-            }
-
-            if (filter_token === 'drinking') {
-                await updateSingleFilter(
-                    'drinking',
-                    drinkingService.getDrinking,
-                    drinkingService.importance.default,
-                );
-            }
-
-            if (filter_token === 'smoking') {
-                await updateSingleFilter(
-                    'smoking',
-                    smokingService.getSmoking,
-                    smokingService.importance.default,
-                );
+                if(filter_token === data.key) {
+                    if(data.is_single) {
+                        await updateSingleFilter(filter_token);
+                    } else if(data.is_multi) {
+                        await updateMultiFilter(filter_token);
+                    }
+                    break;
+                }
             }
         }
 
