@@ -2702,12 +2702,10 @@ function batchUpdateGridSets(persons) {
             function updateNetworks() {
                 return new Promise(async (resolve, reject) => {
                     try {
-                        //todo check
-                        //todo multiple joined networks
-                        let network_token = networksLookup.byId[person.network_id]?.network_token;
+                        let network_tokens = person.networks;
 
-                        if (!network_token) {
-                            console.error('Network token not found');
+                        if (!network_tokens?.length) {
+                            console.error('Network token(s) not found');
 
                             return resolve();
                         }
@@ -2722,24 +2720,20 @@ function batchUpdateGridSets(persons) {
                         let exclude_networks = new Set();
 
                         for (let item of Object.values(networksFilter.items || {})) {
-                            //skip own network
-                            if (item.network_token === network_token) {
-                                continue;
-                            }
-
-                            if (item.is_active) {
+                            //include own networks
+                            if (network_tokens.includes(item.network_token)) {
                                 include_networks.add(item.network_token);
                             } else {
-                                exclude_networks.add(item.network_token);
+                                if (item.is_active) {
+                                    include_networks.add(item.network_token);
+                                } else {
+                                    exclude_networks.add(item.network_token);
+                                }
                             }
                         }
 
                         if (networksFilter.is_all_verified) {
                             for (let network of Object.values(networksLookup.byToken)) {
-                                if (network.network_token === network_token) {
-                                    continue;
-                                }
-
                                 if (network.is_verified) {
                                     if (exclude_networks.has(network.network_token)) {
                                         exclude_networks.delete(network.network_token);
@@ -2753,11 +2747,9 @@ function batchUpdateGridSets(persons) {
                         }
 
                         for (let network of Object.values(networksLookup.byToken)) {
-                            if (network.network_token === network_token) {
-                                continue;
-                            }
+                            let is_own_network = network_tokens.includes(network.network_token);
 
-                            if (!networksFilter.is_active || networksFilter.is_any_network) {
+                            if (is_own_network || !networksFilter.is_active || networksFilter.is_any_network) {
                                 delKeysSet.add(
                                     cacheService.keys.persons_grid_exclude_send_receive(
                                         grid_token,
@@ -2773,8 +2765,7 @@ function batchUpdateGridSets(persons) {
                                         'receive',
                                     ),
                                 );
-                            } else {
-                                //send
+                            } else { //send/receive
                                 if (!networksFilter.is_send) {
                                     delKeysSet.add(
                                         cacheService.keys.persons_grid_exclude_send_receive(

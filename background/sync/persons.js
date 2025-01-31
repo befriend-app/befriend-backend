@@ -11,7 +11,8 @@ const {
     timeoutAwait,
     timeNow,
 } = require('../../services/shared');
-const { getNetworkSelf, getNetworksLookup } = require('../../services/network');
+
+const { getNetworkSelf } = require('../../services/network');
 const { deleteKeys } = require('../../services/cache');
 const { getGendersLookup } = require('../../services/genders');
 const { keys: systemKeys } = require('../../services/system');
