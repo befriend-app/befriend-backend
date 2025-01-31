@@ -15,44 +15,43 @@ const {
 const { homeDomains, cols, getNetworkSelf } = require('../../services/network');
 const { deleteKeys } = require('../../services/cache');
 
-const runInterval = 3600 * 1000; //every hour
 
-loadScriptEnv();
+function main() {
+    loadScriptEnv();
 
-(async function () {
-    let my_network;
+    return new Promise(async (resolve, reject) => {
+        let my_network;
 
-    try {
-        my_network = await getNetworkSelf();
+        try {
+            my_network = await getNetworkSelf();
 
-        if (!my_network) {
-            throw new Error();
+            if (!my_network) {
+                throw new Error();
+            }
+        } catch (e) {
+            console.error('Error getting own network', e);
+            await timeoutAwait(5000);
+            process.exit();
         }
-    } catch (e) {
-        console.error('Error getting own network', e);
-        await timeoutAwait(5000);
-        process.exit();
-    }
 
-    //self->server needs to be running
-    try {
-        let self_ping_url = getURL(my_network.api_domain, `happy-connect`);
+        //self->server needs to be running
+        try {
+            let self_ping_url = getURL(my_network.api_domain, `happy-connect`);
 
-        let r = await axios.get(self_ping_url);
+            let r = await axios.get(self_ping_url);
 
-        if (!('happiness' in r.data)) {
-            throw new Error();
+            if (!('happiness' in r.data)) {
+                throw new Error();
+            }
+        } catch (e) {
+            console.error('Server not running, exiting');
+            console.error('Start server: `node server.js');
+            await timeoutAwait(5000);
+            process.exit();
         }
-    } catch (e) {
-        console.error('Server not running, exiting');
-        console.error('Start server: `node server.js');
-        await timeoutAwait(5000);
-        process.exit();
-    }
 
-    let home_domains = await homeDomains();
+        let home_domains = await homeDomains();
 
-    while (true) {
         console.log({
             sync_networks: getLocalDate(),
         });
@@ -229,6 +228,21 @@ loadScriptEnv();
             console.error(e);
         }
 
-        await timeoutAwait(runInterval);
-    }
-})();
+        resolve();
+    });
+}
+
+module.exports = {
+    main
+}
+
+if (require.main === module) {
+    (async function () {
+        try {
+            await main();
+            process.exit();
+        } catch (e) {
+            console.error(e);
+        }
+    })();
+}

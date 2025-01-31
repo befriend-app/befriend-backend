@@ -1,10 +1,108 @@
 const dbService = require('../db');
-const { getNetworkSelf } = require('../network');
+const { getNetworkSelf, getNetworksLookup } = require('../network');
 const { timeNow, isNumeric } = require('../shared');
 const { getGridLookup } = require('../grid');
 const { getGendersLookup } = require('../genders');
 const { getKidsAgeLookup } = require('../modes');
 const { results_limit, data_since_ms_extra } = require('./common');
+
+function syncNetworksPersons(inputs) {
+    return new Promise(async (resolve, reject) => {
+        //return all known network->person relationships
+        try {
+            let conn = await dbService.conn();
+
+            let request_sent = inputs.request_sent ? parseInt(inputs.request_sent) : null;
+            let data_since_timestamp = inputs.data_since ? parseInt(inputs.data_since) : null;
+            let prev_data_since = inputs.prev_data_since ? parseInt(inputs.prev_data_since) : null;
+            let pagination_updated = inputs.pagination_updated ? parseInt(inputs.pagination_updated) : null;
+
+            if (!request_sent) {
+                return reject({
+                    message: 'request timestamp required'
+                });
+            }
+
+            let server_ms_diff = Math.max(0, timeNow() - request_sent);
+            let add_data_since_ms = server_ms_diff + data_since_ms_extra;
+            let data_since_timestamp_w_extra = null;
+
+            if (data_since_timestamp) {
+                data_since_timestamp_w_extra = data_since_timestamp - add_data_since_ms;
+            }
+
+            let timestamp_updated = prev_data_since || data_since_timestamp_w_extra;
+
+            let networksLookup = await getNetworksLookup();
+
+            let networks_persons_qry = conn('networks_persons AS np')
+                .select(
+                    'p.person_token',
+                    'p.updated AS person_updated',
+                    'p.registration_network_id',
+                    'n.network_token',
+                    'np.is_active',
+                    'np.updated',
+                    'np.deleted'
+                )
+                .join('persons AS p', 'np.person_id', '=', 'p.id')
+                .join('networks AS n', 'np.network_id', '=', 'n.id')
+                .orderBy('np.updated', 'desc')
+                .limit(results_limit);
+
+            if (timestamp_updated) {
+                networks_persons_qry = networks_persons_qry.where('np.updated', '>', timestamp_updated);
+            }
+
+            if (pagination_updated) {
+                networks_persons_qry = networks_persons_qry.where('np.updated', '<=', pagination_updated);
+            }
+
+            let networks_persons = await networks_persons_qry;
+
+            let organized = {};
+
+            for(let row of networks_persons) {
+                if(!(organized[row.person_token])) {
+                    organized[row.person_token] = [];
+                }
+
+                let registration_network = networksLookup.byId[row.registration_network_id];
+                let registration_network_token = registration_network?.network_token || null;
+
+                organized[row.person_token].push({
+                    registration_network_token,
+                    person_token: row.person_token,
+                    person_updated: row.person_updated - 1,
+                    network_token: row.network_token,
+                    is_active: row.is_active,
+                    updated: row.updated,
+                    deleted: row.deleted
+                });
+            }
+
+            let lastTimestamps = [];
+
+            if (networks_persons.length === results_limit) {
+                lastTimestamps.push(networks_persons[networks_persons.length - 1].updated);
+            }
+
+            let return_pagination_updated = lastTimestamps.length ? Math.max(...lastTimestamps) : null;
+
+            return resolve({
+                pagination_updated: return_pagination_updated,
+                prev_data_since: prev_data_since || data_since_timestamp_w_extra,
+                networks_persons: organized
+            });
+        } catch (e) {
+            console.error(e);
+
+            return reject({
+                message: 'Error syncing persons modes'
+            });
+        }
+    });
+}
 
 function createPerson(network, inputs) {
     return new Promise(async (resolve, reject) => {
@@ -345,6 +443,7 @@ function syncModes(inputs) {
 }
 
 module.exports = {
+    syncNetworksPersons,
     createPerson,
     syncPersons,
     syncModes

@@ -133,21 +133,7 @@ async function addPersons() {
                 current_count,
             });
 
-            if(self_network.is_befriend) {
-                let networks_batch_insert = [];
-
-                for(let person of batch_insert) {
-                    networks_batch_insert.push({
-                        network_id: self_network.id,
-                        person_id: person.id,
-                        is_active: true,
-                        created: timeNow(),
-                        updated: timeNow()
-                    })
-                }
-
-                await batchInsert('networks_persons', networks_batch_insert);
-            } else {
+            if(!self_network.is_befriend) {
                 let home_domains = await homeDomains();
                 let networksLookup = await getNetworksLookup();
 

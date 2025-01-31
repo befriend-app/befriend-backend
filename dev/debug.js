@@ -41,7 +41,7 @@ module.exports = {
         }
     },
     sync: {
-        networks_persons: isProdApp() ? false : false,
+        networks_persons: isProdApp() ? false : true,
         persons: isProdApp() ? false : false,
         me: isProdApp() ? false : false,
         filters: isProdApp() ? false : false

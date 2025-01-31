@@ -1,6 +1,8 @@
-const filtersSync = require('./filters');
+const networksSync = require('./networks');
+const networksPersonsSync = require('./networks_persons');
 const personsSync = require('./persons');
 const meSync = require('./me');
+const filtersSync = require('./filters');
 
 const {
     loadScriptEnv,
@@ -14,6 +16,8 @@ const runInterval = 60 * 30 * 1000; //every 30 minutes
 
     while (true) {
         try {
+            await networksSync.main();
+            await networksPersonsSync.main();
             await personsSync.main();
             await meSync.main();
             await filtersSync.main();
