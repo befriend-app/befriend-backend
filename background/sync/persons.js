@@ -18,13 +18,13 @@ const { keys: systemKeys } = require('../../services/system');
 const { getGridLookup } = require('../../services/grid');
 const { batchInsert, batchUpdate } = require('../../services/db');
 const { getKidsAgeLookup } = require('../../services/modes');
-const { batchUpdateGridSets } = require('../../services/filters');
+const { batchUpdateGridSets, filterTokensAll } = require('../../services/filters');
 
 let persons_grid_filters = ['online', 'location', 'modes', 'reviews', 'verifications', 'genders'];
 let batch_process = 1000;
 let defaultTimeout = 20000;
 
-let debug_sync_enabled = require('../../dev/debug').sync.filters;
+let debug_sync_enabled = require('../../dev/debug').sync.persons;
 
 function processPersons(network_id, persons) {
     function preparePersonCache(new_data, prev_data, params = {}) {
@@ -45,8 +45,10 @@ function processPersons(network_id, persons) {
         }
 
         //modes
+        let new_selected_modes = JSON.parse(new_data.modes) || [];
+
         person_data.modes = {
-            selected: JSON.parse(new_data.modes) || []
+            selected: new_selected_modes
         };
 
         //networks
@@ -74,7 +76,7 @@ function processPersons(network_id, persons) {
             if(prev_data.prev_modes) {
                 person_data.modes = {
                     ...prev_data.prev_modes,
-                    selected: new_data.modes
+                    selected: new_selected_modes
                 }
             }
         }
@@ -189,15 +191,19 @@ function processPersons(network_id, persons) {
                     networks = Array.from(networks);
 
                     let grid = gridLookup.byToken[person.grid_token];
-                    let prev_grid = gridLookup.byId[existingPerson?.grid_id];
                     let gender = gendersLookup.byToken[person.gender_token];
 
-                    let person_data;
+                    let prev_grid = null;
 
-                    if (person.updated > existingPerson.updated) {
-                        person_data = {
+                    if(grid && existingPerson.grid_id && grid.id !== existingPerson.grid_id) {
+                        prev_grid = gridLookup.byId[existingPerson.grid_id];
+                    }
+
+                    if (person.updated > existingPerson.updated || debug_sync_enabled) {
+                        let person_data = {
                             id: existingPerson.id,
                             grid_id: grid?.id || null,
+                            prev_grid_id: prev_grid?.id || null,
                             gender_id: gender?.id || null,
                             modes: person.modes,
                             is_new: person.is_new,
@@ -233,32 +239,37 @@ function processPersons(network_id, persons) {
                             grid,
                             prev_grid
                         }
+                        
+                        //if prev grid token, process all filter tokens for person
+                        if(prev_grid) {
+                            personsGrids[person.person_token].filter_tokens = filterTokensAll;
+                        } else {
+                            if(person.is_online !== existingPerson.is_online) {
+                                personsGrids[person.person_token].filter_tokens.push('online');
+                            }
 
-                        if(person.is_online !== existingPerson.is_online) {
-                            personsGrids[person.person_token].filter_tokens.push('online');
-                        }
+                            if(grid?.id !== prev_grid?.id) {
+                                personsGrids[person.person_token].filter_tokens.push('location');
+                            }
 
-                        if(grid?.id !== prev_grid?.id) {
-                            personsGrids[person.person_token].filter_tokens.push('location');
-                        }
+                            if(person.modes !== existingPerson.modes) {
+                                personsGrids[person.person_token].filter_tokens.push('modes');
+                            }
 
-                        if(person.modes !== existingPerson.modes) {
-                            personsGrids[person.person_token].filter_tokens.push('modes');
-                        }
+                            if(reviewsChanged(person_data, existingPerson)) {
+                                personsGrids[person.person_token].filter_tokens.push('reviews');
+                            }
 
-                        if(reviewsChanged(person_data, existingPerson)) {
-                            personsGrids[person.person_token].filter_tokens.push('reviews');
-                        }
+                            if(person.is_verified_in_person !== existingPerson?.is_verified_in_person ||
+                                person.is_verified_linkedin !== existingPerson?.is_verified_linkedin) {
+                                personsGrids[person.person_token].filter_tokens.push('verifications');
+                            }
 
-                        if(person.is_verified_in_person !== existingPerson?.is_verified_in_person ||
-                            person.is_verified_linkedin !== existingPerson?.is_verified_linkedin) {
-                            personsGrids[person.person_token].filter_tokens.push('verifications');
-                        }
+                            let existingGender = gendersLookup.byId[existingPerson?.gender_id];
 
-                        let existingGender = gendersLookup.byId[existingPerson?.gender_id];
-
-                        if(!existingGender || person.gender_token !== existingGender.gender_token) {
-                            personsGrids[person.person_token].filter_tokens.push('genders');
+                            if(!existingGender || person.gender_token !== existingGender.gender_token) {
+                                personsGrids[person.person_token].filter_tokens.push('genders');
+                            }
                         }
                     }
                 }

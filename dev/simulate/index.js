@@ -4,10 +4,12 @@ const {
 
 const yargs = require('yargs');
 let args = yargs.argv;
-let num_persons = 1000;
+let numPersons = 1000;
 
-if (args._ && args._.length) {
-    num_persons = args._[0];
+if(args.n) {
+    numPersons = args.n;
+} else if (args._ && args._.length) {
+    numPersons = args._[0];
 }
 
 function main() {
@@ -23,22 +25,22 @@ function main() {
             const devicesScript = require('./devices');
 
             console.log('Simulate: Persons');
-            await personsScript.main(num_persons);
+            await personsScript.main(numPersons);
 
             console.log('Simulate: Me');
-            await meScript.main(num_persons);
+            await meScript.main(numPersons);
 
             console.log('Simulate: Reviews');
-            await reviewsScript.main(num_persons);
+            await reviewsScript.main(numPersons);
 
             console.log('Simulate: Filters');
-            await filtersScript.main(num_persons);
+            await filtersScript.main(numPersons);
 
             console.log('Simulate: Availability');
-            await availabilityScript.main(num_persons);
+            await availabilityScript.main(numPersons);
 
             console.log('Simulate: Devices');
-            await devicesScript.main(num_persons);
+            await devicesScript.main(numPersons);
         } catch(e) {
             console.error(e);
         }

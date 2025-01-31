@@ -4,8 +4,13 @@ const { keys: systemKeys } = require('../../../services/system');
 const { getGridLookup } = require('../../../services/grid');
 
 let syncMe = require('../../../services/sync/me');
+const yargs = require('yargs');
 
 loadScriptEnv();
+
+let args = yargs.argv;
+
+// let deleteNetworksPersons = args.dnp;
 
 function main() {
     return new Promise(async (resolve, reject) => {

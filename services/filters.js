@@ -13,7 +13,7 @@ const drinkingService = require('./drinking');
 const smokingService = require('./smoking');
 
 const { getModes, getPersonExcludedModes } = require('./modes');
-const { getNetworksForFilters, getNetworksLookup } = require('./network');
+const { getNetworksLookup } = require('./network');
 const { getGendersLookup } = require('./genders');
 const { isNumeric, timeNow } = require('./shared');
 const { getGridLookup } = require('./grid');
@@ -524,6 +524,9 @@ const personalFiltersMap = {
         is_single: true
     }
 };
+
+let filterTokensAll = ['online', 'location', 'modes', 'networks', 'reviews', 'verifications', 'genders']
+    .concat(Object.keys(personalFiltersMap));
 
 
 function getFilters() {
@@ -3587,6 +3590,7 @@ function getPersonalSections() {
 module.exports = {
     filters: null,
     filterMappings,
+    filterTokensAll,
     getFilters,
     getParentFilter,
     getPersonFilters,

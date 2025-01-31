@@ -120,7 +120,7 @@ function syncPersons (inputs) {
             let timestamp_updated = prev_data_since || data_since_timestamp_w_extra;
 
             if(timestamp_updated) {
-                persons_qry = persons_qry.where('updated', '>', timestamp_updated);
+                persons_qry = persons_qry.where('p.updated', '>', timestamp_updated);
             }
 
             if (last_person_token) {
@@ -130,7 +130,7 @@ function syncPersons (inputs) {
                     .first();
 
                 if (person_token_qry) {
-                    persons_qry = persons_qry.where('id', '<', person_token_qry.id);
+                    persons_qry = persons_qry.where('p.id', '<', person_token_qry.id);
                 }
             }
 
