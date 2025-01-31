@@ -133,65 +133,81 @@ async function addPersons() {
                 current_count,
             });
 
-            let home_domains = await homeDomains();
-            let networksLookup = await getNetworksLookup();
-
-            for(let domain of home_domains) {
-                //skip notifying own domain
-                if(self_network.api_domain.includes(domain)) {
-                    continue;
-                }
-
-                let network_to = null;
-
-                for(let network of Object.values(networksLookup.byToken)) {
-                    if(network.api_domain.includes(domain)) {
-                        network_to = network;
-                    }
-                }
-
-                if(!network_to) {
-                    continue;
-                }
-
-                //security_key
-                let secret_key_to_qry = await conn('networks_secret_keys')
-                    .where('network_id', network_to.id)
-                    .where('is_active', true)
-                    .first();
-
-                if (!secret_key_to_qry) {
-                    continue;
-                }
-
-                let has_error = false;
+            if(self_network.is_befriend) {
+                let networks_batch_insert = [];
 
                 for(let person of batch_insert) {
-                    try {
-                        let r = await axios.post(getURL(domain, 'sync/persons'), {
-                            secret_key: secret_key_to_qry.secret_key_to,
-                            network_token: self_network.network_token,
-                            person_token: person.person_token,
-                            updated: person.updated
-                        });
-
-                        if(r.status === 201) {
-                            await conn('persons')
-                                .where('id', person.id)
-                                .update({
-                                    is_person_known: true
-                                });
-                        } else {
-                            has_error = true;
-                        }
-                    } catch(e) {
-                        has_error = true;
-                        console.error(e);
-                    }
+                    networks_batch_insert.push({
+                        network_id: self_network.id,
+                        person_id: person.id,
+                        is_active: true,
+                        created: timeNow(),
+                        updated: timeNow()
+                    })
                 }
 
-                if(!has_error) {
-                    break;
+                await batchInsert('networks_persons', networks_batch_insert);
+            } else {
+                let home_domains = await homeDomains();
+                let networksLookup = await getNetworksLookup();
+
+                for(let domain of home_domains) {
+                    //skip notifying own domain
+                    if(self_network.api_domain.includes(domain)) {
+                        continue;
+                    }
+
+                    let network_to = null;
+
+                    for(let network of Object.values(networksLookup.byToken)) {
+                        if(network.api_domain.includes(domain)) {
+                            network_to = network;
+                        }
+                    }
+
+                    if(!network_to) {
+                        continue;
+                    }
+
+                    //security_key
+                    let secret_key_to_qry = await conn('networks_secret_keys')
+                        .where('network_id', network_to.id)
+                        .where('is_active', true)
+                        .first();
+
+                    if (!secret_key_to_qry) {
+                        continue;
+                    }
+
+                    let has_error = false;
+
+                    for(let person of batch_insert) {
+                        try {
+                            let r = await axios.post(getURL(domain, 'sync/persons'), {
+                                secret_key: secret_key_to_qry.secret_key_to,
+                                network_token: self_network.network_token,
+                                person_token: person.person_token,
+                                updated: person.updated
+                            });
+
+                            if(r.status === 201) {
+                                await conn('persons')
+                                    .where('id', person.id)
+                                    .update({
+                                        is_person_known: true
+                                    });
+                            } else {
+                                has_error = true;
+                            }
+                        } catch(e) {
+                            has_error = true;
+                            console.error(e);
+                        }
+                    }
+
+                    if(!has_error) {
+                        break;
+                    }
                 }
             }
         }
