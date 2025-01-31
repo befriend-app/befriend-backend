@@ -1689,7 +1689,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
     function updateMultiFilter(sectionKey) {
         return new Promise(async (resolve, reject) => {
             try {
-                let section_options = sectionsOptionsLookup[sectionKey] || {};
+                let section_options = sectionsOptionsLookup[sectionKey] || [];
 
                 let default_importance = personalFiltersMap[sectionKey].importance.default;
                 let importance_threshold = personalFiltersMap[sectionKey].importance.threshold;
@@ -1829,7 +1829,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
     function updateSingleFilter(sectionKey) {
         return new Promise(async (resolve, reject) => {
             try {
-                let section_options = sectionsOptionsLookup[sectionKey] || {};
+                let section_options = sectionsOptionsLookup[sectionKey] || [];
 
                 let default_importance = personalFiltersMap[sectionKey].importance.default;
                 let importance_threshold = personalFiltersMap[sectionKey].importance.threshold;
@@ -2004,6 +2004,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
         }
 
         grid_token = person.grid.token;
+        sectionsOptionsLookup = {};
 
         try {
             if (!person_filters) {
@@ -2027,7 +2028,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
         //get data options needed for single/multi filters
         for(let key in personalFiltersMap) {
             if(prev_grid_token || key.includes(filter_token) || filter_token.includes(key)) {
-                sectionsOptionsLookup[filter_token] = await personalFiltersMap[filter_token].options_fn();
+                sectionsOptionsLookup[key] = await personalFiltersMap[key].options_fn();
             }
         }
 
