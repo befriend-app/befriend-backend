@@ -9,7 +9,7 @@ const {
     generateToken,
     timeNow,
     birthDatePure,
-    calculateAge, joinPaths, getURL,
+    calculateAge, getURL,
 } = require('../../services/shared');
 
 const { batchInsert } = require('../../services/db');
@@ -87,6 +87,7 @@ async function addPersons() {
 
                 let person_insert = {
                     registration_network_id: self_network.id,
+                    is_person_known: self_network.is_befriend,
                     person_token: generateToken(),
                     first_name: person.name.first,
                     last_name: person.name.last,
@@ -133,67 +134,69 @@ async function addPersons() {
                 current_count,
             });
 
-            if(!self_network.is_befriend) {
-                let home_domains = await homeDomains();
-                let networksLookup = await getNetworksLookup();
+            if(self_network.is_befriend) {
+                return;
+            }
 
-                for(let domain of home_domains) {
-                    //skip notifying own domain
-                    if(self_network.api_domain.includes(domain)) {
-                        continue;
+            let home_domains = await homeDomains();
+            let networksLookup = await getNetworksLookup();
+
+            for(let domain of home_domains) {
+                //skip notifying own domain
+                if(self_network.api_domain.includes(domain)) {
+                    continue;
+                }
+
+                let network_to = null;
+
+                for(let network of Object.values(networksLookup.byToken)) {
+                    if(network.api_domain.includes(domain)) {
+                        network_to = network;
                     }
+                }
 
-                    let network_to = null;
+                if(!network_to) {
+                    continue;
+                }
 
-                    for(let network of Object.values(networksLookup.byToken)) {
-                        if(network.api_domain.includes(domain)) {
-                            network_to = network;
-                        }
-                    }
+                //security_key
+                let secret_key_to_qry = await conn('networks_secret_keys')
+                    .where('network_id', network_to.id)
+                    .where('is_active', true)
+                    .first();
 
-                    if(!network_to) {
-                        continue;
-                    }
+                if (!secret_key_to_qry) {
+                    continue;
+                }
 
-                    //security_key
-                    let secret_key_to_qry = await conn('networks_secret_keys')
-                        .where('network_id', network_to.id)
-                        .where('is_active', true)
-                        .first();
+                let has_error = false;
 
-                    if (!secret_key_to_qry) {
-                        continue;
-                    }
+                for(let person of batch_insert) {
+                    try {
+                        let r = await axios.post(getURL(domain, 'sync/persons'), {
+                            secret_key: secret_key_to_qry.secret_key_to,
+                            network_token: self_network.network_token,
+                            person_token: person.person_token,
+                            updated: person.updated
+                        });
 
-                    let has_error = false;
-
-                    for(let person of batch_insert) {
-                        try {
-                            let r = await axios.post(getURL(domain, 'sync/persons'), {
-                                secret_key: secret_key_to_qry.secret_key_to,
-                                network_token: self_network.network_token,
-                                person_token: person.person_token,
-                                updated: person.updated
-                            });
-
-                            if(r.status === 201) {
-                                await conn('persons')
-                                    .where('id', person.id)
-                                    .update({
-                                        is_person_known: true
-                                    });
-                            } else {
-                                has_error = true;
-                            }
-                        } catch(e) {
+                        if(r.status === 201) {
+                            await conn('persons')
+                                .where('id', person.id)
+                                .update({
+                                    is_person_known: true
+                                });
+                        } else {
                             has_error = true;
-                            console.error(e);
                         }
+                    } catch(e) {
+                        has_error = true;
+                        console.error(e);
                     }
+                }
 
-                    if(!has_error) {
-                        break;
-                    }
+                if(!has_error) {
+                    break;
                 }
             }
         }
