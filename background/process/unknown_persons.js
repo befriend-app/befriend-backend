@@ -126,7 +126,7 @@ async function main() {
         }
 
         if (self_network.is_befriend) {
-            // return;
+            return;
         }
     } catch (e) {
         console.error('Error getting own network', e);
