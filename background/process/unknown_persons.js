@@ -1,0 +1,155 @@
+const cacheService = require('../../services/cache');
+const dbService = require('../../services/db');
+const { timeNow, loadScriptEnv, calculateAge, timeoutAwait, getURL } = require('../../services/shared');
+const { getNetworkSelf, homeDomains, getNetworksLookup } = require('../../services/network');
+const axios = require('axios');
+
+loadScriptEnv();
+
+const UPDATE_FREQUENCY = 60 * 10 * 1000 / 1000; //runs every 10 minutes
+const BATCH_SIZE = 1000;
+
+let self_network;
+
+function processUpdate() {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let t = timeNow();
+            
+            let conn = await dbService.conn();
+
+            let hasMorePersons = true;
+            let offset = 0;
+
+            while (hasMorePersons) {
+                try {
+                    let persons = await conn('persons')
+                        .where('is_person_known', false)
+                        .where('registration_network_id', self_network.id)
+                        .offset(offset)
+                        .limit(BATCH_SIZE)
+                        .select('id', 'person_token', 'updated');
+
+                    if (!persons.length) {
+                        hasMorePersons = false;
+                    }
+
+                    offset += BATCH_SIZE;
+
+                    let home_domains = await homeDomains();
+                    let networksLookup = await getNetworksLookup();
+
+                    for(let domain of home_domains) {
+                        //skip notifying own domain
+                        if(self_network.api_domain.includes(domain)) {
+                            continue;
+                        }
+
+                        let network_to = null;
+
+                        for(let network of Object.values(networksLookup.byToken)) {
+                            if(network.api_domain.includes(domain)) {
+                                network_to = network;
+                            }
+                        }
+
+                        if(!network_to) {
+                            continue;
+                        }
+
+                        //security_key
+                        let secret_key_to_qry = await conn('networks_secret_keys')
+                            .where('network_id', network_to.id)
+                            .where('is_active', true)
+                            .first();
+
+                        if (!secret_key_to_qry) {
+                            continue;
+                        }
+
+                        let has_error = false;
+
+                        for(let person of persons) {
+                            try {
+                                let r = await axios.post(getURL(domain, 'sync/persons'), {
+                                    secret_key: secret_key_to_qry.secret_key_to,
+                                    network_token: self_network.network_token,
+                                    person_token: person.person_token,
+                                    updated: person.updated
+                                });
+
+                                if(r.status === 201) {
+                                    await conn('persons')
+                                        .where('id', person.id)
+                                        .update({
+                                            is_person_known: true,
+                                            updated: timeNow()
+                                        });
+                                } else {
+                                    has_error = true;
+                                }
+                            } catch(e) {
+                                has_error = true;
+                                console.error(e);
+                            }
+                        }
+
+                        if(!has_error) {
+                            break;
+                        }
+                    }
+                } catch (e) {
+                    console.error(e);
+                    hasMorePersons = false;
+                }
+            }
+
+            console.log({
+                total_time: timeNow() - t,
+            });
+        } catch (e) {
+            console.error(e);
+        }
+
+        resolve();
+    });
+}
+
+async function main() {
+    await cacheService.init();
+
+    try {
+        self_network = await getNetworkSelf();
+
+        if (!self_network) {
+            throw new Error();
+        }
+
+        if (self_network.is_befriend) {
+            // return;
+        }
+    } catch (e) {
+        console.error('Error getting own network', e);
+        await timeoutAwait(5000);
+        process.exit();
+    }
+
+    await processUpdate();
+
+    setInterval(processUpdate, UPDATE_FREQUENCY);
+}
+
+module.exports = {
+    main
+}
+
+if (require.main === module) {
+    (async function () {
+        try {
+            await main();
+            process.exit();
+        } catch (e) {
+            console.error(e);
+        }
+    })();
+}

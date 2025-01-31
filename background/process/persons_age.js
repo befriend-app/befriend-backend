@@ -1,6 +1,6 @@
 const cacheService = require('../../services/cache');
 const dbService = require('../../services/db');
-const { timeNow, loadScriptEnv, calculateAge } = require('../../services/shared');
+const { timeNow, loadScriptEnv, calculateAge, timeoutAwait } = require('../../services/shared');
 const { getNetworkSelf } = require('../../services/network');
 const { batchUpdate } = require('../../services/db');
 
@@ -9,12 +9,12 @@ loadScriptEnv();
 const UPDATE_FREQUENCY = 3600 * 24 * 1000; //runs every day
 const BATCH_SIZE = 50000;
 
+let self_network;
+
 function processUpdate() {
     return new Promise(async (resolve, reject) => {
         try {
             let t = timeNow();
-
-            let my_network = await getNetworkSelf();
 
             let conn = await dbService.conn();
 
@@ -25,7 +25,7 @@ function processUpdate() {
                 try {
                     let persons = await conn('persons AS p')
                         .join('networks_persons AS np', 'np.person_id', '=', 'p.id')
-                        .where('np.network_id', my_network.id)
+                        .where('np.network_id', self_network.id)
                         .where('is_active', true)
                         .orderBy('p.id')
                         .select('p.id', 'person_token', 'birth_date', 'age')
@@ -80,14 +80,37 @@ function processUpdate() {
     });
 }
 
-async function startProcess() {
+async function main() {
     await cacheService.init();
+
+    try {
+        self_network = await getNetworkSelf();
+
+        if (!self_network) {
+            throw new Error();
+        }
+    } catch (e) {
+        console.error('Error getting own network', e);
+        await timeoutAwait(5000);
+        process.exit();
+    }
 
     processUpdate();
 
     setInterval(processUpdate, UPDATE_FREQUENCY);
 }
 
-(async function () {
-    startProcess();
-})();
+module.exports = {
+    main
+}
+
+if (require.main === module) {
+    (async function () {
+        try {
+            await main();
+            process.exit();
+        } catch (e) {
+            console.error(e);
+        }
+    })();
+}
