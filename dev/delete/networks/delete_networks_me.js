@@ -3,7 +3,7 @@ const { loadScriptEnv, isProdApp } = require('../../../services/shared');
 const { keys: systemKeys } = require('../../../services/system');
 const { getGridLookup } = require('../../../services/grid');
 
-let syncMe = require('../../../services/sync/me');
+let syncMe = require('../../../services/networks/me');
 
 loadScriptEnv();
 

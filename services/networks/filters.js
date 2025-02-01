@@ -2,7 +2,7 @@ const dbService = require('../db');
 const { getNetworkSelf, getNetworksLookup } = require('../network');
 const { timeNow } = require('../shared');
 const { results_limit, data_since_ms_extra } = require('./common');
-const { filterMappings} = require('../../services/filters');
+const { filterMappings} = require('../filters');
 const { getFilters } = require('../filters');
 
 function getFilterMapByItem(item) {

@@ -1,8 +1,14 @@
 const { getNetwork } = require('../services/network');
 const cacheService = require('../services/cache');
 
+
 module.exports = function (req, res, next) {
     return new Promise(async (resolve, reject) => {
+        if(['/networks', '/networks/'].includes(req.originalUrl)) {
+            next();
+            return resolve();
+        }
+
         let network_token = req.body.network_token || req.query.network_token;
         let secret_key = req.body.secret_key || req.query.secret_key;
 

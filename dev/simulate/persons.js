@@ -173,7 +173,7 @@ async function addPersons() {
 
                 for(let person of batch_insert) {
                     try {
-                        let r = await axios.post(getURL(domain, 'sync/persons'), {
+                        let r = await axios.post(getURL(domain, 'networks/persons'), {
                             secret_key: secret_key_to_qry.secret_key_to,
                             network_token: self_network.network_token,
                             person_token: person.person_token,

@@ -10,7 +10,7 @@ module.exports = {
             // 'availability',
             // 'activity_types',
             // 'modes',
-            // 'networks',
+            'networks',
             // 'reviews',
             // 'verifications',
 

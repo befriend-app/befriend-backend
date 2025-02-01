@@ -11,7 +11,6 @@ const tvService = require('../services/tv');
 
 const sectionData = require('../services/sections_data');
 
-const { getNetwork, getNetworkSelf } = require('../services/network');
 const { getPerson } = require('../services/persons');
 const { getCategoriesPlaces, placesAutoComplete, travelTimes } = require('../services/places');
 const { cityAutoComplete } = require('../services/locations');
@@ -20,17 +19,11 @@ const { getTopArtistsForGenre, musicAutoComplete } = require('../services/music'
 const { getTopTeamsBySport, sportsAutoComplete } = require('../services/sports');
 
 const {
-    isProdApp,
-    isIPAddress,
-    isLocalHost,
-    getURL,
     timeNow,
     generateToken,
-    joinPaths,
     normalizeSearch,
 } = require('../services/shared');
 const { getActivityTypes } = require('../services/activities');
-const { deleteKeys } = require('../services/cache');
 
 module.exports = {
     getNetworks: function (req, res) {

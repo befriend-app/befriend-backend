@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const syncController = require('../controllers/sync');
+const syncController = require('../controllers/networks/sync');
 
-router.use(require('../middleware/sync'));
+router.use(require('../middleware/networks'));
+
 
 router.get('/networks-persons', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
@@ -16,17 +17,6 @@ router.get('/networks-persons', function (req, res, next) {
     });
 });
 
-router.post('/persons', function (req, res, next) {
-    return new Promise(async (resolve, reject) => {
-        try {
-            await syncController.createPerson(req, res);
-        } catch (e) {
-            console.error(e);
-        }
-
-        resolve();
-    });
-});
 
 router.get('/persons', function (req, res, next) {
     return new Promise(async (resolve, reject) => {

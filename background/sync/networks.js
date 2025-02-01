@@ -15,7 +15,6 @@ const {
 const { homeDomains, cols, getNetworkSelf } = require('../../services/network');
 const { deleteKeys } = require('../../services/cache');
 
-
 function main() {
     loadScriptEnv();
 
