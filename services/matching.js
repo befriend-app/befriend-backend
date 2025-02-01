@@ -517,10 +517,9 @@ function getMatches(me, params = {}) {
             try {
                 let networksLookup = await getNetworksLookup();
 
-                //todo check
-                let my_network_token = networksLookup.byId[me.network_id]?.network_token;
+                let my_network_tokens = me.networks;
 
-                if (!my_network_token) {
+                if (!my_network_tokens?.length) {
                     return resolve();
                 }
 
@@ -556,7 +555,7 @@ function getMatches(me, params = {}) {
 
                 // Get exclusion data for each network
                 for(let network of networks) {
-                    if(my_network_token === network.network_token) {
+                    if(my_network_tokens.includes(network.network_token)) {
                         continue;
                     }
 
@@ -587,7 +586,7 @@ function getMatches(me, params = {}) {
 
                 // Process exclusion results
                 for(let network of networks) {
-                    if(my_network_token === network.network_token) {
+                    if(my_network_tokens.includes(network.network_token)) {
                         continue;
                     }
 
