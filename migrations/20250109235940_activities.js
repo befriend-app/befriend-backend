@@ -14,7 +14,7 @@ exports.up = async function (knex) {
     });
 
     await knex.schema.createTable('activities_notifications', (table) => {
-        table.increments('id').primary();
+        table.bigIncrements('id').primary();
 
         table
             .bigInteger('activity_id')
