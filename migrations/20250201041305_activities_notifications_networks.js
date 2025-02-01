@@ -33,7 +33,11 @@ exports.up = async function(knex) {
             .notNullable()
             .alter();
 
-        table.string('access_token').nullable().after('sent_to_network_at');
+        table.bigInteger('sent_at').nullable().alter().comment('If notification is being handled by 3rd party network, this field would be null at first');
+
+        table.boolean('did_network_receive').nullable().after('sent_to_network_at');
+
+        table.string('access_token').nullable().after('did_network_receive');
         table.bigInteger('access_token_used_at').nullable().after('access_token');
         table.string('access_token_ip').nullable().after('access_token_used_at');
 
@@ -54,7 +58,13 @@ exports.down = async function(knex) {
     });
 
     await knex.schema.alterTable('activities_notifications', (table) => {
-        let cols = ['person_from_network_id', 'access_token', 'access_token_used_at', 'access_token_ip'];
+        let cols = [
+            'person_from_network_id',
+            'did_network_receive',
+            'access_token',
+            'access_token_used_at',
+            'access_token_ip'
+        ];
 
         table.dropForeign('person_from_network_id');
 
