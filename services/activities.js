@@ -3,12 +3,15 @@ const dbService = require('../services/db');
 const matchingService = require('../services/matching');
 const notificationService = require('../services/notifications');
 
-const { getOptionDateTime, isNumeric, timeNow, generateToken } = require('./shared');
+const { getOptionDateTime, isNumeric, timeNow, generateToken, getURL } = require('./shared');
 const { getModes } = require('./modes');
 const { getActivityPlace } = require('./places');
-const { getNetworkSelf } = require('./network');
+const { getNetworkSelf, getNetworksLookup } = require('./network');
 const { hGetAllObj } = require('./cache');
 const { batchInsert } = require('./db');
+
+const axios = require('axios');
+
 
 function createActivity(person, activity) {
     return new Promise(async (resolve, reject) => {
@@ -27,14 +30,18 @@ function createActivity(person, activity) {
         try {
             //activity
             // unique across systems
+            let network_self = await getNetworkSelf();
             let activity_token = generateToken(20);
+            let access_token = generateToken(20);
 
             activity.activity_token = activity_token;
 
             let conn = await dbService.conn();
 
             let activity_insert = {
-                activity_token: activity_token,
+                activity_token,
+                network_id: network_self.id,
+                access_token,
                 activity_type_id: activity.activity.data.id,
                 fsq_place_id: activity.place?.id || null,
                 mode_id: activity.mode.id,
@@ -762,12 +769,20 @@ function findMatches(person, activity) {
     });
 }
 
-function notifyMatches(person, activity, matches) {
-    let conn, payload, network;
+function notifyMatches(me, activity, matches) {
+    let conn, payload, my_network, networksLookup;
     let isFulfilled = false;
+
+    let cache_key = cacheService.keys.activities_notifications(activity.activity_token);
 
     let _tmp_person_int = 0;
     let _tmp_device_int = 0;
+
+    let activityCopy = structuredClone(activity);
+    
+    delete activityCopy.activity_id;
+    delete activityCopy.travel;
+    delete activityCopy.place?.data?.id;
 
     async function getTmpPersonToken() {
         let conn = await dbService.conn();
@@ -835,29 +850,16 @@ function notifyMatches(person, activity, matches) {
 
         return {
             title: `${emoji_str}Invite: ${title_arr.join(' ')}`,
-            body: `Join ${person.first_name}${plus_str} ${place_str}`,
+            body: `Join ${me.first_name}${plus_str} ${place_str}`,
             data: {
                 activity_token: activity.activity_token,
-                network_token: network.network_token,
+                network_token: my_network.network_token,
             },
         };
     }
-
+    
     function sendGroupNotifications(group, delay) {
-        let cache_key = cacheService.keys.activities_notifications(activity.activity_token);
-
         setTimeout(async function () {
-            let platforms = {
-                ios: {
-                    tokens: [],
-                    devices: {},
-                },
-                android: {
-                    tokens: [],
-                    devices: {},
-                },
-            };
-
             //check if activity has already been fulfilled
             if (isFulfilled) {
                 return;
@@ -871,107 +873,312 @@ function notifyMatches(person, activity, matches) {
                     return;
                 }
             }
+            
+            let {platforms, notify_networks_persons} = organizeGroupSend(group);
 
-            //1. send notifications
-            for (let to_person of group) {
-                // our network
-                if (to_person.network_id === network.id) {
-                    if (to_person.device.platform === 'ios') {
-                        platforms.ios.tokens.push(to_person.device.token);
-
-                        platforms.ios.devices[to_person.device.token] = to_person;
-                    } else if (to_person.device.platform === 'android') {
-                        platforms.android.tokens.push(to_person.device.token);
-                    }
-                } else {
-                    // 3rd party network
+            //send notifications
+            if (platforms.ios.tokens.length) {
+                try {
+                     await iosSendGroup(platforms.ios);
+                } catch(e) {
+                    console.error(e);   
                 }
             }
 
-            if (platforms.ios.tokens.length) {
+            if (platforms.android.tokens.length) {
                 try {
+                    await androidSendGroup(platforms.android);
+                } catch(e) {
+                    console.error(e);
+                }
+            }
+
+            if(Object.keys(notify_networks_persons).length) {
+                try {
+                    await networksSendGroup(notify_networks_persons);
+                } catch(e) {
+                    console.error(e);   
+                }
+            }
+        }, delay);
+    }
+
+    function organizeGroupSend(group) {
+        let platforms = {
+            ios: {
+                tokens: [],
+                devices: {},
+            },
+            android: {
+                tokens: [],
+                devices: {},
+            },
+        };
+
+        let notify_networks_persons = {};
+        
+        for (let to_person of group) {
+            // own network
+            let has_device = false;
+
+            if (to_person.networks.includes(my_network.network_token)) {
+                if (to_person.device.platform === 'ios') {
+                    platforms.ios.tokens.push(to_person.device.token);
+
+                    platforms.ios.devices[to_person.device.token] = to_person;
+
+                    has_device = true;
+                } else if (to_person.device.platform === 'android') {
+                    platforms.android.tokens.push(to_person.device.token);
+
+                    has_device = true;
+                }
+            }
+
+            if(!has_device) {
+                // 3rd party network
+                let prevent_duplicates = {};
+
+                for(let network of to_person.networks) {
+                    if(!prevent_duplicates[network]) {
+                        prevent_duplicates[network] = {};
+                    }
+
+                    if(!notify_networks_persons[network]) {
+                        notify_networks_persons[network] = [];
+                    }
+
+                    if(!prevent_duplicates[network][to_person.person_token]) {
+                        prevent_duplicates[network][to_person.person_token] = true;
+                        notify_networks_persons[network].push(to_person);
+                    }
+                }
+            }
+        }
+        
+        return {
+            platforms,
+            notify_networks_persons
+        }
+    }
+    
+    function iosSendGroup(ios) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let batch_insert = [];
+                let to_persons = [];
+                let pipeline = cacheService.startPipeline();
+
+                let results = await notificationService.ios.sendBatch(
+                    ios.tokens,
+                    payload,
+                    true,
+                );
+
+                //2. add to db/cache
+                for (let result of results) {
+                    let is_success = false;
+                    let device_token = null;
+
+                    let sent = result.sent?.[0];
+                    let failed = result.failed?.[0];
+
+                    if (sent) {
+                        device_token = sent.device;
+
+                        if (sent.status === 'success') {
+                            is_success = true;
+                        }
+                    }
+
+                    if (failed) {
+                        device_token = failed.device;
+                    }
+
+                    if (!device_token) {
+                        console.error('No device token found');
+                        continue;
+                    }
+
+                    let to_person = ios.devices[device_token];
+
+                    to_persons.push(to_person);
+
+                    let insert = {
+                        activity_id: activity.activity_id,
+                        person_from_id: me.id,
+                        person_to_id: to_person.person_id,
+                        person_from_network_id: my_network.id,
+                        person_to_network_id: my_network.id,
+                        sent_at: timeNow(),
+                        created: timeNow(),
+                        updated: timeNow(),
+                    };
+
+                    if (is_success) {
+                        insert.is_success = true;
+                    } else {
+                        insert.is_failed = true;
+                    }
+
+                    batch_insert.push(insert);
+                }
+
+                if (batch_insert.length) {
+                    await batchInsert('activities_notifications', batch_insert, true);
+
+                    for (let i = 0; i < batch_insert.length; i++) {
+                        let insert = batch_insert[i];
+                        let to_person = to_persons[i];
+
+                        insert.person_from_token = me.person_token;
+                        insert.friends_qty = activity.friends.qty;
+
+                        pipeline.hSet(
+                            cache_key,
+                            to_person.person_token,
+                            JSON.stringify(insert)
+                        );
+                    }
+
+                    await cacheService.execPipeline(pipeline);
+                }
+                
+                resolve();
+            } catch (e) {
+                console.error(e);
+                return reject(e);
+            }     
+        });
+    }
+
+    function androidSendGroup(android) {
+        return new Promise(async (resolve, reject) => {
+            //todo
+            resolve();
+        });
+    }
+
+    function networksSendGroup(notify_networks_persons) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                //track which persons have already been sent to
+                let persons_networks = {};
+
+                for(let network_token in notify_networks_persons) {
+                    let network = networksLookup.byToken[network_token];
+
+                    if(!network) {
+                        continue;
+                    }
+
+                    let secret_key_to_qry = await conn('networks_secret_keys')
+                        .where('network_id', network.id)
+                        .where('is_active', true)
+                        .first();
+
+                    if (!secret_key_to_qry) {
+                        continue;
+                    }
+
+                    let network_persons = notify_networks_persons[network_token];
+
+                    let organized = {};
+
                     let batch_insert = [];
-                    let to_persons = [];
-                    let pipeline = cacheService.startPipeline();
 
-                    let results = await notificationService.ios.sendBatch(
-                        platforms.ios.tokens,
-                        payload,
-                        true,
-                    );
-
-                    //2. add to db/cache
-                    for (let result of results) {
-                        let is_success = false;
-                        let device_token = null;
-
-                        let sent = result.sent?.[0];
-                        let failed = result.failed?.[0];
-
-                        if (sent) {
-                            device_token = sent.device;
-
-                            if (sent.status === 'success') {
-                                is_success = true;
-                            }
-                        }
-
-                        if (failed) {
-                            device_token = failed.device;
-                        }
-
-                        if (!device_token) {
-                            console.error('No device token found');
+                    for(let network_person of network_persons) {
+                        //in case person belongs to multiple networks and we already delivered a notification request to a network
+                        if(persons_networks[network_person.person_token]) {
                             continue;
                         }
 
-                        let to_person = platforms.ios.devices[device_token];
-
-                        to_persons.push(to_person);
-
-                        let insert = {
+                        let data = {
                             activity_id: activity.activity_id,
-                            person_from_id: person.id,
-                            person_to_id: to_person.person_id,
-                            person_to_network_id: to_person.network_id,
-                            sent_at: timeNow(),
+                            person_from_id: me.id,
+                            person_to_id: network_person.person_id,
+                            person_from_network_id: my_network.id,
+                            person_to_network_id: network.id,
+                            sent_to_network_at: timeNow(),
+                            access_token: generateToken(16),
                             created: timeNow(),
-                            updated: timeNow(),
+                            updated: timeNow()
                         };
 
-                        if (is_success) {
-                            insert.is_success = true;
-                        } else {
-                            insert.is_failed = true;
-                        }
+                        batch_insert.push(data);
 
-                        batch_insert.push(insert);
+                        organized[network_person.person_token] = {
+                            first_name: me.first_name || null,
+                            access_token: data.access_token,
+                            person_from_token: me.person_token,
+                            person_to_token: network_person.person_token,
+                            sent_to_network_at: data.sent_to_network_at,
+                            updated: data.updated
+                        };
                     }
 
-                    if (batch_insert.length) {
+                    if(batch_insert.length) {
+                        let organized_person_tokens = Object.keys(organized);
+
+                        // (1) add to db
                         await batchInsert('activities_notifications', batch_insert, true);
 
-                        for (let i = 0; i < batch_insert.length; i++) {
-                            let insert = batch_insert[i];
-                            let to_person = to_persons[i];
+                        // (2) add to cache
+                        let pipeline = cacheService.startPipeline();
 
-                            insert.person_from_token = person.person_token;
+                        for(let i = 0; i < batch_insert.length; i++) {
+                            let insert = batch_insert[i];
+                            let to_person = organized[organized_person_tokens[i]];
+
+                            insert.person_from_token = me.person_token;
                             insert.friends_qty = activity.friends.qty;
 
                             pipeline.hSet(
                                 cache_key,
-                                to_person.person_token,
-                                JSON.stringify(insert),
+                                to_person.person_to_token,
+                                JSON.stringify(insert)
                             );
                         }
 
                         await cacheService.execPipeline(pipeline);
+
+                        // (3) post to network
+                        try {
+                            let url = getURL(network.api_domain, 'networks/activities/notifications');
+
+                            let r = await axios.post(url, {
+                                secret_key: secret_key_to_qry.secret_key_to,
+                                network_token: my_network.network_token,
+                                activity: activityCopy,
+                                persons: organized
+                            }, {
+                                timeout: 2000
+                            });
+
+                            let activity_notification_ids = batch_insert.map(item => item.id);
+
+                            await conn('activities_notifications')
+                                .whereIn('id', activity_notification_ids)
+                                .update({
+                                    did_network_receive: r.status === 201,
+                                    updated: timeNow(),
+                                })
+
+                            if(r.status === 201) {
+                                for(let person_token in organized) {
+                                    persons_networks[person_token] = true;
+                                }
+                            }
+                        } catch(e) {
+                            console.error(e);
+                        }
                     }
-                } catch (e) {
-                    console.error(e);
                 }
+            } catch(e) {
+                console.error(e);
+                return reject(e);
             }
-        }, delay);
+        });
     }
 
     function isActivityTypeExcluded(filter) {
@@ -997,7 +1204,9 @@ function notifyMatches(person, activity, matches) {
         try {
             conn = await dbService.conn();
 
-            network = await getNetworkSelf();
+            my_network = await getNetworkSelf();
+
+            networksLookup = await getNetworksLookup();
 
             payload = getPayload();
         } catch (e) {
@@ -1013,7 +1222,7 @@ function notifyMatches(person, activity, matches) {
         for (let match of matches) {
             pipeline.hmGet(cacheService.keys.person(match.person_token), [
                 'id',
-                'network_id',
+                'networks',
                 'devices',
             ]);
 
@@ -1040,7 +1249,15 @@ function notifyMatches(person, activity, matches) {
             try {
                 let person = results[idx++];
                 match.person_id = parseInt(person[0]);
-                match.network_id = parseInt(person[1]);
+                match.networks = JSON.parse(person[1]) || [];
+
+                if(!match.networks.length) {
+                    console.warn({
+                        person_token: match.person_token,
+                        error: 'missing cached networks field'
+                    });
+                }
+
                 let personDevices = JSON.parse(person[2]);
 
                 let activities_filter = JSON.parse(results[idx++]);
@@ -1077,7 +1294,15 @@ function notifyMatches(person, activity, matches) {
                 continue;
             }
 
-            if (match.network_id === network.id) {
+            let match_networks = [];
+
+            for(let network_token of match.networks) {
+                if(networksLookup.byToken[network_token]) {
+                    match_networks.push(networksLookup.byToken[network_token]);
+                }
+            }
+
+            if (match.networks.includes(my_network.network_token)) {
                 //tmp - test other network only - todo remove
                 continue;
 
