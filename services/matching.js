@@ -297,7 +297,7 @@ function getMatches(me, params = {}) {
                                 continue;
                             }
 
-                            if(person_sections?.active[s] && !person_sections.active[s].deleted) {
+                            if(person_sections?.active?.[s] && !person_sections.active[s].deleted) {
                                 personsInterests[person_token].sections[s] = person_sections[s];
                             }
                         }
