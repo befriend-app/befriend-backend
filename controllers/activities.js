@@ -7,9 +7,10 @@ const { getPerson } = require('../services/persons');
 
 const { getModes, getModeById } = require('../services/modes');
 const { personToPersonInterests } = require('../services/matching');
-const { getActivityType, declineNotification, acceptNotification } = require('../services/activities');
+const { getActivityType } = require('../services/activities');
 const { getGender } = require('../services/genders');
 const { getPlaceFSQ } = require('../services/places');
+const { acceptNotification, declineNotification } = require('../services/notifications');
 
 
 function createActivity(req, res) {

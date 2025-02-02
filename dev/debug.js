@@ -45,5 +45,9 @@ module.exports = {
         persons: isProdApp() ? false : false,
         me: isProdApp() ? false : false,
         filters: isProdApp() ? false : false
+    },
+    notifications: {
+        notify_matches: isProdApp() ? false : true,
+        networks: isProdApp() ? false : true,
     }
 };

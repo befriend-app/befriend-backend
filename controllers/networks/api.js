@@ -1,4 +1,5 @@
 const networksPersonsService = require('../../services/networks/persons');
+const networksNotificationsService = require('../../services/networks/notifications');
 
 
 module.exports = {
@@ -24,11 +25,12 @@ module.exports = {
         return new Promise(async (resolve, reject) => {
             //received on my network from 3rd-party network person
             let from_network = req.from_network;
+            let person_from_token = req.body.person_from_token;
             let activity = req.body.activity;
             let persons = req.body.persons;
 
             try {
-                let response = await networksPersonsService.createPerson(req.from_network, req.body);
+                let response = await networksNotificationsService.sendNotifications(from_network,person_from_token,  activity, persons);
 
                 res.json(response, 201);
             } catch (e) {

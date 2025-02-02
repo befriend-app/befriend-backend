@@ -29,6 +29,19 @@ function getModeById(id) {
     });
 }
 
+function getModeByToken(token) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let modes = await getModes();
+
+            resolve(modes.byToken[token]);
+        } catch (e) {
+            console.error(e);
+            return reject(e);
+        }
+    });
+}
+
 function getModes() {
     return new Promise(async (resolve, reject) => {
         if (module.exports.modes.lookup) {
@@ -267,6 +280,7 @@ module.exports = {
     kidsAgeOptions: null,
     kidsAgeLookup: null,
     getModeById,
+    getModeByToken,
     getModes,
     getKidsAgeOptions,
     getKidsAgeLookup,

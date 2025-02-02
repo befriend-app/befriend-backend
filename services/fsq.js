@@ -1,5 +1,8 @@
 const axios = require('axios');
+
 const { getMetersFromMilesOrKm, joinPaths } = require('./shared');
+
+const cacheService = require('./cache');
 
 module.exports = {
     base_url: 'https://api.foursquare.com/v3',
@@ -176,4 +179,38 @@ module.exports = {
             }
         });
     },
+    getPlaceData: function (place_id) {
+        return new Promise(async (resolve, reject) => {
+            let cache_key = cacheService.keys.place_fsq(place_id);
+
+            let api_key = process.env.FSQ_KEY;
+
+            let route = `/places/${place_id}`;
+
+            let url = joinPaths(module.exports.base_url, route);
+
+            try {
+                let cache_data = await cacheService.getObj(cache_key);
+
+                if(cache_data) {
+                    return resolve(cache_data);
+                }
+
+                let r = await axios.get(url, {
+                    headers: {
+                        Accept: 'application/json',
+                        Authorization: api_key,
+                    },
+                    params: {},
+                });
+
+                await cacheService.setCache(cache_key, r.data);
+
+                resolve(r.data);
+            } catch (e) {
+                console.error(e);
+                return reject();
+            }
+        });
+    }
 };
