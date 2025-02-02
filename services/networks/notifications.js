@@ -63,6 +63,7 @@ module.exports = {
                             person_from_network_id: from_network.id,
                             person_to_network_id: network_self.id,
                             sent_at: timeNow(),
+                            access_token: to_person.access_token,
                             created: timeNow(),
                             updated: timeNow()
                         };
@@ -347,7 +348,11 @@ module.exports = {
                     let to_person = persons[person_token];
 
                     let payloadCopy = structuredClone(payload);
-                    payloadCopy.data.access_url = getURL(from_network.api_domain, `activities/networks/notifications/${activityData.activity_token}/${to_person.access_token}`);
+
+                    payloadCopy.data.access = {
+                        token: to_person.access_token,
+                        domain: getURL(from_network.api_domain)
+                    }
 
                     if (to_person.device.platform === 'ios') {
                         platforms.ios.tokens[to_person.device.token] = payloadCopy;

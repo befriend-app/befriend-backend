@@ -104,12 +104,15 @@ function notifyMatches(me, activity, matches) {
     delete activityCopy.travel;
     delete activityCopy.place?.data?.id;
 
-    async function getTmpPersonToken() {
+    async function getTmpPerson() {
         let conn = await dbService.conn();
 
-        let persons = await conn('persons').where('id', '>', 1).orderBy('id').limit(3);
+        let persons = await conn('persons')
+            .orderBy('id')
+            .offset(1)
+            .limit(3);
 
-        let token = persons[_tmp_person_int].person_token;
+        let person = persons[_tmp_person_int];
 
         _tmp_person_int++;
 
@@ -117,7 +120,7 @@ function notifyMatches(me, activity, matches) {
             _tmp_person_int = 0;
         }
 
-        return token;
+        return person;
     }
 
     async function getTmpDeviceToken() {
@@ -542,6 +545,10 @@ function notifyMatches(me, activity, matches) {
 
                 let currentDevice = personDevices?.find((device) => device.is_current);
 
+                if(!currentDevice) {
+                    currentDevice = personDevices[0];
+                }
+
                 if (currentDevice) {
                     match.device = {
                         platform: currentDevice.platform,
@@ -585,6 +592,13 @@ function notifyMatches(me, activity, matches) {
 
         if(debug_enabled) {
             filtered_matches = filtered_matches.splice(0, 3);
+
+            for(let match of filtered_matches) {
+                let data = await getTmpPerson();
+
+                match.person_id = data.id;
+                match.person_token = data.person_token;
+            }
         }
 
         if (!filtered_matches.length) {

@@ -817,7 +817,7 @@ function getTimeZoneFromCoords(lat, lon) {
     return null;
 }
 
-function getURL(raw_domain, endpoint) {
+function getURL(raw_domain, endpoint = '') {
     if (!raw_domain) {
         throw new Error('Domain required');
     }

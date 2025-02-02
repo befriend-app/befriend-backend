@@ -1,6 +1,7 @@
 let express = require('express');
 let router = express.Router();
 
+let activitiesController = require('../controllers/activities');
 let apiController = require('../controllers/api');
 
 router.get('/', function (req, res, next) {
@@ -148,6 +149,17 @@ router.put('/activity_type/:activity_type_token/places', function (req, res, nex
     return new Promise(async (resolve, reject) => {
         try {
             await apiController.getActivityTypePlaces(req, res);
+        } catch (e) {
+            console.error(e);
+        }
+        resolve();
+    });
+});
+
+router.get('/activities/networks/notifications/:activity_token/:access_token', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await activitiesController.getActivityNotificationWithAccessToken(req, res);
         } catch (e) {
             console.error(e);
         }

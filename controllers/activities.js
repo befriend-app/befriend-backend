@@ -1,8 +1,9 @@
 const activitiesService = require('../services/activities');
 const cacheService = require('../services/cache');
+const dbService = require('../services/db');
 const matchingService = require('../services/matching');
 
-const { formatObjectTypes } = require('../services/shared');
+const { formatObjectTypes, timeNow, getIPAddr } = require('../services/shared');
 const { getPerson } = require('../services/persons');
 
 const { getModes, getModeById } = require('../services/modes');
@@ -63,13 +64,12 @@ function getActivityNotification(req, res) {
     return new Promise(async (resolve, reject) => {
         let activity_token = req.params.activity_token;
         let person_token = req.query.person_token;
-        let network_token = req.query.network_token;
 
         try {
-            if (!activity_token || !network_token) {
+            if (!activity_token) {
                 res.json(
                     {
-                        message: 'Activity and network token required',
+                        message: 'Activity token required',
                     },
                     400,
                 );
@@ -90,12 +90,10 @@ function getActivityNotification(req, res) {
                 return resolve();
             }
 
-            //validate network token
-
             //ensure person exists on activity invite
             let notification = await cacheService.hGetItem(
                 cacheService.keys.activities_notifications(activity_token),
-                person_token,
+                person_token
             );
 
             if (!notification) {
@@ -142,6 +140,158 @@ function getActivityNotification(req, res) {
                     is_new: person_from.is_new,
                     first_name: person_from.first_name,
                     image_url: person_from.image_url,
+                    age: person_from.age,
+                    reviews: person_from.reviews,
+                },
+            });
+        } catch (e) {
+            console.error(e);
+
+            res.json(
+                {
+                    error: 'Error getting activity',
+                },
+                400,
+            );
+        }
+
+        resolve();
+    });
+}
+
+function getActivityNotificationWithAccessToken(req, res) {
+    return new Promise(async (resolve, reject) => {
+        let activity_token = req.params.activity_token;
+        let access_token = req.params.access_token;
+        let person_token = req.query.person_token;
+
+        try {
+            let conn = await dbService.conn();
+
+            let errors = [];
+
+            if (!activity_token) {
+                errors.push('Activity token required');
+            }
+
+            if(!access_token) {
+                errors.push('Access token required');
+            }
+
+            if(!person_token) {
+                errors.push('Person token required');
+            }
+
+            if(errors.length) {
+                res.json(
+                    {
+                        message: errors,
+                    },
+                    400,
+                );
+
+                return resolve();
+            }
+
+            let me = await getPerson(person_token);
+
+            if (!me) {
+                res.json(
+                    {
+                        message: 'person token not found',
+                    },
+                    400,
+                );
+
+                return resolve();
+            }
+
+            //access token check
+            let access_token_qry = await conn('activities_notifications AS an')
+                .join('persons AS p', 'p.id', '=', 'an.person_to_id')
+                .where('p.person_token', person_token)
+                .where('an.access_token', access_token)
+                .select('an.*', 'p.first_name', 'p.image_url')
+                .first();
+
+            if (!access_token_qry) {
+                res.json(
+                    {
+                        message: 'Invalid activity person/access token',
+                    },
+                    401,
+                );
+
+                return resolve();
+            }
+
+            //set access-token used if not previously set
+            if(!access_token_qry.access_token_used_at) {
+                await conn('activities_notifications')
+                    .where('id', access_token_qry.id)
+                    .update({
+                        access_token_used_at: timeNow(),
+                        access_token_ip: getIPAddr(req),
+                        updated: timeNow()
+                    })
+            }
+
+            //ensure person exists on activity invite
+            let notification = await cacheService.hGetItem(
+                cacheService.keys.activities_notifications(activity_token),
+                person_token
+            );
+
+            if (!notification) {
+                res.json(
+                    {
+                        message: 'Activity does not include person',
+                    },
+                    400,
+                );
+
+                return resolve();
+            }
+
+            let cache_key = cacheService.keys.activities(notification.person_from_token);
+            let activity = await cacheService.hGetItem(cache_key, activity_token);
+
+            if (!activity) {
+                res.json(
+                    {
+                        error: 'Activity not found',
+                    },
+                    400,
+                );
+
+                return resolve();
+            }
+
+            activity.place = await getPlaceFSQ(activity.fsq_place_id);
+            activity.activity_type = await getActivityType(activity.activity_type_token);
+            activity.mode = await getModeById(activity.mode_id);
+
+            let person_from = await getPerson(notification.person_from_token);
+            let gender = await getGender(person_from.gender_id);
+
+            let matching = await personToPersonInterests(me, person_from);
+
+            let first_name = null, image_url = null;
+
+            if(!access_token_qry.access_token_used_at) {
+                first_name = person_from.first_name;
+                image_url = person_from.image_url;
+            }
+
+            res.json({
+                notification,
+                activity,
+                matching,
+                person: {
+                    gender,
+                    first_name,
+                    image_url,
+                    is_new: person_from.is_new,
                     age: person_from.age,
                     reviews: person_from.reviews,
                 },
@@ -379,6 +529,7 @@ function getMatches(req, res) {
 module.exports = {
     createActivity,
     getActivityNotification,
+    getActivityNotificationWithAccessToken,
     getMatches,
     putAcceptNotification,
     putDeclineNotification,
