@@ -6,9 +6,11 @@ const notificationsService = require('../../services/notifications');
 const { getNetworkSelf } = require('../../services/network');
 
 const { timeNow } = require('../../services/shared');
-const { isNumeric, getURL } = require('../shared');
+const { isNumeric, getURL, getIPAddr } = require('../shared');
 const { getActivityType } = require('../activities');
 const { getModeByToken } = require('../modes');
+const { declineNotification } = require('../notifications');
+const { getPerson } = require('../persons');
 
 let debug_enabled = require('../../dev/debug').notifications.networks;
 
@@ -382,6 +384,86 @@ module.exports = {
                 console.error(e);
                 return reject(e);
             }
+        });
+    },
+    declineNotification: function(from_network, activity_token, person_token) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let errors = [];
+
+                if (!person_token) {
+                    errors.push('Person token required');
+                }
+                if (!activity_token) {
+                    errors.push('Activity token required');
+                }
+
+                if (errors.length) {
+                    return reject({ message: errors });
+                }
+
+                let person = await getPerson(person_token);
+
+                if(!person) {
+                    return reject({ message: 'Person not found' });
+                }
+
+                let conn = await dbService.conn();
+
+                let activity = await conn('activities')
+                    .where('activity_token', activity_token)
+                    .first();
+
+                if(!activity) {
+                    return reject({ message: 'Activity not found' });
+                }
+
+                let notification = await conn('activities_notifications')
+                    .where('person_from_network_id', from_network.id)
+                    .where('activity_id', activity.id)
+                    .where('person_to_id', person.id)
+                    .first();
+
+                if (!notification) {
+                    return reject({
+                        message: 'Activity does not include person'
+                    });
+                }
+
+                if (notification.accepted_at) {
+                    return reject({
+                        message: 'Activity cannot be declined'
+                    });
+                }
+
+                if (notification.declined_at) {
+                    return reject({
+                        message: 'Activity already declined'
+                    });
+                }
+
+                let update_result = await conn('activities_notifications AS an')
+                    .where('id', notification.id)
+                    .update({
+                        declined_at: timeNow(),
+                        updated: timeNow()
+                    });
+
+                if(update_result) {
+                    return resolve({
+                        success: true
+                    });
+                }
+
+                return reject({
+                    message: 'Activity notification status could not be updated'
+                });
+            } catch (e) {
+                console.error(e);
+                return reject(e);
+            }
+
+            resolve();
         });
     }
 };

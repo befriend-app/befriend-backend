@@ -7,7 +7,7 @@ const { timeNow, generateToken, getURL } = require('./shared');
 const activitiesService = require('./activities');
 const cacheService = require('./cache');
 const dbService = require('./db');
-const { getNetworkSelf, getNetworksLookup, getSecretKeyToForNetwork } = require('./network');
+const { getNetworkSelf, getNetworksLookup, getSecretKeyToForNetwork, getNetwork } = require('./network');
 
 
 let notification_groups = {
@@ -783,11 +783,25 @@ function declineNotification(person, activity_token) {
             //3rd-party network
             if (network_self.id !== notification.person_to_network_id) {
                 //notify network of decline
+                let network_self = await getNetworkSelf();
+                let network = await getNetwork(notification.person_to_network_id);
                 let secret_key_to = await getSecretKeyToForNetwork(notification.person_to_network_id);
 
+                if(!network || !secret_key_to) {
+                    return reject('Network and secret key required');
+                }
 
+                try {
+                    let url = getURL(network.api_domain, `networks/activities/${activity_token}/notification/decline`);
 
-
+                    await axios.put(url, {
+                        network_token: network_self.network_token,
+                        secret_key: secret_key_to,
+                        person_token: person.person_token
+                    });
+                } catch(e) {
+                    console.error(e);
+                }
             }
 
             resolve({

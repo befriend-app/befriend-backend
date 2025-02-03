@@ -41,5 +41,29 @@ module.exports = {
                 }
             }
         });
+    },
+    putAcceptNotification: function(req, res) {
+        return new Promise(async (resolve, reject) => {
+
+        });
+    },
+    putDeclineNotification: function(req, res) {
+        return new Promise(async (resolve, reject) => {
+            let from_network = req.from_network;
+            let activity_token = req.params.activity_token;
+            let person_token = req.body.person_token;
+
+            try {
+                let response = await networksNotificationsService.declineNotification(from_network, activity_token, person_token);
+
+                res.json(response, 202);
+            } catch (e) {
+                if (e.message) {
+                    res.json(e.message, 400);
+                } else {
+                    res.json('Error creating person', 400);
+                }
+            }
+        });
     }
 };
