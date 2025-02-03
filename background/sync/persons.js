@@ -12,7 +12,7 @@ const {
     timeNow,
 } = require('../../services/shared');
 
-const { getNetworkSelf } = require('../../services/network');
+const { getNetworkSelf, getSecretKeyToForNetwork } = require('../../services/network');
 const { deleteKeys } = require('../../services/cache');
 const { getGendersLookup } = require('../../services/genders');
 const { keys: systemKeys } = require('../../services/system');
@@ -690,12 +690,9 @@ function syncPersons() {
                     let sync_url = getURL(network.api_domain, joinPaths('sync', 'persons'));
 
                     //security_key
-                    let secret_key_to_qry = await conn('networks_secret_keys')
-                        .where('network_id', network.id)
-                        .where('is_active', true)
-                        .first();
+                    let secret_key_to = await getSecretKeyToForNetwork(network.id);
 
-                    if (!secret_key_to_qry) {
+                    if (!secret_key_to) {
                         continue;
                     }
 
@@ -705,7 +702,7 @@ function syncPersons() {
 
                     let response = await axiosInstance.get(sync_url, {
                         params: {
-                            secret_key: secret_key_to_qry.secret_key_to,
+                            secret_key: secret_key_to,
                             network_token: network_self.network_token,
                             data_since: timestamps.last,
                             request_sent: timeNow(),
@@ -727,7 +724,7 @@ function syncPersons() {
                         try {
                             response = await axiosInstance.get(sync_url, {
                                 params: {
-                                    secret_key: secret_key_to_qry.secret_key_to,
+                                    secret_key: secret_key_to,
                                     network_token: network_self.network_token,
                                     last_person_token: response.data.last_person_token,
                                     prev_data_since: response.data.prev_data_since,
@@ -826,12 +823,9 @@ function syncPersonsModes() {
                         timestamps.last = sync_qry.last_updated;
                     }
 
-                    let secret_key_to_qry = await conn('networks_secret_keys')
-                        .where('network_id', network.id)
-                        .where('is_active', true)
-                        .first();
+                    let secret_key_to = await getSecretKeyToForNetwork(network.id);
 
-                    if (!secret_key_to_qry) {
+                    if (!secret_key_to) {
                         continue;
                     }
 
@@ -843,7 +837,7 @@ function syncPersonsModes() {
 
                     let response = await axiosInstance.get(sync_url, {
                         params: {
-                            secret_key: secret_key_to_qry.secret_key_to,
+                            secret_key: secret_key_to,
                             network_token: network_self.network_token,
                             data_since: timestamps.last,
                             request_sent: timeNow()
@@ -865,7 +859,7 @@ function syncPersonsModes() {
                         try {
                             response = await axiosInstance.get(sync_url, {
                                 params: {
-                                    secret_key: secret_key_to_qry.secret_key_to,
+                                    secret_key: secret_key_to,
                                     network_token: network_self.network_token,
                                     pagination_updated: response.data.pagination_updated,
                                     prev_data_since: response.data.prev_data_since,

@@ -1,7 +1,7 @@
 const cacheService = require('../../services/cache');
 const dbService = require('../../services/db');
 const { timeNow, loadScriptEnv, calculateAge, timeoutAwait, getURL } = require('../../services/shared');
-const { getNetworkSelf, homeDomains, getNetworksLookup } = require('../../services/network');
+const { getNetworkSelf, homeDomains, getNetworksLookup, getSecretKeyToForNetwork } = require('../../services/network');
 const axios = require('axios');
 
 loadScriptEnv();
@@ -58,12 +58,9 @@ function processUpdate() {
                         }
 
                         //security_key
-                        let secret_key_to_qry = await conn('networks_secret_keys')
-                            .where('network_id', network_to.id)
-                            .where('is_active', true)
-                            .first();
+                        let secret_key_to = await getSecretKeyToForNetwork(network_to.id);
 
-                        if (!secret_key_to_qry) {
+                        if (!secret_key_to) {
                             continue;
                         }
 
@@ -72,7 +69,7 @@ function processUpdate() {
                         for(let person of persons) {
                             try {
                                 let r = await axios.post(getURL(domain, 'networks/persons'), {
-                                    secret_key: secret_key_to_qry.secret_key_to,
+                                    secret_key: secret_key_to,
                                     network_token: self_network.network_token,
                                     person_token: person.person_token,
                                     updated: person.updated

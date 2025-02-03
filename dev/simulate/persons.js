@@ -2,7 +2,7 @@ const axios = require('axios');
 const yargs = require('yargs');
 const dbService = require('../../services/db');
 const encryptionService = require('../../services/encryption');
-const { getNetworkSelf, homeDomains, getNetworksLookup } = require('../../services/network');
+const { getNetworkSelf, homeDomains, getNetworksLookup, getSecretKeyToForNetwork } = require('../../services/network');
 
 const {
     loadScriptEnv,
@@ -160,12 +160,9 @@ async function addPersons() {
                 }
 
                 //security_key
-                let secret_key_to_qry = await conn('networks_secret_keys')
-                    .where('network_id', network_to.id)
-                    .where('is_active', true)
-                    .first();
+                let secret_key_to = await getSecretKeyToForNetwork(network_to.id);
 
-                if (!secret_key_to_qry) {
+                if (!secret_key_to) {
                     continue;
                 }
 
@@ -174,7 +171,7 @@ async function addPersons() {
                 for(let person of batch_insert) {
                     try {
                         let r = await axios.post(getURL(domain, 'networks/persons'), {
-                            secret_key: secret_key_to_qry.secret_key_to,
+                            secret_key: secret_key_to,
                             network_token: self_network.network_token,
                             person_token: person.person_token,
                             updated: person.updated

@@ -7,7 +7,7 @@ const { timeNow, generateToken, getURL } = require('./shared');
 const activitiesService = require('./activities');
 const cacheService = require('./cache');
 const dbService = require('./db');
-const { getNetworkSelf, getNetworksLookup } = require('./network');
+const { getNetworkSelf, getNetworksLookup, getSecretKeyToForNetwork } = require('./network');
 
 
 let notification_groups = {
@@ -356,12 +356,9 @@ function notifyMatches(me, activity, matches) {
                         continue;
                     }
 
-                    let secret_key_to_qry = await conn('networks_secret_keys')
-                        .where('network_id', network.id)
-                        .where('is_active', true)
-                        .first();
+                    let secret_key_to = await getSecretKeyToForNetwork(network.id);
 
-                    if (!secret_key_to_qry) {
+                    if (!secret_key_to) {
                         continue;
                     }
 
@@ -431,7 +428,7 @@ function notifyMatches(me, activity, matches) {
                             let url = getURL(network.api_domain, 'networks/activities/notifications');
 
                             let r = await axios.post(url, {
-                                secret_key: secret_key_to_qry.secret_key_to,
+                                secret_key: secret_key_to,
                                 network_token: my_network.network_token,
                                 person_from_token: me.person_token,
                                 activity: activityCopy,
@@ -662,7 +659,7 @@ function acceptNotification(person, activity_token) {
                 return reject('Activity already accepted');
             }
 
-            let spots = await getActivitySpots(activity_token, notifications);
+            let spots = await activitiesService.getActivitySpots(activity_token, notifications);
 
             if (spots.available <= 0) {
                 return resolve({
@@ -769,31 +766,32 @@ function declineNotification(person, activity_token) {
 
             let network_self = await getNetworkSelf();
 
-            //own network
-            if (network_self.id === notification.person_to_network_id) {
-                let update = {
-                    declined_at: timeNow(),
-                    updated: timeNow(),
-                };
+            //update db/cache
+            let update = {
+                declined_at: timeNow(),
+                updated: timeNow(),
+            };
 
-                notification = {
-                    ...notification,
-                    ...update,
-                };
+            notification = {
+                ...notification,
+                ...update,
+            };
 
-                await cacheService.hSet(cache_key, person.person_token, notification);
+            await cacheService.hSet(cache_key, person.person_token, notification);
 
-                await conn('activities_notifications').where('id', notification.id).update(update);
+            await conn('activities_notifications').where('id', notification.id).update(update);
+            //3rd-party network
+            if (network_self.id !== notification.person_to_network_id) {
+                //notify network of decline
 
-                resolve({
-                    success: true,
-                    message: 'Notification declined successfully',
-                });
-            } else {
-                //3rd party network
-                //todo
-                resolve();
+
+
             }
+
+            resolve({
+                success: true,
+                message: 'Notification declined successfully',
+            });
         } catch(e) {
             console.error(e);
             return reject("Error declining activity")

@@ -3,7 +3,7 @@ const axios = require('axios');
 const cacheService = require('../../services/cache');
 const dbService = require('../../services/db');
 
-const { getNetworkSelf, getNetworksLookup } = require('../../services/network');
+const { getNetworkSelf, getNetworksLookup, getSecretKeyToForNetwork } = require('../../services/network');
 const { keys: systemKeys } = require('../../services/system');
 const { batchInsert, batchUpdate } = require('../../services/db');
 
@@ -14,8 +14,8 @@ const {
     getURL,
     joinPaths,
 } = require('../../services/shared');
+
 const { getFilters, filterMappings, batchUpdateGridSets } = require('../../services/filters');
-const { getGendersLookup } = require('../../services/genders');
 
 let batch_process = 1000;
 let defaultTimeout = 20000;
@@ -103,12 +103,9 @@ function syncFilters() {
 
                     let sync_url = getURL(network.api_domain, joinPaths('sync', 'persons/filters'));
 
-                    let secret_key_to_qry = await conn('networks_secret_keys')
-                        .where('network_id', network.id)
-                        .where('is_active', true)
-                        .first();
+                    let secret_key_to = await getSecretKeyToForNetwork(network.id);
 
-                    if (!secret_key_to_qry) {
+                    if (!secret_key_to) {
                         continue;
                     }
 
@@ -118,7 +115,7 @@ function syncFilters() {
 
                     let response = await axiosInstance.get(sync_url, {
                         params: {
-                            secret_key: secret_key_to_qry.secret_key_to,
+                            secret_key: secret_key_to,
                             network_token: network_self.network_token,
                             data_since: timestamps.last,
                             request_sent: timeNow(),
@@ -139,7 +136,7 @@ function syncFilters() {
                         try {
                             response = await axiosInstance.get(sync_url, {
                                 params: {
-                                    secret_key: secret_key_to_qry.secret_key_to,
+                                    secret_key: secret_key_to,
                                     network_token: network_self.network_token,
                                     pagination_updated: response.data.pagination_updated,
                                     prev_data_since: response.data.prev_data_since,

@@ -3,7 +3,7 @@ const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 const matchingService = require('../services/matching');
 
-const { formatObjectTypes, timeNow, getIPAddr } = require('../services/shared');
+const { formatObjectTypes, timeNow, getIPAddr, getURL } = require('../services/shared');
 const { getPerson } = require('../services/persons');
 
 const { getModes, getModeById } = require('../services/modes');
@@ -12,6 +12,7 @@ const { getActivityType } = require('../services/activities');
 const { getGender } = require('../services/genders');
 const { getPlaceFSQ } = require('../services/places');
 const { acceptNotification, declineNotification } = require('../services/notifications');
+const { getNetworksLookup, getNetworkSelf } = require('../services/network');
 
 
 function createActivity(req, res) {
@@ -253,6 +254,8 @@ function getActivityNotificationWithAccessToken(req, res) {
                 return resolve();
             }
 
+            let networkSelf = await getNetworkSelf();
+
             let cache_key = cacheService.keys.activities(notification.person_from_token);
             let activity = await cacheService.hGetItem(cache_key, activity_token);
 
@@ -295,6 +298,10 @@ function getActivityNotificationWithAccessToken(req, res) {
                     age: person_from.age,
                     reviews: person_from.reviews,
                 },
+                access: {
+                    token: access_token,
+                    domain: getURL(networkSelf.api_domain)
+                }
             });
         } catch (e) {
             console.error(e);
@@ -368,6 +375,81 @@ function putAcceptNotification(req, res) {
     });
 }
 
+function putAcceptNetworkNotification(req, res) {
+    return new Promise(async (resolve, reject) => {
+        let activity_token = req.params.activity_token;
+        let access_token = req.params.access_token;
+        let person_token = req.body.person_token;
+
+        try {
+            let errors = [];
+
+            if (!activity_token) {
+                errors.push('Activity token required')
+            }
+
+            if (!access_token) {
+                errors.push('Access token required')
+            }
+
+            if (!person_token) {
+                errors.push('Person token required');
+            }
+
+            if (errors.length) {
+                res.json({ message: errors }, 400);
+                return resolve();
+            }
+
+            let me = await getPerson(person_token);
+
+            if (!me) {
+                res.json({ message: 'Person token not found' }, 400);
+                return resolve();
+            }
+
+            // Validate access token
+            let conn = await dbService.conn();
+
+            let access_token_qry = await conn('activities_notifications AS an')
+                .join('persons AS p', 'p.id', '=', 'an.person_to_id')
+                .where('p.person_token', person_token)
+                .where('an.access_token', access_token)
+                .select('an.*')
+                .first();
+
+            if (!access_token_qry) {
+                res.json({ message: 'Invalid activity person/access token' }, 401);
+                return resolve();
+            }
+
+            // Update access token usage if not previously used
+            if (!access_token_qry.access_token_used_at) {
+                await conn('activities_notifications')
+                    .where('id', access_token_qry.id)
+                    .update({
+                        access_token_used_at: timeNow(),
+                        access_token_ip: getIPAddr(req),
+                        updated: timeNow()
+                    });
+            }
+
+            try {
+                let result = await acceptNotification(me, activity_token);
+                res.json(result);
+            } catch(e) {
+                res.json({ error: e }, 400);
+            }
+
+        } catch (e) {
+            console.error(e);
+            res.json({ error: 'Error accepting network notification' }, 400);
+        }
+
+        resolve();
+    });
+}
+
 function putDeclineNotification(req, res) {
     return new Promise(async (resolve, reject) => {
         let activity_token = req.params.activity_token;
@@ -419,6 +501,77 @@ function putDeclineNotification(req, res) {
                 },
                 400,
             );
+        }
+
+        resolve();
+    });
+}
+
+function putDeclineNetworkNotification(req, res) {
+    return new Promise(async (resolve, reject) => {
+        let activity_token = req.params.activity_token;
+        let access_token = req.params.access_token;
+        let person_token = req.body.person_token;
+
+        try {
+            let errors = [];
+
+            if (!activity_token) {
+                errors.push('Activity token required');
+            }
+
+            if (!access_token) {
+                errors.push('Access token required');
+            }
+
+            if (!person_token) {
+                errors.push('Person token required');
+            }
+
+            if (errors.length) {
+                res.json({ message: errors }, 400);
+                return resolve();
+            }
+
+            // Validate access token
+            let conn = await dbService.conn();
+
+            let access_token_qry = await conn('activities_notifications AS an')
+                .join('persons AS p', 'p.id', '=', 'an.person_to_id')
+                .where('p.person_token', person_token)
+                .where('an.access_token', access_token)
+                .select('an.*')
+                .first();
+
+            if (!access_token_qry) {
+                res.json({ message: 'Invalid activity person/access token' }, 401);
+                return resolve();
+            }
+
+            // Update access token usage if not previously used
+            if (!access_token_qry.access_token_used_at) {
+                await conn('activities_notifications')
+                    .where('id', access_token_qry.id)
+                    .update({
+                        access_token_used_at: timeNow(),
+                        access_token_ip: getIPAddr(req),
+                        updated: timeNow()
+                    });
+            }
+
+            try {
+                let result = await declineNotification({
+                    person_token
+                }, activity_token);
+
+                res.json(result);
+            } catch(e) {
+                res.json({ error: e }, 400);
+            }
+
+        } catch (e) {
+            console.error(e);
+            res.json({ error: 'Error declining network notification' }, 400);
         }
 
         resolve();
@@ -532,5 +685,7 @@ module.exports = {
     getActivityNotificationWithAccessToken,
     getMatches,
     putAcceptNotification,
+    putAcceptNetworkNotification,
     putDeclineNotification,
+    putDeclineNetworkNotification,
 };

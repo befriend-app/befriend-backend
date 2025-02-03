@@ -167,6 +167,30 @@ router.get('/activities/networks/notifications/:activity_token/:access_token', f
     });
 });
 
+router.put('/activities/networks/notifications/accept/:activity_token/:access_token', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await activitiesController.putAcceptNetworkNotification(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
+router.put('/activities/networks/notifications/decline/:activity_token/:access_token', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await activitiesController.putDeclineNetworkNotification(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
 router.get('/mapbox/token', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {

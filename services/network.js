@@ -1299,6 +1299,39 @@ function keysExchangeSave(body) {
     });
 }
 
+function getSecretKeyToForNetwork(network_id = null, network_token = null) {
+    return new Promise(async (resolve, reject) => {
+         if(!network_id && !network_token) {
+             return reject("Network id or token required");
+         }
+
+        try {
+            let conn = await dbService.conn();
+
+            if(!network_id) {
+                let networksLookup = await getNetworksLookup();
+                let network = networksLookup.byToken[network_token];
+
+                if(!network) {
+                    return resolve(null);
+                }
+
+                network_id = network.id;
+            }
+
+            let secret_key_to_qry = await conn('networks_secret_keys')
+                .where('network_id', network_id)
+                .where('is_active', true)
+                .first();
+
+            return resolve(secret_key_to_qry?.secret_key_to || null);
+        } catch(e) {
+            console.error(e);
+            return reject();
+        }
+    });
+}
+
 module.exports = {
     cols: [
         'network_token',
@@ -1350,4 +1383,5 @@ module.exports = {
     keysExchangeEncrypt,
     keysExchangeDecrypt,
     keysExchangeSave,
+    getSecretKeyToForNetwork
 };
