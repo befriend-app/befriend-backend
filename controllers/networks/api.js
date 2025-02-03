@@ -42,6 +42,25 @@ module.exports = {
             }
         });
     },
+    putNotificationSpots: function(req, res) {
+        return new Promise(async (resolve, reject) => {
+            let from_network = req.from_network;
+            let activity_token = req.params.activity_token;
+            let spots = req.body.spots;
+
+            try {
+                let response = await networksNotificationsService.onSpotsUpdate(from_network, activity_token, spots);
+
+                res.json(response, 202);
+            } catch (e) {
+                if (e.message) {
+                    res.json(e.message, 400);
+                } else {
+                    res.json('Error creating person', 400);
+                }
+            }
+        });
+    },
     putAcceptNotification: function(req, res) {
         return new Promise(async (resolve, reject) => {
             let from_network = req.from_network;

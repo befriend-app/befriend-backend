@@ -6,10 +6,9 @@ const notificationsService = require('../../services/notifications');
 const { getNetworkSelf } = require('../../services/network');
 
 const { timeNow } = require('../../services/shared');
-const { isNumeric, getURL, getIPAddr } = require('../shared');
+const { isNumeric, getURL } = require('../shared');
 const { getActivityType } = require('../activities');
 const { getModeByToken } = require('../modes');
-const { declineNotification } = require('../notifications');
 const { getPerson } = require('../persons');
 
 let debug_enabled = require('../../dev/debug').notifications.networks;
@@ -205,6 +204,7 @@ module.exports = {
                 }
 
                 let activityData = await conn('activities')
+                    .where('network_id', from_network.id)
                     .where('activity_token', activity.activity_token)
                     .first();
 
@@ -244,7 +244,7 @@ module.exports = {
 
                     activityData = {
                         activity_token: activity.activity_token,
-                        network_id: network_self.id,
+                        network_id: from_network.id,
                         activity_type_id: activityType.id,
                         fsq_place_id: place_details.fsq_id,
                         mode_id: mode.id,
@@ -305,26 +305,26 @@ module.exports = {
                     .where('pd.is_current', true)
                     .select('pd.*', 'p.person_token');
 
-                if(debug_enabled) {
-                    devices = await conn('persons_devices AS pd')
-                        .join('persons AS p', 'p.id', '=', 'pd.person_id')
-                        .select('pd.*', 'p.person_token')
-                        .orderBy('p.id')
-                        .limit(1);
-
-                    if(devices.length) {
-                        for(let person_token in persons) {
-                            persons[person_token].device = {
-                                token: devices[0].token,
-                                platform: devices[0].platform
-                            }
-                        }
-                    }
-                } else {
+                if(!debug_enabled) {
                     for(let pd of devices) {
                         persons[pd.person_token].device = {
                             token: pd.token,
                             platform: pd.platform
+                        }
+                    }
+                } else {
+                    devices = await conn('persons_devices AS pd')
+                        .join('persons AS p', 'p.id', '=', 'pd.person_id')
+                        .select('pd.*', 'p.person_token')
+                        .orderBy('p.id')
+                        .limit(3);
+
+                    for(let device of devices) {
+                        if(persons[device.person_token]) {
+                            persons[device.person_token].device = {
+                                token: device.token,
+                                platform: device.platform
+                            }
                         }
                     }
                 }
@@ -348,6 +348,10 @@ module.exports = {
                     }
 
                     let to_person = persons[person_token];
+
+                    if(!to_person.device) {
+                        continue;
+                    }
 
                     let payloadCopy = structuredClone(payload);
 
@@ -380,6 +384,42 @@ module.exports = {
                 resolve({
                     success: true
                 });
+            } catch(e) {
+                console.error(e);
+                return reject(e);
+            }
+        });
+    },
+    onSpotsUpdate: function(from_network, activity_token, spots) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                 let conn = await dbService.conn();
+
+                 let activity_check = await conn('activities')
+                     .where('network_id', from_network.id)
+                     .where('activity_token', activity_token)
+                     .first();
+
+                 if(!activity_check) {
+                     return reject("Activity not found");
+                 }
+
+                 let network_self = await getNetworkSelf();
+
+                 let notification_persons = await conn('activities_notifications AS an')
+                     .join('persons AS p', 'p.id', '=', 'an.person_to_id')
+                     .where('activity_id', activity_check.id)
+                     .where('person_to_network_id', network_self.id)
+                     .select('person_token');
+
+                 for(let person of notification_persons) {
+                     cacheService.publish('notifications', person.person_token, {
+                         activity_token,
+                         spots
+                     });
+                 }
+
+                 resolve();
             } catch(e) {
                 console.error(e);
                 return reject(e);

@@ -445,7 +445,7 @@ function notifyMatches(me, activity, matches) {
                                 .update({
                                     did_network_receive: r.status === 201,
                                     updated: timeNow(),
-                                })
+                                });
 
                             if(r.status === 201) {
                                 for(let person_token in organized) {
@@ -777,7 +777,7 @@ function acceptNotification(person, activity_token) {
 
                     if(secret_key_to) {
                         try {
-                            let url = getURL(network_to.api_domain, `/activities/${activity_token}/notification/spots`);
+                            let url = getURL(network_to.api_domain, `/networks/activities/${activity_token}/notification/spots`);
 
                             ps.push(axios.put(url, {
                                 network_token: network_self.network_token,
