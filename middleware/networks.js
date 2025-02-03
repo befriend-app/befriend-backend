@@ -23,7 +23,7 @@ module.exports = function (req, res, next) {
                 return resolve();
             }
 
-            let network = await getNetwork(network_token);
+            let network = await getNetwork(null, network_token);
 
             if (!network) {
                 res.json('network_token invalid', 401);

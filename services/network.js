@@ -333,18 +333,20 @@ function setSelfKnown() {
     });
 }
 
-function getNetwork(network_token) {
+function getNetwork(network_id = null, network_token = null) {
     return new Promise(async (resolve, reject) => {
-        if (!network_token) {
+        if (!network_id && !network_token) {
             return reject('No network token');
         }
 
         try {
-            let conn = await dbService.conn();
+            let networks = await getNetworksLookup();
 
-            let qry = await conn('networks').where('network_token', network_token).first();
+            if(network_id) {
+                return resolve(networks.byId[network_id]);
+            }
 
-            resolve(qry);
+            return resolve(networks.byToken[network_token]);
         } catch (e) {
             reject(e);
         }
@@ -1010,8 +1012,8 @@ function keysExchangeEncrypt(body) {
         //ensure the to_network was registered by us
         try {
             my_network = await getNetworkSelf();
-            from_network = await getNetwork(from_network_token);
-            to_network = await getNetwork(to_network_token);
+            from_network = await getNetwork(null, from_network_token);
+            to_network = await getNetwork(null, to_network_token);
 
             if (to_network.registration_network_id !== my_network.id) {
                 return reject({
@@ -1140,7 +1142,7 @@ function keysExchangeDecrypt(body) {
             let conn = await dbService.conn();
 
             //get domain for from_network
-            from_network = await getNetwork(network_tokens.from);
+            from_network = await getNetwork(null, network_tokens.from);
 
             if (!from_network) {
                 return reject({
@@ -1235,7 +1237,7 @@ function keysExchangeSave(body) {
                 });
             }
 
-            to_network = await getNetwork(to_network_token);
+            to_network = await getNetwork(null, to_network_token);
 
             if (!to_network) {
                 return reject({

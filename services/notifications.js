@@ -783,6 +783,8 @@ function declineNotification(person, activity_token) {
             //3rd-party network
             if (network_self.id !== notification.person_to_network_id) {
                 //notify network of decline
+                let secret_key_to = await getSecretKeyToForNetwork(notification.person_to_network_id);
+
 
 
 
