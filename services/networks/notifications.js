@@ -386,7 +386,82 @@ module.exports = {
             }
         });
     },
-    declineNotification: function(from_network, activity_token, person_token) {
+    acceptNotification: function(from_network, activity_token, person_token, accepted_at) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let errors = [];
+
+                if (!person_token) {
+                    errors.push('Person token required');
+                }
+
+                if (!activity_token) {
+                    errors.push('Activity token required');
+                }
+
+                if (errors.length) {
+                    return reject({ message: errors });
+                }
+
+                let person = await getPerson(person_token);
+
+                if(!person) {
+                    return reject({ message: 'Person not found' });
+                }
+
+                let conn = await dbService.conn();
+
+                let activity = await conn('activities')
+                    .where('activity_token', activity_token)
+                    .first();
+
+                if(!activity) {
+                    return reject({ message: 'Activity not found' });
+                }
+
+                let notification = await conn('activities_notifications')
+                    .where('person_from_network_id', from_network.id)
+                    .where('activity_id', activity.id)
+                    .where('person_to_id', person.id)
+                    .first();
+
+                if (!notification) {
+                    return reject({
+                        message: 'Activity does not include person'
+                    });
+                }
+
+                if (notification.declined_at) {
+                    return reject('Activity cannot be accepted');
+                }
+
+                if (notification.accepted_at) {
+                    return reject('Activity already accepted');
+                }
+
+                let update_result = await conn('activities_notifications AS an')
+                    .where('id', notification.id)
+                    .update({
+                        accepted_at: accepted_at,
+                        updated: accepted_at
+                    });
+
+                if(update_result) {
+                    return resolve({
+                        success: true
+                    });
+                }
+
+                return reject({
+                    message: 'Activity notification status could not be updated'
+                });
+            } catch (e) {
+                console.error(e);
+                return reject(e);
+            }
+        });
+    },
+    declineNotification: function(from_network, activity_token, person_token, declined_at) {
         return new Promise(async (resolve, reject) => {
             try {
                 let errors = [];
@@ -445,8 +520,8 @@ module.exports = {
                 let update_result = await conn('activities_notifications AS an')
                     .where('id', notification.id)
                     .update({
-                        declined_at: timeNow(),
-                        updated: timeNow()
+                        declined_at: declined_at,
+                        updated: declined_at
                     });
 
                 if(update_result) {
@@ -462,8 +537,6 @@ module.exports = {
                 console.error(e);
                 return reject(e);
             }
-
-            resolve();
         });
     }
 };

@@ -30,6 +30,18 @@ router.post('/activities/notifications', function (req, res, next) {
     });
 });
 
+router.put('/activities/:activity_token/notification/spots', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await networksApiController.putNotificationSpots(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
 router.put('/activities/:activity_token/notification/accept', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {

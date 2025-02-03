@@ -44,7 +44,22 @@ module.exports = {
     },
     putAcceptNotification: function(req, res) {
         return new Promise(async (resolve, reject) => {
+            let from_network = req.from_network;
+            let activity_token = req.params.activity_token;
+            let person_token = req.body.person_token;
+            let accepted_at = req.body.accepted_at;
 
+            try {
+                let response = await networksNotificationsService.acceptNotification(from_network, activity_token, person_token, accepted_at);
+
+                res.json(response, 202);
+            } catch (e) {
+                if (e.message) {
+                    res.json(e.message, 400);
+                } else {
+                    res.json('Error creating person', 400);
+                }
+            }
         });
     },
     putDeclineNotification: function(req, res) {
@@ -52,9 +67,10 @@ module.exports = {
             let from_network = req.from_network;
             let activity_token = req.params.activity_token;
             let person_token = req.body.person_token;
+            let declined_at = req.body.declined_at;
 
             try {
-                let response = await networksNotificationsService.declineNotification(from_network, activity_token, person_token);
+                let response = await networksNotificationsService.declineNotification(from_network, activity_token, person_token, declined_at);
 
                 res.json(response, 202);
             } catch (e) {

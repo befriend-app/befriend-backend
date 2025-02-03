@@ -401,13 +401,6 @@ function putAcceptNetworkNotification(req, res) {
                 return resolve();
             }
 
-            let me = await getPerson(person_token);
-
-            if (!me) {
-                res.json({ message: 'Person token not found' }, 400);
-                return resolve();
-            }
-
             // Validate access token
             let conn = await dbService.conn();
 
@@ -415,7 +408,7 @@ function putAcceptNetworkNotification(req, res) {
                 .join('persons AS p', 'p.id', '=', 'an.person_to_id')
                 .where('p.person_token', person_token)
                 .where('an.access_token', access_token)
-                .select('an.*')
+                .select('an.*', 'p.id AS person_id')
                 .first();
 
             if (!access_token_qry) {
@@ -423,19 +416,12 @@ function putAcceptNetworkNotification(req, res) {
                 return resolve();
             }
 
-            // Update access token usage if not previously used
-            if (!access_token_qry.access_token_used_at) {
-                await conn('activities_notifications')
-                    .where('id', access_token_qry.id)
-                    .update({
-                        access_token_used_at: timeNow(),
-                        access_token_ip: getIPAddr(req),
-                        updated: timeNow()
-                    });
-            }
-
             try {
-                let result = await acceptNotification(me, activity_token);
+                let result = await acceptNotification({
+                    id: access_token_qry.person_id,
+                    person_token
+                }, activity_token);
+
                 res.json(result);
             } catch(e) {
                 res.json({ error: e }, 400);

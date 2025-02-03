@@ -8,6 +8,7 @@ const activitiesService = require('./activities');
 const cacheService = require('./cache');
 const dbService = require('./db');
 const { getNetworkSelf, getNetworksLookup, getSecretKeyToForNetwork, getNetwork } = require('./network');
+const url = require('node:url');
 
 
 let notification_groups = {
@@ -671,70 +672,136 @@ function acceptNotification(person, activity_token) {
 
             let network_self = await getNetworkSelf();
 
-            //own network
-            if (network_self.id === notification.person_to_network_id) {
-                let update = {
-                    accepted_at: timeNow(),
-                    updated: timeNow(),
-                };
+            let time = timeNow();
 
-                notification = {
-                    ...notification,
-                    ...update,
-                };
+            let update = {
+                accepted_at: time,
+                updated: time,
+            };
 
-                await cacheService.hSet(notification_cache_key, person.person_token, notification);
+            notification = {
+                ...notification,
+                ...update,
+            };
 
-                await conn('activities_notifications').where('id', notification.id).update(update);
+            await cacheService.hSet(notification_cache_key, person.person_token, notification);
 
-                //add to own activities list
-                let person_activity_insert = {
-                    activity_id: notification.activity_id,
-                    person_id: person.id,
-                    is_creator: false,
-                    created: timeNow(),
-                    updated: timeNow()
-                };
+            await conn('activities_notifications').where('id', notification.id).update(update);
 
-                let person_activity_id = await conn('activities_persons')
-                    .insert(person_activity_insert);
+            //add to own activities list
+            let person_activity_insert = {
+                activity_id: notification.activity_id,
+                person_id: person.id,
+                is_creator: false,
+                created: time,
+                updated: time
+            };
 
-                person_activity_id = person_activity_id[0];
-                person_activity_insert.id = person_activity_id;
-                person_activity_insert.person_from_token = notification.person_from_token;
+            let person_activity_id = await conn('activities_persons')
+                .insert(person_activity_insert);
 
-                await cacheService.hSet(person_activity_cache_key, activity_token, person_activity_insert);
+            person_activity_id = person_activity_id[0];
+            person_activity_insert.id = person_activity_id;
+            person_activity_insert.person_from_token = notification.person_from_token;
 
-                spots.accepted++;
-                spots.available--;
+            await cacheService.hSet(person_activity_cache_key, activity_token, person_activity_insert);
 
-                //update ws
+            spots.accepted++;
+            spots.available--;
+
+            //notify 3rd party network of acceptance
+            if (network_self.id !== notification.person_to_network_id) {
                 try {
-                    //notification to everybody notified except me
-                    for(let _person_token in notifications) {
-                        if(_person_token !== person.person_token) {
-                            cacheService.publish('notifications', _person_token, {
-                                activity_token,
-                                spots
+                    let network = await getNetwork(notification.person_to_network_id);
+                    let secret_key_to = await getSecretKeyToForNetwork(notification.person_to_network_id);
+
+                    if(network && secret_key_to) {
+                        try {
+                            let url = getURL(network.api_domain, `networks/activities/${activity_token}/notification/accept`);
+
+                            await axios.put(url, {
+                                network_token: network_self.network_token,
+                                secret_key: secret_key_to,
+                                person_token: person.person_token,
+                                accepted_at: time
                             });
+                        } catch(e) {
+                            console.error(e);
                         }
                     }
                 } catch(e) {
                     console.error(e);
                 }
-
-                //activity to everybody accepted
-                resolve({
-                    success: true,
-                    message: 'Notification accepted successfully',
-                    spots
-                });
-            } else {
-                //3rd party network
-                //todo
-
-                resolve();
             }
+
+            let notify_networks = {};
+            let networksLookup;
+
+            //send current spots data to notified persons via ws
+            for(let _person_token in notifications) {
+                let data = notifications[_person_token];
+
+                if(_person_token !== person.person_token) { //skip self
+                    //if own network, notify via ws
+                    if(data.person_to_network_id === network_self.id) {
+                        cacheService.publish('notifications', _person_token, {
+                            activity_token,
+                            spots
+                        });
+                    } else { //organize 3rd-party networks
+                        if(!networksLookup) {
+                            networksLookup = await getNetworksLookup();
+
+                            let network_to = networksLookup.byId[data.person_to_network_id];
+
+                            if(!network_to) {
+                                continue;
+                            }
+
+                            if(!notify_networks[network_to.network_token]) {
+                                notify_networks[network_to.network_token] = network_to;
+                            }
+                        }
+                    }
+                }
+            }
+
+            //send spots to 3rd-party networks
+            try {
+                let ps = [];
+
+                for(let network_token in notify_networks) {
+                    let network_to = notify_networks[network_token];
+
+                    let secret_key_to = await getSecretKeyToForNetwork(network_to.id);
+
+                    if(secret_key_to) {
+                        try {
+                            let url = getURL(network_to.api_domain, `/activities/${activity_token}/notification/spots`);
+
+                            ps.push(axios.put(url, {
+                                network_token: network_self.network_token,
+                                secret_key: secret_key_to,
+                                spots
+                            }));
+                        } catch(e) {
+                            console.error(e);
+                        }
+                    }
+                }
+
+                if(ps.length) {
+                    await Promise.allSettled(ps);
+                }
+            } catch(e) {
+                console.error(e);
+            }
+
+            resolve({
+                success: true,
+                message: 'Notification accepted successfully',
+                spots
+            });
         } catch(e) {
             console.error(e);
             return reject("Error accepting activity")
@@ -767,9 +834,11 @@ function declineNotification(person, activity_token) {
             let network_self = await getNetworkSelf();
 
             //update db/cache
+            let time = timeNow();
+
             let update = {
-                declined_at: timeNow(),
-                updated: timeNow(),
+                declined_at: time,
+                updated: time,
             };
 
             notification = {
@@ -780,27 +849,26 @@ function declineNotification(person, activity_token) {
             await cacheService.hSet(cache_key, person.person_token, notification);
 
             await conn('activities_notifications').where('id', notification.id).update(update);
+
             //3rd-party network
             if (network_self.id !== notification.person_to_network_id) {
                 //notify network of decline
-                let network_self = await getNetworkSelf();
                 let network = await getNetwork(notification.person_to_network_id);
                 let secret_key_to = await getSecretKeyToForNetwork(notification.person_to_network_id);
 
-                if(!network || !secret_key_to) {
-                    return reject('Network and secret key required');
-                }
+                if(network && secret_key_to) {
+                    try {
+                        let url = getURL(network.api_domain, `networks/activities/${activity_token}/notification/decline`);
 
-                try {
-                    let url = getURL(network.api_domain, `networks/activities/${activity_token}/notification/decline`);
-
-                    await axios.put(url, {
-                        network_token: network_self.network_token,
-                        secret_key: secret_key_to,
-                        person_token: person.person_token
-                    });
-                } catch(e) {
-                    console.error(e);
+                        await axios.put(url, {
+                            network_token: network_self.network_token,
+                            secret_key: secret_key_to,
+                            person_token: person.person_token,
+                            declined_at: time
+                        });
+                    } catch(e) {
+                        console.error(e);
+                    }
                 }
             }
 
