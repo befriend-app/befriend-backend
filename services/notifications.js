@@ -150,14 +150,26 @@ function notifyMatches(me, activity, matches) {
                 return;
             }
 
+            let spots = {
+                available: activity.friends.qty,
+                accepted: activity.friends.qty
+            }
+
             if (delay > 0) {
-                let spots = await activitiesService.getActivitySpots(activity.activity_token);
+                try {
+                    spots = await activitiesService.getActivitySpots(activity.activity_token);
+                } catch(e) {
+                    console.error(e);
+                    return;
+                }
 
                 if (spots.available <= 0) {
                     isFulfilled = true;
                     return;
                 }
             }
+
+            activityCopy.spots = spots;
 
             let {platforms, notify_networks_persons} = organizeGroupSend(group, payload);
 
@@ -344,7 +356,7 @@ function notifyMatches(me, activity, matches) {
         });
     }
 
-    function networksSendGroup(notify_networks_persons) {
+    function networksSendGroup(notify_networks_persons, spots) {
         return new Promise(async (resolve, reject) => {
             try {
                 //track which persons have already been sent to
@@ -434,6 +446,7 @@ function notifyMatches(me, activity, matches) {
                                 person_from_token: me.person_token,
                                 activity: activityCopy,
                                 persons: organized,
+                                spots
                             }, {
                                 timeout: 2000
                             });
@@ -686,6 +699,13 @@ function acceptNotification(person, activity_token) {
 
             await cacheService.hSet(notification_cache_key, person.person_token, notification);
 
+            await conn('activities')
+                .where('id', notification.activity_id)
+                .update({
+                    spots_available: spots.available,
+                    updated: timeNow()
+                });
+
             await conn('activities_notifications').where('id', notification.id).update(update);
 
             //add to own activities list
@@ -741,26 +761,27 @@ function acceptNotification(person, activity_token) {
             for(let _person_token in notifications) {
                 let data = notifications[_person_token];
 
-                if(_person_token !== person.person_token) { //skip self
-                    //if own network, notify via ws
-                    if(data.person_to_network_id === network_self.id) {
+                //notify person via websocket if they're on my network
+                if(data.person_to_network_id === network_self.id) {
+                    if(_person_token !== person.person_token) { //skip self
                         cacheService.publish('notifications', _person_token, {
                             activity_token,
                             spots
                         });
-                    } else { //organize 3rd-party networks
-                        if(!networksLookup) {
-                            networksLookup = await getNetworksLookup();
+                    }
 
-                            let network_to = networksLookup.byId[data.person_to_network_id];
+                } else { //organize 3rd-party networks
+                    if(!networksLookup) {
+                        networksLookup = await getNetworksLookup();
 
-                            if(!network_to) {
-                                continue;
-                            }
+                        let network_to = networksLookup.byId[data.person_to_network_id];
 
-                            if(!notify_networks[network_to.network_token]) {
-                                notify_networks[network_to.network_token] = network_to;
-                            }
+                        if(!network_to) {
+                            continue;
+                        }
+
+                        if(!notify_networks[network_to.network_token]) {
+                            notify_networks[network_to.network_token] = network_to;
                         }
                     }
                 }

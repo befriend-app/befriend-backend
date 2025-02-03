@@ -43,6 +43,7 @@ function createActivity(person, activity) {
                 mode_id: activity.mode.id,
                 person_id: person.id,
                 persons_qty: activity.friends.qty,
+                spots_available: activity.friends.qty,
                 activity_start: activity.when.data.start,
                 activity_end: activity.when.data.end,
                 activity_duration_min: activity.duration,

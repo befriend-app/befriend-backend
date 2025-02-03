@@ -138,6 +138,10 @@ module.exports = {
                     errors.push('Friends type and qty required');
                 }
 
+                if(!activity.spots?.available) {
+                    errors.push('Available spots needed');
+                }
+
                 if(!activity.person?.mode) {
                     errors.push('Mode token required');
                 }
@@ -250,6 +254,7 @@ module.exports = {
                         mode_id: mode.id,
                         person_id: person_from_qry.id,
                         persons_qty: activity.friends.qty,
+                        spots_available: activity.spots.available,
                         activity_start: activity.when.data.start,
                         activity_end: activity.when.data.end,
                         activity_duration_min: activity.duration,
@@ -393,6 +398,14 @@ module.exports = {
     onSpotsUpdate: function(from_network, activity_token, spots) {
         return new Promise(async (resolve, reject) => {
             try {
+                if(typeof activity_token !== 'string') {
+                    return reject("Invalid activity token");
+                }
+
+                if(!spots || typeof spots !== 'object' || !(isNumeric(spots.available))) {
+                    return reject("Invalid spots");
+                }
+
                  let conn = await dbService.conn();
 
                  let activity_check = await conn('activities')
@@ -403,6 +416,13 @@ module.exports = {
                  if(!activity_check) {
                      return reject("Activity not found");
                  }
+
+                await conn('activities')
+                    .where('id', activity_check.id)
+                    .update({
+                        spots_available: spots.available,
+                        updated: timeNow()
+                    });
 
                  let network_self = await getNetworkSelf();
 
