@@ -8,7 +8,6 @@ let sectionsData = require('../services/sections_data');
 let { skipDebugFilter } = require('../dev/debug').matching;
 
 const {
-    filterMappings,
     getPersonFilters,
     getInterestSections,
     getSchoolsWorkSections,
@@ -42,6 +41,8 @@ let interestScoreThresholds = {
     ultra: 200,
     super: 100,
 };
+
+let debug_logs = require('../dev/debug').matching.logs;
 
 
 function getMatches(me, params = {}) {
@@ -100,21 +101,25 @@ function getMatches(me, params = {}) {
 
                 await getGridTokens();
 
-                console.log({
-                    time_grid_tokens: timeNow() - t,
-                });
+                if(debug_logs) {
+                    console.log({
+                        time_grid_tokens: timeNow() - t,
+                    });
+                }
 
                 t = timeNow();
 
                 await getGridPersonTokens();
 
-                console.log({
-                    total_initial_persons: Object.keys(person_tokens).length,
-                });
+                if(debug_logs) {
+                    console.log({
+                        total_initial_persons: Object.keys(person_tokens).length,
+                    });
 
-                console.log({
-                    time_person_tokens: timeNow() - t,
-                });
+                    console.log({
+                        time_person_tokens: timeNow() - t,
+                    });
+                }
 
                 await filterOnlineStatus();
 
@@ -321,9 +326,11 @@ function getMatches(me, params = {}) {
 
                 calculateInterestScores();
 
-                console.log({
-                    filter: timeNow() - t,
-                });
+                if(debug_logs) {
+                    console.log({
+                        filter: timeNow() - t,
+                    });
+                }
 
                 resolve();
             } catch (e) {
@@ -454,12 +461,14 @@ function getMatches(me, params = {}) {
                     }
                 }
 
-                console.log({
-                    after_online_excluded: {
-                        send: Object.keys(personsExclude.send).length,
-                        receive: Object.keys(personsExclude.receive).length,
-                    },
-                });
+                if(debug_logs) {
+                    console.log({
+                        after_online_excluded: {
+                            send: Object.keys(personsExclude.send).length,
+                            receive: Object.keys(personsExclude.receive).length,
+                        },
+                    });
+                }
 
                 resolve();
             } catch (e) {
@@ -677,12 +686,14 @@ function getMatches(me, params = {}) {
                     }
                 }
 
-                console.log({
-                    after_networks_excluded: {
-                        send: Object.keys(personsExclude.send).length,
-                        receive: Object.keys(personsExclude.receive).length,
-                    },
-                });
+                if(debug_logs) {
+                    console.log({
+                        after_networks_excluded: {
+                            send: Object.keys(personsExclude.send).length,
+                            receive: Object.keys(personsExclude.receive).length,
+                        },
+                    });
+                }
 
                 resolve();
             } catch (e) {
@@ -817,12 +828,14 @@ function getMatches(me, params = {}) {
                     }
                 }
 
-                console.log({
-                    after_modes_excluded: {
-                        send: Object.keys(personsExclude.send).length,
-                        receive: Object.keys(personsExclude.receive).length,
-                    },
-                });
+                if(debug_logs) {
+                    console.log({
+                        after_modes_excluded: {
+                            send: Object.keys(personsExclude.send).length,
+                            receive: Object.keys(personsExclude.receive).length,
+                        },
+                    });
+                }
 
                 resolve();
             } catch (e) {
@@ -956,12 +969,14 @@ function getMatches(me, params = {}) {
                     }
                 }
 
-                console.log({
-                    after_verifications_excluded: {
-                        send: Object.keys(personsExclude.send).length,
-                        receive: Object.keys(personsExclude.receive).length,
-                    },
-                });
+                if(debug_logs) {
+                    console.log({
+                        after_verifications_excluded: {
+                            send: Object.keys(personsExclude.send).length,
+                            receive: Object.keys(personsExclude.receive).length,
+                        },
+                    });
+                }
 
                 resolve();
             } catch (e) {
@@ -1139,12 +1154,14 @@ function getMatches(me, params = {}) {
                     }
                 }
 
-                console.log({
-                    after_genders_excluded: {
-                        send: Object.keys(personsExclude.send).length,
-                        receive: Object.keys(personsExclude.receive).length,
-                    },
-                });
+                if(debug_logs) {
+                    console.log({
+                        after_genders_excluded: {
+                            send: Object.keys(personsExclude.send).length,
+                            receive: Object.keys(personsExclude.receive).length,
+                        },
+                    });
+                }
 
                 resolve();
             } catch (e) {
@@ -1353,12 +1370,14 @@ function getMatches(me, params = {}) {
                     }
                 }
 
-                console.log({
-                    after_filter_distance_excluded: {
-                        send: Object.keys(personsExclude.send).length,
-                        receive: Object.keys(personsExclude.receive).length,
-                    },
-                });
+                if(debug_logs) {
+                    console.log({
+                        after_filter_distance_excluded: {
+                            send: Object.keys(personsExclude.send).length,
+                            receive: Object.keys(personsExclude.receive).length,
+                        },
+                    });
+                }
 
                 resolve();
             } catch (e) {
@@ -1451,12 +1470,14 @@ function getMatches(me, params = {}) {
                     }
                 }
 
-                console.log({
-                    after_filter_ages_excluded: {
-                        send: Object.keys(personsExclude.send).length,
-                        receive: Object.keys(personsExclude.receive).length,
-                    },
-                });
+                if(debug_logs) {
+                    console.log({
+                        after_filter_ages_excluded: {
+                            send: Object.keys(personsExclude.send).length,
+                            receive: Object.keys(personsExclude.receive).length,
+                        },
+                    });
+                }
 
                 resolve();
             } catch (e) {
@@ -1777,12 +1798,14 @@ function getMatches(me, params = {}) {
                     }
                 }
 
-                console.log({
-                    after_filter_reviews_excluded: {
-                        send: Object.keys(personsExclude.send).length,
-                        receive: Object.keys(personsExclude.receive).length,
-                    },
-                });
+                if(debug_logs) {
+                    console.log({
+                        after_filter_reviews_excluded: {
+                            send: Object.keys(personsExclude.send).length,
+                            receive: Object.keys(personsExclude.receive).length,
+                        },
+                    });
+                }
 
                 resolve();
             } catch (e) {
@@ -1837,12 +1860,14 @@ function getMatches(me, params = {}) {
                     }
                 }
 
-                console.log({
-                    after_filter_availability_excluded: {
-                        send: Object.keys(personsExclude.send).length,
-                        receive: Object.keys(personsExclude.receive).length,
-                    },
-                });
+                if(debug_logs) {
+                    console.log({
+                        after_filter_availability_excluded: {
+                            send: Object.keys(personsExclude.send).length,
+                            receive: Object.keys(personsExclude.receive).length,
+                        },
+                    });
+                }
 
                 resolve();
             } catch (error) {
@@ -1979,12 +2004,14 @@ function getMatches(me, params = {}) {
                         }
                     }
 
-                    console.log({
-                        [`after_${sectionKey}_excluded`]: {
-                            send: Object.keys(personsExclude.send).length,
-                            receive: Object.keys(personsExclude.receive).length,
-                        },
-                    });
+                    if(debug_logs) {
+                        console.log({
+                            [`after_${sectionKey}_excluded`]: {
+                                send: Object.keys(personsExclude.send).length,
+                                receive: Object.keys(personsExclude.receive).length,
+                            },
+                        });
+                    }
 
                     return resolve();
                 }
@@ -2080,12 +2107,14 @@ function getMatches(me, params = {}) {
                 return reject(e);
             }
 
-            console.log({
-                [`after_${sectionKey}_excluded`]: {
-                    send: Object.keys(personsExclude.send).length,
-                    receive: Object.keys(personsExclude.receive).length,
-                },
-            });
+            if(debug_logs) {
+                console.log({
+                    [`after_${sectionKey}_excluded`]: {
+                        send: Object.keys(personsExclude.send).length,
+                        receive: Object.keys(personsExclude.receive).length,
+                    },
+                });
+            }
 
             resolve();
         });
@@ -2182,50 +2211,60 @@ function getMatches(me, params = {}) {
 
             am_available = isPersonAvailable(me, my_filters.availability);
 
-            console.log({
-                time_my_filters: timeNow() - t
-            });
+            if(debug_logs) {
+                console.log({
+                    time_my_filters: timeNow() - t
+                });
+            }
 
             await processStage1();
 
-            console.log({
-                time_stage_1: timeNow() - t,
-            });
+            if(debug_logs) {
+                console.log({
+                    time_stage_1: timeNow() - t,
+                });
+            }
 
             t = timeNow();
 
             filterPersonsAfterStage1();
 
-            console.log({
-                persons_after_stage_1: Object.keys(persons_not_excluded_after_stage_1).length,
-            });
+            if(debug_logs) {
+                console.log({
+                    persons_after_stage_1: Object.keys(persons_not_excluded_after_stage_1).length,
+                });
 
-            console.log({
-                after_filter_stage_1_excluded: {
-                    send: Object.keys(personsExclude.send).length,
-                    receive: Object.keys(personsExclude.receive).length,
-                },
-            });
+                console.log({
+                    after_filter_stage_1_excluded: {
+                        send: Object.keys(personsExclude.send).length,
+                        receive: Object.keys(personsExclude.receive).length,
+                    },
+                });
 
-            console.log({
-                filter_persons: timeNow() - t,
-            });
+                console.log({
+                    filter_persons: timeNow() - t,
+                });
+            }
 
             t = timeNow();
 
             await processStage2();
 
-            console.log({
-                time_stage_2: timeNow() - t,
-            });
+            if(debug_logs) {
+                console.log({
+                    time_stage_2: timeNow() - t,
+                });
+            }
 
             t = timeNow();
 
             await matchInterests();
 
-            console.log({
-                time_filter_interests: timeNow() - t,
-            });
+            if(debug_logs) {
+                console.log({
+                    time_filter_interests: timeNow() - t,
+                });
+            }
 
             t = timeNow();
 
@@ -2233,14 +2272,16 @@ function getMatches(me, params = {}) {
 
             let memory_end = process.memoryUsage().heapTotal / 1024 / 1024;
 
-            console.log({
-                memory_start,
-                memory_end,
-            });
+            if(debug_logs) {
+                console.log({
+                    memory_start,
+                    memory_end,
+                });
 
-            console.log({
-                final_persons: Object.keys(persons_not_excluded_final).length,
-            });
+                console.log({
+                    final_persons: Object.keys(persons_not_excluded_final).length,
+                });
+            }
 
             neighbor_grid_tokens = null;
             person_tokens = null;

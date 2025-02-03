@@ -3,6 +3,7 @@ const { isProdApp } = require('../services/shared');
 module.exports = {
     matching: {
         on: isProdApp() ? false : true,
+        logs: isProdApp() ? false : true,
         filters: [
             //notifications
 
