@@ -91,7 +91,7 @@ function init() {
                     api_domain: getCleanDomain(process.env.NETWORK_API_DOMAIN),
                     base_domain: getCleanDomain(process.env.NETWORK_API_DOMAIN, true),
                     is_self: true,
-                    is_verified: true,
+                    is_verified: false,
                     is_online: true,
                     last_online: timeNow(),
                     is_active: true, //for self
