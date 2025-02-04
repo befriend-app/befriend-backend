@@ -1092,6 +1092,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                         delKeysSet.add(
                             cacheService.keys.persons_grid_set(prev_grid_token, `is_new_person`),
                         );
+
                         addKeysSet.add(
                             cacheService.keys.persons_grid_set(grid_token, `is_new_person`),
                         );
@@ -1145,6 +1146,10 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                 //new person
                 if (person.is_new) {
                     addKeysSet.add(
+                        cacheService.keys.persons_grid_set(grid_token, `is_new_person`),
+                    );
+                } else {
+                    delKeysSet.add(
                         cacheService.keys.persons_grid_set(grid_token, `is_new_person`),
                     );
                 }
@@ -2411,6 +2416,10 @@ function batchUpdateGridSets(persons) {
                         //new person
                         if (person.is_new) {
                             addKeysSet.add(
+                                cacheService.keys.persons_grid_set(grid_token, `is_new_person`),
+                            );
+                        } else {
+                            delKeysSet.add(
                                 cacheService.keys.persons_grid_set(grid_token, `is_new_person`),
                             );
                         }

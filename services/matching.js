@@ -1665,7 +1665,7 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
                 }
 
                 // Apply review filters
-                for (let token of person_tokens) {
+                for (let token of persons_not_excluded_after_stage_1) {
                     let auto_include = {
                         send: false,
                         receive: false,
@@ -1697,7 +1697,7 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
                     let exclude_receive = false;
 
                     let myRatings = me.reviews || {};
-                    let personRatings = persons_ratings[token] || {};
+                    let personRatings = persons_ratings.get(token) || new Map();
 
                     // Bi-directional send/receive filter settings
                     if (!auto_include.send) {
@@ -1710,8 +1710,8 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
                             }
 
                             if (
-                                (my_threshold && !isNumeric(personRatings[type])) ||
-                                (my_threshold && personRatings[type] < my_threshold)
+                                (my_threshold && !isNumeric(personRatings.get(type))) ||
+                                (my_threshold && personRatings.get(type) < my_threshold)
                             ) {
                                 exclude_send = true;
                                 break;
@@ -1721,7 +1721,7 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
                                 (their_threshold && !isNumeric(myRatings[type])) ||
                                 (their_threshold && myRatings[type] < their_threshold)
                             ) {
-                                if (me.is_new && !(token in exclude_match_new.receive)) {
+                                if (me.is_new && !(exclude_match_new.receive.has(token))) {
                                     continue;
                                 }
 
@@ -1741,8 +1741,8 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
                             }
 
                             if (
-                                (my_threshold && !isNumeric(personRatings[type])) ||
-                                (my_threshold && personRatings[type] < my_threshold)
+                                (my_threshold && !isNumeric(personRatings.get(type))) ||
+                                (my_threshold && personRatings.get(type) < my_threshold)
                             ) {
                                 exclude_receive = true;
                                 break;
@@ -1752,7 +1752,7 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
                                 (their_threshold && !isNumeric(myRatings[type])) ||
                                 (their_threshold && myRatings[type] < their_threshold)
                             ) {
-                                if (me.is_new && !(token in exclude_match_new.send)) {
+                                if (me.is_new && !(exclude_match_new.send.has(token))) {
                                     continue;
                                 }
 
@@ -1762,7 +1762,7 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
                         }
                     }
 
-                    if (exclude_send) {
+                    if (exclude_receive && !send_only) {
                         personsExclude.send.add(token);
                     }
 
