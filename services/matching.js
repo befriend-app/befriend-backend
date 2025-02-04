@@ -1762,11 +1762,11 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
                         }
                     }
 
-                    if (exclude_receive && !send_only) {
+                    if (exclude_send) {
                         personsExclude.send.add(token);
                     }
 
-                    if (exclude_receive) {
+                    if (exclude_receive && !send_only) {
                         personsExclude.receive.add(token);
                     }
                 }
