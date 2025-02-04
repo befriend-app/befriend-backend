@@ -254,30 +254,30 @@ function processPersons(network_id, persons) {
                         if(prev_grid) {
                             personsGrids[person.person_token].filter_tokens = filterTokensAll;
                         } else {
-                            if(person.is_online !== existingPerson.is_online) {
+                            if(person.is_online !== existingPerson.is_online || debug_sync_enabled) {
                                 personsGrids[person.person_token].filter_tokens.push('online');
                             }
 
-                            if(grid?.id !== prev_grid?.id) {
+                            if(grid?.id !== prev_grid?.id || debug_sync_enabled) {
                                 personsGrids[person.person_token].filter_tokens.push('location');
                             }
 
-                            if(person.modes !== existingPerson.modes) {
+                            if(person.modes !== existingPerson.modes || debug_sync_enabled) {
                                 personsGrids[person.person_token].filter_tokens.push('modes');
                             }
 
-                            if(reviewsChanged(person_data, existingPerson)) {
+                            if(reviewsChanged(person_data, existingPerson) || debug_sync_enabled) {
                                 personsGrids[person.person_token].filter_tokens.push('reviews');
                             }
 
                             if(person.is_verified_in_person !== existingPerson?.is_verified_in_person ||
-                                person.is_verified_linkedin !== existingPerson?.is_verified_linkedin) {
+                                person.is_verified_linkedin !== existingPerson?.is_verified_linkedin || debug_sync_enabled) {
                                 personsGrids[person.person_token].filter_tokens.push('verifications');
                             }
 
                             let existingGender = gendersLookup.byId[existingPerson?.gender_id];
 
-                            if(!existingGender || person.gender_token !== existingGender.gender_token) {
+                            if(!existingGender || person.gender_token !== existingGender.gender_token || debug_sync_enabled) {
                                 personsGrids[person.person_token].filter_tokens.push('genders');
                             }
                         }
@@ -452,7 +452,7 @@ function processPersonsModes(network_id, persons_modes) {
                         let existingPartner = existingPartnersLookup[partner.partner_token];
 
                         if (existingPartner) {
-                            if (partner.updated > existingPartner.updated) {
+                            if (partner.updated > existingPartner.updated || debug_sync_enabled) {
                                 partnerData.id = existingPartner.id;
                                 batch_update.partners.push(partnerData);
                             }
@@ -480,7 +480,7 @@ function processPersonsModes(network_id, persons_modes) {
                             const existingKid = existingKidsLookup[kidToken];
 
                             if (existingKid) {
-                                if (kid.updated > existingKid.updated) {
+                                if (kid.updated > existingKid.updated || debug_sync_enabled) {
                                     kidData.id = existingKid.id;
                                     batch_update.kids.push(kidData);
                                 }

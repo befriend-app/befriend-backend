@@ -16,6 +16,8 @@ const { homeDomains, cols, getNetworkSelf } = require('../../services/network');
 const { deleteKeys } = require('../../services/cache');
 
 function main() {
+    console.log("Sync: networks");
+
     loadScriptEnv();
 
     return new Promise(async (resolve, reject) => {

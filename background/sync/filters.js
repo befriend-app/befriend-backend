@@ -515,7 +515,7 @@ function processMain(persons, updated_persons_filters) {
                     }
 
                     if (existingItem) {
-                        if (item.updated > existingItem.updated) {
+                        if (item.updated > existingItem.updated || debug_sync_enabled) {
                             //include all cols on table for batch update
                             for(let col in schema) {
                                 if(['created'].includes(col)) {
@@ -670,7 +670,7 @@ function processAvailability(persons, updated_persons_availability) {
                     };
 
                     if (existingItem) {
-                        if (item.updated > existingItem.updated) {
+                        if (item.updated > existingItem.updated || debug_sync_enabled) {
                             entry.id = existingItem.id;
                             batch_update.push(entry);
                             existingDataLookup[person_token][item.token] = entry;
@@ -794,7 +794,7 @@ function processNetworks(persons, updated_persons_networks) {
                     };
 
                     if(existingItem) {
-                        if(item.updated > existingItem.updated) {
+                        if(item.updated > existingItem.updated || debug_sync_enabled) {
                             entry.id = existingItem.id;
                             batch_update.push(entry);
                             existingDataLookup[person_token][item.token] = entry;

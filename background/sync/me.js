@@ -425,7 +425,7 @@ function processMe(network_id, persons) {
                             };
 
                             if (existingSection) {
-                                if (section.updated > existingSection.updated) {
+                                if (section.updated > existingSection.updated || debug_sync_enabled) {
                                     sectionData.id = existingSection.id;
                                     batch_update.persons_sections.push(sectionData);
                                 }
@@ -480,7 +480,7 @@ function processMe(network_id, persons) {
                                 }
 
                                 if (existingItem) {
-                                    if (item.updated > existingItem.updated) {
+                                    if (item.updated > existingItem.updated || debug_sync_enabled) {
                                         itemData.id = existingItem.id;
                                         batch_update[table].push(itemData);
                                     }
