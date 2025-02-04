@@ -12,7 +12,7 @@ module.exports = {
 
                 res.json(response, 201);
             } catch (e) {
-                if (e.message) {
+                if (e?.message) {
                     res.json(e.message, 400);
                 } else {
                     res.json('Error creating person', 400);
@@ -32,7 +32,7 @@ module.exports = {
 
                 res.json(response, 202);
             } catch (e) {
-                if (e.message) {
+                if (e?.message) {
                     res.json(e.message, 400);
                 } else {
                     res.json('Error filtering persons', 400);
@@ -53,7 +53,7 @@ module.exports = {
 
                 res.json(response, 201);
             } catch (e) {
-                if (e.message) {
+                if (e?.message) {
                     res.json(e.message, 400);
                 } else {
                     res.json('Error creating person', 400);
@@ -72,7 +72,7 @@ module.exports = {
 
                 res.json(response, 202);
             } catch (e) {
-                if (e.message) {
+                if (e?.message) {
                     res.json(e.message, 400);
                 } else {
                     res.json('Error creating person', 400);
@@ -92,7 +92,7 @@ module.exports = {
 
                 res.json(response, 202);
             } catch (e) {
-                if (e.message) {
+                if (e?.message) {
                     res.json(e.message, 400);
                 } else {
                     res.json('Error creating person', 400);
@@ -112,7 +112,7 @@ module.exports = {
 
                 res.json(response, 202);
             } catch (e) {
-                if (e.message) {
+                if (e?.message) {
                     res.json(e.message, 400);
                 } else {
                     res.json('Error creating person', 400);

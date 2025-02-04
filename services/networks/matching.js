@@ -1,10 +1,14 @@
 const matchingService = require('../../services/matching');
 const { isNumeric } = require('../shared');
+const { getPerson } = require('../persons');
 
 
 module.exports = {
-    excludeMatches: function(from_network, person, activity_location, person_tokens) {
+    excludeMatches: function(from_network, person_data, activity_location, person_tokens) {
         return new Promise(async (resolve, reject) => {
+            if(!person_data?.person_token || !person_data.grid?.token) {
+                return reject('Person token and grid required');
+            }
             if(!activity_location) {
                 return reject('Activity field missing');
             }
@@ -18,8 +22,18 @@ module.exports = {
             }
 
             try {
+                let person = await getPerson(person_data.person_token);
+
+                if(!person) {
+                    return reject('Person not found');
+                }
+
                  let excluded = await matchingService.getMatches(
-                     person, {
+                     {
+                         ...person_data,
+                         id: person.id,
+                         timezone: person.timezone,
+                     }, {
                          location: {
                              lat: activity_location.lat,
                              lon: activity_location.lon

@@ -746,6 +746,10 @@ function getPersonFilterForKey(person, filter_key) {
 function getPersonFilters(person) {
     return new Promise(async (resolve, reject) => {
         try {
+            if(!person?.id) {
+                return reject('Person id required');
+            }
+
             let cache_key = cacheService.keys.person_filters(person.person_token);
 
             let person_filters = await cacheService.hGetAllObj(cache_key);
