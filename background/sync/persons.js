@@ -266,7 +266,7 @@ function processPersons(network_id, persons) {
                                 personsGrids[person.person_token].filter_tokens.push('modes');
                             }
 
-                            if(reviewsChanged(person_data, existingPerson) || debug_sync_enabled) {
+                            if(reviewsChanged(person_data, existingPerson) || person.is_new !== existingPerson.is_new || debug_sync_enabled) {
                                 personsGrids[person.person_token].filter_tokens.push('reviews');
                             }
 
