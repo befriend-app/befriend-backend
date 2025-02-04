@@ -88,6 +88,7 @@ async function addPersons() {
                 let person_insert = {
                     registration_network_id: self_network.id,
                     is_person_known: self_network.is_befriend,
+                    is_new: true,
                     person_token: generateToken(),
                     first_name: person.name.first,
                     last_name: person.name.last,
