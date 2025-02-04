@@ -25,7 +25,6 @@ const { getPolitics } = require('./politics');
 const { getReligions } = require('./religion');
 const { isPersonAvailable } = require('./availability');
 const { minAge, maxAge } = require('./persons');
-const { token } = require('morgan');
 const { getActivityPlace } = require('./places');
 const { getGridLookup } = require('./grid');
 const { getLanguages } = require('./languages');
@@ -45,7 +44,15 @@ let interestScoreThresholds = {
 let debug_logs = require('../dev/debug').matching.logs;
 
 
-function getMatches(me, params = {}, person_tokens = {}) {
+function getMatches(me, params = {}, custom_filters = null, person_tokens = {}) {
+    function skipFilter(filter_name) {
+        if(custom_filters && !custom_filters.includes(filter_name)) {
+            return true;
+        }
+
+        return skipDebugFilter(filter_name);
+    }
+
     let { activity, location, send_only, counts_only, exclude_only } = params;
 
     let my_token, my_filters, activity_location, gridLookup;
@@ -85,25 +92,34 @@ function getMatches(me, params = {}, person_tokens = {}) {
 
     function setActivityLocation() {
         return new Promise(async (resolve, reject) => {
+            let lat = null, lon = null;
+
             if(location?.lat && location.lon) {
-                activity_location.lat = location.lat;
-                activity_location.lon = location.lon;
+                lat = location.lat;
+                lon = location.lon;
             } else if (activity?.place) {
                 // use activity place lat/lon
                 if (activity.place?.data?.location_lat) {
-                    activity_location.lat = activity.place.data.location_lat;
-                    activity_location.lon = activity.place.data.location_lon;
+                    lat = activity.place.data.location_lat;
+                    lon = activity.place.data.location_lon;
                 } else {
                     try {
                         let place = await getActivityPlace(activity);
 
                         activity.place.data = place;
 
-                        activity_location.lat = place.location_lat;
-                        activity_location.lon = place.location_lon;
+                        lat = place.location_lat;
+                        lon = place.location_lon;
                     } catch(e) {
                         console.error(e);
                     }
+                }
+            }
+
+            if(lat && lon) {
+                activity_location = {
+                    lat,
+                    lon
                 }
             }
 
@@ -425,6 +441,11 @@ function getMatches(me, params = {}, person_tokens = {}) {
     function getGridPersonTokens() {
         return new Promise(async (resolve, reject) => {
             try {
+                //if custom person tokens provided
+                if(Object.keys(person_tokens).length) {
+                    return resolve();
+                }
+
                 let pipeline_persons = cacheService.startPipeline();
 
                 for (let grid_token of neighbor_grid_tokens) {
@@ -454,7 +475,7 @@ function getMatches(me, params = {}, person_tokens = {}) {
     function filterOnlineStatus() {
         return new Promise(async (resolve, reject) => {
             try {
-                if(skipDebugFilter('online')) {
+                if(skipFilter('online')) {
                     return resolve();
                 }
 
@@ -536,7 +557,7 @@ function getMatches(me, params = {}, person_tokens = {}) {
         // b) if receiving person has specific networks selected and sending person's network matches
 
         return new Promise(async (resolve, reject) => {
-            if(skipDebugFilter('networks')) {
+            if(skipFilter('networks')) {
                 return resolve();
             }
 
@@ -722,7 +743,7 @@ function getMatches(me, params = {}, person_tokens = {}) {
 
     function filterModes() {
         return new Promise(async (resolve, reject) => {
-            if(skipDebugFilter('modes')) {
+            if(skipFilter('modes')) {
                 return resolve();
             }
 
@@ -864,7 +885,7 @@ function getMatches(me, params = {}, person_tokens = {}) {
 
     function filterVerifications() {
         return new Promise(async (resolve, reject) => {
-            if(skipDebugFilter('verifications')) {
+            if(skipFilter('verifications')) {
                 return resolve();
             }
 
@@ -1005,7 +1026,7 @@ function getMatches(me, params = {}, person_tokens = {}) {
 
     function filterGenders() {
         return new Promise(async (resolve, reject) => {
-            if(skipDebugFilter('genders')) {
+            if(skipFilter('genders')) {
                 return resolve();
             }
 
@@ -1190,7 +1211,7 @@ function getMatches(me, params = {}, person_tokens = {}) {
 
     function filterDistance() {
         return new Promise(async (resolve, reject) => {
-            if(skipDebugFilter('distance')) {
+            if(skipFilter('distance')) {
                 return resolve();
             }
 
@@ -1406,7 +1427,7 @@ function getMatches(me, params = {}, person_tokens = {}) {
 
     function filterAges() {
         return new Promise(async (resolve, reject) => {
-            if(skipDebugFilter('ages')) {
+            if(skipFilter('ages')) {
                 return resolve();
             }
 
@@ -1506,7 +1527,7 @@ function getMatches(me, params = {}, person_tokens = {}) {
 
     function filterReviews() {
         return new Promise(async (resolve, reject) => {
-            if(skipDebugFilter('reviews')) {
+            if(skipFilter('reviews')) {
                 return resolve();
             }
 
@@ -1834,7 +1855,7 @@ function getMatches(me, params = {}, person_tokens = {}) {
 
     function filterPersonsAvailability() {
         return new Promise(async (resolve, reject) => {
-            if(skipDebugFilter('availability')) {
+            if(skipFilter('availability')) {
                 return resolve();
             }
 
@@ -1896,7 +1917,7 @@ function getMatches(me, params = {}, person_tokens = {}) {
 
     function filterSection(sectionKey, getOptions, isMultiSelect) {
         return new Promise(async (resolve, reject) => {
-            if(skipDebugFilter(sectionKey)) {
+            if(skipFilter(sectionKey)) {
                 return resolve();
             }
 
@@ -2277,15 +2298,15 @@ function getMatches(me, params = {}, person_tokens = {}) {
 
             t = timeNow();
 
-            await matchInterests();
+            if(!exclude_only) {
+                await matchInterests();
+            }
 
             if(debug_logs) {
                 console.log({
                     time_filter_interests: timeNow() - t,
                 });
             }
-
-            t = timeNow();
 
             organizeFinal();
 
@@ -2305,10 +2326,14 @@ function getMatches(me, params = {}, person_tokens = {}) {
             neighbor_grid_tokens = null;
             person_tokens = null;
 
-            personsExclude = null;
-
             persons_not_excluded_after_stage_1 = null;
             persons_not_excluded_final = null;
+
+            if(exclude_only) {
+                return resolve(personsExclude)
+            }
+
+            personsExclude = null;
 
             if (counts_only) {
                 return resolve(organized);

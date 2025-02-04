@@ -17,15 +17,23 @@ module.exports = {
                 return reject("Person tokens required");
             }
 
-            //todo
             try {
-                 let excluded = await matchingService.getMatches(person, {
-                     location: {
-                         lat: activity_location.lat,
-                         lon: activity_location.lon
-                     },
-                     exclude_only: true
-                 }, person_tokens)
+                 let excluded = await matchingService.getMatches(
+                     person, {
+                         location: {
+                             lat: activity_location.lat,
+                             lon: activity_location.lon
+                         },
+                         send_only: true,
+                         exclude_only: true
+                    },
+                     ['distance'],
+                     person_tokens
+                 );
+
+                resolve({
+                    excluded: excluded.send
+                });
             } catch(e) {
                 console.error(e);
                 return reject();
