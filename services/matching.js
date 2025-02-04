@@ -2284,33 +2284,6 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
 }
 
 function organizePersonInterests(sections, myInterests, otherPersonInterests) {
-    function setMatchData(section, item_token, match_types, table_key = null, name, favorite_position, secondary, importance, totals) {
-        otherPersonInterests.matches.items[item_token] = {
-            section: section.token,
-            token: item_token,
-            table_key: table_key,
-            name: name,
-            totals: totals,
-            match: {
-                types: match_types,
-                mine: {
-                    favorite: {
-                        position: favorite_position?.mine || null,
-                    },
-                    secondary: secondary?.mine || null,
-                    importance: importance?.mine || null,
-                },
-                theirs: {
-                    favorite: {
-                        position: favorite_position?.theirs || null,
-                    },
-                    secondary: secondary?.theirs || null,
-                    importance: importance?.theirs || null,
-                },
-            },
-        };
-    }
-
     let myMergedItems = new Map();
     let theirMergedItems = new Map();
 
