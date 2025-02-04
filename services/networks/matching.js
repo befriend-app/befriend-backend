@@ -21,6 +21,10 @@ module.exports = {
                 return reject("Person tokens required");
             }
 
+            if(person_tokens.length > 1000) {
+                person_tokens = person_tokens.slice(0, 1000);
+            }
+
             try {
                 let person = await getPerson(person_data.person_token);
 

@@ -573,8 +573,8 @@ function notifyMatches(me, activity, matches) {
             }
         }
 
-        let organized_matches = {};
-        let filter_networks_persons = {};
+        let organized_matches = new Map();
+        let filter_networks_persons = new Map();
         let filtered_matches = [];
 
         for (let match of matches) {
@@ -597,7 +597,7 @@ function notifyMatches(me, activity, matches) {
                         match.device.token = await getTmpDeviceToken();
                     }
 
-                    organized_matches[match.person_token] = match;
+                    organized_matches.set(match.person_token, match)
                 }
             } else {
                 //we will call each network with matching person tokens to find which should be excluded
@@ -605,28 +605,31 @@ function notifyMatches(me, activity, matches) {
                 //use first network
                 let network = match_networks[0];
 
-                if(!filter_networks_persons[network.network_token]) {
-                    filter_networks_persons[network.network_token] = {};
+                if(!filter_networks_persons.has(network.network_token)) {
+                    filter_networks_persons.set(network.network_token, new Set());
                 }
 
-                filter_networks_persons[network.network_token][match.person_token] = true;
+                filter_networks_persons.get(network.network_token).add(match.person_token);
 
-                organized_matches[match.person_token] = match;
+                organized_matches.set(match.person_token, match);
             }
         }
 
-        let filter_networks_tokens = Object.keys(filter_networks_persons);
-
-        if(filter_networks_tokens.length) {
+        if(filter_networks_persons.size) {
             let ps = [];
 
-            for(let network_token of filter_networks_tokens) {
+            for(let [network_token, person_tokens] of filter_networks_persons) {
                 let network = networksLookup.byToken[network_token];
-                let person_tokens = Object.keys(filter_networks_persons[network_token]);
 
                 let url = getURL(network.api_domain, `/networks/activities/matching/exclude`);
 
                 let secret_key = await getSecretKeyToForNetwork(network.id);
+
+                let arr_person_tokens = Array.from(person_tokens);
+
+                if(person_tokens.size > 1000) {
+                    arr_person_tokens = arr_person_tokens.slice(0, 1000);
+                }
 
                 ps.push(axios.put(url, {
                     network_token: my_network.network_token,
@@ -641,21 +644,23 @@ function notifyMatches(me, activity, matches) {
                         lat: activity.place?.data?.location_lat,
                         lon: activity.place?.data?.location_lon
                     },
-                    person_tokens
+                    person_tokens: arr_person_tokens
                 }));
             }
 
             try {
                  let results = await Promise.allSettled(ps);
 
-                 for(let i = 0; i < filter_networks_tokens.length; i++) {
-                     let result = results[i];
+                 let filter_idx = 0;
+
+                 for(let [network_token, person_tokens] of filter_networks_persons) {
+                     let result = results[filter_idx++];
 
                      let exclude_person_tokens = result.value?.data?.excluded ?? [];
 
                      if(exclude_person_tokens.length) {
                          for(let person_token of exclude_person_tokens) {
-                            delete organized_matches[person_token];
+                             organized_matches.delete(person_token);
                          }
                      }
                  }
@@ -664,8 +669,8 @@ function notifyMatches(me, activity, matches) {
             }
         }
 
-        for(let person_token in organized_matches) {
-            filtered_matches.push(organized_matches[person_token]);
+        for(let [person_token, match] of organized_matches) {
+            filtered_matches.push(match);
         }
 
         if(debug_enabled) {
