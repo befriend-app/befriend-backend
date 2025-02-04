@@ -11,7 +11,7 @@ module.exports = {
             // 'availability',
             // 'activity_types',
             // 'modes',
-            'networks',
+            // 'networks',
             // 'reviews',
             // 'verifications',
 
@@ -23,7 +23,7 @@ module.exports = {
 
             //personal
             // 'life_stages',
-            // 'relationships'
+            // 'relationships',
             // 'languages',
             // 'politics',
             // 'religion',
@@ -43,9 +43,9 @@ module.exports = {
     },
     sync: {
         networks_persons: isProdApp() ? false : true,
-        persons: isProdApp() ? false : false,
-        me: isProdApp() ? false : false,
-        filters: isProdApp() ? false : false
+        persons: isProdApp() ? false : true,
+        me: isProdApp() ? false : true,
+        filters: isProdApp() ? false : true
     },
     notifications: {
         notify_matches: isProdApp() ? false : true,

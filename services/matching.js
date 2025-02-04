@@ -278,7 +278,7 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
 
         return new Promise(async (resolve, reject) => {
             try {
-                // Build my interests object
+                //organize my interests
                 let sections = interests_sections
                     .concat(schools_work_sections)
                     .concat(personal_sections);
@@ -333,10 +333,9 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
                 let results = await cacheService.execPipeline(pipeline);
 
                 let idx = 0;
-
                 let t = timeNow();
 
-                for (let [person_token, personInterest] of personsInterests) {
+                for (let [person_token, personInterests] of personsInterests) {
                     //person sections
                     let person_sections = results[idx++];
 
@@ -349,7 +348,7 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
                             }
 
                             if (person_sections?.active?.[s] && !person_sections.active[s].deleted) {
-                                personInterest.sections.set(s, person_sections[s]);
+                                personInterests.sections.set(s, person_sections[s]);
                             }
                         }
                     } catch (e) {
@@ -359,7 +358,7 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
                     //person filters
                     for (let section of sections) {
                         try {
-                            personInterest.filters.set(
+                            personInterests.filters.set(
                                 section.token,
                                 JSON.parse(results[idx++])
                             );
@@ -368,7 +367,7 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
                         }
                     }
 
-                    organizePersonInterests(sections, myInterests, personInterest);
+                    organizePersonInterests(sections, myInterests, personInterests);
                 }
 
                 calculateInterestScores();
@@ -2285,17 +2284,7 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
 }
 
 function organizePersonInterests(sections, myInterests, otherPersonInterests) {
-    function setMatchData(
-        section,
-        item_token,
-        match_types,
-        table_key = null,
-        name,
-        favorite_position,
-        secondary,
-        importance,
-        totals,
-    ) {
+    function setMatchData(section, item_token, match_types, table_key = null, name, favorite_position, secondary, importance, totals) {
         otherPersonInterests.matches.items[item_token] = {
             section: section.token,
             token: item_token,
@@ -2322,8 +2311,8 @@ function organizePersonInterests(sections, myInterests, otherPersonInterests) {
         };
     }
 
-    let myMergedItems = {};
-    let theirMergedItems = {};
+    let myMergedItems = new Map();
+    let theirMergedItems = new Map();
 
     for (let section of sections) {
         function calcPersonalTotals(myItem, theirItem) {
@@ -2345,13 +2334,13 @@ function organizePersonInterests(sections, myInterests, otherPersonInterests) {
             }
         }
 
-        myMergedItems[section.token] = {};
-        theirMergedItems[section.token] = {};
+        myMergedItems.set(section.token, new Map());
+        theirMergedItems.set(section.token, new Map());
 
-        let myItems = myInterests.sections[section.token] || {};
-        let myFilter = myInterests.filters[section.token] || {};
-        let theirItems = otherPersonInterests.sections[section.token] || {};
-        let theirFilter = otherPersonInterests.filters[section.token] || {};
+        let myItems = myInterests.sections.get(section.token) || {};
+        let myFilter = myInterests.filters.get(section.token) || {};
+        let theirItems = otherPersonInterests.sections.get(section.token) || {};
+        let theirFilter = otherPersonInterests.filters.get(section.token) || {};
 
         //see if both our filters are enabled
         let myFilterEnabled = myFilter?.is_active && myFilter.is_send;
@@ -2370,88 +2359,77 @@ function organizePersonInterests(sections, myInterests, otherPersonInterests) {
 
         //merge my personal/filter items
         for (let token in myItems) {
-            if (!(token in myMergedItems[section.token])) {
-                myMergedItems[section.token][token] = {
+            if (!myMergedItems.get(section.token).has(token)) {
+                myMergedItems.get(section.token).set(token, {
                     personal: null,
-                    filter: null,
-                };
+                    filter: null
+                });
             }
-
-            myMergedItems[section.token][token].personal = myItems[token];
+            myMergedItems.get(section.token).get(token).personal = myItems[token];
         }
 
         if (myFilter.items) {
             for (let k in myFilter.items) {
                 let item = myFilter.items[k];
 
-                if (!(item.token in myMergedItems[section.token])) {
-                    myMergedItems[section.token][item.token] = {
+                if (!myMergedItems.get(section.token).has(item.token)) {
+                    myMergedItems.get(section.token).set(item.token, {
                         personal: null,
-                        filter: null,
-                    };
+                        filter: null
+                    });
                 }
 
-                myMergedItems[section.token][item.token].filter = item;
+                myMergedItems.get(section.token).get(item.token).filter = item;
             }
         }
 
         //merge their personal/filter items
         for (let token in theirItems) {
-            if (!(token in theirMergedItems[section.token])) {
-                theirMergedItems[section.token][token] = {
+            if (!theirMergedItems.get(section.token).has(token)) {
+                theirMergedItems.get(section.token).set(token, {
                     personal: null,
-                    filter: null,
-                };
+                    filter: null
+                });
             }
 
-            theirMergedItems[section.token][token].personal = theirItems[token];
+            theirMergedItems.get(section.token).get(token).personal = theirItems[token];
         }
 
         if (theirFilter.items) {
             for (let k in theirFilter.items) {
                 let item = theirFilter.items[k];
 
-                if (!(item.token in theirMergedItems[section.token])) {
-                    theirMergedItems[section.token][item.token] = {
+                if (!theirMergedItems.get(section.token).has(item.token)) {
+                    theirMergedItems.get(section.token).set(item.token, {
                         personal: null,
-                        filter: null,
-                    };
+                        filter: null
+                    });
                 }
 
-                theirMergedItems[section.token][item.token].filter = item;
+                theirMergedItems.get(section.token).get(item.token).filter = item;
             }
         }
 
-        for (let item_token in myMergedItems[section.token]) {
-            let myItem = myMergedItems[section.token][item_token];
+        for (let [item_token, myItem] of myMergedItems.get(section.token)) {
             calcPersonalTotals(myItem?.personal);
         }
 
-        for (let item_token in theirMergedItems[section.token]) {
-            let theirItem = theirMergedItems[section.token][item_token];
+        for (let [item_token, theirItem] of theirMergedItems.get(section.token)) {
             calcPersonalTotals(null, theirItem?.personal);
         }
 
-        for (let item_token in myMergedItems[section.token]) {
-            let myItem = myMergedItems[section.token][item_token];
-            let theirItem = theirMergedItems[section.token][item_token];
+        for (let [item_token, myItem] of myMergedItems.get(section.token)) {
+            let theirItem = theirMergedItems.get(section.token).get(item_token);
 
             let isMyItem = myItem?.personal && !myItem.personal.deleted;
             let isTheirItem = theirItem?.personal && !theirItem.personal.deleted;
-            let isMyFilter =
-                myFilterEnabled &&
-                myItem?.filter &&
-                myItem.filter.is_active &&
-                !myItem.filter.is_negative &&
+            let isMyFilter = myFilterEnabled && myItem?.filter &&
+                myItem.filter.is_active && !myItem.filter.is_negative &&
                 !myItem.filter.deleted;
-            let isTheirFilter =
-                theirFilterEnabled &&
-                theirItem?.filter &&
-                theirItem.filter.is_active &&
-                !theirItem.filter.is_negative &&
+            let isTheirFilter = theirFilterEnabled && theirItem?.filter &&
+                theirItem.filter.is_active && !theirItem.filter.is_negative &&
                 !theirItem.filter.deleted;
 
-            // Only proceed if there's at least one type of match
             if (!(isMyItem || isTheirItem || isMyFilter || isTheirFilter)) {
                 continue;
             }
@@ -2474,54 +2452,46 @@ function organizePersonInterests(sections, myInterests, otherPersonInterests) {
                 matchTypes.their_item = true;
             }
 
-            let table_key =
-                myItem?.personal?.table_key ||
-                theirItem?.personal?.table_key ||
-                myItem?.filter?.table_key ||
-                theirItem?.filter?.table_key;
-            let item_name =
-                myItem?.personal?.name ||
-                theirItem?.personal?.name ||
-                myItem?.filter?.name ||
-                theirItem?.filter?.name;
+            let table_key = myItem?.personal?.table_key || theirItem?.personal?.table_key ||
+                myItem?.filter?.table_key || theirItem?.filter?.table_key;
 
-            if (
-                Object.keys(matchTypes).length > 0 &&
-                ((isMyItem && isTheirItem) ||
-                    (isMyFilter && isTheirItem) ||
-                    (isTheirFilter && isMyItem) ||
-                    (isMyFilter && isTheirFilter))
-            ) {
-                setMatchData(
-                    section,
-                    item_token,
-                    matchTypes,
-                    table_key,
-                    item_name,
-                    {
-                        mine: matchTypes.my_item ? myItem.personal.favorite_position : null,
-                        theirs: matchTypes.their_item ? theirItem.personal.favorite_position : null,
-                    },
-                    {
+            let item_name = myItem?.personal?.name || theirItem?.personal?.name ||
+                myItem?.filter?.name || theirItem?.filter?.name;
+
+            if (Object.keys(matchTypes).length > 0 &&
+                ((isMyItem && isTheirItem) || (isMyFilter && isTheirItem) ||
+                    (isTheirFilter && isMyItem) || (isMyFilter && isTheirFilter))) {
+
+                otherPersonInterests.matches.items[item_token] = {
+                    section: section.token,
+                    token: item_token,
+                    table_key: table_key,
+                    name: item_name,
+                    totals: section_totals,
+                    match: {
+                        types: matchTypes,
                         mine: {
-                            item: matchTypes.my_item ? myItem.personal.secondary || null : null,
-                            filter: matchTypes.my_filter ? myItem.filter.secondary || null : null,
+                            favorite: {
+                                position: matchTypes.my_item ? myItem.personal.favorite_position : null,
+                            },
+                            secondary: {
+                                item: matchTypes.my_item ? myItem.personal.secondary || null : null,
+                                filter: matchTypes.my_filter ? myItem.filter.secondary || null : null,
+                            },
+                            importance: matchTypes.my_filter ? myItem.filter.importance : null,
                         },
                         theirs: {
-                            item: matchTypes.their_item
-                                ? theirItem.personal.secondary || null
-                                : null,
-                            filter: matchTypes.their_filter
-                                ? theirItem.filter.secondary || null
-                                : null,
+                            favorite: {
+                                position: matchTypes.their_item ? theirItem.personal.favorite_position : null,
+                            },
+                            secondary: {
+                                item: matchTypes.their_item ? theirItem.personal.secondary || null : null,
+                                filter: matchTypes.their_filter ? theirItem.filter.secondary || null : null,
+                            },
+                            importance: matchTypes.their_filter ? theirItem.filter.importance : null,
                         },
                     },
-                    {
-                        mine: matchTypes.my_filter ? myItem.filter.importance : null,
-                        theirs: matchTypes.their_filter ? theirItem.filter.importance : null,
-                    },
-                    section_totals,
-                );
+                };
             }
         }
     }
