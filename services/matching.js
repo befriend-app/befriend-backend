@@ -1200,10 +1200,6 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
                 let results = await cacheService.execPipeline(pipeline);
                 let idx = 0;
 
-                let personLocations = new Map();
-                let personGrids = new Map();
-                let personFilters = new Map();
-
                 for (let person_token of persons_not_excluded_after_stage_1) {
                     try {
                         let their_location = results[idx++];
@@ -1315,12 +1311,12 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
                         let their_exclude_send_distance = DEFAULT_DISTANCE_MILES;
                         let their_exclude_receive_distance = DEFAULT_DISTANCE_MILES;
 
-                        if (their_distance_filter.is_active && filter.filter_value) {
+                        if (their_distance_filter?.is_active && their_distance_filter.filter_value) {
                             if (their_distance_filter.is_send) {
-                                their_exclude_send_distance = filter.filter_value;
+                                their_exclude_send_distance = their_distance_filter.filter_value;
                             }
                             if (their_distance_filter.is_receive) {
-                                their_exclude_receive_distance = filter.filter_value;
+                                their_exclude_receive_distance = their_distance_filter.filter_value;
                             }
                         }
 
@@ -2108,7 +2104,7 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
                 included = true;
 
                 // Add to send matches if preparing notifications
-                if (!counts_only) {
+                if (!counts_only && !exclude_only) {
                     let personInterests = personsInterests.get(person_token);
 
                     personInterests.person_token = person_token;

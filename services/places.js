@@ -1200,4 +1200,33 @@ module.exports = {
             resolve(place);
         });
     },
+    convertAddressToCoordinates(address) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const encodedAddress = encodeURIComponent(address);
+                const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodedAddress}.json`;
+
+                const response = await axios.get(url, {
+                    params: {
+                        access_token: process.env.MAPBOX_SECRET_KEY,
+                        limit: 1
+                    }
+                });
+
+                if (response.data.features && response.data.features[0]) {
+                    const [lon, lat] = response.data.features[0].center;
+
+                    return resolve({
+                        lat, lon
+                    });
+                }
+
+                return reject('No results found');
+
+            } catch (error) {
+                console.error('Geocoding failed:', error);
+                return reject();
+            }
+        });
+    }
 };

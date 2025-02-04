@@ -46,7 +46,7 @@ module.exports = {
                  );
 
                 resolve({
-                    excluded: excluded.send
+                    excluded: Array.from(excluded.send)
                 });
             } catch(e) {
                 console.error(e);

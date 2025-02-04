@@ -649,13 +649,15 @@ function notifyMatches(me, activity, matches) {
                  let results = await Promise.allSettled(ps);
 
                  for(let i = 0; i < filter_networks_tokens.length; i++) {
-                     let network_token = filter_networks_tokens[i];
                      let result = results[i];
 
-                     if(result) {
+                     let exclude_person_tokens = result.value?.data?.excluded ?? [];
 
+                     if(exclude_person_tokens.length) {
+                         for(let person_token of exclude_person_tokens) {
+                            delete organized_matches[person_token];
+                         }
                      }
-
                  }
             } catch(e) {
                 console.error(e);
