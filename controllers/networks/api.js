@@ -1,3 +1,4 @@
+const networksMatchingService = require('../../services/networks/matching');
 const networksPersonsService = require('../../services/networks/persons');
 const networksNotificationsService = require('../../services/networks/notifications');
 
@@ -19,6 +20,24 @@ module.exports = {
             }
 
             resolve();
+        });
+    },
+    activityMatchingExclude: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            //received on my network from 3rd-party network->person that is creating activity
+            //this enables us to filter by distance without sharing location cross-network
+
+            try {
+                let response = await networksMatchingService.excludeMatches(req.from_network, req.body.person, req.body.activity_location, req.body.person_tokens);
+
+                res.json(response, 202);
+            } catch (e) {
+                if (e.message) {
+                    res.json(e.message, 400);
+                } else {
+                    res.json('Error filtering persons', 400);
+                }
+            }
         });
     },
     sendNotifications: function(req, res) {

@@ -518,7 +518,7 @@ function notifyMatches(me, activity, matches) {
         }
 
         let activity_notification_key = cacheService.keys.activities_notifications(
-            activity.activity_token,
+            activity.activity_token
         );
 
         try {
@@ -538,6 +538,8 @@ function notifyMatches(me, activity, matches) {
                         person_token: match.person_token,
                         error: 'missing cached networks field'
                     });
+
+                    continue;
                 }
 
                 let personDevices = JSON.parse(person[2]);
@@ -571,7 +573,8 @@ function notifyMatches(me, activity, matches) {
             }
         }
 
-        //organize into groups
+        let organized_matches = {};
+        let filter_networks_persons = {};
         let filtered_matches = [];
 
         for (let match of matches) {
@@ -594,11 +597,73 @@ function notifyMatches(me, activity, matches) {
                         match.device.token = await getTmpDeviceToken();
                     }
 
-                    filtered_matches.push(match);
+                    organized_matches[match.person_token] = match;
                 }
             } else {
-                filtered_matches.push(match);
+                //we will call each network with matching person tokens to find which should be excluded
+
+                //use first network
+                let network = match_networks[0];
+
+                if(!filter_networks_persons[network.network_token]) {
+                    filter_networks_persons[network.network_token] = {};
+                }
+
+                filter_networks_persons[network.network_token][match.person_token] = true;
+
+                organized_matches[match.person_token] = match;
             }
+        }
+
+        let filter_networks_tokens = Object.keys(filter_networks_persons);
+
+        if(filter_networks_tokens.length) {
+            let ps = [];
+
+            for(let network_token of filter_networks_tokens) {
+                let network = networksLookup.byToken[network_token];
+                let person_tokens = Object.keys(filter_networks_persons[network_token]);
+
+                let url = getURL(network.api_domain, `/networks/activities/matching/exclude`);
+
+                let secret_key = await getSecretKeyToForNetwork(network.id);
+
+                ps.push(axios.put(url, {
+                    network_token: my_network.network_token,
+                    person: {
+                        person_token: me.person_token,
+                        grid: {
+                            token: me.grid?.token
+                        }
+                    },
+                    secret_key,
+                    activity_location: {
+                        lat: activity.place?.data?.location_lat,
+                        lon: activity.place?.data?.location_lon
+                    },
+                    person_tokens
+                }));
+            }
+
+            try {
+                 let results = await Promise.allSettled(ps);
+
+                 for(let i = 0; i < filter_networks_tokens.length; i++) {
+                     let network_token = filter_networks_tokens[i];
+                     let result = results[i];
+
+                     if(result) {
+
+                     }
+
+                 }
+            } catch(e) {
+                console.error(e);
+            }
+        }
+
+        for(let person_token in organized_matches) {
+            filtered_matches.push(organized_matches[person_token]);
         }
 
         if(debug_enabled) {
@@ -616,6 +681,7 @@ function notifyMatches(me, activity, matches) {
             return reject('No persons available to notify');
         }
 
+        //organize into groups
         let groups_organized = {};
         let group_keys = Object.keys(notification_groups);
         let persons_multiplier = Math.max(activity?.friends?.qty, 1);

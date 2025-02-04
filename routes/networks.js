@@ -1,10 +1,23 @@
 const express = require('express');
 const router = express.Router();
 const networksApiController = require('../controllers/networks/api');
-const activitiesController = require('../controllers/activities');
 
 router.use(require('../middleware/networks'));
 
+
+router.put('/activities/matching/exclude', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        //3rd-party network to my network to find persons that would be excluded by distance
+
+        try {
+            await networksApiController.activityMatchingExclude(req, res);
+        } catch (e) {
+            console.error(e);
+        }
+
+        resolve();
+    });
+});
 
 router.post('/persons', function (req, res, next) {
     return new Promise(async (resolve, reject) => {

@@ -45,16 +45,15 @@ let interestScoreThresholds = {
 let debug_logs = require('../dev/debug').matching.logs;
 
 
-function getMatches(me, params = {}) {
-    let { activity, send_only, counts_only } = params;
+function getMatches(me, params = {}, person_tokens = {}) {
+    let { activity, location, send_only, counts_only, exclude_only } = params;
 
-    let my_token, my_filters, gridLookup;
+    let my_token, my_filters, activity_location, gridLookup;
     let am_online = me?.is_online;
     let am_available = false;
 
     let neighbor_grid_tokens = [];
 
-    let person_tokens = {};
     let personsInterests = {};
 
     let personsExclude = {
@@ -83,6 +82,34 @@ function getMatches(me, params = {}) {
             receive: [],
         },
     };
+
+    function setActivityLocation() {
+        return new Promise(async (resolve, reject) => {
+            if(location?.lat && location.lon) {
+                activity_location.lat = location.lat;
+                activity_location.lon = location.lon;
+            } else if (activity?.place) {
+                // use activity place lat/lon
+                if (activity.place?.data?.location_lat) {
+                    activity_location.lat = activity.place.data.location_lat;
+                    activity_location.lon = activity.place.data.location_lon;
+                } else {
+                    try {
+                        let place = await getActivityPlace(activity);
+
+                        activity.place.data = place;
+
+                        activity_location.lat = place.location_lat;
+                        activity_location.lon = place.location_lon;
+                    } catch(e) {
+                        console.error(e);
+                    }
+                }
+            }
+
+            resolve();
+        });
+    }
 
     function sortMatches() {
         organized.matches.send.sort(function (a, b) {
@@ -354,24 +381,14 @@ function getMatches(me, params = {}) {
                 // choose location for grid tokens based on if we have a location provided
 
                 // default to user's current location
-                let location = {
+                let use_location = {
                     lat: me.location_lat,
                     lon: me.location_lon,
                 };
 
-                if (activity?.place) {
-                    // use activity place lat/lon
-                    if (activity.place?.data?.location_lat) {
-                        location.lat = activity.place.data.location_lat;
-                        location.lon = activity.place.data.location_lon;
-                    } else {
-                        let place = await getActivityPlace(activity);
-
-                        activity.place.data = place;
-
-                        location.lat = place.location_lat;
-                        location.lon = place.location_lon;
-                    }
+                if (activity_location) {
+                    use_location.lat = activity_location.lat;
+                    use_location.lon = activity_location.lon;
                 }
 
                 let max_distance = DEFAULT_DISTANCE_MILES;
@@ -389,7 +406,7 @@ function getMatches(me, params = {}) {
 
                 max_distance *= kms_per_mile;
 
-                let grids = await gridService.findNearby(location.lat, location.lon, max_distance);
+                let grids = await gridService.findNearby(use_location.lat, use_location.lon, max_distance);
 
                 for (let grid of grids) {
                     if(grid.token !== my_grid_token) {
@@ -1179,15 +1196,15 @@ function getMatches(me, params = {}) {
 
             try {
                 //default to current location
-                let my_location = {
+                let use_location = {
                     lat: me.location_lat,
                     lon: me.location_lon,
                 };
 
                 //activity place location
-                if (activity?.place?.data?.location_lat) {
-                    my_location.lat = activity.place.data.location_lat;
-                    my_location.lon = activity.place.data.location_lon;
+                if (activity_location) {
+                    use_location.lat = activity_location.lat;
+                    use_location.lon = activity_location.lon;
                 }
 
                 let my_grid = me.grid;
@@ -1247,12 +1264,12 @@ function getMatches(me, params = {}) {
                     // Calculate distance between persons
                     let distance_km = null;
 
-                    if (my_location && their_location) {
+                    if (use_location && their_location) {
                         // Calculate using lat/lon
                         distance_km = calculateDistanceMeters(
                             {
-                                lat: my_location.lat,
-                                lon: my_location.lon,
+                                lat: use_location.lat,
+                                lon: use_location.lon,
                             },
                             {
                                 lat: their_location.lat,
@@ -2201,6 +2218,8 @@ function getMatches(me, params = {}) {
             if (!me) {
                 return reject('Person required');
             }
+
+            await setActivityLocation();
 
             my_token = me.person_token;
             gridLookup = await getGridLookup();
