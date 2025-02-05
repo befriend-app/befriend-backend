@@ -703,7 +703,6 @@ function syncMe() {
                         }
                     }
 
-                    //todo remove
                     if (!skipSaveTimestamps && !debug_sync_enabled) {
                         //update sync table
                         if (sync_qry) {

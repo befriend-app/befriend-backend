@@ -8,7 +8,6 @@ const activitiesService = require('./activities');
 const cacheService = require('./cache');
 const dbService = require('./db');
 const { getNetworkSelf, getNetworksLookup, getSecretKeyToForNetwork, getNetwork } = require('./network');
-const url = require('node:url');
 
 
 let notification_groups = {

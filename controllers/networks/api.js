@@ -49,7 +49,7 @@ module.exports = {
             let persons = req.body.persons;
 
             try {
-                let response = await networksNotificationsService.sendNotifications(from_network,person_from_token,  activity, persons);
+                let response = await networksNotificationsService.sendNotifications(from_network, person_from_token, activity, persons);
 
                 res.json(response, 201);
             } catch (e) {
