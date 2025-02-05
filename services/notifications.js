@@ -92,7 +92,7 @@ function notifyMatches(me, activity, matches) {
 
     let conn, payload, my_network, networksLookup;
 
-    let cache_key = cacheService.keys.activities_notifications(activity.activity_token);
+    let notifications_cache_key = cacheService.keys.activities_notifications(activity.activity_token);
 
     let activityCopy = structuredClone(activity);
 
@@ -289,8 +289,16 @@ function notifyMatches(me, activity, matches) {
                         insert.friends_qty = activity.friends.qty;
 
                         pipeline.hSet(
-                            cache_key,
+                            notifications_cache_key,
                             to_person.person_token,
+                            JSON.stringify(insert)
+                        );
+
+                        let person_notifications_cache_key = cacheService.keys.persons_notifications(to_person.person_to_token);
+
+                        pipeline.hSet(
+                            person_notifications_cache_key,
+                            activity.activity_token,
                             JSON.stringify(insert)
                         );
                     }
@@ -385,8 +393,16 @@ function notifyMatches(me, activity, matches) {
                             insert.friends_qty = activity.friends.qty;
 
                             pipeline.hSet(
-                                cache_key,
+                                notifications_cache_key,
                                 to_person.person_to_token,
+                                JSON.stringify(insert)
+                            );
+
+                            let person_notifications_cache_key = cacheService.keys.persons_notifications(to_person.person_to_token);
+
+                            pipeline.hSet(
+                                person_notifications_cache_key,
+                                activity.activity_token,
                                 JSON.stringify(insert)
                             );
                         }

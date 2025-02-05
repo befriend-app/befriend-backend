@@ -12,7 +12,6 @@ const { getModeByToken } = require('../modes');
 const { getPerson } = require('../persons');
 
 
-
 module.exports = {
     sendNotifications: function (from_network, person_from_token, activity, persons) {
         let network_self, personsLookup;

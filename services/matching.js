@@ -38,6 +38,7 @@ const { doesActivityOverlap } = require('./activities');
 
 const DEFAULT_DISTANCE_MILES = 20;
 const MAX_PERSONS_PROCESS = 1000;
+const NOTIFICATION_MINS_BUFFER = 5;
 
 let interests_sections = getInterestSections();
 let schools_work_sections = getSchoolsWorkSections();
@@ -2295,6 +2296,9 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
 
 function filterMatches(person, activity, matches) {
     let filtered_matches = [];
+    let organized_matches = new Map();
+    let filter_networks_persons = new Map();
+    let persons_excluded = new Set();
 
     let debug_enabled = require('../dev/debug').matching.filter_matches;
 
@@ -2304,212 +2308,56 @@ function filterMatches(person, activity, matches) {
     let _tmp_person_int = 0;
     let _tmp_device_int = 0;
 
-    async function getTmpPerson() {
-        let conn = await dbService.conn();
-
-        let persons = await conn('persons')
-            .orderBy('id')
-            .offset(1)
-            .limit(3);
-
-        let person = persons[_tmp_person_int];
-
-        _tmp_person_int++;
-
-        if (_tmp_person_int >= persons.length) {
-            _tmp_person_int = 0;
-        }
-
-        return person;
-    }
-
-    async function getTmpDeviceToken() {
-        let conn = await dbService.conn();
-
-        let devices = await conn('persons_devices')
-            .where('id', '>', 1)
-            .orderBy('person_id')
-            .limit(3);
-
-        let token = devices[_tmp_device_int].token;
-
-        _tmp_device_int++;
-
-        if (_tmp_device_int >= devices.length) {
-            _tmp_device_int = 0;
-        }
-
-        return token;
-    }
-
-    return new Promise(async (resolve, reject) => {
-        let persons_excluded = new Set();
-        let prev_notifications_persons = {};
-
-        try {
-            conn = await dbService.conn();
-
-            my_network = await getNetworkSelf();
-            networksLookup = await getNetworksLookup();
-
-            payload = getPayload(my_network, person, activity);
-        } catch (e) {
-            console.error(e);
-            return reject(e);
-        }
-
-        //get networks and devices for matches
-        let pipeline = cacheService.startPipeline();
-        let results = [];
-        let idx = 0;
-
-        for (let match of matches) {
-            pipeline.hmGet(cacheService.keys.person(match.person_token), [
-                'id',
-                'networks',
-                'devices',
-            ]);
-
-            //current activities
-            pipeline.hGetAll(cacheService.keys.persons_activities(match.person_token));
-
-            //activity types filter
-            pipeline.hGet(cacheService.keys.person_filters(match.person_token), 'activity_types');
-        }
-
-        try {
-            results = await cacheService.execPipeline(pipeline);
-        } catch (e) {
-            console.error(e);
-        }
-
-        let activity_notification_key = cacheService.keys.activities_notifications(
-            activity.activity_token
-        );
-
-        try {
-            prev_notifications_persons = (await cacheService.hGetAllObj(activity_notification_key)) || {};
-        } catch (e) {
-            console.error(e);
-        }
-
-        for (let match of matches) {
-            try {
-                let personData = results[idx++];
-                let personActivities = cacheService.parseHashData(results[idx++]);
-                let activitiesFilter = JSON.parse(results[idx++]);
-
-                if(match.person_token in prev_notifications_persons) {
-                    persons_excluded.add(match.person_token);
+    function organizeMatches() {
+        return new Promise(async (resolve, reject) => {
+            for (let match of matches) {
+                //do not add to organized matches if excluded
+                if(persons_excluded.has(match.person_token)) {
                     continue;
                 }
 
-                match.person_id = parseInt(personData[0]);
-                match.networks = JSON.parse(personData[1]) || [];
-                let personDevices = JSON.parse(personData[2]);
+                let match_networks = [];
 
-                if(!match.networks.length) {
-                    console.warn({
-                        person_token: match.person_token,
-                        error: 'missing cached networks field'
-                    });
-
-                    persons_excluded.add(match.person_token);
-                    continue;
-                }
-
-                //exclude by current activities
-                if(Object.keys(personActivities).length && !debug_enabled) {
-                    const activityStart = activity.when?.data?.start;
-                    const activityEnd = activity.when?.data?.end;
-
-                    let activity_overlaps = await doesActivityOverlap(person.person_token, {
-                        start: activityStart,
-                        end: activityEnd
-                    }, personActivities);
-
-                    if(activity_overlaps) {
-                        persons_excluded.add(match.person_token);
+                for(let network_token of match.networks) {
+                    if(networksLookup.byToken[network_token]) {
+                        match_networks.push(networksLookup.byToken[network_token]);
                     }
                 }
 
-                //exclude by activity type
-                let is_activity_excluded = activitiesService.isActivityTypeExcluded(activity, activitiesFilter);
+                if (match.networks.includes(my_network.network_token)) {
+                    if (match.device?.platform && match.device.token) {
+                        if(debug_enabled) {
+                            match.device.token = await getTmpDeviceToken();
+                        }
 
-                if (is_activity_excluded) {
-                    persons_excluded.add(match.person_token);
-                    continue;
-                }
+                        organized_matches.set(match.person_token, match)
+                    }
+                } else {
+                    //we will call each network with matching person tokens to find which should be excluded
 
-                if (!personDevices?.length) {
-                    continue;
-                }
+                    //use first network
+                    let network = match_networks[0];
 
-                let currentDevice = personDevices?.find((device) => device.is_current);
-
-                if(!currentDevice) {
-                    currentDevice = personDevices[0];
-                }
-
-                if (currentDevice) {
-                    match.device = {
-                        platform: currentDevice.platform,
-                        token: currentDevice.token,
-                    };
-                }
-            } catch (e) {
-                console.error(e);
-            }
-        }
-
-        let organized_matches = new Map();
-        let filter_networks_persons = new Map();
-
-        for (let match of matches) {
-            //prevent sending to person if:
-            //they have an active activity during this activity
-            //recently received notifications for other activities
-            //has excluded receiving notifications for this activity type
-            //already notified of this activity
-
-            if(persons_excluded.has(match.person_token)) {
-                continue;
-            }
-
-            let match_networks = [];
-
-            for(let network_token of match.networks) {
-                if(networksLookup.byToken[network_token]) {
-                    match_networks.push(networksLookup.byToken[network_token]);
-                }
-            }
-
-            if (match.networks.includes(my_network.network_token)) {
-                if (match.device?.platform && match.device.token) {
-                    if(debug_enabled) {
-                        match.device.token = await getTmpDeviceToken();
+                    if(!filter_networks_persons.has(network.network_token)) {
+                        filter_networks_persons.set(network.network_token, new Set());
                     }
 
-                    organized_matches.set(match.person_token, match)
+                    filter_networks_persons.get(network.network_token).add(match.person_token);
+
+                    organized_matches.set(match.person_token, match);
                 }
-            } else {
-                //we will call each network with matching person tokens to find which should be excluded
-
-                //use first network
-                let network = match_networks[0];
-
-                if(!filter_networks_persons.has(network.network_token)) {
-                    filter_networks_persons.set(network.network_token, new Set());
-                }
-
-                filter_networks_persons.get(network.network_token).add(match.person_token);
-
-                organized_matches.set(match.person_token, match);
             }
-        }
 
-        //filter
-        if(filter_networks_persons.size) {
+            resolve();
+        });
+    }
+
+    function excludeNetworksPersons() {
+        return new Promise(async (resolve, reject) => {
+            if(!filter_networks_persons.size) {
+                return resolve();
+            }
+
             let ps = [];
 
             for(let [network_token, person_tokens] of filter_networks_persons) {
@@ -2522,8 +2370,8 @@ function filterMatches(person, activity, matches) {
 
                     let arr_person_tokens = Array.from(person_tokens);
 
-                    if(person_tokens.size > 1000) {
-                        arr_person_tokens = arr_person_tokens.slice(0, 1000);
+                    if(person_tokens.size > MAX_PERSONS_PROCESS) {
+                        arr_person_tokens = arr_person_tokens.slice(0, MAX_PERSONS_PROCESS);
                     }
 
                     ps.push(axios.put(url, {
@@ -2567,8 +2415,223 @@ function filterMatches(person, activity, matches) {
             } catch(e) {
                 console.error(e);
             }
+
+            return resolve();
+        });
+    }
+
+    function excludeRecentNotifications(personNotifications) {
+        let most_recent_notification = null;
+
+        for(let k in personNotifications) {
+            let personNotification = personNotifications[k];
+
+            if(personNotification.declined_at) {
+                continue;
+            }
+
+            let time_sent = personNotification.sent_at || personNotification.sent_to_network_at;
+
+            if(!time_sent) {
+                continue;
+            }
+
+            personNotification.time_sent = time_sent;
+
+            if(!most_recent_notification || timeNow() - time_sent < timeNow() - most_recent_notification.time_sent) {
+                most_recent_notification = personNotification;
+            }
         }
 
+        if(most_recent_notification) {
+            let sent_secs_ago = (timeNow() - most_recent_notification.time_sent) / 1000;
+
+            return sent_secs_ago < NOTIFICATION_MINS_BUFFER * 60;
+        }
+
+        return false;
+    }
+
+    async function getTmpPerson() {
+        let conn = await dbService.conn();
+
+        let persons = await conn('persons')
+            .orderBy('id')
+            .offset(1)
+            .limit(3);
+
+        let person = persons[_tmp_person_int];
+
+        _tmp_person_int++;
+
+        if (_tmp_person_int >= persons.length) {
+            _tmp_person_int = 0;
+        }
+
+        return person;
+    }
+
+    async function getTmpDeviceToken() {
+        let conn = await dbService.conn();
+
+        let devices = await conn('persons_devices')
+            .where('id', '>', 1)
+            .orderBy('person_id')
+            .limit(3);
+
+        let token = devices[_tmp_device_int].token;
+
+        _tmp_device_int++;
+
+        if (_tmp_device_int >= devices.length) {
+            _tmp_device_int = 0;
+        }
+
+        return token;
+    }
+
+    return new Promise(async (resolve, reject) => {
+        let prev_notifications_persons = {};
+
+        try {
+            conn = await dbService.conn();
+
+            my_network = await getNetworkSelf();
+            networksLookup = await getNetworksLookup();
+
+            payload = getPayload(my_network, person, activity);
+        } catch (e) {
+            console.error(e);
+            return reject(e);
+        }
+
+        //get networks and devices for matches
+        let pipeline = cacheService.startPipeline();
+        let results = [];
+        let idx = 0;
+
+        for (let match of matches) {
+            pipeline.hmGet(cacheService.keys.person(match.person_token), [
+                'id',
+                'networks',
+                'devices',
+            ]);
+
+            //current activities
+            pipeline.hGetAll(cacheService.keys.persons_activities(match.person_token));
+
+            //all notifications
+            pipeline.hGetAll(cacheService.keys.persons_notifications(match.person_token));
+
+            //activity types filter
+            pipeline.hGet(cacheService.keys.person_filters(match.person_token), 'activity_types');
+        }
+
+        try {
+            results = await cacheService.execPipeline(pipeline);
+        } catch (e) {
+            console.error(e);
+        }
+
+        let activity_notification_key = cacheService.keys.activities_notifications(
+            activity.activity_token
+        );
+
+        try {
+            prev_notifications_persons = (await cacheService.hGetAllObj(activity_notification_key)) || {};
+        } catch (e) {
+            console.error(e);
+        }
+
+        for (let match of matches) {
+            try {
+                let personData = results[idx++];
+                let personActivities = cacheService.parseHashData(results[idx++]);
+                let personNotifications = cacheService.parseHashData(results[idx++]);
+                let activitiesFilter = JSON.parse(results[idx++]);
+
+                //exclude if notifications already sent for this activity
+                if(match.person_token in prev_notifications_persons) {
+                    persons_excluded.add(match.person_token);
+                    continue;
+                }
+
+                match.person_id = parseInt(personData[0]);
+                match.networks = JSON.parse(personData[1]) || [];
+                let personDevices = JSON.parse(personData[2]);
+
+                if(!match.networks.length) {
+                    console.warn({
+                        person_token: match.person_token,
+                        error: 'missing cached networks field'
+                    });
+
+                    persons_excluded.add(match.person_token);
+                    continue;
+                }
+
+                //exclude if this activity overlaps with existing activities
+                if(Object.keys(personActivities).length && !debug_enabled) {
+                    const activityStart = activity.when?.data?.start;
+                    const activityEnd = activity.when?.data?.end;
+
+                    let activity_overlaps = await doesActivityOverlap(person.person_token, {
+                        start: activityStart,
+                        end: activityEnd
+                    }, personActivities);
+
+                    if(activity_overlaps) {
+                        persons_excluded.add(match.person_token);
+                        continue;
+                    }
+                }
+
+                //exclude by recent notifications
+                if(Object.keys(personNotifications).length) {
+                    let exclude_recent = excludeRecentNotifications(personNotifications);
+
+                    if(exclude_recent) {
+                        persons_excluded.add(match.person_token);
+                        continue;
+                    }
+                }
+
+                //exclude by activity type
+                let is_activity_excluded = activitiesService.isActivityTypeExcluded(activity, activitiesFilter);
+
+                if (is_activity_excluded) {
+                    persons_excluded.add(match.person_token);
+                    continue;
+                }
+
+                if (!personDevices?.length) {
+                    continue;
+                }
+
+                let currentDevice = personDevices?.find((device) => device.is_current);
+
+                if(!currentDevice) {
+                    currentDevice = personDevices[0];
+                }
+
+                if (currentDevice) {
+                    match.device = {
+                        platform: currentDevice.platform,
+                        token: currentDevice.token,
+                    };
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        //organize by this network/3rd party networks
+        await organizeMatches();
+
+        //exclude by data known to 3rd party networks only
+        await excludeNetworksPersons();
+
+        //prepare return data
         for(let [person_token, match] of organized_matches) {
             filtered_matches.push(match);
         }
@@ -2750,10 +2813,6 @@ function organizePersonInterests(sections, myInterests, otherPersonInterests) {
                 theirItem.filter.is_active &&
                 !theirItem.filter.is_negative &&
                 !theirItem.filter.deleted;
-
-            // if(item_token === 'mls') {
-            //     debugger;
-            // }
 
             // Only proceed if there's at least one type of match
             if (!(isMyItem || isTheirItem || isMyFilter || isTheirFilter)) {
