@@ -301,6 +301,13 @@ function getActivityNotificationWithAccessToken(req, res) {
                 access: {
                     token: access_token,
                     domain: getURL(networkSelf.api_domain)
+                },
+                network: {
+                    token: networkSelf.network_token,
+                    name: networkSelf.network_name,
+                    icon: networkSelf.app_icon,
+                    website: getURL(networkSelf.base_domain),
+                    verified: networkSelf.is_verified
                 }
             });
         } catch (e) {
