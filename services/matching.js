@@ -2283,8 +2283,8 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
 }
 
 /**
- * Before sending notifications, filter out matches:
- * - 3rd-party network filters
+ * After initial matching, filter out matches by:
+ * - 3rd-party networks
  * - Current activities
  * - Recent notifications
  * - Previous notifications for the same activity
@@ -2293,10 +2293,13 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
  */
 
 function filterMatches(person, activity, matches) {
+    let filtered_matches = [];
+
     let debug_enabled = require('../dev/debug').matching.get_matches;
 
     let conn, payload, my_network, networksLookup;
 
+    //for development/testing
     let _tmp_person_int = 0;
     let _tmp_device_int = 0;
 
@@ -2339,8 +2342,8 @@ function filterMatches(person, activity, matches) {
     }
 
     return new Promise(async (resolve, reject) => {
+        let persons_excluded = new Set();
         let prev_notifications_persons = {};
-        let excluded_by_activity_type = new Set();
 
         try {
             conn = await dbService.conn();
@@ -2366,6 +2369,10 @@ function filterMatches(person, activity, matches) {
                 'devices',
             ]);
 
+            //current activities
+            pipeline.hGetAll(cacheService.keys.persons_activities(match.person_token));
+
+            //activity types filter
             pipeline.hGet(cacheService.keys.person_filters(match.person_token), 'activity_types');
         }
 
@@ -2387,9 +2394,18 @@ function filterMatches(person, activity, matches) {
 
         for (let match of matches) {
             try {
-                let person = results[idx++];
-                match.person_id = parseInt(person[0]);
-                match.networks = JSON.parse(person[1]) || [];
+                let personData = results[idx++];
+                let personActivities = cacheService.parseHashData(results[idx++]);
+                let activitiesFilter = JSON.parse(results[idx++]);
+
+                if(match.person_token in prev_notifications_persons) {
+                    persons_excluded.add(match.person_token);
+                    continue;
+                }
+
+                match.person_id = parseInt(personData[0]);
+                match.networks = JSON.parse(personData[1]) || [];
+                let personDevices = JSON.parse(personData[2]);
 
                 if(!match.networks.length) {
                     console.warn({
@@ -2397,17 +2413,21 @@ function filterMatches(person, activity, matches) {
                         error: 'missing cached networks field'
                     });
 
+                    persons_excluded.add(match.person_token);
                     continue;
                 }
 
-                let personDevices = JSON.parse(person[2]);
+                //exclude by current activities
+                if(Object.keys(personActivities).length) {
+                    debugger;
+                }
 
-                let activities_filter = JSON.parse(results[idx++]);
-
-                let is_activity_excluded = activitiesService.isActivityTypeExcluded(activity, activities_filter);
+                //exclude by activity type
+                let is_activity_excluded = activitiesService.isActivityTypeExcluded(activity, activitiesFilter);
 
                 if (is_activity_excluded) {
-                    excluded_by_activity_type.add(match.person_token);
+                    persons_excluded.add(match.person_token);
+                    continue;
                 }
 
                 if (!personDevices?.length) {
@@ -2433,15 +2453,15 @@ function filterMatches(person, activity, matches) {
 
         let organized_matches = new Map();
         let filter_networks_persons = new Map();
-        let filtered_matches = [];
 
         for (let match of matches) {
-            //prevent sending if:
-            //person has excluded receiving notifications for this activity type
-            //person already notified of this activity
+            //prevent sending to person if:
+            //they have an active activity during this activity
+            //recently received notifications for other activities
+            //has excluded receiving notifications for this activity type
+            //already notified of this activity
 
-            if (match.person_token in prev_notifications_persons ||
-                excluded_by_activity_type.has(match.person_token)) {
+            if(persons_excluded.has(match.person_token)) {
                 continue;
             }
 
@@ -2482,36 +2502,41 @@ function filterMatches(person, activity, matches) {
             let ps = [];
 
             for(let [network_token, person_tokens] of filter_networks_persons) {
-                let network = networksLookup.byToken[network_token];
+                try {
+                    let network = networksLookup.byToken[network_token];
 
-                let url = getURL(network.api_domain, `/networks/activities/matching/exclude`);
+                    let url = getURL(network.api_domain, `/networks/activities/matching/exclude`);
 
-                let secret_key = await getSecretKeyToForNetwork(network.id);
+                    let secret_key = await getSecretKeyToForNetwork(network.id);
 
-                let arr_person_tokens = Array.from(person_tokens);
+                    let arr_person_tokens = Array.from(person_tokens);
 
-                if(person_tokens.size > 1000) {
-                    arr_person_tokens = arr_person_tokens.slice(0, 1000);
+                    if(person_tokens.size > 1000) {
+                        arr_person_tokens = arr_person_tokens.slice(0, 1000);
+                    }
+
+                    ps.push(axios.put(url, {
+                        network_token: my_network.network_token,
+                        person: {
+                            person_token: person.person_token,
+                            grid: {
+                                token: person.grid?.token
+                            }
+                        },
+                        secret_key,
+                        activity_location: {
+                            lat: activity.place?.data?.location_lat,
+                            lon: activity.place?.data?.location_lon
+                        },
+                        person_tokens: arr_person_tokens
+                    }));
+                } catch(e) {
+                    console.error(e);
                 }
-
-                ps.push(axios.put(url, {
-                    network_token: my_network.network_token,
-                    person: {
-                        person_token: person.person_token,
-                        grid: {
-                            token: person.grid?.token
-                        }
-                    },
-                    secret_key,
-                    activity_location: {
-                        lat: activity.place?.data?.location_lat,
-                        lon: activity.place?.data?.location_lon
-                    },
-                    person_tokens: arr_person_tokens
-                }));
             }
 
             try {
+                //call networks in parallel
                 let results = await Promise.allSettled(ps);
 
                 let filter_idx = 0;
@@ -2523,6 +2548,7 @@ function filterMatches(person, activity, matches) {
 
                     if(exclude_person_tokens.length) {
                         for(let person_token of exclude_person_tokens) {
+                            //remove excluded person tokens
                             organized_matches.delete(person_token);
                         }
                     }

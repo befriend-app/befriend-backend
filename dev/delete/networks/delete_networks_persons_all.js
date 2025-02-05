@@ -8,10 +8,13 @@ const yargs = require('yargs');
 
 loadScriptEnv();
 
+let args = yargs.argv;
+
+// let deleteNetworksPersons = args.dnp;
 
 function main() {
     return new Promise(async (resolve, reject) => {
-        console.log('Delete: networks->persons');
+        console.log('Delete: networks->persons->all');
 
         if (isProdApp()) {
             console.error('App env: [prod]', 'exiting');
@@ -47,6 +50,10 @@ function main() {
                 .first();
 
             let bulk_delete_count = 50000;
+
+            await knex('networks_persons')
+                .whereNot('network_id', network_self.id)
+                .delete();
 
             let persons = await knex('persons')
                 .whereNot('registration_network_id', network_self.id)
@@ -85,6 +92,10 @@ function main() {
 
                 await knex('persons_kids')
                     .whereIn('person_id', ids)
+                    .delete();
+
+                await knex('persons')
+                    .whereIn('id', ids)
                     .delete();
 
                 let pipeline = cacheService.startPipeline();
