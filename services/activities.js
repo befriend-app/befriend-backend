@@ -1,6 +1,5 @@
 const cacheService = require('../services/cache');
 const dbService = require('../services/db');
-const matchingService = require('../services/matching');
 
 const { getOptionDateTime, isNumeric, timeNow, generateToken } = require('./shared');
 const { getModes } = require('./modes');
@@ -112,6 +111,8 @@ function createActivity(person, activity) {
 
             try {
                 matches = await findMatches(person, activity);
+
+                matches = await require('../services/matching').filterMatches(person, activity, matches);
 
                 if(matches.length) {
                     await require('../services/notifications').notifyMatches(person, activity, matches);
@@ -593,7 +594,7 @@ function getDefaultActivity() {
 function findMatches(person, activity) {
     return new Promise(async (resolve, reject) => {
         try {
-            let matches = await matchingService.getMatches(person, {
+            let matches = await require('../services/matching').getMatches(person, {
                 activity,
                 send_only: true,
             });

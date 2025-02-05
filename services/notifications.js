@@ -37,7 +37,6 @@ let notification_groups = {
     },
 };
 
-let debug_enabled = require('../dev/debug').notifications.notify_matches;
 
 
 function getPayload(activity_network, me, activity, notification_activity) {
@@ -90,57 +89,17 @@ function getPayload(activity_network, me, activity, notification_activity) {
 }
 
 function notifyMatches(me, activity, matches) {
-    let conn, payload, my_network, networksLookup;
     let isFulfilled = false;
 
-    let cache_key = cacheService.keys.activities_notifications(activity.activity_token);
+    let conn, payload, my_network, networksLookup;
 
-    let _tmp_person_int = 0;
-    let _tmp_device_int = 0;
+    let cache_key = cacheService.keys.activities_notifications(activity.activity_token);
 
     let activityCopy = structuredClone(activity);
 
     delete activityCopy.activity_id;
     delete activityCopy.travel;
     delete activityCopy.place?.data?.id;
-
-    async function getTmpPerson() {
-        let conn = await dbService.conn();
-
-        let persons = await conn('persons')
-            .orderBy('id')
-            .offset(1)
-            .limit(3);
-
-        let person = persons[_tmp_person_int];
-
-        _tmp_person_int++;
-
-        if (_tmp_person_int >= persons.length) {
-            _tmp_person_int = 0;
-        }
-
-        return person;
-    }
-
-    async function getTmpDeviceToken() {
-        let conn = await dbService.conn();
-
-        let devices = await conn('persons_devices')
-            .where('id', '>', 1)
-            .orderBy('person_id')
-            .limit(3);
-
-        let token = devices[_tmp_device_int].token;
-
-        _tmp_device_int++;
-
-        if (_tmp_device_int >= devices.length) {
-            _tmp_device_int = 0;
-        }
-
-        return token;
-    }
 
     function sendGroupNotifications(group, delay) {
         setTimeout(async function () {
@@ -479,215 +438,18 @@ function notifyMatches(me, activity, matches) {
     }
 
     return new Promise(async (resolve, reject) => {
-        let prev_notifications_persons = {};
-        let excluded_by_activity_type = {};
-
         try {
             conn = await dbService.conn();
-
             my_network = await getNetworkSelf();
-
             networksLookup = await getNetworksLookup();
-
-            payload = getPayload(my_network, me, activity);
-        } catch (e) {
+        } catch(e) {
             console.error(e);
             return reject(e);
         }
 
-        //get networks and devices for matches
-        let pipeline = cacheService.startPipeline();
-        let results = [];
-        let idx = 0;
+        //organize matches into sending groups
+        //stagger sending
 
-        for (let match of matches) {
-            pipeline.hmGet(cacheService.keys.person(match.person_token), [
-                'id',
-                'networks',
-                'devices',
-            ]);
-
-            pipeline.hGet(cacheService.keys.person_filters(match.person_token), 'activity_types');
-        }
-
-        try {
-            results = await cacheService.execPipeline(pipeline);
-        } catch (e) {
-            console.error(e);
-        }
-
-        let activity_notification_key = cacheService.keys.activities_notifications(
-            activity.activity_token
-        );
-
-        try {
-            prev_notifications_persons = (await cacheService.hGetAllObj(activity_notification_key)) || {};
-        } catch (e) {
-            console.error(e);
-        }
-
-        for (let match of matches) {
-            try {
-                let person = results[idx++];
-                match.person_id = parseInt(person[0]);
-                match.networks = JSON.parse(person[1]) || [];
-
-                if(!match.networks.length) {
-                    console.warn({
-                        person_token: match.person_token,
-                        error: 'missing cached networks field'
-                    });
-
-                    continue;
-                }
-
-                let personDevices = JSON.parse(person[2]);
-
-                let activities_filter = JSON.parse(results[idx++]);
-
-                let is_activity_excluded = activitiesService.isActivityTypeExcluded(activity, activities_filter);
-
-                if (is_activity_excluded) {
-                    excluded_by_activity_type[match.person_token] = true;
-                }
-
-                if (!personDevices?.length) {
-                    continue;
-                }
-
-                let currentDevice = personDevices?.find((device) => device.is_current);
-
-                if(!currentDevice) {
-                    currentDevice = personDevices[0];
-                }
-
-                if (currentDevice) {
-                    match.device = {
-                        platform: currentDevice.platform,
-                        token: currentDevice.token,
-                    };
-                }
-            } catch (e) {
-                console.error(e);
-            }
-        }
-
-        let organized_matches = new Map();
-        let filter_networks_persons = new Map();
-        let filtered_matches = [];
-
-        for (let match of matches) {
-            if (match.person_token in prev_notifications_persons ||
-                match.person_token in excluded_by_activity_type) {
-                continue;
-            }
-
-            let match_networks = [];
-
-            for(let network_token of match.networks) {
-                if(networksLookup.byToken[network_token]) {
-                    match_networks.push(networksLookup.byToken[network_token]);
-                }
-            }
-
-            if (match.networks.includes(my_network.network_token)) {
-                if (match.device?.platform && match.device.token) {
-                    if(debug_enabled) {
-                        match.device.token = await getTmpDeviceToken();
-                    }
-
-                    organized_matches.set(match.person_token, match)
-                }
-            } else {
-                //we will call each network with matching person tokens to find which should be excluded
-
-                //use first network
-                let network = match_networks[0];
-
-                if(!filter_networks_persons.has(network.network_token)) {
-                    filter_networks_persons.set(network.network_token, new Set());
-                }
-
-                filter_networks_persons.get(network.network_token).add(match.person_token);
-
-                organized_matches.set(match.person_token, match);
-            }
-        }
-
-        if(filter_networks_persons.size) {
-            let ps = [];
-
-            for(let [network_token, person_tokens] of filter_networks_persons) {
-                let network = networksLookup.byToken[network_token];
-
-                let url = getURL(network.api_domain, `/networks/activities/matching/exclude`);
-
-                let secret_key = await getSecretKeyToForNetwork(network.id);
-
-                let arr_person_tokens = Array.from(person_tokens);
-
-                if(person_tokens.size > 1000) {
-                    arr_person_tokens = arr_person_tokens.slice(0, 1000);
-                }
-
-                ps.push(axios.put(url, {
-                    network_token: my_network.network_token,
-                    person: {
-                        person_token: me.person_token,
-                        grid: {
-                            token: me.grid?.token
-                        }
-                    },
-                    secret_key,
-                    activity_location: {
-                        lat: activity.place?.data?.location_lat,
-                        lon: activity.place?.data?.location_lon
-                    },
-                    person_tokens: arr_person_tokens
-                }));
-            }
-
-            try {
-                 let results = await Promise.allSettled(ps);
-
-                 let filter_idx = 0;
-
-                 for(let [network_token, person_tokens] of filter_networks_persons) {
-                     let result = results[filter_idx++];
-
-                     let exclude_person_tokens = result.value?.data?.excluded ?? [];
-
-                     if(exclude_person_tokens.length) {
-                         for(let person_token of exclude_person_tokens) {
-                             organized_matches.delete(person_token);
-                         }
-                     }
-                 }
-            } catch(e) {
-                console.error(e);
-            }
-        }
-
-        for(let [person_token, match] of organized_matches) {
-            filtered_matches.push(match);
-        }
-
-        if(debug_enabled) {
-            filtered_matches = filtered_matches.splice(0, 3);
-
-            for(let match of filtered_matches) {
-                let data = await getTmpPerson();
-
-                match.person_id = data.id;
-                match.person_token = data.person_token;
-            }
-        }
-
-        if (!filtered_matches.length) {
-            return reject('No persons available to notify');
-        }
-
-        //organize into groups
         let groups_organized = {};
         let group_keys = Object.keys(notification_groups);
         let persons_multiplier = Math.max(activity?.friends?.qty, 1);
@@ -700,12 +462,12 @@ function notifyMatches(me, activity, matches) {
             let total_group_size = group_size * persons_multiplier;
 
             groups_organized[group_key] = {
-                persons: filtered_matches.slice(currentIndex, currentIndex + total_group_size),
+                persons: matches.slice(currentIndex, currentIndex + total_group_size),
             };
 
             currentIndex += total_group_size;
 
-            if (currentIndex >= filtered_matches.length) {
+            if (currentIndex >= matches.length) {
                 break;
             }
         }

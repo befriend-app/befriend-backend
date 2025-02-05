@@ -5,8 +5,9 @@ module.exports = {
         create: isProdApp() ? false : true
     },
     matching: {
-        on: isProdApp() ? false : true,
         logs: isProdApp() ? false : true,
+        get_matches: isProdApp() ? false : true,
+        filter_matches: isProdApp() ? false : true,
         filters: [
             //notifications
 
@@ -37,7 +38,7 @@ module.exports = {
 
         ],
         skipDebugFilter: function(filter) {
-            if(!module.exports.matching.on) {
+            if(!module.exports.matching.get_matches) {
                 return false;
             }
 
@@ -51,7 +52,6 @@ module.exports = {
         filters: isProdApp() ? false : true
     },
     notifications: {
-        notify_matches: isProdApp() ? false : true,
         networks: isProdApp() ? false : true,
     }
 };

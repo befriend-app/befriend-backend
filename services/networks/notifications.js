@@ -11,12 +11,13 @@ const { getActivityType } = require('../activities');
 const { getModeByToken } = require('../modes');
 const { getPerson } = require('../persons');
 
-let debug_enabled = require('../../dev/debug').notifications.networks;
 
 
 module.exports = {
     sendNotifications: function (from_network, person_from_token, activity, persons) {
         let network_self, personsLookup;
+
+        let debug_enabled = require('../../dev/debug').notifications.networks;
 
         function iosSend(person_from, activityData, ios) {
             return new Promise(async (resolve, reject) => {
