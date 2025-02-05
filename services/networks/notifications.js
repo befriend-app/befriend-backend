@@ -23,6 +23,8 @@ module.exports = {
             return new Promise(async (resolve, reject) => {
                 try {
                     //add access token and url to payload
+                    let pipeline = cacheService.startPipeline();
+
                     let batch_insert = [];
 
                     let results = await notificationsService.ios.sendBatch(
@@ -77,10 +79,15 @@ module.exports = {
                         }
 
                         batch_insert.push(insert);
+                        pipeline.hSet(cacheService.keys.persons_notifications(to_person.person_to_token), activity.activity_token, JSON.stringify(insert));
                     }
 
                     if (batch_insert.length) {
                         await dbService.batchInsert('activities_notifications', batch_insert, true);
+
+                        await cacheService.execPipeline(pipeline);
+                    } else {
+                        await cacheService.discardPipeline(pipeline);
                     }
 
                     resolve();
@@ -500,14 +507,23 @@ module.exports = {
                     return reject('Activity already accepted');
                 }
 
+                let update_data = {
+                    accepted_at: accepted_at,
+                    updated: accepted_at
+                };
+
                 let update_result = await conn('activities_notifications AS an')
                     .where('id', notification.id)
-                    .update({
-                        accepted_at: accepted_at,
-                        updated: accepted_at
-                    });
+                    .update(update_data);
 
                 if(update_result) {
+                    let person_notification_cache_key = cacheService.keys.persons_notifications(person_token);
+
+                    await cacheService.hSet(person_notification_cache_key, activity_token, {
+                        ...notification,
+                        ...update_data
+                    });
+
                     return resolve({
                         success: true
                     });
@@ -578,14 +594,23 @@ module.exports = {
                     });
                 }
 
+                let update_data = {
+                    declined_at: declined_at,
+                    updated: declined_at
+                };
+
                 let update_result = await conn('activities_notifications AS an')
                     .where('id', notification.id)
-                    .update({
-                        declined_at: declined_at,
-                        updated: declined_at
-                    });
+                    .update(update_data);
 
                 if(update_result) {
+                    let person_notification_cache_key = cacheService.keys.persons_notifications(person_token);
+
+                    await cacheService.hSet(person_notification_cache_key, activity_token, {
+                        ...notification,
+                        ...update_data
+                    });
+
                     return resolve({
                         success: true
                     });

@@ -488,6 +488,7 @@ function acceptNotification(person, activity_token) {
     return new Promise(async (resolve, reject) => {
         let notification_cache_key = cacheService.keys.activities_notifications(activity_token);
         let person_activity_cache_key = cacheService.keys.persons_activities(person.person_token);
+        let person_notification_cache_key = cacheService.keys.persons_notifications(person.person_token);
 
         try {
             //ensure person exists on activity invite
@@ -531,7 +532,12 @@ function acceptNotification(person, activity_token) {
                 ...update,
             };
 
-            await cacheService.hSet(notification_cache_key, person.person_token, notification);
+            let pipeline = cacheService.startPipeline();
+
+            pipeline.hSet(notification_cache_key, person.person_token, JSON.stringify(notification));
+            pipeline.hSet(person_notification_cache_key, activity_token, JSON.stringify(notification));
+
+            await cacheService.execPipeline(pipeline);
 
             await conn('activities')
                 .where('id', notification.activity_id)
@@ -603,7 +609,6 @@ function acceptNotification(person, activity_token) {
                             spots
                         });
                     }
-
                 } else { //organize 3rd-party networks
                     if(!networksLookup) {
                         networksLookup = await getNetworksLookup();
@@ -666,11 +671,12 @@ function acceptNotification(person, activity_token) {
 
 function declineNotification(person, activity_token) {
     return new Promise(async (resolve, reject) => {
-        let cache_key = cacheService.keys.activities_notifications(activity_token);
+        let notification_cache_key = cacheService.keys.activities_notifications(activity_token);
+        let person_notification_cache_key = cacheService.keys.persons_notifications(person.person_token);
 
         try {
             //ensure person exists on activity invite
-            let notification = await cacheService.hGetItem(cache_key, person.person_token);
+            let notification = await cacheService.hGetItem(notification_cache_key, person.person_token);
 
             if (!notification) {
                 return reject('Activity does not include person');
@@ -701,7 +707,12 @@ function declineNotification(person, activity_token) {
                 ...update,
             };
 
-            await cacheService.hSet(cache_key, person.person_token, notification);
+            let pipeline = cacheService.startPipeline();
+
+            pipeline.hSet(notification_cache_key, person.person_token, JSON.stringify(notification));
+            pipeline.hSet(person_notification_cache_key, activity_token, JSON.stringify(notification));
+
+            await cacheService.execPipeline(pipeline);
 
             await conn('activities_notifications').where('id', notification.id).update(update);
 

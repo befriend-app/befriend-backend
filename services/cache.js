@@ -54,7 +54,7 @@ const sportsKeys = {
 
 const keyFunctions = {
     exchange_keys: (token) => `networks:keys:exchange:${token}`,
-    activities: (person_token) => `activities:persons:${person_token}`, //lookup of activity is by hash field of activity_token by person who created activity
+    activities: (person_token) => `activities:persons:${person_token}`, //activities organized by person who created them, lookup by activity_token
     activities_notifications: (activity_token) => `activities:${activity_token}:notifications`,
     activity_type: (token) => `activity_types:${token}`,
     activity_type_venue_categories: (token) => `activity_types:venue_categories:${token}`,
@@ -67,9 +67,11 @@ const keyFunctions = {
     city_country_prefix: (countryCode, prefix) => `cities:country:${countryCode}:${prefix}`,
     address_geo: (addressId) => `address:geo:${addressId}`,
     travel_times: (token) => `activities:travel:${token}`,
+
     person: (tokenOrEmail = '') => `persons:${tokenOrEmail.toLowerCase()}`,
     person_login_tokens: (person_token = '') => `persons:${person_token.toLowerCase()}:login_tokens`,
     persons_activities: (person_token) => `persons:activities:${person_token}`,
+    persons_notifications: (person_token) => `persons:notifications:${person_token}`,
     person_filters: (person_token) => `persons:filters:${person_token}`,
     person_sections: (person_token) => `persons:me:sections:${person_token}`,
     persons_grid_set: (gridToken, key) => `persons:grid:${gridToken}:set:${key}`,
@@ -81,6 +83,7 @@ const keyFunctions = {
         `persons:grid:${gridToken}:exclude:${key}:${send_or_receive}`,
     persons_grid_exclude_sorted_send_receive: (gridToken, key, send_or_receive) =>
         `persons:grid:${gridToken}:sorted:exclude:${key}:${send_or_receive}`,
+
     instruments_prefix: (prefix) => `instruments:prefix:${prefix}`,
     movies_prefix: (prefix) => `movies:prefix:${prefix}`,
     movies_prefix_top_1000: (prefix) => `movies:prefix:top:1000:${prefix}`,
@@ -543,6 +546,17 @@ module.exports = {
 
                 resolve(data);
             } catch (e) {
+                console.error(e);
+                return reject(e);
+            }
+        });
+    },
+    discardPipeline: function (pipeline) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                await pipeline.discard();
+                resolve();
+            } catch(e) {
                 console.error(e);
                 return reject(e);
             }
