@@ -4,7 +4,6 @@ const { keys: systemKeys } = require('../../../services/system');
 const { getGridLookup } = require('../../../services/grid');
 
 let syncMe = require('../../../services/networks/me');
-const yargs = require('yargs');
 
 loadScriptEnv();
 
@@ -84,6 +83,22 @@ function main() {
                     .delete();
 
                 await knex('persons_kids')
+                    .whereIn('person_id', ids)
+                    .delete();
+
+                await knex('activities_persons')
+                    .whereIn('person_id', ids)
+                    .delete();
+
+                await knex('activities_notifications')
+                    .whereIn('person_to_id', ids)
+                    .delete();
+
+                await knex('activities_notifications')
+                    .whereIn('person_from_id', ids)
+                    .delete();
+
+                await knex('activities')
                     .whereIn('person_id', ids)
                     .delete();
 
