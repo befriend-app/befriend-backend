@@ -100,6 +100,8 @@ function createActivity(person, activity) {
 
             person_activity_id = person_activity_id[0];
             person_activity_insert.id = person_activity_id;
+            person_activity_insert.activity_start = activity_insert.activity_start;
+            person_activity_insert.activity_end = activity_insert.activity_end;
 
             //save to cache
             try {

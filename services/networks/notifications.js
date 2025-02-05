@@ -507,22 +507,54 @@ module.exports = {
                     return reject('Activity already accepted');
                 }
 
+                let person_activity_qry = await conn('activities_persons')
+                    .where('activity_id', activity.id)
+                    .where('person_id', person.id)
+                    .first();
+
+                if(person_activity_qry) {
+                    return reject('Activity for person already exists');
+                }
+
                 let update_data = {
                     accepted_at: accepted_at,
                     updated: accepted_at
-                };
+                }
 
                 let update_result = await conn('activities_notifications AS an')
                     .where('id', notification.id)
                     .update(update_data);
 
                 if(update_result) {
+                    let person_activities_cache_key = cacheService.keys.persons_activities(person_token);
                     let person_notification_cache_key = cacheService.keys.persons_notifications(person_token);
 
-                    await cacheService.hSet(person_notification_cache_key, activity_token, {
+                    let notification_data = {
                         ...notification,
                         ...update_data
-                    });
+                    }
+
+                    let person_activity_insert = {
+                        activity_id: activity.id,
+                        person_id: person.id,
+                        is_creator: false,
+                        created: timeNow(),
+                        updated: timeNow()
+                    };
+
+                    await conn('activities_persons')
+                        .insert(person_activity_insert);
+
+                    person_activity_insert.activity_start = activity.activity_start;
+                    person_activity_insert.activity_end = activity.activity_end;
+
+                    let pipeline = cacheService.startPipeline();
+
+                    pipeline.hSet(person_activities_cache_key, activity_token, JSON.stringify(person_activity_insert));
+
+                    pipeline.hSet(person_notification_cache_key, activity_token, JSON.stringify(notification_data));
+
+                    await cacheService.execPipeline(pipeline);
 
                     return resolve({
                         success: true

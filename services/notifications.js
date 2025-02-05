@@ -38,7 +38,6 @@ let notification_groups = {
 };
 
 
-
 function getPayload(activity_network, me, activity, notification_activity) {
     let title_arr = [];
     let plus_str = '';
@@ -101,63 +100,6 @@ function notifyMatches(me, activity, matches) {
     delete activityCopy.travel;
     delete activityCopy.place?.data?.id;
 
-    function sendGroupNotifications(group, delay) {
-        setTimeout(async function () {
-            //check if activity has already been fulfilled
-            if (isFulfilled) {
-                return;
-            }
-
-            let spots = {
-                available: activity.friends.qty,
-                accepted: activity.friends.qty
-            }
-
-            if (delay > 0) {
-                try {
-                    spots = await activitiesService.getActivitySpots(activity.activity_token);
-                } catch(e) {
-                    console.error(e);
-                    return;
-                }
-
-                if (spots.available <= 0) {
-                    isFulfilled = true;
-                    return;
-                }
-            }
-
-            activityCopy.spots = spots;
-
-            let {platforms, notify_networks_persons} = organizeGroupSend(group, payload);
-
-            //send notifications
-            if (Object.keys(platforms.ios.tokens).length) {
-                try {
-                    await iosSendGroup(platforms.ios);
-                } catch(e) {
-                    console.error(e);
-                }
-            }
-
-            if (Object.keys(platforms.android.tokens).length) {
-                try {
-                    await androidSendGroup(platforms.android);
-                } catch(e) {
-                    console.error(e);
-                }
-            }
-
-            if(Object.keys(notify_networks_persons).length) {
-                try {
-                    await networksSendGroup(notify_networks_persons);
-                } catch(e) {
-                    console.error(e);
-                }
-            }
-        }, delay);
-    }
-
     function organizeGroupSend(group, payload) {
         let platforms = {
             ios: {
@@ -216,6 +158,63 @@ function notifyMatches(me, activity, matches) {
             platforms,
             notify_networks_persons
         }
+    }
+
+    function sendGroupNotifications(group, delay) {
+        setTimeout(async function () {
+            //check if activity has already been fulfilled
+            if (isFulfilled) {
+                return;
+            }
+
+            let spots = {
+                available: activity.friends.qty,
+                accepted: activity.friends.qty
+            }
+
+            if (delay > 0) {
+                try {
+                    spots = await activitiesService.getActivitySpots(activity.activity_token);
+                } catch(e) {
+                    console.error(e);
+                    return;
+                }
+
+                if (spots.available <= 0) {
+                    isFulfilled = true;
+                    return;
+                }
+            }
+
+            activityCopy.spots = spots;
+
+            let {platforms, notify_networks_persons} = organizeGroupSend(group, payload);
+
+            //send notifications
+            if (Object.keys(platforms.ios.tokens).length) {
+                try {
+                    await iosSendGroup(platforms.ios);
+                } catch(e) {
+                    console.error(e);
+                }
+            }
+
+            if (Object.keys(platforms.android.tokens).length) {
+                try {
+                    await androidSendGroup(platforms.android);
+                } catch(e) {
+                    console.error(e);
+                }
+            }
+
+            if(Object.keys(notify_networks_persons).length) {
+                try {
+                    await networksSendGroup(notify_networks_persons);
+                } catch(e) {
+                    console.error(e);
+                }
+            }
+        }, delay);
     }
 
     function iosSendGroup(ios) {
@@ -522,6 +521,15 @@ function acceptNotification(person, activity_token) {
 
             let time = timeNow();
 
+            let activity_qry = await conn('activities')
+                .where('activity_token', activity_token)
+                .select('id', 'activity_start', 'activity_end')
+                .first();
+
+            if(!activity_qry) {
+                return reject('Activity not found');
+            }
+
             let update = {
                 accepted_at: time,
                 updated: time,
@@ -563,6 +571,12 @@ function acceptNotification(person, activity_token) {
             person_activity_id = person_activity_id[0];
             person_activity_insert.id = person_activity_id;
             person_activity_insert.person_from_token = notification.person_from_token;
+
+            person_activity_insert = {
+                ...person_activity_insert,
+                activity_start: activity_qry.activity_start,
+                activity_end: activity_qry.activity_end,
+            }
 
             await cacheService.hSet(person_activity_cache_key, activity_token, person_activity_insert);
 
