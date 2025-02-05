@@ -2,7 +2,8 @@ const { isProdApp } = require('../services/shared');
 
 module.exports = {
     activities: {
-        create: isProdApp() ? false : true
+        create: isProdApp() ? false : true,
+        accept: isProdApp() ? false : false
     },
     matching: {
         logs: isProdApp() ? false : true,

@@ -8,6 +8,7 @@ const activitiesService = require('./activities');
 const cacheService = require('./cache');
 const dbService = require('./db');
 const { getNetworkSelf, getNetworksLookup, getSecretKeyToForNetwork, getNetwork } = require('./network');
+const { doesActivityOverlap } = require('./activities');
 
 
 let notification_groups = {
@@ -505,6 +506,8 @@ function acceptNotification(person, activity_token) {
         let person_activity_cache_key = cacheService.keys.persons_activities(person.person_token);
         let person_notification_cache_key = cacheService.keys.persons_notifications(person.person_token);
 
+        let debug_enabled = require('../dev/debug').activities.accept;
+
         try {
             //ensure person exists on activity invite
             let notifications = await cacheService.hGetAllObj(notification_cache_key);
@@ -544,6 +547,18 @@ function acceptNotification(person, activity_token) {
 
             if(!activity_qry) {
                 return reject('Activity not found');
+            }
+
+            let personActivities = await cacheService.hGetAllObj(cacheService.keys.persons_activities(person.person_token));
+
+            //prevent accepting if person accepted a different activity during the same time
+            let activity_overlaps = await doesActivityOverlap(person.person_token, {
+                start: activity_qry.activity_start,
+                end: activity_qry.activity_end,
+            }, personActivities);
+
+            if(activity_overlaps && !debug_enabled) {
+                return reject('Activity overlaps with existing activity');
             }
 
             let update = {

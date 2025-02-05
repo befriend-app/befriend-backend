@@ -7,7 +7,7 @@ const { getNetworkSelf } = require('../../services/network');
 
 const { timeNow } = require('../../services/shared');
 const { isNumeric, getURL } = require('../shared');
-const { getActivityType } = require('../activities');
+const { getActivityType, doesActivityOverlap } = require('../activities');
 const { getModeByToken } = require('../modes');
 const { getPerson } = require('../persons');
 
@@ -455,18 +455,21 @@ module.exports = {
     },
     acceptNotification: function(from_network, activity_token, person_token, accepted_at) {
         return new Promise(async (resolve, reject) => {
+            let debug_enabled = require('../../dev/debug').activities.accept;
+
             try {
+
                 let errors = [];
 
-                if (!person_token) {
+                if(!person_token) {
                     errors.push('Person token required');
                 }
 
-                if (!activity_token) {
+                if(!activity_token) {
                     errors.push('Activity token required');
                 }
 
-                if (errors.length) {
+                if(errors.length) {
                     return reject({ message: errors });
                 }
 
@@ -513,6 +516,18 @@ module.exports = {
 
                 if(person_activity_qry) {
                     return reject('Activity for person already exists');
+                }
+
+                let personActivities = await cacheService.hGetAllObj(cacheService.keys.persons_activities(person_token));
+
+                //prevent accepting if person accepted a different activity during the same time
+                let activity_overlaps = await doesActivityOverlap(person_token, {
+                    start: activity.activity_start,
+                    end: activity.activity_end,
+                }, personActivities);
+
+                if(activity_overlaps && !debug_enabled) {
+                    return reject('Activity overlaps with existing activity');
                 }
 
                 let update_data = {
