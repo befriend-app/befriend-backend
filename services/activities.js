@@ -124,7 +124,10 @@ function createActivity(person, activity) {
                     return reject('No persons found. Please check your filters or try again later.');
                 }
             } catch (e) {
-                console.error(e);
+                if(!e?.message) {
+                    console.error(e);
+                }
+
                 return reject(e?.message ? e.message : 'Error notifying matches');
             }
         } catch(e) {
@@ -521,21 +524,26 @@ function prepareActivity(person, activity) {
     });
 }
 
-function doesActivityOverlap(person_token, time) {
+function doesActivityOverlap(person_token, time, activitiesData = null) {
     return new Promise(async (resolve, reject) => {
+        let overlaps = false;
+
         try {
-            let cache_key = cacheService.keys.activities(person_token);
-
-            let data = await cacheService.hGetAllObj(cache_key);
-
-            if (!data) {
+            if(!time?.start || !time?.end) {
                 return resolve(false);
             }
 
-            let overlaps = false;
+            if(!activitiesData) {
+                let cache_key = cacheService.keys.activities(person_token);
+                activitiesData = await cacheService.hGetAllObj(cache_key);
+            }
 
-            for (let k in data) {
-                let activity = data[k];
+            if (!activitiesData) {
+                return resolve(false);
+            }
+
+            for (let k in activitiesData) {
+                let activity = activitiesData[k];
 
                 if (activity.cancelled_at) {
                     continue;

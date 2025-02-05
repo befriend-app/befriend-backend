@@ -34,6 +34,7 @@ const { getGridLookup } = require('./grid');
 const { getLanguages } = require('./languages');
 
 const { getPayload } = require('./notifications');
+const { doesActivityOverlap } = require('./activities');
 
 const DEFAULT_DISTANCE_MILES = 20;
 const MAX_PERSONS_PROCESS = 1000;
@@ -2295,7 +2296,7 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
 function filterMatches(person, activity, matches) {
     let filtered_matches = [];
 
-    let debug_enabled = require('../dev/debug').matching.get_matches;
+    let debug_enabled = require('../dev/debug').matching.filter_matches;
 
     let conn, payload, my_network, networksLookup;
 
@@ -2418,8 +2419,18 @@ function filterMatches(person, activity, matches) {
                 }
 
                 //exclude by current activities
-                if(Object.keys(personActivities).length) {
-                    debugger;
+                if(Object.keys(personActivities).length && !debug_enabled) {
+                    const activityStart = activity.when?.data?.start;
+                    const activityEnd = activity.when?.data?.end;
+
+                    let activity_overlaps = await doesActivityOverlap(person.person_token, {
+                        start: activityStart,
+                        end: activityEnd
+                    }, personActivities);
+
+                    if(activity_overlaps) {
+                        persons_excluded.add(match.person_token);
+                    }
                 }
 
                 //exclude by activity type
@@ -2574,7 +2585,9 @@ function filterMatches(person, activity, matches) {
         }
 
         if (!filtered_matches.length) {
-            return reject('No persons available to notify');
+            return reject({
+                message: 'No persons available to notify'
+            });
         }
 
         resolve(filtered_matches);
