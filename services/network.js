@@ -754,8 +754,7 @@ function exchangeKeysHomeFrom(body) {
                 .where('network_token', module.exports.token)
                 .where('is_self', true)
                 .update({
-                    //todo
-                    // registration_network_id: befriend_network_id,
+                    registration_network_id: befriend_network_id,
                     is_network_known: true,
                     updated: timeNow(),
                 });
@@ -772,8 +771,7 @@ function exchangeKeysHomeFrom(body) {
 
                 if (qry) {
                     await conn('networks').where('id', befriend_network_id).update({
-                        //todo
-                        // registration_network_id: qry.id,
+                        registration_network_id: qry.id,
                         updated: timeNow(),
                     });
                 }
