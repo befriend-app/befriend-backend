@@ -7,6 +7,8 @@ const { getModes } = require('./modes');
 const { getActivityPlace } = require('./places');
 const { getNetworkSelf } = require('./network');
 
+let debug_create_activity_enabled = require('../dev/debug').activities.create;
+
 
 function createActivity(person, activity) {
     return new Promise(async (resolve, reject) => {
@@ -504,8 +506,7 @@ function prepareActivity(person, activity) {
 
             let overlaps = await module.exports.doesActivityOverlap(person.person_token, time);
 
-            //todo remove
-            if (0 && overlaps) {
+            if (overlaps && !debug_create_activity_enabled) {
                 return reject(['Activity time overlaps with current activity']);
             }
         } catch (e) {
