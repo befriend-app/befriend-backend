@@ -3,7 +3,7 @@ const { isProdApp } = require('../services/shared');
 module.exports = {
     activities: {
         create: isProdApp() ? false : true,
-        accept: isProdApp() ? false : false
+        accept: isProdApp() ? false : true
     },
     matching: {
         logs: isProdApp() ? false : true,

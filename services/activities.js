@@ -100,6 +100,8 @@ function createActivity(person, activity) {
 
             person_activity_id = person_activity_id[0];
             person_activity_insert.id = person_activity_id;
+            person_activity_insert.person_from_token = person.person_token;
+            person_activity_insert.activity_token = activity_token;
             person_activity_insert.activity_start = activity_insert.activity_start;
             person_activity_insert.activity_end = activity_insert.activity_end;
 
@@ -672,6 +674,38 @@ function isActivityTypeExcluded(activity, filter) {
     return filtered_activity.is_negative;
 }
 
+function getPersonActivities(person) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let person_activities = await cacheService.hGetAllObj(cacheService.keys.persons_activities(person.person_token));
+
+            if(Object.keys(person_activities).length) {
+                let pipeline = cacheService.startPipeline();
+
+                for(let activity_token in person_activities) {
+                    let activity = person_activities[activity_token];
+                    pipeline.hGet(cacheService.keys.activities(activity.person_from_token), activity_token);
+                }
+
+                let results = await cacheService.execPipeline(pipeline);
+
+                let idx = 0;
+
+                for(let activity_token in person_activities) {
+                    let activity = person_activities[activity_token];
+
+                    activity.data = JSON.parse(results[idx++]);
+                }
+            }
+
+            resolve(person_activities);
+        } catch(e) {
+            console.error(e);
+            return reject(e);
+        }
+    });
+}
+
 module.exports = {
     types: null,
     activityTypesMapping: null,
@@ -727,4 +761,5 @@ module.exports = {
     findMatches,
     getActivitySpots,
     isActivityTypeExcluded,
+    getPersonActivities
 };

@@ -549,7 +549,7 @@ function acceptNotification(person, activity_token) {
                 return reject('Activity not found');
             }
 
-            let personActivities = await cacheService.hGetAllObj(cacheService.keys.persons_activities(person.person_token));
+            let personActivities = await cacheService.hGetAllObj(person_activity_cache_key);
 
             //prevent accepting if person accepted a different activity during the same time
             let activity_overlaps = await doesActivityOverlap(person.person_token, {
@@ -600,11 +600,12 @@ function acceptNotification(person, activity_token) {
                 .insert(person_activity_insert);
 
             person_activity_id = person_activity_id[0];
-            person_activity_insert.id = person_activity_id;
-            person_activity_insert.person_from_token = notification.person_from_token;
 
             person_activity_insert = {
                 ...person_activity_insert,
+                id: person_activity_id,
+                activity_token,
+                person_from_token: notification.person_from_token,
                 activity_start: activity_qry.activity_start,
                 activity_end: activity_qry.activity_end,
             }

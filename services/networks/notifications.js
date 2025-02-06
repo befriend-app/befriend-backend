@@ -489,10 +489,12 @@ module.exports = {
                     return reject({ message: 'Activity not found' });
                 }
 
-                let notification = await conn('activities_notifications')
-                    .where('person_from_network_id', from_network.id)
-                    .where('activity_id', activity.id)
-                    .where('person_to_id', person.id)
+                let notification = await conn('activities_notifications AS an')
+                    .join('persons AS p', 'p.id', '=', 'an.person_from_id')
+                    .where('an.person_from_network_id', from_network.id)
+                    .where('an.activity_id', activity.id)
+                    .where('an.person_to_id', person.id)
+                    .select('an.*', 'p.person_token AS person_from_token')
                     .first();
 
                 if (!notification) {
@@ -559,8 +561,13 @@ module.exports = {
                     await conn('activities_persons')
                         .insert(person_activity_insert);
 
-                    person_activity_insert.activity_start = activity.activity_start;
-                    person_activity_insert.activity_end = activity.activity_end;
+                    person_activity_insert = {
+                        ...person_activity_insert,
+                        activity_token,
+                        person_from_token: notification.person_from_token,
+                        activity_start: activity.activity_start,
+                        activity_end: activity.activity_end,
+                    }
 
                     let pipeline = cacheService.startPipeline();
 
