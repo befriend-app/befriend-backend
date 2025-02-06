@@ -498,10 +498,12 @@ function prepareActivity(person, activity) {
         }
 
         //number_persons
+        let activity_friends_max = await getMaxFriends(person);
+
         if (!activity.friends || !isNumeric(activity.friends?.qty) || activity.friends.qty < 1) {
             errors.push('Friends qty required');
-        } else if (activity.friends.qty > module.exports.friends.max) {
-            errors.push(`Max friends: ${module.exports.friends.max}`);
+        } else if (activity.friends.qty > activity_friends_max) {
+            errors.push(`Max friends: ${activity_friends_max}`);
         }
 
         //return validation errors
@@ -706,6 +708,35 @@ function getPersonActivities(person) {
     });
 }
 
+function getMaxFriends(person) {
+    return new Promise(async (resolve, reject) => {
+        try {
+             let person_activities = await getPersonActivities(person);
+
+             if(!Object.keys(person_activities).length) {
+                 return resolve(module.exports.friends.max.default);
+             }
+
+            let activities_count = 0;
+
+            for(let activity_token in person_activities) {
+                let activity = person_activities[activity_token];
+
+                if(!activity.cancelled_at && timeNow(true) > activity.activity_end) {
+                    activities_count++;
+                }
+            }
+
+            let max = Math.min(activities_count + 2, module.exports.friends.max.max);
+
+            return resolve(max);
+        } catch(e) {
+            console.error(e);
+            return reject(e);
+        }
+    });
+}
+
 module.exports = {
     types: null,
     activityTypesMapping: null,
@@ -725,7 +756,10 @@ module.exports = {
     travelModes: ['driving', 'walking', 'bicycle'],
     friends: {
         types: ['is_new', 'is_existing', 'is_both'],
-        max: 10,
+        max: {
+            default: 2,
+            max: 10
+        }
     },
     when: {
         options: {
@@ -761,5 +795,6 @@ module.exports = {
     findMatches,
     getActivitySpots,
     isActivityTypeExcluded,
-    getPersonActivities
+    getPersonActivities,
+    getMaxFriends
 };
