@@ -16,7 +16,7 @@ const { getNetworkSelf, getSecretKeyToForNetwork } = require('../../services/net
 const { deleteKeys } = require('../../services/cache');
 const { getGendersLookup } = require('../../services/genders');
 const { keys: systemKeys } = require('../../services/system');
-const { getGridLookup } = require('../../services/grid');
+const { getGridByToken, getGridById } = require('../../services/grid');
 const { batchInsert, batchUpdate } = require('../../services/db');
 const { getKidsAgeLookup } = require('../../services/modes');
 const { batchUpdateGridSets, filterTokensAll } = require('../../services/filters');
@@ -100,7 +100,6 @@ function processPersons(network_id, persons) {
         try {
             let conn = await dbService.conn();
 
-            let gridLookup = await getGridLookup();
             let gendersLookup = await getGendersLookup();
 
             //batch process/insert/update
@@ -200,13 +199,13 @@ function processPersons(network_id, persons) {
 
                     networks = Array.from(networks);
 
-                    let grid = gridLookup.byToken[person.grid_token];
+                    let grid = await getGridByToken(person.grid_token);
                     let gender = gendersLookup.byToken[person.gender_token];
 
                     let prev_grid = null;
 
                     if(grid && existingPerson.grid_id && grid.id !== existingPerson.grid_id) {
-                        prev_grid = gridLookup.byId[existingPerson.grid_id];
+                        prev_grid = await getGridById(existingPerson.grid_id);
                     }
 
                     if (person.updated > existingPerson.updated || debug_sync_enabled) {

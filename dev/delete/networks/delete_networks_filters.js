@@ -1,7 +1,7 @@
 const cacheService = require('../../../services/cache');
 const { loadScriptEnv, isProdApp } = require('../../../services/shared');
 const { keys: systemKeys } = require('../../../services/system');
-const { getGridLookup } = require('../../../services/grid');
+const { getGridById } = require('../../../services/grid');
 
 loadScriptEnv();
 
@@ -45,8 +45,6 @@ function main() {
                 .whereNot('registration_network_id', network_self.id)
                 .select('id', 'person_token', 'grid_id');
 
-            let gridLookup = await getGridLookup();
-
             for (let i = 0; i < persons.length; i += bulk_delete_count) {
                 let chunk = persons.slice(i, i + bulk_delete_count);
 
@@ -55,7 +53,7 @@ function main() {
                 let grids = {};
 
                 for(let p of chunk) {
-                    let grid = gridLookup.byId[p.grid_id];
+                    let grid = await getGridById(p.grid_id);
 
                     if(grid) {
                         grids[grid.token] = true;

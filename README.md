@@ -12,7 +12,15 @@
 
 `node setup`
 
-`node server.js`
+### Run Servers
+
+#### Production
+`pm2 start pm2.config.js`
+
+#### Development
+`node servers`
+
+
 
 ### Push Notifications
 

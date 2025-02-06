@@ -14,9 +14,7 @@ const {
 } = require('../../services/shared');
 
 const { getNetworkSelf, homeDomains, getNetworksLookup, getSecretKeyToForNetwork } = require('../../services/network');
-const { getGendersLookup } = require('../../services/genders');
 const { keys: systemKeys } = require('../../services/system');
-const { getGridLookup } = require('../../services/grid');
 const { batchInsert, batchUpdate } = require('../../services/db');
 
 let batch_process = 1000;

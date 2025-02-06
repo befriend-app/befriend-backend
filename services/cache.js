@@ -1,11 +1,15 @@
 const redis = require('redis');
-const { isNumeric } = require('./shared');
+const { isNumeric, generateToken } = require('./shared');
 
 const standardKeys = {
     networks: 'networks',
     networks_filters: 'networks:filters',
     networks_secrets: `networks:secrets`,
     ws: 'ws:messages',
+    grid: {
+        request: 'grid:messages:request',
+        response: 'grid:messages:response'
+    },
     activity_types: 'activity_types',
     activity_type_default: 'activity_type:default',
     countries: 'countries',
@@ -121,7 +125,13 @@ const keyFunctions = {
 
 module.exports = {
     conn: null,
-    publisher: null,
+    publishers: {
+        ws: null,
+        grid: null
+    },
+    subscribers: {
+        grid: null
+    },
     keys: {
         ...standardKeys,
         ...filterKeys,
@@ -134,7 +144,7 @@ module.exports = {
         sportsKeys,
         keyFunctions,
     },
-    init: function () {
+    init: function (params = {}) {
         return new Promise(async (resolve, reject) => {
             let redis_ip = process.env.REDIS_HOST;
 
@@ -151,11 +161,19 @@ module.exports = {
                 return reject(e);
             }
 
-            //setup publisher
-            module.exports.publisher = module.exports.conn.duplicate();
+            //setup publishers
+            module.exports.publishers.ws = module.exports.conn.duplicate();
+            module.exports.publishers.grid = module.exports.conn.duplicate();
+            module.exports.subscribers.grid = module.exports.conn.duplicate();
 
             try {
-                await module.exports.publisher.connect();
+                await module.exports.publishers.ws.connect();
+                await module.exports.publishers.grid.connect();
+                await module.exports.subscribers.grid.connect();
+
+                if(params?.server !== 'grid') {
+                    module.exports.grid.responseHandler();
+                }
             } catch (e) {
                 console.error(e);
             }
@@ -882,7 +900,7 @@ module.exports = {
             resolve();
         });
     },
-    publish: function (namespace, person_token, data) {
+    publishWS: function (namespace, person_token, data) {
         return new Promise(async (resolve, reject) => {
             if(!namespace || !person_token || !data) {
                 return resolve();
@@ -895,12 +913,57 @@ module.exports = {
             }
 
             try {
-                await module.exports.publisher.publish(module.exports.keys.ws, JSON.stringify(message));
+                await module.exports.publishers.ws.publish(module.exports.keys.ws, JSON.stringify(message));
             } catch(e) {
                 console.error(e);
             }
 
             resolve();
         });
+    },
+    grid: {
+        promiseMap: {},
+        publish: function (data) {
+            return new Promise(async (resolve, reject) => {
+                const event_id = generateToken(16);
+
+                module.exports.grid.promiseMap[event_id] = {
+                    resolve,
+                    reject
+                }
+
+                let message = {
+                    event_id,
+                    data
+                }
+
+                try {
+                    await module.exports.publishers.grid.publish(module.exports.keys.grid.request, JSON.stringify(message));
+                } catch(e) {
+                    console.error(e);
+                }
+            });
+        },
+        responseHandler: function () {
+            let resolveMap = module.exports.grid.promiseMap;
+
+            module.exports.subscribers.grid.subscribe(module.exports.keys.grid.response, (message) => {
+                try {
+                    let response = JSON.parse(message.toString());
+
+                    let event_id = response.event_id;
+
+                    if(response.error) {
+                        resolveMap[event_id]?.reject(response.error);
+                    } else {
+                        resolveMap[event_id]?.resolve(response.data);
+                    }
+
+                    delete resolveMap[event_id];
+                } catch (e) {
+                    console.error(e);
+                }
+            });
+        }
     },
 };

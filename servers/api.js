@@ -2,9 +2,9 @@
 
 require('dotenv').config();
 
-let cacheService = require('./services/cache');
-let networkService = require('./services/network');
-let serverService = require('./services/server');
+let cacheService = require('../services/cache');
+let networkService = require('../services/network');
+let serverService = require('../services/server');
 
 (async function () {
     try {

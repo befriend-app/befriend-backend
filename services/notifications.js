@@ -650,7 +650,7 @@ function acceptNotification(person, activity_token) {
                 //notify person via websocket if they're on my network
                 if(data.person_to_network_id === network_self.id) {
                     if(_person_token !== person.person_token) { //skip self
-                        cacheService.publish('notifications', _person_token, {
+                        cacheService.publishWS('notifications', _person_token, {
                             activity_token,
                             spots
                         });

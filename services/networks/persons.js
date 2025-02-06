@@ -1,10 +1,10 @@
 const dbService = require('../db');
 const { getNetworkSelf, getNetworksLookup } = require('../network');
 const { timeNow, isNumeric } = require('../shared');
-const { getGridLookup } = require('../grid');
 const { getGendersLookup } = require('../genders');
 const { getKidsAgeLookup } = require('../modes');
 const { results_limit, data_since_ms_extra } = require('./common');
+const { getGridById } = require('../grid');
 
 function createPerson(network, inputs) {
     return new Promise(async (resolve, reject) => {
@@ -235,8 +235,6 @@ function syncPersons (inputs) {
             let persons = await persons_qry;
             let return_last_person_token = null;
 
-            let gridLookup = await getGridLookup();
-
             let genders = await getGendersLookup();
 
             genders = structuredClone(genders);
@@ -250,7 +248,7 @@ function syncPersons (inputs) {
 
             //organize data
             for (let person of persons) {
-                let grid = gridLookup.byId[person.grid_id];
+                let grid = await getGridById(person.grid_id);
                 let gender = genders.byId[person.gender_id];
 
                 delete person.gender_id;

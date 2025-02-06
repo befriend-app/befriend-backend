@@ -2,8 +2,8 @@ const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 const { timeNow } = require('../services/shared');
 const { updateGridSets } = require('../services/filters');
-const { getGridLookup } = require('./grid');
 const { getNetworksLookup } = require('./network');
+const { getGridById } = require('./grid');
 
 module.exports = {
     minAge: 18,
@@ -128,8 +128,7 @@ module.exports = {
 
                 //add grid
                 if (person.grid_id) {
-                    let gridLookup = await getGridLookup();
-                    let grid = gridLookup.byId[person.grid_id];
+                    let grid = await getGridById(person.grid_id);
 
                     if (grid) {
                         person.grid = {
@@ -203,8 +202,6 @@ module.exports = {
 
                 //2. retrieve from DB if missing in cache
                 if (missingTokens.length) {
-                    let gridLookup = await getGridLookup();
-
                     const conn = await dbService.conn();
 
                     const persons = await conn('persons')
@@ -289,7 +286,7 @@ module.exports = {
 
                         //grid
                         if (person.grid_id) {
-                            let grid = gridLookup.byId[person.grid_id];
+                            let grid = await getGridById(person.grid_id);
 
                             if(grid) {
                                 person.grid = {

@@ -440,7 +440,7 @@ module.exports = {
                      .select('person_token');
 
                  for(let person of notification_persons) {
-                     cacheService.publish('notifications', person.person_token, {
+                     cacheService.publishWS('notifications', person.person_token, {
                          activity_token,
                          spots
                      });

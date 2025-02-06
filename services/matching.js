@@ -30,11 +30,11 @@ const { getReligions } = require('./religion');
 const { isPersonAvailable } = require('./availability');
 const { minAge, maxAge } = require('./persons');
 const { getActivityPlace } = require('./places');
-const { getGridLookup } = require('./grid');
 const { getLanguages } = require('./languages');
 
 const { getPayload } = require('./notifications');
 const { doesActivityOverlap } = require('./activities');
+const { getGridById } = require('./grid');
 
 const DEFAULT_DISTANCE_MILES = 20;
 const MAX_PERSONS_PROCESS = 1000;
@@ -63,7 +63,7 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
 
     let { activity, location, send_only, counts_only, exclude_only } = params;
 
-    let my_token, my_filters, activity_location, gridLookup;
+    let my_token, my_filters, activity_location;
     let am_online = me?.is_online;
     let am_available = false;
 
@@ -1247,14 +1247,17 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
                                 distance_km = 0;
                             } else {
                                 try {
+                                    my_grid.data = await getGridById(my_grid.id);
+                                    their_grid.data = await getGridById(their_grid.id);
+
                                     distance_km = calculateDistanceMeters(
                                         {
-                                            lat: gridLookup.byId[my_grid.id].center_lat,
-                                            lon: gridLookup.byId[my_grid.id].center_lon,
+                                            lat: my_grid.data.center_lat,
+                                            lon: my_grid.data.center_lon,
                                         },
                                         {
-                                            lat: gridLookup.byId[their_grid.id].center_lat,
-                                            lon: gridLookup.byId[their_grid.id].center_lon,
+                                            lat: their_grid.data.center_lat,
+                                            lon: their_grid.data.center_lon,
                                         },
                                         true,
                                     );
@@ -2178,7 +2181,6 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
             await setActivityLocation();
 
             my_token = me.person_token;
-            gridLookup = await getGridLookup();
 
             let t = timeNow();
 
