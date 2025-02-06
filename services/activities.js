@@ -498,12 +498,17 @@ function prepareActivity(person, activity) {
         }
 
         //number_persons
-        let activity_friends_max = await getMaxFriends(person);
+        try {
+            let activity_friends_max = await getMaxFriends(person);
 
-        if (!activity.friends || !isNumeric(activity.friends?.qty) || activity.friends.qty < 1) {
-            errors.push('Friends qty required');
-        } else if (activity.friends.qty > activity_friends_max) {
-            errors.push(`Max friends: ${activity_friends_max}`);
+            if (!activity.friends || !isNumeric(activity.friends?.qty) || activity.friends.qty < 1) {
+                errors.push('Friends qty required');
+            } else if (activity.friends.qty > activity_friends_max) {
+                errors.push(`Max friends: ${activity_friends_max}`);
+            }
+        } catch(e) {
+            console.error(e);
+            errors.push('Error validating friends qty');
         }
 
         //return validation errors
