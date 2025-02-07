@@ -105,6 +105,12 @@ function createActivity(person, activity) {
             person_activity_insert.activity_start = activity_insert.activity_start;
             person_activity_insert.activity_end = activity_insert.activity_end;
 
+            activity_insert.persons = {
+                [person.person_token]: {
+                    is_creator: true
+                }
+            }
+
             //save to cache
             try {
                 await cacheService.hSet(activity_cache_key, activity_token, activity_insert);

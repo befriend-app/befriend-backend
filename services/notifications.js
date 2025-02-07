@@ -9,6 +9,7 @@ const cacheService = require('./cache');
 const dbService = require('./db');
 const { getNetworkSelf, getNetworksLookup, getSecretKeyToForNetwork, getNetwork } = require('./network');
 const { doesActivityOverlap } = require('./activities');
+const { getPerson } = require('./persons');
 
 
 let notification_groups = {
@@ -526,6 +527,14 @@ function acceptNotification(person, activity_token) {
                 return reject('Activity already accepted');
             }
 
+            let activity_cache_key = cacheService.keys.activities(notification.person_from_token);
+
+            let activity_data = await cacheService.hGetItem(activity_cache_key, activity_token);
+
+            if(!activity_data) {
+                return reject('Activity data not found');
+            }
+
             let spots = await activitiesService.getActivitySpots(activity_token, notifications);
 
             if (spots.available <= 0) {
@@ -540,21 +549,12 @@ function acceptNotification(person, activity_token) {
 
             let time = timeNow();
 
-            let activity_qry = await conn('activities')
-                .where('activity_token', activity_token)
-                .select('id', 'activity_start', 'activity_end')
-                .first();
-
-            if(!activity_qry) {
-                return reject('Activity not found');
-            }
-
             let personActivities = await cacheService.hGetAllObj(person_activity_cache_key);
 
             //prevent accepting if person accepted a different activity during the same time
             let activity_overlaps = await doesActivityOverlap(person.person_token, {
-                start: activity_qry.activity_start,
-                end: activity_qry.activity_end,
+                start: activity_data.activity_start,
+                end: activity_data.activity_end,
             }, personActivities);
 
             if(activity_overlaps && !debug_enabled) {
@@ -573,6 +573,9 @@ function acceptNotification(person, activity_token) {
 
             let pipeline = cacheService.startPipeline();
 
+            activity_data.persons[person.person_token] = {};
+
+            pipeline.hSet(activity_cache_key, activity_token, JSON.stringify(activity_data));
             pipeline.hSet(notification_cache_key, person.person_token, JSON.stringify(notification));
             pipeline.hSet(person_notification_cache_key, activity_token, JSON.stringify(notification));
 
@@ -606,14 +609,68 @@ function acceptNotification(person, activity_token) {
                 id: person_activity_id,
                 activity_token,
                 person_from_token: notification.person_from_token,
-                activity_start: activity_qry.activity_start,
-                activity_end: activity_qry.activity_end,
+                activity_start: activity_data.activity_start,
+                activity_end: activity_data.activity_end,
             }
 
             await cacheService.hSet(person_activity_cache_key, activity_token, person_activity_insert);
 
             spots.accepted++;
             spots.available--;
+
+            //notify all persons on my network that accepted this activity with most recent data
+            let personsData = {};
+
+            for(let person_token in activity_data.persons) {
+                try {
+                    personsData[person_token] = await getPerson(person_token);
+                } catch(e) {
+                    console.error(e);
+                }
+            }
+
+            for(let person_token in activity_data.persons) {
+                let person_a = personsData[person_token];
+
+                if(!person_a) {
+                    continue;
+                }
+
+                let data = activity_data.persons[person_token];
+
+                if(data.cancelled_at) {
+                    continue;
+                }
+
+                let person_notification = notifications[person_token];
+                let is_own_network = person_token === notification.person_from_token || person_notification?.person_to_network_id === network_self.id;
+
+                if(!is_own_network) {
+                    continue;
+                }
+
+                let matching = {};
+
+                for(let _person_token in activity_data.persons) {
+                    if(_person_token === person_token) {
+                        continue;
+                    }
+
+                    let person_b = personsData[_person_token];
+
+                    if(!person_b) {
+                        continue;
+                    }
+
+                    matching[_person_token] = await require('../services/matching').personToPersonInterests(person_a, person_b);
+                }
+
+                cacheService.publishWS('activities', person_token, {
+                    activity_token,
+                    matching,
+                    spots
+                });
+            }
 
             //notify 3rd party network of acceptance
             if (network_self.id !== notification.person_to_network_id) {
@@ -649,7 +706,7 @@ function acceptNotification(person, activity_token) {
 
                 //notify person via websocket if they're on my network
                 if(data.person_to_network_id === network_self.id) {
-                    if(_person_token !== person.person_token) { //skip self
+                    if(_person_token !== person.person_token) { //send notification update
                         cacheService.publishWS('notifications', _person_token, {
                             activity_token,
                             spots
