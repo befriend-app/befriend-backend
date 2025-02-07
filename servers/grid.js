@@ -278,6 +278,7 @@ function getPort() {
 }
 
 module.exports = {
+    DEFAULT_RADIUS_KM,
     router,
     getPort,
     main

@@ -1,10 +1,8 @@
 const axios = require('axios');
 
 const { loadScriptEnv } = require('../services/shared');
-const { getPort } = require('../servers/grid');
+const { getPort, DEFAULT_RADIUS_KM } = require('../servers/grid');
 loadScriptEnv();
-
-const DEFAULT_RADIUS_KM = 30;
 
 let cacheData = {
     byId: {},
