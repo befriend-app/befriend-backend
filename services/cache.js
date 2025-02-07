@@ -6,10 +6,6 @@ const standardKeys = {
     networks_filters: 'networks:filters',
     networks_secrets: `networks:secrets`,
     ws: 'ws:messages',
-    grid: {
-        request: 'grid:messages:request',
-        response: 'grid:messages:response'
-    },
     activity_types: 'activity_types',
     activity_type_default: 'activity_type:default',
     countries: 'countries',
