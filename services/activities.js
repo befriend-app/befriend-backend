@@ -121,7 +121,16 @@ function createActivity(person, activity) {
                 if(matches.length) {
                     await require('../services/notifications').notifyMatches(person, activity, matches);
 
-                    return resolve(activity_token);
+                    activity_insert.place = activity.place.data;
+                    activity_insert.activity_type = activity.activity.data;
+                    activity_insert.mode = activity.mode;
+
+                    let organized = {
+                        ...person_activity_insert,
+                        data: activity_insert
+                    }
+
+                    return resolve(organized);
                 } else {
                     return reject('No persons found. Please check your filters or try again later.');
                 }

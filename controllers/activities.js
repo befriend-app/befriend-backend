@@ -37,14 +37,9 @@ function createActivity(req, res) {
             }
 
             try {
-                let activity_token = await activitiesService.createActivity(person, activity);
+                let activityData = await activitiesService.createActivity(person, activity);
 
-                res.json(
-                    {
-                        activity_token: activity_token,
-                    },
-                    201
-                );
+                res.json(activityData, 201);
             } catch(e) {
                 res.json(
                     {

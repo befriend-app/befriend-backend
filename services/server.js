@@ -111,9 +111,9 @@ module.exports = {
             httpServer.on('listening', function () {
                 let addr = httpServer.address();
 
-                let bind = typeof addr === 'string' ? 'pipe ' + addr : 'port ' + addr.port;
+                let bind = typeof addr === 'string' ? 'pipe ' + addr : addr.port;
 
-                console.log('Listening on ' + bind);
+                console.log(`API server listening on port: ${bind}`);
             });
 
             resolve();
