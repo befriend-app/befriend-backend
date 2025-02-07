@@ -552,7 +552,7 @@ function doesActivityOverlap(person_token, time, activitiesData = null) {
             }
 
             if(!activitiesData) {
-                let cache_key = cacheService.keys.activities(person_token);
+                let cache_key = cacheService.keys.persons_activities(person_token);
                 activitiesData = await cacheService.hGetAllObj(cache_key);
             }
 

@@ -428,7 +428,6 @@ function putAcceptNetworkNotification(req, res) {
             } catch(e) {
                 res.json({ error: e }, 400);
             }
-
         } catch (e) {
             console.error(e);
             res.json({ error: 'Error accepting network notification' }, 400);
