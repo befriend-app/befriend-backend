@@ -1,6 +1,7 @@
+const axios = require('axios');
+
 const { loadScriptEnv } = require('../services/shared');
-const cacheService = require('../services/cache');
-const { timeNow } = require('./shared');
+const { getPort } = require('../servers/grid');
 loadScriptEnv();
 
 const DEFAULT_RADIUS_KM = 30;
@@ -10,28 +11,21 @@ let cacheData = {
     byToken: {}
 }
 
+let grid_server_port = getPort();
+
 
 function getGridById(id) {
     return new Promise(async (resolve, reject) => {
+        if(cacheData.byId[id]) {
+            return resolve(cacheData.byId[id]);
+        }
+
         try {
-            if(cacheData.byId[id]) {
-                return resolve(cacheData.byId[id]);
-            }
+            let r = await axios.get(`http://localhost:${grid_server_port}/grid/id/${id}`);
 
-            let request = {
-                fn: 'getGridById',
-                id
-            }
+            cacheData.byId[id] = r.data;
 
-            let response = await cacheService.grid.publish(request);
-
-            if(!response) {
-                return reject('No response');
-            }
-
-            cacheData.byId[id] = response;
-
-            resolve(response);
+            resolve(r.data);
         } catch(e) {
             console.error(e);
             return reject(e);
@@ -46,20 +40,16 @@ function getGridByToken(token) {
                 return resolve(cacheData.byToken[token]);
             }
 
-            let request = {
-                fn: 'getGridByToken',
-                token
+            try {
+                let r = await axios.get(`http://localhost:${grid_server_port}/grid/token/${token}`);
+
+                cacheData.byToken[token] = r.data;
+
+                resolve(r.data);
+            } catch(e) {
+                console.error(e);
+                return reject(e);
             }
-
-            let response = await cacheService.grid.publish(request);
-
-            if(!response) {
-                return reject('No response');
-            }
-
-            cacheData.byToken[token] = response;
-
-            resolve(response);
         } catch(e) {
             console.error(e);
             return reject(e);
@@ -69,49 +59,44 @@ function getGridByToken(token) {
 
 function findNearby(lat, lon, radiusKm = DEFAULT_RADIUS_KM, limit = null) {
     return new Promise(async (resolve, reject) => {
-         try {
-              let request = {
-                  fn: 'findNearby',
-                  lat,
-                  lon,
-                  radiusKm,
-                  limit
-              }
+        try {
+            const params = {
+                lat,
+                lon,
+                radius: radiusKm
+            };
 
-              let response = await cacheService.grid.publish(request);
+            if (limit !== null) {
+                params.limit = limit;
+            }
 
-             if(!response) {
-                 return reject('No response');
-             }
+            let r = await axios.get(`http://localhost:${grid_server_port}/grid/nearby`, {
+                params
+            });
 
-             resolve(response);
-         } catch(e) {
-             console.error(e);
-             return reject(e);
-         }
+            resolve(r.data);
+        } catch (error) {
+            reject(error);
+        }
     });
 }
 
 function findNearest(lat, lon, radiusKm = DEFAULT_RADIUS_KM) {
     return new Promise(async (resolve, reject) => {
         try {
-            let request = {
-                fn: 'findNearest',
+            const params = {
                 lat,
                 lon,
-                radiusKm,
-            }
+                radius: radiusKm
+            };
 
-            let response = await cacheService.grid.publish(request);
+            let r = await axios.get(`http://localhost:${grid_server_port}/grid/nearest`, {
+                params
+            });
 
-            if(!response) {
-                return reject('No response');
-            }
-
-            resolve(response);
-        } catch(e) {
-            console.error(e);
-            return reject(e);
+            resolve(r.data);
+        } catch (error) {
+            reject(error);
         }
     });
 }
