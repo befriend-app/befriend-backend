@@ -184,18 +184,18 @@ module.exports = {
         return new Promise(async (resolve, reject) => {
             let cache_key = cacheService.keys.place_fsq(place_id);
 
-            let api_key = process.env.FSQ_KEY;
-
-            let route = `/places/${place_id}`;
-
-            let url = joinPaths(module.exports.base_url, route);
-
             try {
                 let cache_data = await cacheService.getObj(cache_key);
 
                 if(cache_data) {
                     return resolve(cache_data);
                 }
+
+                let api_key = process.env.FSQ_KEY;
+
+                let route = `/places/${place_id}`;
+
+                let url = joinPaths(module.exports.base_url, route);
 
                 let r = await axios.get(url, {
                     headers: {

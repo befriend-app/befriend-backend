@@ -247,9 +247,18 @@ module.exports = {
 
                     let location = place_details.location;
 
-                    if(!location) {
+                    let lat = place_details.geocodes?.main?.latitude || place_details.location_lat || location?.location_lat;
+                    let lon = place_details.geocodes?.main?.longitude || place_details.location_lon || location?.location_lon;
+
+                    let address = place_details.location_address || location.address;
+                    let address_2 = place_details.location_address_2 || location.address_extended || null;
+                    let locality = place_details.location_locality || location.locality;
+                    let region = place_details.location_region || location.region;
+                    let country = place_details.location_country || location.country;
+
+                    if(!lat || !lon || !address || !locality || !region || !country) {
                         return reject({
-                            message: 'No location'
+                            message: 'Location required'
                         });
                     }
 
@@ -257,7 +266,7 @@ module.exports = {
                         activity_token: activity.activity_token,
                         network_id: from_network.id,
                         activity_type_id: activityType.id,
-                        fsq_place_id: place_details.fsq_id,
+                        fsq_place_id: place_details.fsq_id || place_details.fsq_place_id,
                         mode_id: mode.id,
                         person_id: person_from_qry.id,
                         persons_qty: activity.friends.qty,
@@ -271,14 +280,14 @@ module.exports = {
                         is_public: true,
                         is_new_friends: activity.friends.type.is_new || false,
                         is_existing_friends: activity.friends.type.is_existing || false,
-                        location_lat: place_details.geocodes?.main?.latitude || location.location_lat,
-                        location_lon: place_details.geocodes?.main?.longitude || location.location_lon,
+                        location_lat: lat,
+                        location_lon: lon,
                         location_name: place_details.name,
-                        location_address: location.address,
-                        location_address_2: location.address_extended || null,
-                        location_locality: location.locality,
-                        location_region: location.region,
-                        location_country: location.country,
+                        location_address: address,
+                        location_address_2: address_2,
+                        location_locality: locality,
+                        location_region: region,
+                        location_country: country,
                         created: timeNow(),
                         updated: activity.updated
                     };
