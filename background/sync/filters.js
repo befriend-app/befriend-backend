@@ -4,7 +4,7 @@ const cacheService = require('../../services/cache');
 const dbService = require('../../services/db');
 
 const { getNetworkSelf, getNetworksLookup, getSecretKeyToForNetwork } = require('../../services/network');
-const { keys: systemKeys } = require('../../services/system');
+const { keys: systemKeys, getNetworkSyncProcess, setNetworkSyncProcess } = require('../../services/system');
 const { batchInsert, batchUpdate } = require('../../services/db');
 
 const {
@@ -45,7 +45,6 @@ function syncFilters() {
     console.log("Sync: filters");
 
     let sync_name = systemKeys.sync.network.persons_filters;
-
 
     return new Promise(async (resolve, reject) => {
         let conn, networks, network_self;
@@ -92,10 +91,7 @@ function syncFilters() {
                         last: null
                     };
 
-                    let sync_qry = await conn('sync')
-                        .where('network_id', network.id)
-                        .where('sync_process', sync_name)
-                        .first();
+                    let sync_qry = await getNetworkSyncProcess(sync_name, network.network_id);
 
                     if (sync_qry && !debug_sync_enabled) {
                         timestamps.last = sync_qry.last_updated;
@@ -185,22 +181,15 @@ function syncFilters() {
                     await updateFilterGridSets(updated_persons.filters);
 
                     if (!skipSaveTimestamps && !debug_sync_enabled) {
-                        if (sync_qry) {
-                            await conn('sync').where('id', sync_qry.id)
-                                .update({
-                                    last_updated: timestamps.current,
-                                    updated: timeNow(),
-                                });
-                        } else {
-                            await conn('sync')
-                                .insert({
-                                    network_id: network.id,
-                                    sync_process: sync_name,
-                                    last_updated: timestamps.current,
-                                    created: timeNow(),
-                                    updated: timeNow(),
-                                });
-                        }
+                        let sync_update = {
+                            sync_process: sync_name,
+                            network_id: network.id,
+                            last_updated: timestamps.current,
+                            created: sync_qry ? sync_qry.created : timeNow(),
+                            updated: timeNow()
+                        };
+
+                        await setNetworkSyncProcess(sync_name, network.network_id, sync_update);
                     }
 
                     console.log({
@@ -218,10 +207,10 @@ function syncFilters() {
 
 function processFilters(network_id, persons_filters, updated_persons) {
     return new Promise(async (resolve, reject) => {
-        try {
-            let hasPersons = false;
-            let hasInvalidPersons = false;
+        let hasPersons = false;
+        let hasInvalidPersons = false;
 
+        try {
             for(let k in persons_filters) {
                 let persons = persons_filters[k];
 
@@ -231,7 +220,7 @@ function processFilters(network_id, persons_filters, updated_persons) {
             }
 
             if(!hasPersons) {
-                return resolve();
+                return resolve(true);
             }
 
             //ensure this network has permission to provide updated data for these persons
@@ -296,7 +285,7 @@ function processFilters(network_id, persons_filters, updated_persons) {
             return reject(e);
         }
 
-        resolve();
+        resolve(!hasInvalidPersons);
     });
 }
 

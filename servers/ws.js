@@ -270,11 +270,6 @@ function initSubscribe() {
             try {
                 let data = JSON.parse(message.toString());
 
-                //skip sending messages without a process key
-                // if(data && !data.process_key) {
-                //     return;
-                // }
-
                 console.log('processing ws message', getDateTimeStr());
 
                 let message_sent = false;

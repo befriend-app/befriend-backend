@@ -54,6 +54,8 @@ const sportsKeys = {
 
 const keyFunctions = {
     exchange_keys: (token) => `networks:keys:exchange:${token}`,
+    sync_networks: (sync_name, network) => `sync:networks:${sync_name}:${network}`,
+
     activities: (person_token) => `activities:persons:${person_token}`, //activities organized by person who created them, lookup by activity_token
     activities_notifications: (activity_token) => `activities:${activity_token}:notifications`,
     activity_type: (token) => `activity_types:${token}`,

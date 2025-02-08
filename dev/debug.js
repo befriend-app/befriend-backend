@@ -47,10 +47,10 @@ module.exports = {
         }
     },
     sync: {
-        networks_persons: isProdApp() ? false : true,
-        persons: isProdApp() ? false : true,
-        me: isProdApp() ? false : true,
-        filters: isProdApp() ? false : true
+        networks_persons: isProdApp() ? false : false,
+        persons: isProdApp() ? false : false,
+        me: isProdApp() ? false : false,
+        filters: isProdApp() ? false : false
     },
     notifications: {
         networks: isProdApp() ? false : true,

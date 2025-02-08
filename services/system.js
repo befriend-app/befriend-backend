@@ -1,33 +1,7 @@
+const cacheService = require('./cache');
 const dbService = require('./db');
 const { timeNow, isNumeric } = require('./shared');
 
-function setProcessRan(system_key) {
-    return new Promise(async (resolve, reject) => {
-        try {
-            let conn = await dbService.conn();
-
-            let qry = await conn('system').where('system_key', system_key).first();
-
-            if (qry) {
-                await conn('system').where('id', qry.id).update({
-                    updated: timeNow(),
-                });
-            } else {
-                await conn('system').insert({
-                    system_key: system_key,
-                    system_value: 1,
-                    created: timeNow(),
-                    updated: timeNow(),
-                });
-            }
-
-            resolve();
-        } catch (e) {
-            console.error(e);
-            return reject(e);
-        }
-    });
-}
 
 function getProcessRan(system_key) {
     return new Promise(async (resolve, reject) => {
@@ -60,6 +34,62 @@ function getProcessRan(system_key) {
     });
 }
 
+function setProcessRan(system_key) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let conn = await dbService.conn();
+
+            let qry = await conn('system').where('system_key', system_key).first();
+
+            if (qry) {
+                await conn('system').where('id', qry.id).update({
+                    updated: timeNow(),
+                });
+            } else {
+                await conn('system').insert({
+                    system_key: system_key,
+                    system_value: 1,
+                    created: timeNow(),
+                    updated: timeNow(),
+                });
+            }
+
+            resolve();
+        } catch (e) {
+            console.error(e);
+            return reject(e);
+        }
+    });
+}
+
+
+function getNetworkSyncProcess(sync_name, network_id) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let data = await cacheService.getObj(cacheService.keys.sync_networks(sync_name, network_id));
+
+            resolve(data);
+        } catch(e) {
+            console.error(e);
+            reject();
+        }
+    });
+}
+
+function setNetworkSyncProcess(sync_name, network_id, data) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await cacheService.setCache(cacheService.keys.sync_networks(sync_name, network_id), data);
+
+            resolve();
+        } catch(e) {
+            console.error(e);
+            reject();
+        }
+    });
+}
+
+
 module.exports = {
     keys: {
         sync: {
@@ -90,6 +120,8 @@ module.exports = {
         },
         system: {},
     },
-    setProcessRan,
     getProcessRan,
+    getNetworkSyncProcess,
+    setProcessRan,
+    setNetworkSyncProcess,
 };

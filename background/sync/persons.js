@@ -15,7 +15,7 @@ const {
 const { getNetworkSelf, getSecretKeyToForNetwork } = require('../../services/network');
 const { deleteKeys } = require('../../services/cache');
 const { getGendersLookup } = require('../../services/genders');
-const { keys: systemKeys } = require('../../services/system');
+const { keys: systemKeys, getNetworkSyncProcess, setNetworkSyncProcess } = require('../../services/system');
 const { getGridByToken, getGridById } = require('../../services/grid');
 const { batchInsert, batchUpdate } = require('../../services/db');
 const { getKidsAgeLookup } = require('../../services/modes');
@@ -86,8 +86,12 @@ function processPersons(network_id, persons) {
     }
 
     return new Promise(async (resolve, reject) => {
-        if (!persons || !persons.length) {
+        if (!persons) {
             return resolve();
+        }
+
+        if(!persons.length) {
+            return resolve(true);
         }
 
         if(persons.length > 50000) {
@@ -346,8 +350,12 @@ function reviewsChanged(newData, oldData) {
 
 function processPersonsModes(network_id, persons_modes) {
     return new Promise(async (resolve, reject) => {
-        if(!persons_modes?.length) {
+        if(!persons_modes) {
             return resolve();
+        }
+
+        if(!persons_modes.length) {
+            return resolve(true);
         }
 
         if(persons_modes.length > 50000) {
@@ -677,10 +685,7 @@ function syncPersons() {
                     };
 
                     //request latest data only on subsequent syncs
-                    let sync_qry = await conn('sync')
-                        .where('network_id', network.id)
-                        .where('sync_process', sync_name)
-                        .first();
+                    let sync_qry = await getNetworkSyncProcess(sync_name, network.network_id);
 
                     if (sync_qry && !debug_sync_enabled) {
                         timestamps.last = sync_qry.last_updated;
@@ -748,21 +753,15 @@ function syncPersons() {
                     }
 
                     if (!skipSaveTimestamps && !debug_sync_enabled) {
-                        //update sync table
-                        if (sync_qry) {
-                            await conn('sync').where('id', sync_qry.id).update({
-                                last_updated: timestamps.current,
-                                updated: timeNow(),
-                            });
-                        } else {
-                            await conn('sync').insert({
-                                sync_process: sync_name,
-                                network_id: network.id,
-                                last_updated: timestamps.current,
-                                created: timeNow(),
-                                updated: timeNow(),
-                            });
-                        }
+                        let sync_update = {
+                            sync_process: sync_name,
+                            network_id: network.id,
+                            last_updated: timestamps.current,
+                            created: sync_qry ? sync_qry.created : timeNow(),
+                            updated: timeNow()
+                        };
+
+                        await setNetworkSyncProcess(sync_name, network.network_id, sync_update);
                     }
 
                     console.log({
@@ -813,10 +812,7 @@ function syncPersonsModes() {
                         last: null
                     };
 
-                    let sync_qry = await conn('sync')
-                        .where('network_id', network.id)
-                        .where('sync_process', sync_name)
-                        .first();
+                    let sync_qry = await getNetworkSyncProcess(sync_name, network.network_id);
 
                     if (sync_qry) {
                         timestamps.last = sync_qry.last_updated;
@@ -882,23 +878,16 @@ function syncPersonsModes() {
                         }
                     }
 
-                    if (!skipSaveTimestamps) {
-                        if (sync_qry) {
-                            await conn('sync')
-                                .where('id', sync_qry.id)
-                                .update({
-                                    last_updated: timestamps.current,
-                                    updated: timeNow()
-                                });
-                        } else {
-                            await conn('sync').insert({
-                                sync_process: sync_name,
-                                network_id: network.id,
-                                last_updated: timestamps.current,
-                                created: timeNow(),
-                                updated: timeNow()
-                            });
-                        }
+                    if (!skipSaveTimestamps && !debug_sync_enabled) {
+                        let sync_update = {
+                            sync_process: sync_name,
+                            network_id: network.id,
+                            last_updated: timestamps.current,
+                            created: sync_qry ? sync_qry.created : timeNow(),
+                            updated: timeNow()
+                        };
+
+                        await setNetworkSyncProcess(sync_name, network.network_id, sync_update);
                     }
                 } catch (e) {
                     console.error('Error syncing with network:', e);
