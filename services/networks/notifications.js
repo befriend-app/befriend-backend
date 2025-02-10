@@ -532,7 +532,7 @@ module.exports = {
                 let personActivities = await cacheService.hGetAllObj(cacheService.keys.persons_activities(person_token));
 
                 //prevent accepting if person accepted a different activity during the same time
-                let activity_overlaps = await gdoesActivityOverlap(person_token, {
+                let activity_overlaps = await doesActivityOverlap(person_token, {
                     start: activity.activity_start,
                     end: activity.activity_end,
                 }, personActivities);

@@ -146,7 +146,7 @@ async function main(qty) {
 
     if (!self_network) {
         console.error(
-            'Network not setup: 1) Setup system: node setup 2) Start server: node server.js',
+            'Network not setup: 1) Setup system: node setup 2) Start server: node servers',
         );
         process.exit(1);
     }

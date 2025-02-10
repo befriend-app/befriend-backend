@@ -46,7 +46,7 @@ function main() {
             }
         } catch (e) {
             console.error('Server not running, exiting');
-            console.error('Start server: `node server.js');
+            console.error('Start server: `node servers');
             await timeoutAwait(5000);
             process.exit();
         }

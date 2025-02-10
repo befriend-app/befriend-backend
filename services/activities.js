@@ -699,7 +699,7 @@ function isActivityTypeExcluded(activity, filter) {
 function getPersonActivities(person) {
     return new Promise(async (resolve, reject) => {
         try {
-            let person_activities = await cacheService.hGetAllObj(cacheService.keys.persons_activities(person.person_token));
+            let person_activities = (await cacheService.hGetAllObj(cacheService.keys.persons_activities(person.person_token))) || {};
 
             if(Object.keys(person_activities).length) {
                 let pipeline = cacheService.startPipeline();
