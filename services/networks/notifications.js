@@ -294,6 +294,10 @@ module.exports = {
 
                     let [activity_id] = await conn('activities').insert(activityData);
 
+                    activityData.activity_type_token = activity.activity.token;
+
+                    await cacheService.hSet(cacheService.keys.activities(person_from_token), activity.activity_token, activityData);
+
                     activityData.id = activity_id;
                 }
 
@@ -424,14 +428,18 @@ module.exports = {
 
                  let conn = await dbService.conn();
 
-                 let activity_check = await conn('activities')
+                 let activity_check = await conn('activities AS a')
+                     .join('persons AS p', 'a.person_id', '=', 'p.id')
                      .where('network_id', from_network.id)
                      .where('activity_token', activity_token)
+                     .select('a.*', 'p.person_token AS person_from_token')
                      .first();
 
                  if(!activity_check) {
                      return reject("Activity not found");
                  }
+
+                let cache_key = cacheService.keys.activities(activity_check.person_from_token);
 
                 await conn('activities')
                     .where('id', activity_check.id)
@@ -439,6 +447,13 @@ module.exports = {
                         spots_available: spots.available,
                         updated: timeNow()
                     });
+
+                 let cache_activity = await cacheService.hGetItem(cache_key, activity_token);
+
+                 if(cache_activity) {
+                     cache_activity.spots_available = spots.available;
+                     await cacheService.hSet(cache_key, activity_token, cache_activity);
+                 }
 
                  let network_self = await getNetworkSelf();
 
