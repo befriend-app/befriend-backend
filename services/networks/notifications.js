@@ -250,11 +250,11 @@ module.exports = {
                     let lat = place_details.geocodes?.main?.latitude || place_details.location_lat || location?.location_lat;
                     let lon = place_details.geocodes?.main?.longitude || place_details.location_lon || location?.location_lon;
 
-                    let address = place_details.location_address || location.address;
-                    let address_2 = place_details.location_address_2 || location.address_extended || null;
-                    let locality = place_details.location_locality || location.locality;
-                    let region = place_details.location_region || location.region;
-                    let country = place_details.location_country || location.country;
+                    let address = place_details.location_address || location?.address;
+                    let address_2 = place_details.location_address_2 || location?.address_extended || null;
+                    let locality = place_details.location_locality || location?.locality;
+                    let region = place_details.location_region || location?.region;
+                    let country = place_details.location_country || location?.country;
 
                     if(!lat || !lon || !address || !locality || !region || !country) {
                         return reject({
