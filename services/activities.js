@@ -364,9 +364,7 @@ function prepareActivity(person, activity) {
         } else {
             if (activity.activity.token) {
                 try {
-                    let activity_type = await cacheService.getObj(
-                        cacheService.keys.activity_type(activity.activity.token),
-                    );
+                    let activity_type = await getActivityType(activity.activity.token);
 
                     if (!activity_type) {
                         errors.push('Invalid activity type');
