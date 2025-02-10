@@ -561,6 +561,9 @@ function acceptNotification(person, activity_token) {
                 return reject('Activity overlaps with existing activity');
             }
 
+            spots.accepted++;
+            spots.available--;
+
             let update = {
                 accepted_at: time,
                 updated: time,
@@ -574,6 +577,8 @@ function acceptNotification(person, activity_token) {
             let pipeline = cacheService.startPipeline();
 
             activity_data.persons[person.person_token] = {};
+
+            activity_data.spots_available = spots.available;
 
             pipeline.hSet(activity_cache_key, activity_token, JSON.stringify(activity_data));
             pipeline.hSet(notification_cache_key, person.person_token, JSON.stringify(notification));
@@ -614,9 +619,6 @@ function acceptNotification(person, activity_token) {
             }
 
             await cacheService.hSet(person_activity_cache_key, activity_token, person_activity_insert);
-
-            spots.accepted++;
-            spots.available--;
 
             //notify all persons on my network that accepted this activity with most recent data
             let personsData = {};
