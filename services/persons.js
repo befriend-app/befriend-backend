@@ -231,7 +231,7 @@ module.exports = {
                             .select('id', 'person_id', 'token', 'age_id', 'gender_id', 'is_active'),
                     ]);
 
-                    let devicesLookup = {}
+                    let devicesLookup = {};
 
                     for(let d of devices) {
                         if(!(devicesLookup[d.person_id])) {
