@@ -38,22 +38,15 @@ let ws_server;
 let options = {};
 
 if (process.env.APP_ENV !== 'local') {
-    if (isProdApp()) {
-        options = {
-            cert: fs.readFileSync('/etc/ssl/certs/befriend.crt'),
-            key: fs.readFileSync('/etc/ssl/private/befriend.key'),
-        };
-    } else {
-        options = {
-            cert: fs.readFileSync('/etc/ssl/certs/dev.befriend.crt'),
-            key: fs.readFileSync('/etc/ssl/private/dev.befriend.key'),
-        };
-    }
+    options = {
+        cert: fs.readFileSync(process.env.SSL_CERT),
+        key: fs.readFileSync(process.env.SSL_KEY),
+    };
 
-    ws_server = https.createServer(options);
-} else {
-    ws_server = http.createServer(options);
 }
+
+ws_server = https.createServer(options);
+
 
 const wss = new WebSocket.Server({ server: ws_server });
 
