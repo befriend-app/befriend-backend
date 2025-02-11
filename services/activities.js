@@ -3,8 +3,11 @@ const dbService = require('../services/db');
 
 const { getOptionDateTime, isNumeric, timeNow, generateToken } = require('./shared');
 const { getModes, getModeById } = require('./modes');
-const { getActivityPlace } = require('./places');
+const { getActivityPlace, getPlaceFSQ } = require('./places');
 const { getNetworkSelf } = require('./network');
+const { getPerson } = require('./persons');
+const { getGender } = require('./genders');
+const { personToPersonInterests } = require('./matching');
 
 let debug_create_activity_enabled = require('../dev/debug').activities.create;
 
@@ -678,6 +681,80 @@ function getActivitySpots(activity_token, notification_data = null) {
     });
 }
 
+function getActivityNotification(activity_token, person_token) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            if (typeof activity_token !== 'string') {
+                return reject({
+                    message: 'Activity token required'
+                });
+            }
+
+            let me = await getPerson(person_token);
+
+            if (!me) {
+                return reject({
+                    message: 'person token not found'
+                });
+            }
+
+            //ensure person exists on activity invite
+            let notification = await cacheService.hGetItem(
+                cacheService.keys.activities_notifications(activity_token),
+                person_token
+            );
+
+            if (!notification) {
+                return reject({
+                    message: 'Activity does not include person'
+                });
+            }
+
+            let cache_key = cacheService.keys.activities(notification.person_from_token);
+
+            let activity = await cacheService.hGetItem(cache_key, activity_token);
+
+            if (!activity) {
+                return reject({
+                    message: 'Activity not found'
+                });
+            }
+
+            activity.place = await getPlaceFSQ(activity.fsq_place_id);
+
+            activity.activity_type = await getActivityType(activity.activity_type_token);
+
+            activity.mode = await getModeById(activity.mode_id);
+
+            let person_from = await getPerson(notification.person_from_token);
+
+            let gender = await getGender(person_from.gender_id);
+
+            let matching = await personToPersonInterests(me, person_from);
+
+            return resolve({
+                notification,
+                activity,
+                matching,
+                person: {
+                    gender,
+                    is_new: person_from.is_new,
+                    first_name: person_from.first_name,
+                    image_url: person_from.image_url,
+                    age: person_from.age,
+                    reviews: person_from.reviews,
+                },
+            });
+        } catch (e) {
+            console.error(e);
+
+            return reject({
+                message: 'Error getting activity'
+            });
+        }
+    });
+}
+
 function isActivityTypeExcluded(activity, filter) {
     if (!filter?.is_active) {
         return false;
@@ -813,12 +890,13 @@ module.exports = {
     getActivityTypes,
     getActivityTypesMapping,
     getActivityType,
-    prepareActivity,
-    doesActivityOverlap,
     getDefaultActivity,
-    findMatches,
-    getActivitySpots,
-    isActivityTypeExcluded,
     getPersonActivities,
-    getMaxFriends
+    getActivitySpots,
+    getActivityNotification,
+    getMaxFriends,
+    prepareActivity,
+    findMatches,
+    doesActivityOverlap,
+    isActivityTypeExcluded,
 };

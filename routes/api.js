@@ -534,6 +534,18 @@ router.get('/activities/matches', function (req, res, next) {
     });
 });
 
+router.get('/activities/:activity_token/matching', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await activitiesController.getActivityMatching(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
 router.get('/activities/:activity_token/notification', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {

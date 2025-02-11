@@ -12,7 +12,7 @@ const { getActivityType } = require('../services/activities');
 const { getGender } = require('../services/genders');
 const { getPlaceFSQ } = require('../services/places');
 const { acceptNotification, declineNotification } = require('../services/notifications');
-const { getNetworksLookup, getNetworkSelf } = require('../services/network');
+const { getNetworkSelf } = require('../services/network');
 
 
 function createActivity(req, res) {
@@ -56,7 +56,7 @@ function createActivity(req, res) {
     });
 }
 
-function getActivityNotification(req, res) {
+function getActivityMatching(req, res) {
     return new Promise(async (resolve, reject) => {
         let activity_token = req.params.activity_token;
         let person_token = req.query.person_token;
@@ -146,6 +146,28 @@ function getActivityNotification(req, res) {
             res.json(
                 {
                     error: 'Error getting activity',
+                },
+                400,
+            );
+        }
+
+        resolve();
+    });
+}
+
+function getActivityNotification(req, res) {
+    return new Promise(async (resolve, reject) => {
+        let activity_token = req.params.activity_token;
+        let person_token = req.query.person_token;
+
+        try {
+            let notification = await activitiesService.getActivityNotification(activity_token, person_token);
+
+            res.json(notification);
+        } catch (e) {
+            res.json(
+                {
+                    error: e?.message,
                 },
                 400,
             );
