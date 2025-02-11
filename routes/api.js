@@ -714,4 +714,16 @@ router.get('/autocomplete/work', function (req, res, next) {
     });
 });
 
+router.get('/places/fsq/:id', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await apiController.getPlaceFSQ(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
 module.exports = router;

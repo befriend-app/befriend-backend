@@ -24,6 +24,7 @@ const {
     normalizeSearch,
 } = require('../services/shared');
 const { getActivityTypes } = require('../services/activities');
+const { getPlaceData } = require('../services/fsq');
 
 module.exports = {
     getNetworks: function (req, res) {
@@ -987,4 +988,26 @@ module.exports = {
             resolve();
         });
     },
+    getPlaceFSQ: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            let id = req.params.id;
+
+            if(!id) {
+                res.json('FSQ id required', 400);
+                return resolve();
+            }
+
+            try {
+                 let data = await getPlaceData(id);
+
+                 res.json(data);
+            } catch(e) {
+                console.error(e);
+                res.json('Could not retrieve place data', 400);
+                return resolve();
+            }
+
+            resolve();
+        });
+    }
 };

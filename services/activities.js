@@ -2,7 +2,7 @@ const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 
 const { getOptionDateTime, isNumeric, timeNow, generateToken } = require('./shared');
-const { getModes } = require('./modes');
+const { getModes, getModeById } = require('./modes');
 const { getActivityPlace } = require('./places');
 const { getNetworkSelf } = require('./network');
 
@@ -704,6 +704,7 @@ function getPersonActivities(person) {
 
                 for(let activity_token in person_activities) {
                     let activity = person_activities[activity_token];
+
                     pipeline.hGet(cacheService.keys.activities(activity.person_from_token), activity_token);
                 }
 
@@ -715,6 +716,11 @@ function getPersonActivities(person) {
                     let activity = person_activities[activity_token];
 
                     activity.data = JSON.parse(results[idx++]);
+
+                    //append mode object
+                    if(activity.data?.mode_id) {
+                        activity.data.mode = await getModeById(activity.data.mode_id);
+                    }
                 }
             }
 

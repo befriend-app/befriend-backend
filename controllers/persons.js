@@ -39,7 +39,9 @@ module.exports = {
 
             try {
                 let me = await getPerson(person_token);
+
                 let activities = await getPersonActivities(me);
+
                 let filters = await getPersonFilters(me);
 
                 //set country
