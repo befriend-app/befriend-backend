@@ -37,16 +37,16 @@ let ws_server;
 
 let options = {};
 
-if (process.env.APP_ENV !== 'local') {
+if (process.env.APP_ENV === 'local') {
+    ws_server = http.createServer(options);
+} else {
     options = {
         cert: fs.readFileSync(process.env.SSL_CERT),
         key: fs.readFileSync(process.env.SSL_KEY),
     };
 
+    ws_server = https.createServer(options);
 }
-
-ws_server = https.createServer(options);
-
 
 const wss = new WebSocket.Server({ server: ws_server });
 
