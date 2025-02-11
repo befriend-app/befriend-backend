@@ -7,7 +7,6 @@ const { getActivityPlace, getPlaceFSQ } = require('./places');
 const { getNetworkSelf } = require('./network');
 const { getPerson } = require('./persons');
 const { getGender } = require('./genders');
-const { personToPersonInterests } = require('./matching');
 
 let debug_create_activity_enabled = require('../dev/debug').activities.create;
 
@@ -730,7 +729,7 @@ function getActivityNotification(activity_token, person_token) {
 
             let gender = await getGender(person_from.gender_id);
 
-            let matching = await personToPersonInterests(me, person_from);
+            let matching = await require('./matching').personToPersonInterests(me, person_from);
 
             return resolve({
                 notification,
@@ -844,10 +843,9 @@ function getActivityNotificationWithAccessToken(activity_token, access_token, pe
             activity.activity_type = await getActivityType(activity.activity_type_token);
             activity.mode = await getModeById(activity.mode_id);
 
-            //
             const person_from = await getPerson(notification.person_from_token);
             const gender = await getGender(person_from.gender_id);
-            const matching = await personToPersonInterests(me, person_from);
+            const matching = await require('./matching').personToPersonInterests(me, person_from);
             const networkSelf = await getNetworkSelf();
 
             let first_name = null;
@@ -886,6 +884,81 @@ function getActivityNotificationWithAccessToken(activity_token, access_token, pe
             console.error(e);
             return reject({
                 message: 'Error getting activity',
+                status: 400
+            });
+        }
+    });
+}
+
+function getActivityMatching(person_token, activity_token) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            if (typeof activity_token !== 'string') {
+                return reject({
+                        message: 'Activity token required',
+                        status: 400
+                    });
+            }
+
+            let me = await getPerson(person_token);
+
+            if (!me) {
+                return reject({
+                    message: 'person token not found',
+                    status: 400
+                });
+            }
+
+            //ensure person exists on activity
+            let person_activity = await cacheService.hGetItem(
+                cacheService.keys.persons_activities(person_token),
+                activity_token
+            );
+
+            if (!person_activity) {
+                return reject({
+                    message: 'Activity does not include person',
+                    status: 400
+                });
+            }
+
+            let cache_key = cacheService.keys.activities(person_activity.person_from_token);
+
+            let activity = await cacheService.hGetItem(cache_key, activity_token);
+
+            if (!activity) {
+                return reject({
+                    message: 'Activity not found',
+                    status: 400
+                });
+            }
+
+            let matching = {};
+
+            for(let _person_token in activity.persons) {
+                if(_person_token === person_token) {
+                    continue;
+                }
+
+                try {
+                    let person_b = await getPerson(_person_token);
+
+                    if(!person_b) {
+                        continue;
+                    }
+
+                    matching[_person_token] = await require('../services/matching').personToPersonInterests(me, person_b);
+                } catch(e) {
+                    console.error(e);
+                }
+            }
+
+            resolve(matching);
+        } catch (e) {
+            console.error(e);
+
+            return reject({
+                message: 'Errog getting activity matching',
                 status: 400
             });
         }
@@ -1032,6 +1105,7 @@ module.exports = {
     getActivitySpots,
     getActivityNotification,
     getActivityNotificationWithAccessToken,
+    getActivityMatching,
     getMaxFriends,
     prepareActivity,
     findMatches,

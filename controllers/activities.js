@@ -58,96 +58,19 @@ function createActivity(req, res) {
 
 function getActivityMatching(req, res) {
     return new Promise(async (resolve, reject) => {
-        let activity_token = req.params.activity_token;
         let person_token = req.query.person_token;
+        let activity_token = req.params.activity_token;
 
         try {
-            if (!activity_token) {
-                res.json(
-                    {
-                        message: 'Activity token required',
-                    },
-                    400,
-                );
+            let matching = await activitiesService.getActivityMatching(person_token, activity_token);
 
-                return resolve();
-            }
-
-            let me = await getPerson(person_token);
-
-            if (!me) {
-                res.json(
-                    {
-                        message: 'person token not found',
-                    },
-                    400,
-                );
-
-                return resolve();
-            }
-
-            //ensure person exists on activity invite
-            let notification = await cacheService.hGetItem(
-                cacheService.keys.activities_notifications(activity_token),
-                person_token
-            );
-
-            if (!notification) {
-                res.json(
-                    {
-                        message: 'Activity does not include person',
-                    },
-                    400,
-                );
-
-                return resolve();
-            }
-
-            let cache_key = cacheService.keys.activities(notification.person_from_token);
-
-            let activity = await cacheService.hGetItem(cache_key, activity_token);
-
-            if (!activity) {
-                res.json(
-                    {
-                        error: 'Activity not found',
-                    },
-                    400,
-                );
-
-                return resolve();
-            }
-
-            activity.place = await getPlaceFSQ(activity.fsq_place_id);
-            activity.activity_type = await getActivityType(activity.activity_type_token);
-            activity.mode = await getModeById(activity.mode_id);
-
-            let person_from = await getPerson(notification.person_from_token);
-            let gender = await getGender(person_from.gender_id);
-
-            let matching = await personToPersonInterests(me, person_from);
-
-            res.json({
-                notification,
-                activity,
-                matching,
-                person: {
-                    gender,
-                    is_new: person_from.is_new,
-                    first_name: person_from.first_name,
-                    image_url: person_from.image_url,
-                    age: person_from.age,
-                    reviews: person_from.reviews,
-                },
-            });
+            res.json(matching);
         } catch (e) {
-            console.error(e);
-
             res.json(
                 {
-                    error: 'Error getting activity',
+                    error: e?.message,
                 },
-                400,
+                e?.status || 400,
             );
         }
 
@@ -184,7 +107,7 @@ function getActivityNotificationWithAccessToken(req, res) {
         let person_token = req.query.person_token;
 
         try {
-            let result = await activitiesService.getActivityNotificationWithAccessToken(activity_token, access_token, person_token);
+            let result = await activitiesService.getActivityNotificationWithAccessToken(activity_token, access_token, person_token, req);
 
             res.json(result);
         } catch(e) {
@@ -458,8 +381,6 @@ function getMatches(req, res) {
                 return resolve();
             }
 
-            //validate
-
             //modes
             let modes = await getModes();
             let mode = modes?.byToken[activity.person?.mode];
@@ -545,6 +466,7 @@ module.exports = {
     createActivity,
     getActivityNotification,
     getActivityNotificationWithAccessToken,
+    getActivityMatching,
     getMatches,
     putAcceptNotification,
     putAcceptNetworkNotification,
