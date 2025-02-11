@@ -1,7 +1,7 @@
 const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 
-const { getOptionDateTime, isNumeric, timeNow, generateToken } = require('./shared');
+const { getOptionDateTime, isNumeric, timeNow, generateToken, getURL, getIPAddr } = require('./shared');
 const { getModes, getModeById } = require('./modes');
 const { getActivityPlace, getPlaceFSQ } = require('./places');
 const { getNetworkSelf } = require('./network');
@@ -755,6 +755,143 @@ function getActivityNotification(activity_token, person_token) {
     });
 }
 
+function getActivityNotificationWithAccessToken(activity_token, access_token, person_token, req) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            if (typeof activity_token !== 'string') {
+                return reject({
+                    message: 'Activity token required',
+                    status: 400
+                });
+            }
+
+            if (typeof access_token !== 'string') {
+                return reject({
+                    message: 'Access token required',
+                    status: 400
+                });
+            }
+
+            if (typeof person_token !== 'string') {
+                return reject({
+                    message: 'Person token required',
+                    status: 400
+                });
+            }
+
+            const me = await getPerson(person_token);
+
+            if (!me) {
+                return reject({
+                    message: 'Person token not found',
+                    status: 400
+                });
+            }
+
+            const conn = await dbService.conn();
+
+            //access token check
+            const access_token_qry = await conn('activities_notifications AS an')
+                .join('persons AS p', 'p.id', '=', 'an.person_to_id')
+                .where('p.person_token', person_token)
+                .where('an.access_token', access_token)
+                .select('an.*', 'p.first_name', 'p.image_url')
+                .first();
+
+            if (!access_token_qry) {
+                return reject({
+                    message: 'Invalid activity person/access token',
+                    status: 401
+                });
+            }
+
+            //set access-token used if not previously set
+            if (!access_token_qry.access_token_used_at) {
+                await conn('activities_notifications')
+                    .where('id', access_token_qry.id)
+                    .update({
+                        access_token_used_at: timeNow(),
+                        access_token_ip: getIPAddr(req),
+                        updated: timeNow()
+                    });
+            }
+
+            //ensure person exists on activity invite
+            const notification = await cacheService.hGetItem(
+                cacheService.keys.activities_notifications(activity_token),
+                person_token
+            );
+
+            if (!notification) {
+                return reject({
+                    message: 'Activity does not include person',
+                    status: 400
+                });
+            }
+
+            const cache_key = cacheService.keys.activities(notification.person_from_token);
+            const activity = await cacheService.hGetItem(cache_key, activity_token);
+
+            if (!activity) {
+                return reject({
+                    message: 'Activity not found',
+                    status: 400
+                });
+            }
+
+            //enrich activity data
+            activity.place = await getPlaceFSQ(activity.fsq_place_id);
+            activity.activity_type = await getActivityType(activity.activity_type_token);
+            activity.mode = await getModeById(activity.mode_id);
+
+            //
+            const person_from = await getPerson(notification.person_from_token);
+            const gender = await getGender(person_from.gender_id);
+            const matching = await personToPersonInterests(me, person_from);
+            const networkSelf = await getNetworkSelf();
+
+            let first_name = null;
+            let image_url = null;
+
+            if (!access_token_qry.access_token_used_at) {
+                first_name = person_from.first_name;
+                image_url = person_from.image_url;
+            }
+
+            return resolve({
+                notification,
+                activity,
+                matching,
+                person: {
+                    gender,
+                    first_name,
+                    image_url,
+                    is_new: person_from.is_new,
+                    age: person_from.age,
+                    reviews: person_from.reviews,
+                },
+                access: {
+                    token: access_token,
+                    domain: getURL(networkSelf.api_domain)
+                },
+                network: {
+                    token: networkSelf.network_token,
+                    name: networkSelf.network_name,
+                    icon: networkSelf.app_icon,
+                    website: getURL(networkSelf.base_domain),
+                    verified: networkSelf.is_verified
+                }
+            });
+        } catch (e) {
+            console.error(e);
+            return reject({
+                message: 'Error getting activity',
+                status: 400
+            });
+        }
+    });
+}
+
 function isActivityTypeExcluded(activity, filter) {
     if (!filter?.is_active) {
         return false;
@@ -894,6 +1031,7 @@ module.exports = {
     getPersonActivities,
     getActivitySpots,
     getActivityNotification,
+    getActivityNotificationWithAccessToken,
     getMaxFriends,
     prepareActivity,
     findMatches,

@@ -8,7 +8,6 @@ const activitiesService = require('./activities');
 const cacheService = require('./cache');
 const dbService = require('./db');
 const { getNetworkSelf, getNetworksLookup, getSecretKeyToForNetwork, getNetwork } = require('./network');
-const { doesActivityOverlap } = require('./activities');
 const { getPerson } = require('./persons');
 
 
@@ -552,7 +551,7 @@ function acceptNotification(person, activity_token) {
             let personActivities = await cacheService.hGetAllObj(person_activity_cache_key);
 
             //prevent accepting if person accepted a different activity during the same time
-            let activity_overlaps = await doesActivityOverlap(person.person_token, {
+            let activity_overlaps = await activitiesService.doesActivityOverlap(person.person_token, {
                 start: activity_data.activity_start,
                 end: activity_data.activity_end,
             }, personActivities);

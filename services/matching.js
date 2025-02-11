@@ -33,7 +33,6 @@ const { getActivityPlace } = require('./places');
 const { getLanguages } = require('./languages');
 
 const { getPayload } = require('./notifications');
-const { doesActivityOverlap } = require('./activities');
 const { getGridById } = require('./grid');
 
 const DEFAULT_DISTANCE_MILES = 20;
@@ -2577,7 +2576,7 @@ function filterMatches(person, activity, matches) {
                     const activityStart = activity.when?.data?.start;
                     const activityEnd = activity.when?.data?.end;
 
-                    let activity_overlaps = await doesActivityOverlap(person.person_token, {
+                    let activity_overlaps = await activitiesService.doesActivityOverlap(person.person_token, {
                         start: activityStart,
                         end: activityEnd
                     }, personActivities);
