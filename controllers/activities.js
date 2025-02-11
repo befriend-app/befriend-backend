@@ -180,6 +180,8 @@ function putAcceptNetworkNotification(req, res) {
         let activity_token = req.params.activity_token;
         let access_token = req.params.access_token;
         let person_token = req.body.person_token;
+        let first_name = req.body.first_name;
+        let image_url = req.body.image_url;
 
         try {
             let errors = [];
@@ -201,7 +203,7 @@ function putAcceptNetworkNotification(req, res) {
                 return resolve();
             }
 
-            // Validate access token
+            //validate access token
             let conn = await dbService.conn();
 
             let access_token_qry = await conn('activities_notifications AS an')
@@ -219,7 +221,9 @@ function putAcceptNetworkNotification(req, res) {
             try {
                 let result = await acceptNotification({
                     id: access_token_qry.person_id,
-                    person_token
+                    person_token,
+                    first_name,
+                    image_url
                 }, activity_token);
 
                 res.json(result);

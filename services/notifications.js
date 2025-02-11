@@ -575,7 +575,10 @@ function acceptNotification(person, activity_token) {
 
             let pipeline = cacheService.startPipeline();
 
-            activity_data.persons[person.person_token] = {};
+            activity_data.persons[person.person_token] = {
+                first_name: person.first_name || null,
+                image_url: person.image_url || null
+            };
 
             activity_data.spots_available = spots.available;
 
@@ -602,6 +605,22 @@ function acceptNotification(person, activity_token) {
                 created: time,
                 updated: time
             };
+
+            //add access token and first_name/image for 3rd party network acceptance
+            if (network_self.id !== notification.person_to_network_id) {
+                //access token
+                person_activity_insert.access_token = generateToken(16);
+
+                //first name
+                if(person.first_name) {
+                    person_activity_insert.first_name = person.first_name;
+                }
+
+                //image url
+                if(person.image_url) {
+                    person_activity_insert.image_url = person.image_url;
+                }
+            }
 
             let person_activity_id = await conn('activities_persons')
                 .insert(person_activity_insert);
@@ -683,12 +702,40 @@ function acceptNotification(person, activity_token) {
                         try {
                             let url = getURL(network.api_domain, `networks/activities/${activity_token}/notification/accept`);
 
-                            await axios.put(url, {
+                            let r = await axios.put(url, {
                                 network_token: network_self.network_token,
                                 secret_key: secret_key_to,
                                 person_token: person.person_token,
+                                access_token: person_activity_insert.access_token,
                                 accepted_at: time
                             });
+
+                            if(r.status === 202) {
+                                //update db/cache with server-side first_name/image_url if different from client data
+                                let update = {};
+
+                                if(r.data.first_name && r.data.first_name !== person.first_name) {
+                                    update.first_name = r.data.first_name;
+                                }
+
+                                if(r.data.image_url && r.data.image_url !== person.image_url) {
+                                    update.image_url = r.data.image_url;
+                                }
+
+                                if(Object.keys(update).length) {
+                                    await conn('activities_persons')
+                                        .where('id', person_activity_id)
+                                        .update({
+                                            ...update,
+                                            updated: timeNow()
+                                        });
+
+                                    await cacheService.hSet(person_activity_cache_key, activity_token, {
+                                        ...person_activity_insert,
+                                        ...update
+                                    });
+                                }
+                            }
                         } catch(e) {
                             console.error(e);
                         }

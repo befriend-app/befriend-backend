@@ -85,10 +85,11 @@ module.exports = {
             let from_network = req.from_network;
             let activity_token = req.params.activity_token;
             let person_token = req.body.person_token;
+            let access_token = req.body.access_token;
             let accepted_at = req.body.accepted_at;
 
             try {
-                let response = await networksNotificationsService.acceptNotification(from_network, activity_token, person_token, accepted_at);
+                let response = await networksNotificationsService.acceptNotification(from_network, activity_token, person_token, access_token, accepted_at);
 
                 res.json(response, 202);
             } catch (e) {

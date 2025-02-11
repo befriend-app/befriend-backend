@@ -109,7 +109,9 @@ function createActivity(person, activity) {
 
             activity_insert.persons = {
                 [person.person_token]: {
-                    is_creator: true
+                    is_creator: true,
+                    first_name: person.first_name,
+                    image_url: person.image_url
                 }
             }
 

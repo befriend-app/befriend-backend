@@ -477,7 +477,7 @@ module.exports = {
             }
         });
     },
-    acceptNotification: function(from_network, activity_token, person_token, accepted_at) {
+    acceptNotification: function(from_network, activity_token, person_token, access_token, accepted_at) {
         return new Promise(async (resolve, reject) => {
             let debug_enabled = require('../../dev/debug').activities.accept;
 
@@ -575,6 +575,7 @@ module.exports = {
                     }
 
                     let person_activity_insert = {
+                        access_token,
                         activity_id: activity.id,
                         person_id: person.id,
                         is_creator: false,
@@ -591,6 +592,10 @@ module.exports = {
                         person_from_token: notification.person_from_token,
                         activity_start: activity.activity_start,
                         activity_end: activity.activity_end,
+                        access: {
+                            token: access_token,
+                            domain: getURL(from_network.api_domain)
+                        }
                     }
 
                     let pipeline = cacheService.startPipeline();
@@ -602,6 +607,8 @@ module.exports = {
                     await cacheService.execPipeline(pipeline);
 
                     return resolve({
+                        first_name: person.first_name,
+                        image_url: person.image_url,
                         success: true
                     });
                 }
