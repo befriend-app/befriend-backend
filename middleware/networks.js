@@ -13,12 +13,12 @@ module.exports = function (req, res, next) {
         let secret_key = req.body.secret_key || req.query.secret_key;
 
         try {
-            if (!network_token) {
+            if (typeof network_token !== 'string') {
                 res.json('network_token required', 401);
                 return resolve();
             }
 
-            if(!secret_key) {
+            if(typeof secret_key !== 'string') {
                 res.json('secret key required', 401);
                 return resolve();
             }
