@@ -6,6 +6,8 @@ module.exports = {
     cache_key: 'genders',
     getGender: function (gender_id) {
         return new Promise(async (resolve, reject) => {
+            gender_id = parseInt(gender_id);
+
             try {
                 let genders = await module.exports.getAllGenders();
 

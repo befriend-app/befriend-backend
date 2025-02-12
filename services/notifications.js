@@ -640,6 +640,72 @@ function acceptNotification(person, activity_token) {
 
             await cacheService.hSet(person_activity_cache_key, activity_token, person_activity_insert);
 
+            //notify 3rd party network of acceptance
+            if (network_self.id !== notification.person_to_network_id) {
+                try {
+                    let network = await getNetwork(notification.person_to_network_id);
+                    let secret_key_to = await getSecretKeyToForNetwork(notification.person_to_network_id);
+
+                    if(network && secret_key_to) {
+                        try {
+                            let url = getURL(network.api_domain, `networks/activities/${activity_token}/notification/accept`);
+
+                            let r = await axios.put(url, {
+                                network_token: network_self.network_token,
+                                secret_key: secret_key_to,
+                                person_token: person.person_token,
+                                access_token: person_activity_insert.access_token,
+                                accepted_at: time
+                            }, {
+                                timeout: 1000
+                            });
+
+                            if(r.status === 202) {
+                                //update db/cache with server-side first_name/image_url if different from client data
+                                let update = {};
+
+                                if(r.data.first_name && r.data.first_name !== person.first_name) {
+                                    update.first_name = r.data.first_name;
+                                }
+
+                                if(r.data.image_url && r.data.image_url !== person.image_url) {
+                                    update.image_url = r.data.image_url;
+                                }
+
+                                if(Object.keys(update).length) {
+                                    await conn('activities_persons')
+                                        .where('id', person_activity_id)
+                                        .update({
+                                            ...update,
+                                            updated: timeNow()
+                                        });
+
+                                    let pipeline = cacheService.startPipeline();
+
+                                    activity_data.persons[person.person_token] = {
+                                        first_name: update.first_name || person.first_name || null,
+                                        image_url: update.image_url || person.image_url || null
+                                    };
+
+                                    pipeline.hSet(person_activity_cache_key, activity_token, JSON.stringify({
+                                        ...person_activity_insert,
+                                        ...update
+                                    }));
+
+                                    pipeline.hSet(activity_cache_key, activity_token, JSON.stringify(activity_data));
+
+                                    await cacheService.execPipeline(pipeline);
+                                }
+                            }
+                        } catch(e) {
+                            console.error(e);
+                        }
+                    }
+                } catch(e) {
+                    console.error(e);
+                }
+            }
+
             //notify all persons on my network that accepted this activity with most recent data
             let personsData = {};
 
@@ -665,6 +731,7 @@ function acceptNotification(person, activity_token) {
                 }
 
                 let person_notification = notifications[person_token];
+
                 let is_own_network = person_token === notification.person_from_token || person_notification?.person_to_network_id === network_self.id;
 
                 if(!is_own_network) {
@@ -689,62 +756,10 @@ function acceptNotification(person, activity_token) {
 
                 cacheService.publishWS('activities', person_token, {
                     activity_token,
+                    persons: activity_data.persons,
                     matching,
                     spots
                 });
-            }
-
-            //notify 3rd party network of acceptance
-            if (network_self.id !== notification.person_to_network_id) {
-                try {
-                    let network = await getNetwork(notification.person_to_network_id);
-                    let secret_key_to = await getSecretKeyToForNetwork(notification.person_to_network_id);
-
-                    if(network && secret_key_to) {
-                        try {
-                            let url = getURL(network.api_domain, `networks/activities/${activity_token}/notification/accept`);
-
-                            let r = await axios.put(url, {
-                                network_token: network_self.network_token,
-                                secret_key: secret_key_to,
-                                person_token: person.person_token,
-                                access_token: person_activity_insert.access_token,
-                                accepted_at: time
-                            });
-
-                            if(r.status === 202) {
-                                //update db/cache with server-side first_name/image_url if different from client data
-                                let update = {};
-
-                                if(r.data.first_name && r.data.first_name !== person.first_name) {
-                                    update.first_name = r.data.first_name;
-                                }
-
-                                if(r.data.image_url && r.data.image_url !== person.image_url) {
-                                    update.image_url = r.data.image_url;
-                                }
-
-                                if(Object.keys(update).length) {
-                                    await conn('activities_persons')
-                                        .where('id', person_activity_id)
-                                        .update({
-                                            ...update,
-                                            updated: timeNow()
-                                        });
-
-                                    await cacheService.hSet(person_activity_cache_key, activity_token, {
-                                        ...person_activity_insert,
-                                        ...update
-                                    });
-                                }
-                            }
-                        } catch(e) {
-                            console.error(e);
-                        }
-                    }
-                } catch(e) {
-                    console.error(e);
-                }
             }
 
             let notify_networks = {};

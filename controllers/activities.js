@@ -56,13 +56,13 @@ function createActivity(req, res) {
     });
 }
 
-function getActivityMatching(req, res) {
+function getActivity(req, res) {
     return new Promise(async (resolve, reject) => {
         let person_token = req.query.person_token;
         let activity_token = req.params.activity_token;
 
         try {
-            let matching = await activitiesService.getActivityMatching(person_token, activity_token);
+            let matching = await activitiesService.getActivity(person_token, activity_token);
 
             res.json(matching);
         } catch (e) {
@@ -470,7 +470,7 @@ module.exports = {
     createActivity,
     getActivityNotification,
     getActivityNotificationWithAccessToken,
-    getActivityMatching,
+    getActivity,
     getMatches,
     putAcceptNotification,
     putAcceptNetworkNotification,

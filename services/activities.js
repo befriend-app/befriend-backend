@@ -3,10 +3,11 @@ const dbService = require('../services/db');
 
 const { getOptionDateTime, isNumeric, timeNow, generateToken, getURL, getIPAddr } = require('./shared');
 const { getModes, getModeById } = require('./modes');
-const { getActivityPlace, getPlaceFSQ } = require('./places');
+const { getActivityPlace } = require('./places');
 const { getNetworkSelf } = require('./network');
 const { getPerson } = require('./persons');
-const { getGender } = require('./genders');
+const { getGender, getGenderByToken } = require('./genders');
+const { getPlaceData } = require('./fsq');
 
 let debug_create_activity_enabled = require('../dev/debug').activities.create;
 
@@ -721,7 +722,7 @@ function getActivityNotification(activity_token, person_token) {
                 });
             }
 
-            activity.place = await getPlaceFSQ(activity.fsq_place_id);
+            activity.place = await getPlaceData(activity.fsq_place_id);
 
             activity.activity_type = await getActivityType(activity.activity_type_token);
 
@@ -841,7 +842,7 @@ function getActivityNotificationWithAccessToken(activity_token, access_token, pe
             }
 
             //enrich activity data
-            activity.place = await getPlaceFSQ(activity.fsq_place_id);
+            activity.place = await getPlaceData(activity.fsq_place_id);
             activity.activity_type = await getActivityType(activity.activity_type_token);
             activity.mode = await getModeById(activity.mode_id);
 
@@ -892,8 +893,10 @@ function getActivityNotificationWithAccessToken(activity_token, access_token, pe
     });
 }
 
-function getActivityMatching(person_token, activity_token) {
+function getActivity(person_token, activity_token) {
     return new Promise(async (resolve, reject) => {
+        let spots = {}, place = {}, matching = {};
+
         try {
             if (typeof activity_token !== 'string') {
                 return reject({
@@ -935,27 +938,71 @@ function getActivityMatching(person_token, activity_token) {
                 });
             }
 
-            let matching = {};
+            if(activity.mode_id) {
+                activity.mode = await getModeById(activity.mode_id);
+            }
 
+            spots = {
+                available: activity.spots_available,
+                accepted: activity.persons_qty - activity.spots_available
+            };
+
+            place = await getPlaceData(activity.fsq_place_id);
+
+            let pipeline = cacheService.startPipeline();
+
+            //get person attributes and matching data
             for(let _person_token in activity.persons) {
                 if(_person_token === person_token) {
                     continue;
                 }
 
                 try {
-                    let person_b = await getPerson(_person_token);
+                    pipeline.hmGet(cacheService.keys.person(_person_token), [
+                        'age',
+                        'gender_id'
+                    ])
 
-                    if(!person_b) {
-                        continue;
-                    }
-
-                    matching[_person_token] = await require('../services/matching').personToPersonInterests(me, person_b);
+                    matching[_person_token] = await require('../services/matching').personToPersonInterests(me, {
+                        person_token: _person_token
+                    });
                 } catch(e) {
                     console.error(e);
                 }
             }
 
-            resolve(matching);
+            let results = await cacheService.execPipeline(pipeline);
+
+            let idx = 0;
+
+            //merge results into persons object
+            for(let _person_token in (activity.persons || {})) {
+                if(_person_token === person_token) {
+                    continue;
+                }
+
+                let result = results[idx++];
+
+                let gender = await getGender(result[1]);
+
+                activity.persons[_person_token] = {
+                    ...activity.persons[_person_token],
+                    age: result[0] ? parseInt(result[0]) : null,
+                    gender
+                }
+            }
+
+            let organized = {
+                ...person_activity,
+                data: {
+                    ...activity,
+                    place,
+                    spots,
+                    matching
+                }
+            }
+
+            resolve(organized);
         } catch (e) {
             console.error(e);
 
@@ -1099,6 +1146,7 @@ module.exports = {
         },
     },
     createActivity,
+    getActivity,
     getActivityTypes,
     getActivityTypesMapping,
     getActivityType,
@@ -1107,7 +1155,6 @@ module.exports = {
     getActivitySpots,
     getActivityNotification,
     getActivityNotificationWithAccessToken,
-    getActivityMatching,
     getMaxFriends,
     prepareActivity,
     findMatches,
