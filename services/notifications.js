@@ -9,6 +9,7 @@ const cacheService = require('./cache');
 const dbService = require('./db');
 const { getNetworkSelf, getNetworksLookup, getSecretKeyToForNetwork, getNetwork } = require('./network');
 const { getPerson } = require('./persons');
+const { getGender } = require('./genders');
 
 
 let notification_groups = {
@@ -639,6 +640,32 @@ function acceptNotification(person, activity_token) {
             }
 
             await cacheService.hSet(person_activity_cache_key, activity_token, person_activity_insert);
+
+            pipeline = cacheService.startPipeline();
+
+            for(let _person_token in activity_data.persons) {
+                pipeline.hmGet(cacheService.keys.person(_person_token), [
+                    'age',
+                    'gender_id'
+                ])
+            }
+
+            let results = await cacheService.execPipeline(pipeline);
+
+            let idx = 0;
+
+            //merge results into persons object
+            for(let _person_token in (activity_data.persons || {})) {
+                let result = results[idx++];
+
+                let gender = await getGender(result[1]);
+
+                activity_data.persons[_person_token] = {
+                    ...activity_data.persons[_person_token],
+                    age: result[0] ? parseInt(result[0]) : null,
+                    gender
+                }
+            }
 
             //notify 3rd party network of acceptance
             if (network_self.id !== notification.person_to_network_id) {
