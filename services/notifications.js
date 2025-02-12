@@ -665,7 +665,8 @@ function acceptNotification(person, activity_token) {
                     ...activity_data.persons[_person_token],
                     gender,
                     age: result[0] ? parseInt(result[0]) : null,
-                    is_new: !!(result[2] && isNumeric(result[2]) && parseInt(result[2]))
+                    is_new: !!(result[2] && isNumeric(result[2]) && parseInt(result[2])),
+                    reviews: JSON.parse(result[3])
                 }
             }
 
