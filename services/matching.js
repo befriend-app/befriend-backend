@@ -2327,10 +2327,6 @@ function filterMatches(person, activity, matches) {
 
                 if (match.networks.includes(my_network.network_token)) {
                     if (match.device?.platform && match.device.token) {
-                        if(debug_enabled) {
-                            match.device.token = await getTmpDeviceToken();
-                        }
-
                         organized_matches.set(match.person_token, match)
                     }
                 } else {
@@ -2456,12 +2452,16 @@ function filterMatches(person, activity, matches) {
     async function getTmpPerson() {
         let conn = await dbService.conn();
 
-        let persons = await conn('persons')
-            .orderBy('id')
+        let persons = await conn('persons AS p')
+            .join('networks AS n', 'n.id', '=', 'p.registration_network_id')
+            .orderBy('p.id')
             .offset(1)
-            .limit(3);
+            .limit(3)
+            .select('p.*', 'n.network_token');
 
         let person = persons[_tmp_person_int];
+
+        person.networks = [person.network_token];
 
         _tmp_person_int++;
 
@@ -2472,7 +2472,7 @@ function filterMatches(person, activity, matches) {
         return person;
     }
 
-    async function getTmpDeviceToken() {
+    async function getTmpDevice() {
         let conn = await dbService.conn();
 
         let devices = await conn('persons_devices')
@@ -2480,7 +2480,7 @@ function filterMatches(person, activity, matches) {
             .orderBy('person_id')
             .limit(3);
 
-        let token = devices[_tmp_device_int].token;
+        let device = devices[_tmp_device_int];
 
         _tmp_device_int++;
 
@@ -2488,7 +2488,7 @@ function filterMatches(person, activity, matches) {
             _tmp_device_int = 0;
         }
 
-        return token;
+        return device;
     }
 
     return new Promise(async (resolve, reject) => {
@@ -2643,8 +2643,15 @@ function filterMatches(person, activity, matches) {
             for(let match of filtered_matches) {
                 let data = await getTmpPerson();
 
+                match.networks = data.networks;
                 match.person_id = data.id;
                 match.person_token = data.person_token;
+
+                let device = await getTmpDevice();
+
+                if(match.networks.includes(my_network.network_token)) {
+                    match.device = device;
+                }
             }
         }
 

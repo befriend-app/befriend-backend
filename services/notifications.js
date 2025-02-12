@@ -189,7 +189,7 @@ function notifyMatches(me, activity, matches) {
 
             activityCopy.spots = spots;
 
-            let {platforms, notify_networks_persons} = organizeGroupSend(group, payload);
+            let { platforms, notify_networks_persons } = organizeGroupSend(group, payload);
 
             //send notifications
             if (Object.keys(platforms.ios.tokens).length) {
@@ -458,6 +458,8 @@ function notifyMatches(me, activity, matches) {
             conn = await dbService.conn();
             my_network = await getNetworkSelf();
             networksLookup = await getNetworksLookup();
+
+            payload = getPayload(my_network, me, activity);
         } catch(e) {
             console.error(e);
             return reject(e);
