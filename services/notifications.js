@@ -647,7 +647,8 @@ function acceptNotification(person, activity_token) {
                 pipeline.hmGet(cacheService.keys.person(_person_token), [
                     'age',
                     'gender_id',
-                    'is_new'
+                    'is_new',
+                    'reviews'
                 ])
             }
 
