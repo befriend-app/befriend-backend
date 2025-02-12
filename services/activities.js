@@ -960,7 +960,8 @@ function getActivity(person_token, activity_token) {
                 try {
                     pipeline.hmGet(cacheService.keys.person(_person_token), [
                         'age',
-                        'gender_id'
+                        'gender_id',
+                        'is_new'
                     ])
 
                     matching[_person_token] = await require('../services/matching').personToPersonInterests(me, {
@@ -987,8 +988,9 @@ function getActivity(person_token, activity_token) {
 
                 activity.persons[_person_token] = {
                     ...activity.persons[_person_token],
+                    gender,
                     age: result[0] ? parseInt(result[0]) : null,
-                    gender
+                    is_new: !!(result[2] && isNumeric(result[2]) && parseInt(result[2]))
                 }
             }
 

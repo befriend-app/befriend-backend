@@ -2,7 +2,7 @@ const axios = require('axios');
 const http2 = require('http2');
 const jwt = require('jsonwebtoken');
 
-const { timeNow, generateToken, getURL } = require('./shared');
+const { timeNow, generateToken, getURL, isNumeric } = require('./shared');
 
 const activitiesService = require('./activities');
 const cacheService = require('./cache');
@@ -646,7 +646,8 @@ function acceptNotification(person, activity_token) {
             for(let _person_token in activity_data.persons) {
                 pipeline.hmGet(cacheService.keys.person(_person_token), [
                     'age',
-                    'gender_id'
+                    'gender_id',
+                    'is_new'
                 ])
             }
 
@@ -662,8 +663,9 @@ function acceptNotification(person, activity_token) {
 
                 activity_data.persons[_person_token] = {
                     ...activity_data.persons[_person_token],
+                    gender,
                     age: result[0] ? parseInt(result[0]) : null,
-                    gender
+                    is_new: !!(result[2] && isNumeric(result[2]) && parseInt(result[2]))
                 }
             }
 
