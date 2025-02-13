@@ -79,5 +79,17 @@ router.put('/activities/:activity_token/notification/decline', function (req, re
     });
 });
 
+router.put('/activities/:activity_token', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await networksApiController.putActivity(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
 
 module.exports = router;

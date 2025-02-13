@@ -915,6 +915,10 @@ function isNumeric(val) {
     return !isNaN(parseFloat(val)) && isFinite(val);
 }
 
+function isObject(value) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
 function isProdApp() {
     return process.env.APP_ENV && process.env.APP_ENV.includes('prod');
 }
@@ -1288,6 +1292,7 @@ module.exports = {
     isNumeric: isNumeric,
     isProdApp: isProdApp,
     isIPAddress: isIPAddress,
+    isObject,
     isValidEmail: isValidEmail,
     isValidUserName: isValidUserName,
     joinPaths: joinPaths,

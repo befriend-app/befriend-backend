@@ -738,7 +738,11 @@ function acceptNotification(person, activity_token) {
             }
 
             //notify all persons on my network that accepted this activity with most recent data
+            //organize network update with persons->accepted
+
             let personsData = {};
+            let personsMatching = {};
+            let networksSendPersons = new Set();
 
             for(let person_token in activity_data.persons) {
                 try {
@@ -765,10 +769,6 @@ function acceptNotification(person, activity_token) {
 
                 let is_own_network = person_token === notification.person_from_token || person_notification?.person_to_network_id === network_self.id;
 
-                if(!is_own_network) {
-                    continue;
-                }
-
                 let matching = {};
 
                 for(let _person_token in activity_data.persons) {
@@ -785,12 +785,18 @@ function acceptNotification(person, activity_token) {
                     matching[_person_token] = await require('../services/matching').personToPersonInterests(person_a, person_b);
                 }
 
-                cacheService.publishWS('activities', person_token, {
-                    activity_token,
-                    persons: activity_data.persons,
-                    matching,
-                    spots
-                });
+                personsMatching[person_token] = matching;
+
+                if(is_own_network) {
+                    cacheService.publishWS('activities', person_token, {
+                        activity_token,
+                        persons: activity_data.persons,
+                        matching,
+                        spots
+                    });
+                } else { //send persons to this 3rd-party network
+                    networksSendPersons.add(person_notification.person_to_network_id);
+                }
             }
 
             let notify_networks = {};
@@ -842,6 +848,8 @@ function acceptNotification(person, activity_token) {
                                 network_token: network_self.network_token,
                                 secret_key: secret_key_to,
                                 spots
+                            }, {
+                                timeout: 1000
                             }));
                         } catch(e) {
                             console.error(e);
@@ -854,6 +862,43 @@ function acceptNotification(person, activity_token) {
                 }
             } catch(e) {
                 console.error(e);
+            }
+
+            //send persons data to networks
+            if(networksSendPersons.size) {
+                try {
+                    let ps = [];
+
+                    for(let network_id of networksSendPersons) {
+                        let network_to = networksLookup.byId[network_id];
+
+                        let secret_key_to = await getSecretKeyToForNetwork(network_to.id);
+
+                        if(secret_key_to) {
+                            try {
+                                let url = getURL(network_to.api_domain, `/networks/activities/${activity_token}`);
+
+                                ps.push(axios.put(url, {
+                                    network_token: network_self.network_token,
+                                    secret_key: secret_key_to,
+                                    persons: activity_data.persons,
+                                    matching: personsMatching,
+                                    spots
+                                }, {
+                                    // timeout: 1000
+                                }));
+                            } catch(e) {
+                                console.error(e);
+                            }
+                        }
+                    }
+
+                    if(ps.length) {
+                        await Promise.allSettled(ps);
+                    }
+                } catch(e) {
+                    console.error(e);
+                }
             }
 
             resolve({

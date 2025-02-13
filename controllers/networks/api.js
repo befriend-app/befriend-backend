@@ -120,5 +120,25 @@ module.exports = {
                 }
             }
         });
-    }
+    },
+    putActivity: function(req, res) {
+        return new Promise(async (resolve, reject) => {
+            let from_network = req.from_network;
+            let activity_token = req.params.activity_token;
+            let data = req.body;
+
+            try {
+                let response = await networksNotificationsService.updateActivity(from_network, activity_token, data);
+
+                res.json(response, 202);
+            } catch (e) {
+                if (e?.message) {
+                    res.json(e.message, 400);
+                } else {
+                    res.json('Error updating activity', 400);
+                }
+            }
+        });
+    },
+
 };

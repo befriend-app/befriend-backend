@@ -6,7 +6,7 @@ const notificationsService = require('../../services/notifications');
 const { getNetworkSelf } = require('../../services/network');
 
 const { timeNow } = require('../../services/shared');
-const { isNumeric, getURL } = require('../shared');
+const { isNumeric, getURL, isObject } = require('../shared');
 const { getActivityType, doesActivityOverlap } = require('../activities');
 const { getModeByToken } = require('../modes');
 const { getPerson } = require('../persons');
@@ -425,11 +425,15 @@ module.exports = {
         return new Promise(async (resolve, reject) => {
             try {
                 if(typeof activity_token !== 'string') {
-                    return reject("Invalid activity token");
+                    return reject({
+                        message: 'Invalid activity token'
+                    });
                 }
 
                 if(!spots || typeof spots !== 'object' || !(isNumeric(spots.available))) {
-                    return reject("Invalid spots");
+                    return reject({
+                        message: 'Invalid spots'
+                    });
                 }
 
                  let conn = await dbService.conn();
@@ -442,7 +446,9 @@ module.exports = {
                      .first();
 
                  if(!activity_check) {
-                     return reject("Activity not found");
+                     return reject({
+                         message: 'Activity not found'
+                     });
                  }
 
                 let cache_key = cacheService.keys.activities(activity_check.person_from_token);
@@ -724,6 +730,84 @@ module.exports = {
                     message: 'Activity notification status could not be updated'
                 });
             } catch (e) {
+                console.error(e);
+                return reject(e);
+            }
+        });
+    },
+    updateActivity: function(from_network, activity_token, activity_data) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                if(typeof activity_token !== 'string') {
+                    return reject({
+                        message: 'Invalid activity token'
+                    });
+                }
+
+                if(!isObject(activity_data)) {
+                    return reject({
+                        message: 'Invalid update data'
+                    });
+                }
+
+                let { persons, matching, spots } = activity_data;
+
+                if(!isObject(persons) || !isObject(matching) || !isObject(spots)) {
+                    return reject({
+                        message: 'Invalid activity object format'
+                    });
+                }
+
+                let conn = await dbService.conn();
+
+                let activity_check = await conn('activities AS a')
+                    .join('persons AS p', 'a.person_id', '=', 'p.id')
+                    .where('network_id', from_network.id)
+                    .where('activity_token', activity_token)
+                    .select('a.*', 'p.person_token AS person_from_token')
+                    .first();
+
+                if(!activity_check) {
+                    return reject({
+                        message: 'Activity not found'
+                    });
+                }
+
+                let cache_key = cacheService.keys.activities(activity_check.person_from_token);
+
+                let cache_activity = await cacheService.hGetItem(cache_key, activity_token);
+
+                if(cache_activity) {
+                    cache_activity.persons = persons;
+
+                    await cacheService.hSet(cache_key, activity_token, cache_activity);
+                }
+
+                let network_self = await getNetworkSelf();
+
+                let notification_persons = await conn('activities_notifications AS an')
+                    .join('persons AS p', 'p.id', '=', 'an.person_to_id')
+                    .where('activity_id', activity_check.id)
+                    .where('person_to_network_id', network_self.id)
+                    .select('person_token');
+
+                for(let person of notification_persons) {
+                    if(!(person.person_token in persons)) {
+                        continue;
+                    }
+
+                    let personMatching = matching[person.person_token];
+
+                    cacheService.publishWS('activities', person.person_token, {
+                        activity_token,
+                        matching: personMatching,
+                        persons,
+                        spots
+                    });
+                }
+
+                resolve();
+            } catch(e) {
                 console.error(e);
                 return reject(e);
             }
