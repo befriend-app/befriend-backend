@@ -6,7 +6,6 @@ let home_dir = __dirname;
 
 let app_name = slugify(process.env.NETWORK_NAME || 'befriend');
 
-
 module.exports = {
     apps: [
         {
