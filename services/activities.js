@@ -722,6 +722,8 @@ function getActivityNotification(activity_token, person_token) {
                 });
             }
 
+            notification.activity_token = activity_token;
+
             activity.place = await getPlaceData(activity.fsq_place_id);
 
             activity.activity_type = await getActivityType(activity.activity_type_token);
@@ -735,6 +737,7 @@ function getActivityNotification(activity_token, person_token) {
             let matching = await require('./matching').personToPersonInterests(me, person_from);
 
             return resolve({
+                activity_token,
                 notification,
                 activity,
                 matching,
@@ -831,6 +834,7 @@ function getActivityNotificationWithAccessToken(activity_token, access_token, pe
                 });
             }
 
+            notification.activity_token = activity_token;
             const cache_key = cacheService.keys.activities(notification.person_from_token);
             const activity = await cacheService.hGetItem(cache_key, activity_token);
 
@@ -860,6 +864,7 @@ function getActivityNotificationWithAccessToken(activity_token, access_token, pe
             }
 
             return resolve({
+                activity_token,
                 notification,
                 activity,
                 matching,

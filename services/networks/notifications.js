@@ -78,7 +78,11 @@ module.exports = {
                         }
 
                         batch_insert.push(insert);
-                        pipeline.hSet(cacheService.keys.persons_notifications(to_person.person_to_token), activity.activity_token, JSON.stringify(insert));
+
+                        let insertCopy = structuredClone(insert);
+
+                        insertCopy.person_from_token = person_from_token;
+                        pipeline.hSet(cacheService.keys.persons_notifications(to_person.person_to_token), activity.activity_token, JSON.stringify(insertCopy));
                     }
 
                     if (batch_insert.length) {

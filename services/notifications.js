@@ -10,6 +10,7 @@ const dbService = require('./db');
 const { getNetworkSelf, getNetworksLookup, getSecretKeyToForNetwork, getNetwork } = require('./network');
 const { getPerson } = require('./persons');
 const { getGender } = require('./genders');
+const { hGetAllObj } = require('./cache');
 
 
 let notification_groups = {
@@ -224,7 +225,6 @@ function notifyMatches(me, activity, matches) {
             try {
                 let batch_insert = [];
                 let to_persons = [];
-                let pipeline = cacheService.startPipeline();
 
                 let results = await sendIOSBatch(
                     ios.tokens,
@@ -283,6 +283,8 @@ function notifyMatches(me, activity, matches) {
                 if (batch_insert.length) {
                     await dbService.batchInsert('activities_notifications', batch_insert, true);
 
+                    let pipeline = cacheService.startPipeline();
+
                     for (let i = 0; i < batch_insert.length; i++) {
                         let insert = batch_insert[i];
                         let to_person = to_persons[i];
@@ -296,7 +298,7 @@ function notifyMatches(me, activity, matches) {
                             JSON.stringify(insert)
                         );
 
-                        let person_notifications_cache_key = cacheService.keys.persons_notifications(to_person.person_to_token);
+                        let person_notifications_cache_key = cacheService.keys.persons_notifications(to_person.person_token);
 
                         pipeline.hSet(
                             person_notifications_cache_key,
@@ -500,6 +502,57 @@ function notifyMatches(me, activity, matches) {
         }
 
         resolve();
+    });
+}
+
+function getPersonNotifications(person) {
+    return new Promise(async (resolve, reject) => {
+        let person_notification_cache_key = cacheService.keys.persons_notifications(person.person_token);
+
+        try {
+             let notifications = (await hGetAllObj(person_notification_cache_key) || {});
+
+             if(Object.keys(notifications).length) {
+                 let network_self = await getNetworkSelf();
+
+                 let pipeline = cacheService.startPipeline();
+
+                 for(let activity_token in notifications) {
+                     let activity = notifications[activity_token];
+                     pipeline.hGet(cacheService.keys.activities(activity.person_from_token), activity_token);
+                 }
+
+                 let results = await cacheService.execPipeline(pipeline);
+
+                 let idx = 0;
+
+                 for(let activity_token in notifications) {
+                     try {
+                         let activity = notifications[activity_token];
+                         activity.activity_token = activity_token;
+
+                         activity.activity = JSON.parse(results[idx++]);
+
+                         //add access token if 3rd party network
+                         if(activity.person_from_network_id !== network_self.id) {
+                             let network_to = await getNetwork(activity.person_from_network_id);
+
+                             activity.access = {
+                                 token: activity.access_token,
+                                 domain: getURL(network_to.api_domain)
+                             }
+                         }
+                     } catch(e) {
+                         console.error(e);
+                     }
+                 }
+             }
+
+             resolve(notifications);
+        } catch(e) {
+            console.error(e);
+            return reject();
+        }
     });
 }
 
@@ -1356,6 +1409,7 @@ function sendIOSBatch(devicesTokensPayloads, time_sensitive) {
 module.exports = {
     notifyMatches,
     getPayload,
+    getPersonNotifications,
     acceptNotification,
     declineNotification,
     ios: {

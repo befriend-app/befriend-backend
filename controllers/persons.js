@@ -31,6 +31,7 @@ const {
 
 const { getKidsAgeOptions } = require('../services/modes');
 const { getPersonActivities } = require('../services/activities');
+const { getPersonNotifications } = require('../services/notifications');
 
 module.exports = {
     getMe: function (req, res) {
@@ -41,7 +42,7 @@ module.exports = {
                 let me = await getPerson(person_token);
 
                 let activities = await getPersonActivities(me);
-
+                let notifications = await getPersonNotifications(me);
                 let filters = await getPersonFilters(me);
 
                 //set country
@@ -75,6 +76,7 @@ module.exports = {
                 res.json({
                     me,
                     activities,
+                    notifications,
                     filters,
                     genders,
                     sections,
