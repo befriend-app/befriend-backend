@@ -167,6 +167,17 @@ router.get('/activities/networks/notifications/:activity_token/:access_token', f
     });
 });
 
+router.get('/activities/networks/:activity_token/:access_token', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await activitiesController.getActivityWithAccessToken(req, res);
+        } catch (e) {
+            console.error(e);
+        }
+        resolve();
+    });
+});
+
 router.put('/activities/networks/notifications/accept/:activity_token/:access_token', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {

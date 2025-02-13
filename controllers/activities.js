@@ -62,9 +62,9 @@ function getActivity(req, res) {
         let activity_token = req.params.activity_token;
 
         try {
-            let matching = await activitiesService.getActivity(person_token, activity_token);
+            let activity = await activitiesService.getActivity(person_token, activity_token);
 
-            res.json(matching);
+            res.json(activity);
         } catch (e) {
             res.json(
                 {
@@ -108,6 +108,32 @@ function getActivityNotificationWithAccessToken(req, res) {
 
         try {
             let result = await activitiesService.getActivityNotificationWithAccessToken(activity_token, access_token, person_token, req);
+
+            res.json(result);
+        } catch(e) {
+            res.json({ message: e.message }, e.status || 400);
+        }
+
+        resolve();
+    });
+}
+
+function getActivityWithAccessToken(req, res) {
+    return new Promise(async (resolve, reject) => {
+        let activity_token = req.params.activity_token;
+        let access_token = req.params.access_token;
+        let person_token = req.query.person_token;
+
+        if (typeof access_token !== 'string') {
+            res.json({
+                message: 'Access token required',
+            }, 401);
+
+            return resolve();
+        }
+
+        try {
+            let result = await activitiesService.getActivity(person_token, activity_token, access_token);
 
             res.json(result);
         } catch(e) {
@@ -471,6 +497,7 @@ module.exports = {
     getActivityNotification,
     getActivityNotificationWithAccessToken,
     getActivity,
+    getActivityWithAccessToken,
     getMatches,
     putAcceptNotification,
     putAcceptNetworkNotification,

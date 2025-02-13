@@ -893,7 +893,7 @@ function getActivityNotificationWithAccessToken(activity_token, access_token, pe
     });
 }
 
-function getActivity(person_token, activity_token) {
+function getActivity(person_token, activity_token, access_token = null) {
     return new Promise(async (resolve, reject) => {
         let spots = {}, place = {}, matching = {};
 
@@ -937,6 +937,25 @@ function getActivity(person_token, activity_token) {
                     status: 400
                 });
             }
+
+            //validate access token
+            if(access_token) {
+                let conn = await dbService.conn();
+
+                let access_token_qry = await conn('activities_persons AS ap')
+                    .join('persons AS p', 'p.id', '=', 'ap.person_id')
+                    .where('ap.access_token', access_token)
+                    .where('p.person_token', person_token)
+                    .first();
+
+                if (!access_token_qry) {
+                    return reject({
+                        message: 'Invalid access token',
+                        status: 401
+                    });
+                }
+            }
+
 
             if(activity.mode_id) {
                 activity.mode = await getModeById(activity.mode_id);
