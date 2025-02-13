@@ -859,7 +859,12 @@ function acceptNotification(person, activity_token) {
             resolve({
                 success: true,
                 message: 'Notification accepted successfully',
-                spots
+                activity: {
+                    ...person_activity_insert,
+                    data: {
+                        ...activity_data
+                    }
+                }
             });
         } catch(e) {
             console.error(e);
