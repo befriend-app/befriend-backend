@@ -296,6 +296,12 @@ module.exports = {
 
                     activityData.activity_type_token = activity.activity.token;
 
+                    activityData.persons = {
+                        [person_from_token]: {
+                            is_creator: true
+                        }
+                    }
+
                     await cacheService.hSet(cacheService.keys.activities(person_from_token), activity.activity_token, activityData);
 
                     activityData.id = activity_id;
@@ -566,6 +572,7 @@ module.exports = {
                     .update(update_data);
 
                 if(update_result) {
+                    let activity_cache_key = cacheService.keys.activities(notification.person_from_token);
                     let person_activities_cache_key = cacheService.keys.persons_activities(person_token);
                     let person_notification_cache_key = cacheService.keys.persons_notifications(person_token);
 
@@ -598,7 +605,20 @@ module.exports = {
                         }
                     }
 
+                    let activity_data = await cacheService.hGetItem(activity_cache_key, activity_token);
+
+                    if(!activity_data.persons) {
+                        activity_data.persons = {};
+                    }
+
+                    activity_data.persons[person_token] = {
+                        first_name: person.first_name,
+                        image_url: person.image_url
+                    }
+
                     let pipeline = cacheService.startPipeline();
+
+                    pipeline.hSet(activity_cache_key, activity_token, JSON.stringify(activity_data));
 
                     pipeline.hSet(person_activities_cache_key, activity_token, JSON.stringify(person_activity_insert));
 
