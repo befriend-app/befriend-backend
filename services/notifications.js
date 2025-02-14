@@ -543,8 +543,6 @@ function getPersonNotifications(person) {
                              image_url: results[idx++],
                          }
 
-                         activity.activity.mode = await getModeById(activity.activity.mode_id);
-
                          //add access token if 3rd party network
                          if(activity.person_from_network_id !== network_self.id) {
                              let network_to = await getNetwork(activity.person_from_network_id);
@@ -600,11 +598,6 @@ function acceptNotification(person, activity_token) {
 
             if(!activity_data) {
                 return reject('Activity data not found');
-            }
-
-            //add mode to activity data
-            if(activity_data.mode_id) {
-                activity_data.mode = await getModeById(activity_data.mode_id);
             }
 
             let spots = await activitiesService.getActivitySpots(activity_token, notifications);
