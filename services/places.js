@@ -144,6 +144,10 @@ module.exports = {
                     let batch_places = Object.values(batch_dict);
 
                     for (let place of batch_places) {
+                        if(!place.id) {
+                            continue;
+                        }
+
                         //3. categories_geo_places
                         batch_geo_place_insert.push({
                             category_geo_id: category_geo_id,
@@ -306,13 +310,12 @@ module.exports = {
         }
 
         return new Promise(async (resolve, reject) => {
+            //use fsq's sorting
+            return resolve(places);
+
             if (places && !places.length) {
                 return resolve(places);
             }
-
-            //use fsq's sorting
-            //possible todo - custom sorting
-            return resolve(places);
 
             if (!places || typeof radius_meters === 'undefined') {
                 return reject('Invalid sort places params');
@@ -667,17 +670,17 @@ module.exports = {
 
             let cache_miss_ids = [];
 
-            let multi = cacheService.startPipeline();
+            let pipeline = cacheService.startPipeline();
 
             for (let fsq_id of fsq_ids) {
                 let cache_key = cacheService.keys.place_fsq(fsq_id);
 
-                multi.get(cache_key);
+                pipeline.get(cache_key);
             }
 
             //try cache first
             try {
-                let cache_data = await cacheService.execMulti(multi);
+                let cache_data = await cacheService.execPipeline(pipeline);
 
                 for (let i = 0; i < cache_data.length; i++) {
                     let data = cache_data[i];
@@ -750,8 +753,6 @@ module.exports = {
             let batch_update = [];
 
             try {
-                let conn = await dbService.conn();
-
                 batch_dict = await module.exports.getBatchPlacesFSQ(fsq_ids);
 
                 for (let fsq_id of fsq_ids) {
