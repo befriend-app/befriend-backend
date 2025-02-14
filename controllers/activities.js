@@ -3,16 +3,11 @@ const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 const matchingService = require('../services/matching');
 
-const { formatObjectTypes, timeNow, getIPAddr, getURL } = require('../services/shared');
+const { formatObjectTypes, timeNow, getIPAddr } = require('../services/shared');
 const { getPerson } = require('../services/persons');
 
-const { getModes, getModeById } = require('../services/modes');
-const { personToPersonInterests } = require('../services/matching');
-const { getActivityType } = require('../services/activities');
-const { getGender } = require('../services/genders');
-const { getPlaceFSQ } = require('../services/places');
+const { getModes } = require('../services/modes');
 const { acceptNotification, declineNotification } = require('../services/notifications');
-const { getNetworkSelf } = require('../services/network');
 
 
 function createActivity(req, res) {

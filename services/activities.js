@@ -961,7 +961,6 @@ function getActivity(person_token, activity_token, access_token = null) {
                 }
             }
 
-
             if(activity.mode_id) {
                 activity.mode = await getModeById(activity.mode_id);
             }

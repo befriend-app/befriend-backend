@@ -133,7 +133,7 @@ router.post('/keys/exchange/save', function (req, res, next) {
     });
 });
 
-router.get('/activity_types', function (req, res, next) {
+router.get('/activity-types', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await apiController.getActivityTypes(req, res);
@@ -145,7 +145,7 @@ router.get('/activity_types', function (req, res, next) {
     });
 });
 
-router.put('/activity_type/:activity_type_token/places', function (req, res, next) {
+router.put('/activity-types/:activity_type_token/places', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await apiController.getActivityTypePlaces(req, res);
