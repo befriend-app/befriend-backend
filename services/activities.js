@@ -359,8 +359,14 @@ function prepareActivity(person, activity) {
                         name: mode.name,
                     };
 
-                    //validate/prepare kids
-                    if(mode?.token?.includes('kids')) {
+                    //validate/prepare partner/kids
+                    if(mode.token.includes('partner')) {
+                        try {
+                            activity.mode.partner = await validatePartnerForActivity(activity.mode, person.person_token, errors);
+                        } catch(e) {
+
+                        }
+                    } else if(mode.token.includes('kids')) {
                         try {
                             activity.mode.kids = await validateKidsForActivity(activity.mode, person.person_token, errors);
                         } catch(e) {
@@ -558,6 +564,58 @@ function prepareActivity(person, activity) {
         }
 
         return resolve(true);
+    });
+}
+
+function validatePartnerForActivity(mode, person_token, errors) {
+    return new Promise(async (resolve, reject) => {
+        if(!mode?.token?.includes('partner')) {
+            return resolve();
+        }
+
+        let partner = {};
+
+        try {
+            let person_modes = await cacheService.hGetItem(cacheService.keys.person(person_token), 'modes');
+
+            if(!person_modes) {
+                errors.push('Modes missing');
+            } else if(!person_modes?.selected?.includes('mode-partner')) {
+                errors.push('Partner mode not active');
+            } else {
+                if(!isObject(person_modes.partner)) {
+                    errors.push('No partner available');
+                } else {
+                    let isValid = !!person_modes.partner?.gender_id;
+
+                    if(!isValid) {
+                        errors.push('Active partner and gender required');
+                    } else {
+                        try {
+                            let gender = await getGender(person_modes.partner.gender_id);
+
+                            partner = {
+                                gender: {
+                                    name: gender.gender_name
+                                }
+                            }
+                        } catch(e) {
+                            console.error(e);
+                            errors.push('Error preparing partner');
+                        }
+                    }
+                }
+            }
+
+            if(errors.length) {
+                return reject(errors);
+            }
+
+            resolve(partner);
+        } catch(e) {
+            console.error(e);
+            return reject();
+        }
     });
 }
 
