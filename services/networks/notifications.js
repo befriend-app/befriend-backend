@@ -153,6 +153,10 @@ module.exports = {
                     errors.push('Available spots needed');
                 }
 
+                if(!activity.mode) {
+                    errors.push('Mode required');
+                }
+
                 if(!activity.person?.mode) {
                     errors.push('Mode token required');
                 }
@@ -299,6 +303,7 @@ module.exports = {
                     let [activity_id] = await conn('activities').insert(activityData);
 
                     activityData.activity_type_token = activity.activity.token;
+                    activityData.mode = activity.mode;
 
                     activityData.persons = {
                         [person_from_token]: {

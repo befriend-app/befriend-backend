@@ -1,8 +1,8 @@
 const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 
-const { getOptionDateTime, isNumeric, timeNow, generateToken, getURL, getIPAddr } = require('./shared');
-const { getModes, getModeById } = require('./modes');
+const { getOptionDateTime, isNumeric, timeNow, generateToken, getURL, getIPAddr, isObject } = require('./shared');
+const { getModes, getModeById, getKidsAgeLookup } = require('./modes');
 const { getActivityPlace } = require('./places');
 const { getNetworkSelf } = require('./network');
 const { getPerson } = require('./persons');
@@ -108,6 +108,8 @@ function createActivity(person, activity) {
             person_activity_insert.activity_start = activity_insert.activity_start;
             person_activity_insert.activity_end = activity_insert.activity_end;
 
+            activity_insert.mode = activity.mode;
+
             activity_insert.persons = {
                 [person.person_token]: {
                     is_creator: true,
@@ -134,7 +136,6 @@ function createActivity(person, activity) {
 
                     activity_insert.place = activity.place.data;
                     activity_insert.activity_type = activity.activity.data;
-                    activity_insert.mode = activity.mode;
 
                     let organized = {
                         ...person_activity_insert,
@@ -357,6 +358,15 @@ function prepareActivity(person, activity) {
                         token: mode.token,
                         name: mode.name,
                     };
+
+                    //validate/prepare kids
+                    if(mode?.token?.includes('kids')) {
+                        try {
+                            activity.mode.kids = await validateKidsForActivity(activity.mode, person.person_token, errors);
+                        } catch(e) {
+
+                        }
+                    }
                 }
             } catch (e) {
                 console.error(e);
@@ -551,6 +561,86 @@ function prepareActivity(person, activity) {
     });
 }
 
+function validateKidsForActivity(mode, person_token, errors) {
+    return new Promise(async (resolve, reject) => {
+        if(!mode?.token?.includes('kids')) {
+            return resolve();
+        }
+
+        let organized_kids = {};
+
+        try {
+            let person_modes = await cacheService.hGetItem(cacheService.keys.person(person_token), 'modes');
+
+            if(!person_modes) {
+                errors.push('Modes missing');
+            } else if(!person_modes?.selected?.includes('mode-kids')) {
+                errors.push('Kids mode not active');
+            } else {
+                if(!isObject(person_modes.kids)) {
+                    errors.push('No kids available');
+                } else {
+                    let isValid = false;
+
+                    for(let k in person_modes.kids) {
+                        let kid = person_modes.kids[k];
+
+                        if(kid.age_id && kid.gender_id && kid.is_active && !kid.deleted) {
+                            isValid = true;
+                            break;
+                        }
+                    }
+
+                    if(!isValid) {
+                        errors.push('Active kid age and gender required');
+                    } else {
+                        try {
+                            let kidsAgeLookup = await getKidsAgeLookup();
+
+                            //key of age token-gender token
+                            for(let k in person_modes.kids) {
+                                let kid = person_modes.kids[k];
+
+                                let age = kidsAgeLookup.byId[kid.age_id];
+                                let gender = await getGender(kid.gender_id);
+
+                                let key = `${age.token}-${gender.gender_token}`;
+
+                                if(!organized_kids[key]) {
+                                    organized_kids[key] = {
+                                        age: {
+                                            name: `${age.range.min} - ${age.range.max}`,
+                                        },
+                                        gender: {
+                                            token: gender.gender_token,
+                                            name: gender.gender_name
+                                        },
+                                        qty: 0
+                                    }
+                                }
+
+                                organized_kids[key].qty++;
+                            }
+                        } catch(e) {
+                            console.error(e);
+                            errors.push('Error preparing kids data');
+                        }
+                    }
+                }
+            }
+
+            if(errors.length) {
+                return reject(errors);
+            }
+
+            resolve(organized_kids);
+        } catch(e) {
+            console.error(e);
+            return reject();
+        }
+    });
+}
+
 function doesActivityOverlap(person_token, time, activitiesData = null) {
     return new Promise(async (resolve, reject) => {
         let overlaps = false;
@@ -728,8 +818,6 @@ function getActivityNotification(activity_token, person_token) {
 
             activity.activity_type = await getActivityType(activity.activity_type_token);
 
-            activity.mode = await getModeById(activity.mode_id);
-
             let person_from = await getPerson(notification.person_from_token);
 
             let gender = await getGender(person_from.gender_id);
@@ -848,7 +936,6 @@ function getActivityNotificationWithAccessToken(activity_token, access_token, pe
             //enrich activity data
             activity.place = await getPlaceData(activity.fsq_place_id);
             activity.activity_type = await getActivityType(activity.activity_type_token);
-            activity.mode = await getModeById(activity.mode_id);
 
             const person_from = await getPerson(notification.person_from_token);
             const gender = await getGender(person_from.gender_id);
@@ -959,10 +1046,6 @@ function getActivity(person_token, activity_token, access_token = null) {
                         status: 401
                     });
                 }
-            }
-
-            if(activity.mode_id) {
-                activity.mode = await getModeById(activity.mode_id);
             }
 
             spots = {
@@ -1079,11 +1162,6 @@ function getPersonActivities(person) {
                     let activity = person_activities[activity_token];
 
                     activity.data = JSON.parse(results[idx++]);
-
-                    //append mode object
-                    if(activity.data?.mode_id) {
-                        activity.data.mode = await getModeById(activity.data.mode_id);
-                    }
                 }
             }
 
@@ -1187,4 +1265,5 @@ module.exports = {
     findMatches,
     doesActivityOverlap,
     isActivityTypeExcluded,
+    validateKidsForActivity
 };
