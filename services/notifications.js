@@ -519,7 +519,12 @@ function getPersonNotifications(person) {
 
                  for(let activity_token in notifications) {
                      let activity = notifications[activity_token];
+
+                     //activity
                      pipeline.hGet(cacheService.keys.activities(activity.person_from_token), activity_token);
+
+                     //person image
+                     pipeline.hGet(cacheService.keys.person(activity.person_from_token), 'image_url');
                  }
 
                  let results = await cacheService.execPipeline(pipeline);
@@ -532,6 +537,10 @@ function getPersonNotifications(person) {
                          activity.activity_token = activity_token;
 
                          activity.activity = JSON.parse(results[idx++]);
+
+                         activity.person = {
+                             image_url: results[idx++],
+                         }
 
                          //add access token if 3rd party network
                          if(activity.person_from_network_id !== network_self.id) {
@@ -938,7 +947,7 @@ function acceptNotification(person, activity_token) {
                                     matching: personsMatching,
                                     spots
                                 }, {
-                                    // timeout: 1000
+                                    timeout: 1000
                                 }));
                             } catch(e) {
                                 console.error(e);
