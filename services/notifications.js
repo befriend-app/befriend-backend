@@ -981,6 +981,8 @@ function acceptNotification(person, activity_token) {
                 }
             }
 
+            activity_data.matching = personsMatching[person.person_token] || {};
+
             resolve({
                 success: true,
                 message: 'Notification accepted successfully',
