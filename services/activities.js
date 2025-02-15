@@ -627,7 +627,7 @@ function validatePartnerForActivity(mode, person_token, errors = []) {
     });
 }
 
-function validateKidsForActivity(mode, person_token, errors) {
+function validateKidsForActivity(mode, person_token, errors = []) {
     return new Promise(async (resolve, reject) => {
         if(!mode?.token?.includes('kids')) {
             return resolve();
