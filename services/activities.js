@@ -2,11 +2,11 @@ const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 
 const { getOptionDateTime, isNumeric, timeNow, generateToken, getURL, getIPAddr, isObject } = require('./shared');
-const { getModes, getModeById, getKidsAgeLookup } = require('./modes');
+const { getModes, getKidsAgeLookup } = require('./modes');
 const { getActivityPlace } = require('./places');
 const { getNetworkSelf } = require('./network');
 const { getPerson } = require('./persons');
-const { getGender, getGenderByToken } = require('./genders');
+const { getGender } = require('./genders');
 const { getPlaceData } = require('./fsq');
 
 let debug_create_activity_enabled = require('../dev/debug').activities.create;
@@ -110,12 +110,20 @@ function createActivity(person, activity) {
 
             activity_insert.mode = activity.mode;
 
+            let activityPersonData = {
+                is_creator: true,
+                first_name: person.first_name,
+                image_url: person.image_url
+            };
+
+            if(activity.mode?.token.includes('partner')) {
+                activityPersonData.partner = activity.mode.partner;
+            } else if(activity.mode?.token.includes('kids')) {
+                activityPersonData.kids = activity.mode.kids;
+            }
+
             activity_insert.persons = {
-                [person.person_token]: {
-                    is_creator: true,
-                    first_name: person.first_name,
-                    image_url: person.image_url
-                }
+                [person.person_token]: activityPersonData
             }
 
             //save to cache
@@ -567,7 +575,7 @@ function prepareActivity(person, activity) {
     });
 }
 
-function validatePartnerForActivity(mode, person_token, errors) {
+function validatePartnerForActivity(mode, person_token, errors = []) {
     return new Promise(async (resolve, reject) => {
         if(!mode?.token?.includes('partner')) {
             return resolve();
@@ -1323,5 +1331,6 @@ module.exports = {
     findMatches,
     doesActivityOverlap,
     isActivityTypeExcluded,
-    validateKidsForActivity
+    validateKidsForActivity,
+    validatePartnerForActivity
 };

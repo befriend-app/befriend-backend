@@ -12,6 +12,7 @@ const { getPerson } = require('./persons');
 const { getGender } = require('./genders');
 const { hGetAllObj } = require('./cache');
 const { getModeById } = require('./modes');
+const { validatePartnerForActivity, validateKidsForActivity } = require('./activities');
 
 
 let notification_groups = {
@@ -639,14 +640,30 @@ function acceptNotification(person, activity_token) {
                 ...update,
             };
 
-            let pipeline = cacheService.startPipeline();
-
-            activity_data.persons[person.person_token] = {
+            let activityPersonData = {
                 first_name: person.first_name || null,
                 image_url: person.image_url || null
             };
 
+            if(activity_data.mode?.token.includes('partner')) {
+                try {
+                     activityPersonData.partner = await validatePartnerForActivity(activity_data.mode, person.person_token);
+                } catch(e) {
+                    console.error(e);
+                }
+            } else if(activity_data.mode?.token.includes('kids')) {
+                try {
+                    activityPersonData.kids = await validateKidsForActivity(activity_data.mode, person.person_token);
+                } catch(e) {
+                    console.error(e);
+                }
+            }
+
+            activity_data.persons[person.person_token] = activityPersonData;
+
             activity_data.spots_available = spots.available;
+
+            let pipeline = cacheService.startPipeline();
 
             pipeline.hSet(activity_cache_key, activity_token, JSON.stringify(activity_data));
             pipeline.hSet(notification_cache_key, person.person_token, JSON.stringify(notification));

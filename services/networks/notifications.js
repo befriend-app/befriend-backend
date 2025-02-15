@@ -305,10 +305,18 @@ module.exports = {
                     activityData.activity_type_token = activity.activity.token;
                     activityData.mode = activity.mode;
 
+                    let activityPersonData = {
+                        is_creator: true
+                    };
+
+                    if(activity.mode?.token.includes('partner')) {
+                        activityPersonData.partner = activity.mode.partner;
+                    } else if(activity.mode?.token.includes('kids')) {
+                        activityPersonData.kids = activity.mode.kids;
+                    }
+
                     activityData.persons = {
-                        [person_from_token]: {
-                            is_creator: true
-                        }
+                        [person_from_token]: activityPersonData
                     }
 
                     await cacheService.hSet(cacheService.keys.activities(person_from_token), activity.activity_token, activityData);
