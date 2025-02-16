@@ -76,8 +76,11 @@ async function simulateReviews() {
     let batch_update = [];
 
     for (let person of persons) {
+        let reviews_count = Math.floor(Math.random() * 10) + 1;
+
         let update = {
             id: person.id,
+            reviews_count,
             updated: timeNow(),
         };
 
@@ -111,8 +114,6 @@ async function simulateReviews() {
         batch_update.push(update);
 
         let person_obj = await hGetAllObj(cacheService.keys.person(person.person_token));
-
-        let reviews_count = Math.floor(Math.random() * 10) + 1;
 
         let reviews = {
             count: reviews_count,
