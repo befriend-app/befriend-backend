@@ -110,10 +110,19 @@ function createActivity(person, activity) {
 
             activity_insert.mode = activity.mode;
 
+            let network = await getNetworkSelf(true);
+
             let activityPersonData = {
                 is_creator: true,
                 first_name: person.first_name,
-                image_url: person.image_url
+                image_url: person.image_url,
+                network: {
+                    token: network.network_token,
+                    name: network.network_name,
+                    icon: network.app_icon,
+                    domain: getURL(network.base_domain),
+                    verified: network.is_verified ? 1 : 0,
+                }
             };
 
             if(activity.mode?.token.includes('partner')) {

@@ -640,12 +640,18 @@ function acceptNotification(person, activity_token) {
                 ...update,
             };
 
-            let network = null;
+            let person_network = await getNetwork(notification.person_to_network_id);
 
             let activityPersonData = {
                 first_name: person.first_name || null,
                 image_url: person.image_url || null,
-                network
+                network: {
+                    token: person_network.network_token,
+                    name: person_network.network_name,
+                    icon: person_network.app_icon,
+                    domain: getURL(person_network.base_domain),
+                    verified: person_network.is_verified ? 1 : 0,
+                }
             };
 
             if(activity_data.mode?.token.includes('partner')) {
