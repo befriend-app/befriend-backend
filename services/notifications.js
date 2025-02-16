@@ -640,9 +640,12 @@ function acceptNotification(person, activity_token) {
                 ...update,
             };
 
+            let network = null;
+
             let activityPersonData = {
                 first_name: person.first_name || null,
-                image_url: person.image_url || null
+                image_url: person.image_url || null,
+                network
             };
 
             if(activity_data.mode?.token.includes('partner')) {
@@ -747,7 +750,7 @@ function acceptNotification(person, activity_token) {
                     gender,
                     age: result[0] ? parseInt(result[0]) : null,
                     is_new: !!(result[2] && isNumeric(result[2]) && parseInt(result[2])),
-                    reviews: JSON.parse(result[3])
+                    reviews: JSON.parse(result[3]),
                 }
             }
 

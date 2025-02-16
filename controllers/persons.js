@@ -32,6 +32,7 @@ const {
 const { getKidsAgeOptions } = require('../services/modes');
 const { getPersonActivities } = require('../services/activities');
 const { getPersonNotifications } = require('../services/notifications');
+const { getNetworkSelf } = require('../services/network');
 
 module.exports = {
     getMe: function (req, res) {
@@ -39,6 +40,8 @@ module.exports = {
             let person_token = req.query.person_token;
 
             try {
+                let network = await getNetworkSelf(true);
+
                 let me = await getPerson(person_token);
 
                 let activities = await getPersonActivities(me);
@@ -74,6 +77,7 @@ module.exports = {
                 let sections = await getSections(me);
 
                 res.json({
+                    network,
                     me,
                     activities,
                     notifications,

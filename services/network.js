@@ -354,11 +354,19 @@ function getNetwork(network_id = null, network_token = null) {
     });
 }
 
-function getNetworkSelf() {
+function getNetworkSelf(is_frontend) {
     return new Promise(async (resolve, reject) => {
         try {
-            if (module.exports.cache.self) {
-                return resolve(module.exports.cache.self);
+            let key = is_frontend ? 'frontend' : 'backend';
+
+            if (module.exports.cache.self[key]) {
+                return resolve(module.exports.cache.self[key]);
+            }
+
+            let cols = '*';
+
+            if(is_frontend) {
+                cols = ['network_token', 'network_name', 'network_logo', 'app_icon', 'base_domain', 'api_domain', 'is_verified', 'is_self'];
             }
 
             let conn = await dbService.conn();
@@ -366,9 +374,10 @@ function getNetworkSelf() {
             let qry = await conn('networks')
                 .where('network_token', process.env[module.exports.env.network_token_key])
                 .where('is_self', true)
+                .select(cols)
                 .first();
 
-            module.exports.cache.self = qry;
+            module.exports.cache.self[key] = qry;
 
             resolve(qry);
         } catch (e) {
@@ -1367,7 +1376,12 @@ module.exports = {
         befriend: [`api.befriend.app`],
         alt: null,
     },
-    cache: {},
+    cache: {
+        self: {
+            backend: null,
+            frontend: null
+        }
+    },
     init,
     homeDomains,
     loadAltDomains,
