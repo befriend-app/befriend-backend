@@ -11,8 +11,8 @@ const { getNetworkSelf, getNetworksLookup, getSecretKeyToForNetwork, getNetwork 
 const { getPerson } = require('./persons');
 const { getGender } = require('./genders');
 const { hGetAllObj } = require('./cache');
-const { getModeById } = require('./modes');
 const { validatePartnerForActivity, validateKidsForActivity } = require('./activities');
+const { getPlaceData } = require('./fsq');
 
 
 let notification_groups = {
@@ -981,6 +981,7 @@ function acceptNotification(person, activity_token) {
                 }
             }
 
+            activity_data.place = await getPlaceData(activity_data.fsq_place_id);
             activity_data.matching = personsMatching[person.person_token] || {};
 
             resolve({
