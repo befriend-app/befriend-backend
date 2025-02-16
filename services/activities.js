@@ -11,6 +11,27 @@ const { getPlaceData } = require('./fsq');
 
 let debug_create_activity_enabled = require('../dev/debug').activities.create;
 
+let cancellationRules = {
+    'hours-3': {
+        max_cancellations: 1,
+        time_span_mins: 180,
+        is_day: false,
+        error: 'Too many activities cancelled in the last 3 hours'
+    },
+    'hours-6': {
+        max_cancellations: 2,
+        time_span_mins: 360,
+        is_day: false,
+        error: 'Too many activities cancelled in the last 6 hours'
+    },
+    'day': {
+        max_cancellations: 3,
+        time_span_mins: 1440,
+        is_day: true,
+        error: 'Too many activities cancelled, please try again tomorrow'
+    }
+};
+
 
 function createActivity(person, activity) {
     return new Promise(async (resolve, reject) => {
@@ -19,7 +40,7 @@ function createActivity(person, activity) {
         let activity_cache_key = cacheService.keys.activities(person.person_token);
         let person_activity_cache_key = cacheService.keys.persons_activities(person.person_token);
 
-        //throws rejection if invalid
+        //throws rejection if validation/permission errors
         try {
             await prepareActivity(person, activity);
         } catch (errs) {
@@ -568,12 +589,23 @@ function prepareActivity(person, activity) {
         }
 
         try {
+            //check if this activity overlaps with any other activities
+            let cache_key = cacheService.keys.persons_activities(person.person_token);
+            let activitiesData = await cacheService.hGetAllObj(cache_key);
+
             let time = activity.when.data;
 
-            let overlaps = await module.exports.doesActivityOverlap(person.person_token, time);
+            let overlaps = await doesActivityOverlap(person.person_token, time, activitiesData);
 
             if (overlaps && !debug_create_activity_enabled) {
                 return reject(['Activity time overlaps with current activity']);
+            }
+
+            //prevent creation of too many activities within a short time period in the event of cancellation
+            let too_many_activities_cancelled = await tooManyActivitiesCancelled(person.person_token, time, activitiesData);
+
+            if(too_many_activities_cancelled && !debug_create_activity_enabled) {
+                return reject([too_many_activities_cancelled]);
             }
         } catch (e) {
             console.error(e);
@@ -760,6 +792,55 @@ function doesActivityOverlap(person_token, time, activitiesData = null) {
             resolve(overlaps);
         } catch (e) {
             console.error(e);
+            return reject(e);
+        }
+    });
+}
+
+function tooManyActivitiesCancelled(person_token, time, activitiesData = null) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            if (!activitiesData) {
+                let cache_key = cacheService.keys.persons_activities(person_token);
+                activitiesData = await cacheService.hGetAllObj(cache_key);
+            }
+
+            if (!activitiesData) {
+                return resolve(false);
+            }
+
+            let currentTime = timeNow();
+
+            let startOfDay = new Date(currentTime).setHours(0, 0, 0, 0);
+
+            let todayCancelledActivities = Object.values(activitiesData)
+                .filter(activity =>
+                    activity.cancelled_at &&
+                    activity.cancelled_at >= startOfDay &&
+                    activity.cancelled_at <= currentTime
+                )
+                .sort((a, b) => b.cancelled_at - a.cancelled_at);
+
+            if (todayCancelledActivities.length === 0) {
+                return resolve(false);
+            }
+
+            for (const [ruleKey, rule] of Object.entries(cancellationRules)) {
+                let timeSpanMs = rule.time_span_mins * 60 * 1000;
+                let timeThreshold = rule.is_day ? startOfDay : (currentTime - timeSpanMs);
+
+                let cancellationsInTimespan = todayCancelledActivities.filter(
+                    activity => activity.cancelled_at >= timeThreshold
+                ).length;
+
+                if (cancellationsInTimespan > rule.max_cancellations) {
+                    return resolve(rule.error);
+                }
+            }
+
+            return resolve(false);
+        } catch (e) {
+            console.error('Error checking cancelled activities:', e);
             return reject(e);
         }
     });
@@ -1339,6 +1420,7 @@ module.exports = {
     prepareActivity,
     findMatches,
     doesActivityOverlap,
+    tooManyActivitiesCancelled,
     isActivityTypeExcluded,
     validateKidsForActivity,
     validatePartnerForActivity
