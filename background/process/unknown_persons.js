@@ -6,10 +6,13 @@ const axios = require('axios');
 
 loadScriptEnv();
 
-const UPDATE_FREQUENCY = 60 * 10 * 1000 / 1000; //runs every 10 minutes
+const UPDATE_FREQUENCY = 60 * 10 * 1000; //runs every 10 minutes
 const BATCH_SIZE = 1000;
 
 let self_network;
+
+//in case 3rd party network was unable to communicate with a befriend->home domain on user creation,
+//this process ensures those persons are eventually known by the network
 
 function processUpdate() {
     return new Promise(async (resolve, reject) => {

@@ -11,27 +11,36 @@ const { getPlaceData } = require('./fsq');
 
 let debug_create_activity_enabled = require('../dev/debug').activities.create;
 
-let cancellationRules = {
-    'hours-3': {
-        max_cancellations: 1,
-        time_span_mins: 180,
-        is_day: false,
-        error: 'Too many activities cancelled in the last 3 hours'
+let rules = {
+    unfulfilled: {
+        acceptance: {
+            minsThreshold: 10
+        },
+        noShow: {
+            minsThreshold: 20
+        }
     },
-    'hours-6': {
-        max_cancellations: 2,
-        time_span_mins: 360,
-        is_day: false,
-        error: 'Too many activities cancelled in the last 6 hours'
-    },
-    'day': {
-        max_cancellations: 3,
-        time_span_mins: 1440,
-        is_day: true,
-        error: 'Too many activities cancelled, please try again tomorrow'
+    cancellation: {
+        'hours-3': {
+            max_cancellations: 1,
+            time_span_mins: 180,
+            is_day: false,
+            error: 'Too many activities cancelled in the last 3 hours'
+        },
+        'hours-6': {
+            max_cancellations: 2,
+            time_span_mins: 360,
+            is_day: false,
+            error: 'Too many activities cancelled in the last 6 hours'
+        },
+        'day': {
+            max_cancellations: 3,
+            time_span_mins: 1440,
+            is_day: true,
+            error: 'Too many activities cancelled, please try again tomorrow'
+        }
     }
-};
-
+}
 
 function createActivity(person, activity) {
     return new Promise(async (resolve, reject) => {
@@ -825,7 +834,7 @@ function tooManyActivitiesCancelled(person_token, time, activitiesData = null) {
                 return resolve(false);
             }
 
-            for (const [ruleKey, rule] of Object.entries(cancellationRules)) {
+            for (const [ruleKey, rule] of Object.entries(rules.cancellation)) {
                 let timeSpanMs = rule.time_span_mins * 60 * 1000;
                 let timeThreshold = rule.is_day ? startOfDay : (currentTime - timeSpanMs);
 
@@ -1359,6 +1368,7 @@ function getMaxFriends(person) {
 }
 
 module.exports = {
+    rules,
     types: null,
     activityTypesMapping: null,
     lookup: {},
