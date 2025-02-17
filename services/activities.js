@@ -773,17 +773,17 @@ function doesActivityOverlap(person_token, time, activitiesData = null) {
                     continue;
                 }
 
-                if (activity.activity_start <= time.start && activity.activity_end > time.start) {
+                if (time.start >= activity.activity_start && time.start < activity.activity_end) {
                     overlaps = true;
                     break;
                 }
 
-                if (activity.activity_start < time.end && activity.activity_end >= time.end) {
+                if (time.end > activity.activity_start && time.end <= activity.activity_end) {
                     overlaps = true;
                     break;
                 }
 
-                if (activity.activity_start >= time.start && activity.activity_end <= time.end) {
+                if (time.start <= activity.activity_start && time.end >= activity.activity_end) {
                     overlaps = true;
                     break;
                 }
