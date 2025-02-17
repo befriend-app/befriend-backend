@@ -111,6 +111,7 @@ module.exports = {
                 },
             },
             network: {
+                activities: 'sync_activities',
                 networks_persons: 'sync_networks_persons',
                 persons: 'sync_persons',
                 persons_modes: 'sync_persons_modes',

@@ -1,8 +1,26 @@
+const networksActivitiesService = require('../../services/networks/activities');
 const networksFiltersService = require('../../services/networks/filters');
 const networksMeService = require('../../services/networks/me');
 const networksPersonsService = require('../../services/networks/persons');
 
 module.exports = {
+    syncActivities: function(req, res) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let response = await networksActivitiesService.syncActivities(req.from_network, req.query);
+
+                res.json(response, 202);
+            } catch (e) {
+                if (e.message) {
+                    res.json(e.message, 400);
+                } else {
+                    res.json('Error syncing networks-persons', 400);
+                }
+            }
+
+            resolve();
+        });
+    },
     syncNetworksPersons: function(req, res) {
         return new Promise(async (resolve, reject) => {
             //received on befriend->home domain

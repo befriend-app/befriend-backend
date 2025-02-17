@@ -4,6 +4,17 @@ const syncController = require('../controllers/networks/sync');
 
 router.use(require('../middleware/networks'));
 
+router.get('/activities', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await syncController.syncActivities(req, res);
+        } catch (e) {
+            console.error(e);
+        }
+
+        resolve();
+    });
+});
 
 router.get('/networks-persons', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
@@ -16,7 +27,6 @@ router.get('/networks-persons', function (req, res, next) {
         resolve();
     });
 });
-
 
 router.get('/persons', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
