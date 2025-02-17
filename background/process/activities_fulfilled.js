@@ -13,7 +13,78 @@ let self_network;
 
 //this process sets the status of an activity to fulfilled/unfulfilled, allowing users to later create new activities during the same time periods
 
+
 function processUpdate() {
+    let activitiesOrganized = {};
+
+    function updateCache(batch_update) {
+        return new Promise(async (resolve, reject) => {
+            let pipeline = cacheService.startPipeline();
+
+            for(let activity of batch_update) {
+                let data = activitiesOrganized[activity.id];
+
+                pipeline.hGet(cacheService.keys.activities(data.person_token), data.activity_token);
+            }
+
+            try {
+                let results = await cacheService.execPipeline(pipeline);
+
+                let idx = 0;
+
+                pipeline = cacheService.startPipeline();
+
+                for(let activity of batch_update) {
+                    let data = activitiesOrganized[activity.id];
+
+                    let activityData = JSON.parse(results[idx++]);
+
+                    activityData.is_fulfilled = activity.is_fulfilled;
+                    pipeline.hSet(cacheService.keys.activities(data.person_token), data.activity_token, JSON.stringify(activityData));
+                }
+
+                await cacheService.execPipeline(pipeline);
+            } catch(e) {
+                console.error(e);
+            }
+
+            //update cache for activity->person
+            pipeline = cacheService.startPipeline();
+
+            for(let activity of batch_update) {
+                let data = activitiesOrganized[activity.id];
+
+                for(let person of data.persons) {
+                    pipeline.hGet(cacheService.keys.persons_activities(person.person_token), data.activity_token);
+                }
+            }
+
+            try {
+                let results = await cacheService.execPipeline(pipeline);
+
+                let idx = 0;
+
+                pipeline = cacheService.startPipeline();
+
+                for(let activity of batch_update) {
+                    let data = activitiesOrganized[activity.id];
+
+                    for(let person of data.persons) {
+                        let activityData = JSON.parse(results[idx++]);
+                        activityData.is_fulfilled = activity.is_fulfilled;
+                        pipeline.hSet(cacheService.keys.persons_activities(data.person_token), data.activity_token, JSON.stringify(activityData));
+                    }
+                }
+
+                await cacheService.execPipeline(pipeline);
+            } catch(e) {
+                console.error(e);
+            }
+
+            resolve();
+        });
+    }
+
     return new Promise(async (resolve, reject) => {
         try {
             let t = timeNow(true);
@@ -24,9 +95,8 @@ function processUpdate() {
             let noShowThreshold = rules.unfulfilled.noShow.minsThreshold * 60;
 
             let activities = await conn('activities AS a')
-                .join('persons AS p', 'p.id', '=', 'a.person_id')
                 .join('activities_persons AS ap', 'ap.activity_id', '=', 'a.id')
-                .whereNull('a.is_fulfilled')
+                // .whereNull('a.is_fulfilled')
                 .select(
                     'a.id',
                     'a.activity_token',
@@ -39,21 +109,32 @@ function processUpdate() {
                     'ap.cancelled_at',
                     'ap.left_at',
                     'ap.is_creator',
-                    'p.person_token'
                 );
 
-            let activitiesOrganized = {};
-            let activityLookupMap = {};
+            let personIds = new Set();
+
+            for(let a of activities) {
+                personIds.add(a.person_id_from);
+                personIds.add(a.person_id_to);
+            }
+
+            let personsQry = await conn('persons')
+                .whereIn('id', Array.from(personIds))
+                .select('id', 'person_token');
+
+            let personsMap = {};
+
+            for(let p of personsQry) {
+                personsMap[p.id] = p.person_token;
+            }
 
             for(let activity of activities) {
-                activityLookupMap[activity.id] = {
-                    activity_token: activity.activity_token,
-                    person_token: activity.person_token,
-                }
-
                 if (!activitiesOrganized[activity.id]) {
+                    let person_token = personsMap[activity.person_id_from];
+
                     activitiesOrganized[activity.id] = {
                         id: activity.id,
+                        person_token: person_token,
                         activity_token: activity.activity_token,
                         person_id_from: activity.person_id_from,
                         activity_start: activity.activity_start,
@@ -62,8 +143,11 @@ function processUpdate() {
                     };
                 }
 
+                let person_to_token = personsMap[activity.person_id_to];
+
                 activitiesOrganized[activity.id].persons.push({
                     person_id: activity.person_id_to,
+                    person_token: person_to_token,
                     arrived_at: activity.arrived_at,
                     cancelled_at: activity.cancelled_at,
                     left_at: activity.left_at,
@@ -117,31 +201,9 @@ function processUpdate() {
                     console.error(e);
                 }
 
-                let pipeline = cacheService.startPipeline();
-
-                for(let activity of batch_update) {
-                    let data = activityLookupMap[activity.id];
-
-                    pipeline.hGet(cacheService.keys.activities(data.person_token), data.activity_token);
-                }
-
+                //update cache for activity
                 try {
-                    let results = await cacheService.execPipeline(pipeline);
-
-                    let idx = 0;
-
-                    pipeline = cacheService.startPipeline();
-
-                    for(let activity of batch_update) {
-                        let data = activityLookupMap[activity.id];
-
-                        let activityData = JSON.parse(results[idx++]);
-
-                        activityData.is_fulfilled = activity.is_fulfilled;
-                        pipeline.hSet(cacheService.keys.activities(data.person_token), data.activity_token, JSON.stringify(activityData));
-                    }
-
-                    await cacheService.execPipeline(pipeline);
+                    await updateCache(batch_update);
                 } catch(e) {
                     console.error(e);
                 }
