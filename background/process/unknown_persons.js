@@ -147,7 +147,6 @@ if (require.main === module) {
     (async function () {
         try {
             await main();
-            process.exit();
         } catch (e) {
             console.error(e);
         }

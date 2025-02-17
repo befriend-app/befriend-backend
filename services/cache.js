@@ -1,5 +1,5 @@
 const redis = require('redis');
-const { isNumeric, generateToken } = require('./shared');
+const { isNumeric } = require('./shared');
 
 const standardKeys = {
     networks: 'networks',

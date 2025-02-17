@@ -1,6 +1,9 @@
 const { isProdApp } = require('../services/shared');
 
 module.exports = {
+    process: {
+        activity_fulfilled: isProdApp() ? false : true,
+    },
     activities: {
         create: isProdApp() ? false : true,
         accept: isProdApp() ? false : true

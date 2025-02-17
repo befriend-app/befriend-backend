@@ -11,8 +11,9 @@ const UPDATE_FREQUENCY = 60 * 10 * 1000; //runs every 10 minutes
 
 let self_network;
 
-//this process sets the status of an activity to fulfilled/unfulfilled, allowing users to later create new activities during the same time periods
+let debug_enabled = require('../../dev/debug').process.activity_fulfilled;
 
+//this process sets the status of an activity to fulfilled/unfulfilled, allowing users to later create new activities during the same time periods
 
 function processUpdate() {
     let activitiesOrganized = {};
@@ -85,6 +86,80 @@ function processUpdate() {
         });
     }
 
+    function updateWS(batch_update) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let activityIds = [];
+                let personIds = new Set();
+                let ownNetworkPersonsDict = {};
+
+                for(let activity of batch_update) {
+                    activityIds.push(activity.id);
+
+                    let data = activitiesOrganized[activity.id];
+
+                    personIds.add(data.person_id_from);
+
+                    for(let person of data.persons) {
+                        personIds.add(person.person_id);
+                    }
+                }
+
+                try {
+                    let conn = await dbService.conn();
+
+                    let ownNetworkPersons = await conn('activities_notifications')
+                        .where('person_to_network_id', self_network.id)
+                        .whereIn('activity_id', activityIds)
+                        .whereIn('person_to_id', Array.from(personIds))
+                        .select('person_to_id');
+
+                    for(let p of ownNetworkPersons) {
+                        ownNetworkPersonsDict[p.person_to_id] = true;
+                    }
+                } catch(e) {
+                    console.error(e);
+                }
+
+                for(let activity of batch_update) {
+                    let data = activitiesOrganized[activity.id];
+
+                    if(data.network_id === self_network.id) {
+                        try {
+                             cacheService.publishWS('activities', data.person_token, {
+                                 activity_token: data.activity_token,
+                                 is_fulfilled: activity.is_fulfilled,
+                             } );
+                        } catch(e) {
+                            console.error(e);
+                        }
+                    }
+
+                    for(let person of data.persons) {
+                        if(person.is_creator) {
+                            continue;
+                        }
+
+                        if(person.person_id in ownNetworkPersonsDict) {
+                            try {
+                                cacheService.publishWS('activities', person.person_token, {
+                                    activity_token: data.activity_token,
+                                    is_fulfilled: activity.is_fulfilled,
+                                } );
+                            } catch(e) {
+                                console.error(e);
+                            }
+                        }
+                    }
+                }
+            } catch(e) {
+                console.error(e);
+            }
+
+            resolve();
+        });
+    }
+
     return new Promise(async (resolve, reject) => {
         try {
             let t = timeNow(true);
@@ -94,12 +169,12 @@ function processUpdate() {
             let acceptanceThreshold = rules.unfulfilled.acceptance.minsThreshold * 60;
             let noShowThreshold = rules.unfulfilled.noShow.minsThreshold * 60;
 
-            let activities = await conn('activities AS a')
+            let activities = conn('activities AS a')
                 .join('activities_persons AS ap', 'ap.activity_id', '=', 'a.id')
-                // .whereNull('a.is_fulfilled')
                 .select(
                     'a.id',
                     'a.activity_token',
+                    'a.network_id',
                     'a.person_id as person_id_from',
                     'ap.person_id AS person_id_to',
                     'a.activity_start',
@@ -110,6 +185,12 @@ function processUpdate() {
                     'ap.left_at',
                     'ap.is_creator',
                 );
+
+            if(!debug_enabled) {
+                activities = activities.whereNull('a.is_fulfilled');
+            }
+
+            activities = await activities;
 
             let personIds = new Set();
 
@@ -134,6 +215,7 @@ function processUpdate() {
 
                     activitiesOrganized[activity.id] = {
                         id: activity.id,
+                        network_id: activity.network_id,
                         person_token: person_token,
                         activity_token: activity.activity_token,
                         person_id_from: activity.person_id_from,
@@ -208,6 +290,12 @@ function processUpdate() {
                     console.error(e);
                 }
 
+                try {
+                    await updateWS(batch_update);
+                } catch(e) {
+                    console.error(e);
+                }
+
                 console.log({
                     process_update: {
                         time: getDateTimeStr(),
@@ -252,7 +340,6 @@ if (require.main === module) {
     (async function () {
         try {
             await main();
-            process.exit();
         } catch (e) {
             console.error(e);
         }

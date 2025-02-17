@@ -778,7 +778,8 @@ function doesActivityOverlap(person_token, time, activitiesData = null) {
             for (let k in activitiesData) {
                 let activity = activitiesData[k];
 
-                if (activity.cancelled_at) {
+                //skip cancelled or unfulfilled activities
+                if(activity.cancelled_at || ('is_fulfilled' in activity && !activity.is_fulfilled)) {
                     continue;
                 }
 
