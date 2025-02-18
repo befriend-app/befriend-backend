@@ -20,198 +20,6 @@ let debug_sync_enabled = require('../../dev/debug').sync.activities;
 
 let network_self;
 
-function processActivities(network_id, activities) {
-    return new Promise(async (resolve, reject) => {
-        if (!activities) {
-            return resolve();
-        }
-
-        if (!activities.length) {
-            return resolve(true);
-        }
-
-        if (activities.length > 50000) {
-            console.error("Response too large, check network data");
-            return resolve();
-        }
-
-        let has_invalid_activities = false;
-
-        try {
-            let conn = await dbService.conn();
-
-            let batches = [];
-
-            for (let i = 0; i < activities.length; i += batch_process) {
-                batches.push(activities.slice(i, i + batch_process));
-            }
-
-            for (let batch of batches) {
-                let activitiesToUpdate = [];
-                let existingActivitiesDict = {};
-                let activityIds = [];
-                let idTokenMap = {};
-                let invalidActivities = {};
-
-                let batchActivityTokens = batch.map(a => a.activity_token);
-
-                let existingActivities = await conn('activities AS a')
-                    .join('persons AS p', 'p.id', '=', 'a.person_id')
-                    .whereIn('activity_token', batchActivityTokens)
-                    .select('a.*', 'p.person_token');
-
-                for (let activity of existingActivities) {
-                    activityIds.push(activity.id);
-                    idTokenMap[activity.id] = activity.activity_token;
-                    existingActivitiesDict[activity.activity_token] = activity;
-                }
-
-                for (let activity of batch) {
-                    if (!activity.activity_token) {
-                        invalidActivities[activity.activity_token] = true;
-                        has_invalid_activities = true;
-                        continue;
-                    }
-
-                    let existingActivity = existingActivitiesDict[activity.activity_token];
-
-                    if(!existingActivity) {
-                        invalidActivities[activity.activity_token] = true;
-                        has_invalid_activities = true;
-                        continue;
-                    }
-
-                    let activityData = {
-                        is_fulfilled: activity.is_fulfilled,
-                        updated: activity.updated,
-                    };
-
-                    if (activity.updated > existingActivity.updated || debug_sync_enabled) {
-                        activityData.id = existingActivity.id;
-                        activitiesToUpdate.push(activityData);
-                    }
-                }
-
-                if (Object.keys(invalidActivities).length) {
-                    console.warn({
-                        invalid_activities_count: Object.keys(invalidActivities).length,
-                    });
-                }
-
-                if (activitiesToUpdate.length) {
-                    try {
-                        await batchUpdate('activities', activitiesToUpdate);
-                    } catch(e) {
-                        console.error(e);
-                    }
-
-                    //create activity->persons lookup
-                    let notificationsPersons = {};
-
-                    try {
-                        //get data
-                        let notifications = await conn('activities_notifications AS an')
-                            .join('persons AS p', 'p.id', '=', 'an.person_to_id')
-                            .where('person_to_network_id', network_self.id)
-                            .whereIn('activity_id', activityIds)
-                            .select('an.activity_id', 'an.person_to_id', 'p.person_token');
-
-                        for(let an of notifications) {
-                            if(!notificationsPersons[an.activity_id]) {
-                                notificationsPersons[an.activity_id] = [];
-                            }
-
-                            notificationsPersons[an.activity_id].push(an.person_token);
-                        }
-                    } catch(e) {
-                        console.error(e);
-                    }
-
-                    //update activity
-                    try {
-                        let pipeline = cacheService.startPipeline();
-
-                        for(let activity of activitiesToUpdate) {
-                            let token = idTokenMap[activity.id];
-                            let data = existingActivitiesDict[token];
-
-                            pipeline.hGet(cacheService.keys.activities(data.person_token), data.activity_token);
-                        }
-
-                        let results = await cacheService.execPipeline(pipeline);
-
-                        let idx = 0;
-
-                        pipeline = cacheService.startPipeline();
-
-                        for(let activity of activitiesToUpdate) {
-                            let token = idTokenMap[activity.id];
-                            let data = existingActivitiesDict[token];
-
-                            let activityData = JSON.parse(results[idx++]);
-
-                            activityData.is_fulfilled = activity.is_fulfilled;
-
-                            pipeline.hSet(cacheService.keys.activities(data.person_token), data.activity_token, JSON.stringify(activityData));
-                        }
-
-                        await cacheService.execPipeline(pipeline);
-                    } catch(e) {
-                        console.error(e);
-                    }
-
-                    //update activity->person
-                    try {
-                        let pipeline = cacheService.startPipeline();
-
-                        for(let activity of activitiesToUpdate) {
-                            let token = idTokenMap[activity.id];
-
-                            let data = existingActivitiesDict[token];
-                            let persons = notificationsPersons[activity.id];
-
-                            for(let person_token of persons) {
-                                pipeline.hGet(cacheService.keys.persons_activities(person_token), data.activity_token);
-                            }
-                        }
-
-                        let results = await cacheService.execPipeline(pipeline);
-
-                        let idx = 0;
-
-                        pipeline = cacheService.startPipeline();
-
-                        for(let activity of activitiesToUpdate) {
-                            let token = idTokenMap[activity.id];
-
-                            let data = existingActivitiesDict[token];
-                            let persons = notificationsPersons[activity.id];
-
-                            for(let person_token of persons) {
-                                let activityData = JSON.parse(results[idx++]);
-
-                                if(activityData) {
-                                    activityData.is_fulfilled = activity.is_fulfilled;
-                                    pipeline.hSet(cacheService.keys.persons_activities(person_token), data.activity_token, JSON.stringify(activityData));
-                                }
-                            }
-                        }
-
-                        await cacheService.execPipeline(pipeline);
-                    } catch(e) {
-                        console.error(e);
-                    }
-                }
-            }
-        } catch (e) {
-            console.error('Error in processActivities:', e);
-            return reject(e);
-        }
-
-        resolve(true);
-    });
-}
-
 function syncActivities() {
     console.log("Sync: activities");
 
@@ -339,6 +147,203 @@ function syncActivities() {
         }
 
         resolve();
+    });
+}
+
+function processActivities(network_id, activities) {
+    return new Promise(async (resolve, reject) => {
+        if (!activities) {
+            return resolve();
+        }
+
+        if (!activities.length) {
+            return resolve(true);
+        }
+
+        if (activities.length > 50000) {
+            console.error("Response too large, check network data");
+            return resolve();
+        }
+
+        let has_invalid_activities = false;
+
+        try {
+            let conn = await dbService.conn();
+
+            let batches = [];
+
+            for (let i = 0; i < activities.length; i += batch_process) {
+                batches.push(activities.slice(i, i + batch_process));
+            }
+
+            for (let batch of batches) {
+                let activitiesToUpdate = [];
+                let existingActivitiesDict = {};
+                let activityIds = [];
+                let idTokenMap = {};
+                let invalidActivities = {};
+
+                let batchActivityTokens = batch.map(a => a.activity_token);
+
+                let existingActivities = await conn('activities AS a')
+                    .join('persons AS p', 'p.id', '=', 'a.person_id')
+                    .whereIn('activity_token', batchActivityTokens)
+                    .select('a.*', 'p.person_token');
+
+                for (let activity of existingActivities) {
+                    activityIds.push(activity.id);
+                    idTokenMap[activity.id] = activity.activity_token;
+                    existingActivitiesDict[activity.activity_token] = activity;
+                }
+
+                for (let activity of batch) {
+                    if (!activity.activity_token) {
+                        invalidActivities[activity.activity_token] = true;
+                        has_invalid_activities = true;
+                        continue;
+                    }
+
+                    let existingActivity = existingActivitiesDict[activity.activity_token];
+
+                    if(!existingActivity) {
+                        invalidActivities[activity.activity_token] = true;
+                        has_invalid_activities = true;
+                        continue;
+                    }
+
+                    let activityData = {
+                        is_fulfilled: activity.is_fulfilled,
+                        updated: activity.updated,
+                    };
+
+                    if (activity.updated > existingActivity.updated || debug_sync_enabled) {
+                        activityData.id = existingActivity.id;
+                        activitiesToUpdate.push(activityData);
+                    }
+                }
+
+                if (Object.keys(invalidActivities).length) {
+                    console.warn({
+                        invalid_activities_count: Object.keys(invalidActivities).length,
+                    });
+                }
+
+                if (activitiesToUpdate.length) {
+                    try {
+                        await batchUpdate('activities', activitiesToUpdate);
+                    } catch(e) {
+                        console.error(e);
+                    }
+
+                    //create activity->persons lookup
+                    let notificationsPersons = {};
+
+                    try {
+                        //get data
+                        let notifications = await conn('activities_notifications AS an')
+                            .join('persons AS p', 'p.id', '=', 'an.person_to_id')
+                            .where('person_to_network_id', network_self.id)
+                            .whereIn('activity_id', activityIds)
+                            .select('an.activity_id', 'an.person_to_id', 'p.person_token');
+
+                        for(let an of notifications) {
+                            if(!notificationsPersons[an.activity_id]) {
+                                notificationsPersons[an.activity_id] = [];
+                            }
+
+                            notificationsPersons[an.activity_id].push(an.person_token);
+                        }
+                    } catch(e) {
+                        console.error(e);
+                    }
+
+                    //update activity
+                    try {
+                        let pipeline = cacheService.startPipeline();
+
+                        for(let activity of activitiesToUpdate) {
+                            let activity_token = idTokenMap[activity.id];
+                            let data = existingActivitiesDict[activity_token];
+
+                            pipeline.hGet(cacheService.keys.activities(data.person_token), activity_token);
+                        }
+
+                        let results = await cacheService.execPipeline(pipeline);
+
+                        let idx = 0;
+
+                        pipeline = cacheService.startPipeline();
+
+                        for(let activity of activitiesToUpdate) {
+                            let activity_token = idTokenMap[activity.id];
+                            let data = existingActivitiesDict[activity_token];
+
+                            let activityData = JSON.parse(results[idx++]);
+                            activityData.is_fulfilled = activity.is_fulfilled;
+
+                            pipeline.hSet(cacheService.keys.activities(data.person_token), activity_token, JSON.stringify(activityData));
+                        }
+
+                        await cacheService.execPipeline(pipeline);
+                    } catch(e) {
+                        console.error(e);
+                    }
+
+                    //update activity->person
+                    try {
+                        let pipeline = cacheService.startPipeline();
+
+                        for(let activity of activitiesToUpdate) {
+                            let activity_token = idTokenMap[activity.id];
+                            let persons = notificationsPersons[activity.id];
+
+                            for(let person_token of persons) {
+                                pipeline.hGet(cacheService.keys.persons_activities(person_token), activity_token);
+                            }
+                        }
+
+                        let results = await cacheService.execPipeline(pipeline);
+
+                        let idx = 0;
+
+                        pipeline = cacheService.startPipeline();
+
+                        for(let activity of activitiesToUpdate) {
+                            let activity_token = idTokenMap[activity.id];
+                            let persons = notificationsPersons[activity.id];
+
+                            for(let person_token of persons) {
+                                let activityData = JSON.parse(results[idx++]);
+
+                                if(activityData) {
+                                    activityData.is_fulfilled = activity.is_fulfilled;
+                                    pipeline.hSet(cacheService.keys.persons_activities(person_token), activity_token, JSON.stringify(activityData));
+
+                                    //send ws
+                                    try {
+                                        cacheService.publishWS('activities', person_token, {
+                                            activity_token: activity_token,
+                                            is_fulfilled: activity.is_fulfilled
+                                        });
+                                    } catch(e) {
+                                        console.error(e);
+                                    }
+                                }
+                            }
+                        }
+
+                        await cacheService.execPipeline(pipeline);
+                    } catch(e) {
+                        console.error(e);
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('Error in processActivities:', e);
+            return reject(e);
+        }
+
+        resolve(true);
     });
 }
 
