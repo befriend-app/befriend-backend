@@ -179,15 +179,13 @@ function notifyMatches(me, activity, matches) {
 
             if (delay > 0) {
                 try {
-                    spots = await activitiesService.getActivitySpots(activity.activity_token);
+                    isFulfilled = await activitiesService.getActivityFulfilledStatus(me.person_token, activity.activity_token);
+
+                    if(isFulfilled) {
+                        return;
+                    }
                 } catch(e) {
                     console.error(e);
-                    return;
-                }
-
-                if (spots.available <= 0) {
-                    isFulfilled = true;
-                    return;
                 }
             }
 

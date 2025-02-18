@@ -939,6 +939,24 @@ function getActivitySpots(activity_token, notification_data = null) {
     });
 }
 
+function getActivityFulfilledStatus(person_token, activity_token) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let spots = await getActivitySpots(activity_token);
+
+            if (spots.available <= 0) {
+                return resolve(true);
+            }
+
+            let activity = await cacheService.hGetItem(cacheService.keys.activities(person_token), activity_token);
+
+            resolve(!!activity.cancelled_at);
+        } catch(e) {
+            reject(e);
+        }
+    });
+}
+
 function getActivityNotification(activity_token, person_token) {
     return new Promise(async (resolve, reject) => {
         try {
@@ -1425,6 +1443,7 @@ module.exports = {
     getDefaultActivity,
     getPersonActivities,
     getActivitySpots,
+    getActivityFulfilledStatus,
     getActivityNotification,
     getActivityNotificationWithAccessToken,
     getMaxFriends,
