@@ -5,7 +5,7 @@ module.exports = {
         activity_fulfilled: isProdApp() ? false : true,
     },
     activities: {
-        cancel: isProdApp() ? false : true,
+        cancel: isProdApp() ? false : false,
         create: isProdApp() ? false : true,
         accept: isProdApp() ? false : true
     },

@@ -599,6 +599,12 @@ function acceptNotification(person, activity_token) {
                 return reject('Activity data not found');
             }
 
+            if(activity_data.cancelled_at) {
+                return resolve({
+                    error: 'Activity cancelled'
+                });
+            }
+
             let spots = await activitiesService.getActivitySpots(notification.person_from_token, activity_token, activity_data);
 
             if (spots.available <= 0) {

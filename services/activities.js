@@ -45,7 +45,9 @@ let rules = {
 
 function cancelActivity(person, activity_token) {
     return new Promise(async (resolve, reject) => {
-        //person/creator can cancel their participation without the whole activity being cancelled
+        let time = timeNow();
+
+        //creator can cancel their participation without the whole activity being cancelled
         let activity_cancelled_at = null;
 
         let notification_cache_key = cacheService.keys.activities_notifications(activity_token);
@@ -53,6 +55,7 @@ function cancelActivity(person, activity_token) {
         let debug_enabled = require('../dev/debug').activities.cancel;
 
         try {
+
             let conn = await dbService.conn();
 
             let network_self = await getNetworkSelf();
@@ -102,8 +105,6 @@ function cancelActivity(person, activity_token) {
                 person_to_network_id = personNetworkQry?.person_to_network_id;
             }
 
-            let time = timeNow();
-
             //calc active participants remaining
             let activeParticipants = [];
 
@@ -136,6 +137,7 @@ function cancelActivity(person, activity_token) {
                     updated: time
                 });
 
+            //if cancellation is by creator and there are less than two participants remaining, cancel entire activity
             if(activityPersonQry.is_creator && activeParticipants.length < 2) {
                 await conn('activities')
                     .where('id', activityPersonQry.activity_id)
@@ -165,16 +167,15 @@ function cancelActivity(person, activity_token) {
                     });
             }
 
-            //update cache
-            await cacheService.hSet(activity_cache_key, activity_token, activity_data);
-
-            //get cached person activity and save
+            //set cancelled on person activity
             let personActivity = await cacheService.hGetItem(person_activity_cache_key, activity_token);
 
             if(personActivity) {
                 personActivity.cancelled_at = time;
             }
 
+            //update cache
+            await cacheService.hSet(activity_cache_key, activity_token, activity_data);
             await cacheService.hSet(person_activity_cache_key, activity_token, personActivity);
 
             //notify 3rd party network of cancellation
@@ -273,7 +274,8 @@ function cancelActivity(person, activity_token) {
                             ps.push(axios.put(url, {
                                 network_token: network_self.network_token,
                                 secret_key: secret_key_to,
-                                spots
+                                spots,
+                                activity_cancelled_at: activity_cancelled_at
                             }, {
                                 timeout: 1000
                             }));
@@ -329,12 +331,8 @@ function cancelActivity(person, activity_token) {
             resolve({
                 success: true,
                 message: 'Activity cancelled successfully',
-                activity: {
-                    ...personActivity,
-                    data: {
-                        ...activity_data
-                    }
-                }
+                cancelled_at: time,
+                activity_cancelled_at: activity_cancelled_at
             });
         } catch(e) {
             console.error(e);

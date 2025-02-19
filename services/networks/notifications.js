@@ -438,7 +438,7 @@ module.exports = {
             }
         });
     },
-    onSpotsUpdate: function(from_network, activity_token, spots) {
+    onSpotsUpdate: function(from_network, activity_token, spots, activity_cancelled_at = null) {
         return new Promise(async (resolve, reject) => {
             try {
                 if(typeof activity_token !== 'string') {
@@ -450,6 +450,12 @@ module.exports = {
                 if(!spots || typeof spots !== 'object' || !(isNumeric(spots.available))) {
                     return reject({
                         message: 'Invalid spots'
+                    });
+                }
+
+                if(activity_cancelled_at && !isNumeric(activity_cancelled_at) ) {
+                    return reject({
+                        message: 'Invalid cancellation time'
                     });
                 }
 
@@ -470,32 +476,44 @@ module.exports = {
 
                 let cache_key = cacheService.keys.activities(activity_check.person_from_token);
 
+                let updateData = {
+                    spots_available: spots.available,
+                    updated: timeNow()
+                };
+
+                if(activity_cancelled_at) {
+                    updateData.cancelled_at = activity_cancelled_at;
+                }
+
                 await conn('activities')
                     .where('id', activity_check.id)
-                    .update({
-                        spots_available: spots.available,
-                        updated: timeNow()
-                    });
+                    .update(updateData);
 
                  let cache_activity = await cacheService.hGetItem(cache_key, activity_token);
 
                  if(cache_activity) {
                      cache_activity.spots_available = spots.available;
+
+                     if(activity_cancelled_at) {
+                         cache_activity.cancelled_at = activity_cancelled_at;
+                     }
+
                      await cacheService.hSet(cache_key, activity_token, cache_activity);
                  }
 
                  let network_self = await getNetworkSelf();
 
-                 let notification_persons = await conn('activities_notifications AS an')
+                let notification_persons = await conn('activities_notifications AS an')
                      .join('persons AS p', 'p.id', '=', 'an.person_to_id')
                      .where('activity_id', activity_check.id)
                      .where('person_to_network_id', network_self.id)
-                     .select('person_token');
+                     .select('an.id', 'person_token');
 
                  for(let person of notification_persons) {
                      cacheService.publishWS('notifications', person.person_token, {
                          activity_token,
-                         spots
+                         spots,
+                         activity_cancelled_at
                      });
                  }
 

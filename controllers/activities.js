@@ -173,7 +173,7 @@ function putCancelActivity(req, res) {
             try {
                 let result = await cancelActivity(me, activity_token);
 
-                res.json(result);
+                res.json(result, 202);
             } catch(e) {
                 res.json(
                     {
