@@ -4,10 +4,11 @@ const dbService = require('../services/db');
 const { getOptionDateTime, isNumeric, timeNow, generateToken, getURL, getIPAddr, isObject } = require('./shared');
 const { getModes, getKidsAgeLookup } = require('./modes');
 const { getActivityPlace } = require('./places');
-const { getNetworkSelf } = require('./network');
+const { getNetworkSelf, getNetwork, getSecretKeyToForNetwork, getNetworksLookup } = require('./network');
 const { getPerson } = require('./persons');
 const { getGender } = require('./genders');
 const { getPlaceData } = require('./fsq');
+const axios = require('axios');
 
 let debug_create_activity_enabled = require('../dev/debug').activities.create;
 
@@ -40,6 +41,306 @@ let rules = {
             error: 'Too many activities cancelled, please try again tomorrow'
         }
     }
+}
+
+function cancelActivity(person, activity_token) {
+    return new Promise(async (resolve, reject) => {
+        //person/creator can cancel their participation without the whole activity being cancelled
+        let activity_cancelled_at = null;
+
+        let notification_cache_key = cacheService.keys.activities_notifications(activity_token);
+        let person_activity_cache_key = cacheService.keys.persons_activities(person.person_token);
+        let debug_enabled = require('../dev/debug').activities.cancel;
+
+        try {
+            let conn = await dbService.conn();
+
+            let network_self = await getNetworkSelf();
+            let networksLookup = await getNetworksLookup();
+
+            let activityPersonQry = await conn('activities_persons AS ap')
+                .join('activities AS a', 'a.id', '=', 'ap.activity_id')
+                .where('activity_token', activity_token)
+                .where('ap.person_id', person.id)
+                .select('ap.*', 'a.person_id AS person_id_from')
+                .first();
+
+            if(!activityPersonQry) {
+                return reject('Activity does not include person');
+            }
+
+            let personFromQry = await conn('persons')
+                .where('id', activityPersonQry.person_id_from)
+                .first();
+
+            if(!personFromQry) {
+                return reject('Person not found');
+            }
+
+            if(activityPersonQry.cancelled_at && !debug_enabled) {
+                return reject('Activity already cancelled');
+            }
+
+            let activity_cache_key = cacheService.keys.activities(personFromQry.person_token);
+
+            let activity_data = await cacheService.hGetItem(activity_cache_key, activity_token);
+
+            if(!activity_data) {
+                return reject('Activity data not found');
+            }
+
+            let notifications = await cacheService.hGetAllObj(notification_cache_key);
+
+            let person_to_network_id = null;
+
+            if(!activityPersonQry.is_creator) {
+                let personNetworkQry = await conn('activities_notifications')
+                    .where('activity_id', activityPersonQry.activity_id)
+                    .where('person_to_id', person.id)
+                    .first();
+
+                person_to_network_id = personNetworkQry?.person_to_network_id;
+            }
+
+            let time = timeNow();
+
+            //calc active participants remaining
+            let activeParticipants = [];
+
+            for(let person_token in (activity_data.persons || {})) {
+                if(person_token === person.person_token) {
+                    continue;
+                }
+
+                let _person = activity_data.persons[person_token];
+
+                if(!person.cancelled_at) {
+                    activeParticipants.push(_person);
+                }
+            }
+
+            //update cached persons object
+            for(let person_token in (activity_data.persons || {})) {
+                if(person_token === person.person_token) {
+                    let _person = activity_data.persons[person_token];
+                    _person.cancelled_at = time;
+                    break;
+                }
+            }
+
+            //update db
+            await conn('activities_persons')
+                .where('id', activityPersonQry.id)
+                .update({
+                    cancelled_at: time,
+                    updated: time
+                });
+
+            if(activityPersonQry.is_creator && activeParticipants.length < 2) {
+                await conn('activities')
+                    .where('id', activityPersonQry.activity_id)
+                    .update({
+                        cancelled_at: time,
+                        updated: time
+                    });
+
+                activity_data.cancelled_at = time;
+
+                activity_cancelled_at = time;
+            }
+
+            let prev_spots_available = activity_data.spots_available;
+
+            //get updated spots
+            let spots = await getActivitySpots(personFromQry.person_token, activity_token, activity_data);
+
+            if(prev_spots_available !== spots.available) {
+                activity_data.spots_available = spots.available;
+
+                await conn('activities')
+                    .where('id', activityPersonQry.activity_id)
+                    .update({
+                        spots_available: spots.available,
+                        updated: timeNow()
+                    });
+            }
+
+            //update cache
+            await cacheService.hSet(activity_cache_key, activity_token, activity_data);
+
+            //get cached person activity and save
+            let personActivity = await cacheService.hGetItem(person_activity_cache_key, activity_token);
+
+            if(personActivity) {
+                personActivity.cancelled_at = time;
+            }
+
+            await cacheService.hSet(person_activity_cache_key, activity_token, personActivity);
+
+            //notify 3rd party network of cancellation
+            if (person_to_network_id && network_self.id !== person_to_network_id) {
+                try {
+                    let network = await getNetwork(person_to_network_id);
+                    let secret_key_to = await getSecretKeyToForNetwork(person_to_network_id);
+
+                    if(network && secret_key_to) {
+                        try {
+                            let url = getURL(network.api_domain, `networks/activities/${activity_token}/cancel`);
+
+                            let r = await axios.put(url, {
+                                network_token: network_self.network_token,
+                                secret_key: secret_key_to,
+                                person_token: person.person_token,
+                                access_token: activityPersonQry.access_token,
+                                accepted_at: time
+                            }, {
+                                timeout: 1000
+                            });
+                        } catch(e) {
+                            console.error(e);
+                        }
+                    }
+                } catch(e) {
+                    console.error(e);
+                }
+            }
+
+            //notify all persons on my network for this activity with most recent data
+            //organize network update
+            let networksSendPersons = new Set();
+
+            for(let person_token in activity_data.persons) {
+                let person_notification = notifications[person_token];
+
+                let is_own_network = person_token === personFromQry.person_token || person_notification?.person_to_network_id === network_self.id;
+
+                if(is_own_network) {
+                    cacheService.publishWS('activities', person_token, {
+                        activity_token,
+                        persons: activity_data.persons,
+                        spots,
+                        activity_cancelled_at
+                    });
+                } else { //send update to 3rd-party network
+                    networksSendPersons.add(person_notification.person_to_network_id);
+                }
+            }
+
+            let notify_networks = {};
+
+            //update notified persons
+            for(let _person_token in notifications) {
+                //do not send if sent above or is me
+                if(_person_token in activity_data.persons || _person_token === person.person_token) {
+                    continue;
+                }
+
+                let data = notifications[_person_token];
+
+                //notify person via websocket if they're on my network
+                if(data.person_to_network_id === network_self.id) {
+                    cacheService.publishWS('notifications', _person_token, {
+                        activity_token,
+                        spots,
+                        activity_cancelled_at
+                    });
+                } else { //organize 3rd-party networks
+                    let network_to = networksLookup.byId[data.person_to_network_id];
+
+                    if(!network_to) {
+                        continue;
+                    }
+
+                    if(!notify_networks[network_to.network_token]) {
+                        notify_networks[network_to.network_token] = network_to;
+                    }
+                }
+            }
+
+            //send spots to 3rd-party networks
+            try {
+                let ps = [];
+
+                for(let network_token in notify_networks) {
+                    let network_to = notify_networks[network_token];
+
+                    let secret_key_to = await getSecretKeyToForNetwork(network_to.id);
+
+                    if(secret_key_to) {
+                        try {
+                            let url = getURL(network_to.api_domain, `/networks/activities/${activity_token}/notification/spots`);
+
+                            ps.push(axios.put(url, {
+                                network_token: network_self.network_token,
+                                secret_key: secret_key_to,
+                                spots
+                            }, {
+                                timeout: 1000
+                            }));
+                        } catch(e) {
+                            console.error(e);
+                        }
+                    }
+                }
+
+                if(ps.length) {
+                    await Promise.allSettled(ps);
+                }
+            } catch(e) {
+                console.error(e);
+            }
+
+            //send persons data to networks
+            if(networksSendPersons.size) {
+                try {
+                    let ps = [];
+
+                    for(let network_id of networksSendPersons) {
+                        let network_to = networksLookup.byId[network_id];
+
+                        let secret_key_to = await getSecretKeyToForNetwork(network_to.id);
+
+                        if(secret_key_to) {
+                            try {
+                                let url = getURL(network_to.api_domain, `/networks/activities/${activity_token}/persons`);
+
+                                ps.push(axios.put(url, {
+                                    network_token: network_self.network_token,
+                                    secret_key: secret_key_to,
+                                    persons: activity_data.persons,
+                                    spots
+                                }, {
+                                    timeout: 1000
+                                }));
+                            } catch(e) {
+                                console.error(e);
+                            }
+                        }
+                    }
+
+                    if(ps.length) {
+                        await Promise.allSettled(ps);
+                    }
+                } catch(e) {
+                    console.error(e);
+                }
+            }
+
+            resolve({
+                success: true,
+                message: 'Activity cancelled successfully',
+                activity: {
+                    ...personActivity,
+                    data: {
+                        ...activity_data
+                    }
+                }
+            });
+        } catch(e) {
+            console.error(e);
+            return reject("Error cancelling activity")
+        }
+    });
 }
 
 function createActivity(person, activity) {
@@ -900,41 +1201,59 @@ function findMatches(person, activity) {
     });
 }
 
-function getActivitySpots(activity_token, notification_data = null) {
+function getActivitySpots(person_from_token, activity_token, activity_data = null) {
     return new Promise(async (resolve, reject) => {
         try {
-            if(!notification_data) {
-                let notification_key = cacheService.keys.activities_notifications(activity_token);
-                notification_data = (await cacheService.hGetAllObj(notification_key)) || {};
+            if(!activity_data) {
+                let cache_key = cacheService.keys.activities(person_from_token);
+                activity_data = (await cacheService.hGetAllObj(cache_key)) || {};
             }
 
-            if (!Object.keys(notification_data).length) {
-                return reject('No notifications sent');
+            if (!Object.keys(activity_data.persons).length) {
+                return reject('No persons on activity');
             }
 
+            let friends_qty = activity_data.persons_qty;
             let persons_accepted = 0;
+            let creatorCancelled = false;
 
-            let friends_qty = null;
+            //check if creator cancelled
+            for (let person_token in activity_data.persons) {
+                let person = activity_data.persons[person_token];
 
-            for (let k in notification_data) {
-                let v = notification_data[k];
-
-                if (friends_qty === null) {
-                    friends_qty = v.friends_qty;
+                if(person.is_creator && person.cancelled_at) {
+                    creatorCancelled = true;
+                    break;
                 }
+            }
 
-                if (v.accepted_at && !v.cancelled_at) {
+            for (let person_token in activity_data.persons) {
+                let person = activity_data.persons[person_token];
+
+                if(!person.is_creator && !person.cancelled_at) {
                     persons_accepted++;
                 }
             }
 
-            return resolve({
+            //add an extra spot if creator cancelled
+            if(creatorCancelled) {
+                friends_qty++;
+            }
+
+            let availableSpots = friends_qty - persons_accepted;
+
+            //if activity is cancelled, set spots to 0
+            if(activity_data.cancelled_at) {
+                availableSpots = 0;
+            }
+
+            resolve({
                 accepted: persons_accepted,
-                available: friends_qty - persons_accepted
+                available: availableSpots
             });
         } catch (e) {
             console.error(e);
-            return reject(e);
+            reject(e);
         }
     });
 }
@@ -942,15 +1261,19 @@ function getActivitySpots(activity_token, notification_data = null) {
 function getActivityFulfilledStatus(person_token, activity_token) {
     return new Promise(async (resolve, reject) => {
         try {
-            let spots = await getActivitySpots(activity_token);
+            let activity = await cacheService.hGetItem(cacheService.keys.activities(person_token), activity_token);
+
+            if(activity.cancelled_at) {
+                return resolve(true);
+            }
+
+            let spots = await getActivitySpots(person_token, activity_token, activity);
 
             if (spots.available <= 0) {
                 return resolve(true);
             }
 
-            let activity = await cacheService.hGetItem(cacheService.keys.activities(person_token), activity_token);
-
-            resolve(!!activity.cancelled_at);
+            resolve(false);
         } catch(e) {
             reject(e);
         }
@@ -1435,6 +1758,7 @@ module.exports = {
             480: { id: 480, value: '8', unit: 'hrs', in_mins: 480 },
         },
     },
+    cancelActivity,
     createActivity,
     getActivity,
     getActivityTypes,

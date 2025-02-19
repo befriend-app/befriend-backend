@@ -558,6 +558,18 @@ router.get('/activities/:activity_token/notification', function (req, res, next)
     });
 });
 
+router.put('/activities/:activity_token/cancel', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await activitiesController.putCancelActivity(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
 router.put('/activities/:activity_token/notification/accept', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {

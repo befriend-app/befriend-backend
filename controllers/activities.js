@@ -8,6 +8,7 @@ const { getPerson } = require('../services/persons');
 
 const { getModes } = require('../services/modes');
 const { acceptNotification, declineNotification } = require('../services/notifications');
+const { cancelActivity } = require('../services/activities');
 
 
 function createActivity(req, res) {
@@ -139,13 +140,70 @@ function getActivityWithAccessToken(req, res) {
     });
 }
 
+function putCancelActivity(req, res) {
+    return new Promise(async (resolve, reject) => {
+        let activity_token = req.params.activity_token;
+        let person_token = req.body.person_token;
+
+        try {
+            if (typeof activity_token !== 'string') {
+                res.json(
+                    {
+                        message: 'Activity token required',
+                    },
+                    400,
+                );
+
+                return resolve();
+            }
+
+            let me = await getPerson(person_token);
+
+            if (!me) {
+                res.json(
+                    {
+                        message: 'Person token not found',
+                    },
+                    400,
+                );
+
+                return resolve();
+            }
+
+            try {
+                let result = await cancelActivity(me, activity_token);
+
+                res.json(result);
+            } catch(e) {
+                res.json(
+                    {
+                        error: e
+                    },
+                    400
+                );
+            }
+        } catch (e) {
+            console.error(e);
+
+            res.json(
+                {
+                    error: 'Error cancelling activity',
+                },
+                400,
+            );
+        }
+
+        resolve();
+    });
+}
+
 function putAcceptNotification(req, res) {
     return new Promise(async (resolve, reject) => {
         let activity_token = req.params.activity_token;
         let person_token = req.body.person_token;
 
         try {
-            if (!activity_token) {
+            if (typeof activity_token !== 'string') {
                 res.json(
                     {
                         message: 'Activity token required',
@@ -489,6 +547,7 @@ function getMatches(req, res) {
 
 module.exports = {
     createActivity,
+    putCancelActivity,
     getActivityNotification,
     getActivityNotificationWithAccessToken,
     getActivity,

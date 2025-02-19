@@ -579,15 +579,15 @@ function acceptNotification(person, activity_token) {
 
             let notification = notifications?.[person.person_token];
 
-            if (!notification) {
+            if(!notification) {
                 return reject('Activity does not include person');
             }
 
-            if (notification.declined_at) {
+            if(notification.declined_at) {
                 return reject('Activity cannot be accepted');
             }
 
-            if (notification.accepted_at) {
+            if(notification.accepted_at) {
                 return reject('Activity already accepted');
             }
 
@@ -599,7 +599,7 @@ function acceptNotification(person, activity_token) {
                 return reject('Activity data not found');
             }
 
-            let spots = await activitiesService.getActivitySpots(activity_token, notifications);
+            let spots = await activitiesService.getActivitySpots(notification.person_from_token, activity_token, activity_data);
 
             if (spots.available <= 0) {
                 return resolve({
@@ -610,6 +610,7 @@ function acceptNotification(person, activity_token) {
             let conn = await dbService.conn();
 
             let network_self = await getNetworkSelf();
+            let networksLookup = await getNetworksLookup();
 
             let time = timeNow();
 
@@ -887,7 +888,6 @@ function acceptNotification(person, activity_token) {
             }
 
             let notify_networks = {};
-            let networksLookup;
 
             //send current spots data to notified persons via ws
             for(let _person_token in notifications) {
@@ -902,18 +902,14 @@ function acceptNotification(person, activity_token) {
                         });
                     }
                 } else { //organize 3rd-party networks
-                    if(!networksLookup) {
-                        networksLookup = await getNetworksLookup();
+                    let network_to = networksLookup.byId[data.person_to_network_id];
 
-                        let network_to = networksLookup.byId[data.person_to_network_id];
+                    if(!network_to) {
+                        continue;
+                    }
 
-                        if(!network_to) {
-                            continue;
-                        }
-
-                        if(!notify_networks[network_to.network_token]) {
-                            notify_networks[network_to.network_token] = network_to;
-                        }
+                    if(!notify_networks[network_to.network_token]) {
+                        notify_networks[network_to.network_token] = network_to;
                     }
                 }
             }
