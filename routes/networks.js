@@ -91,5 +91,17 @@ router.put('/activities/:activity_token', function (req, res, next) {
     });
 });
 
+router.put('/activities/:activity_token/cancel', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await networksApiController.putCancelActivity(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
 
 module.exports = router;

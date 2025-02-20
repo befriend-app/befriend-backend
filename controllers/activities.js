@@ -99,7 +99,7 @@ function getActivityNotification(req, res) {
 function getActivityNotificationWithAccessToken(req, res) {
     return new Promise(async (resolve, reject) => {
         let activity_token = req.params.activity_token;
-        let access_token = req.params.access_token;
+        let access_token = req.query.access_token;
         let person_token = req.query.person_token;
 
         try {
@@ -117,7 +117,7 @@ function getActivityNotificationWithAccessToken(req, res) {
 function getActivityWithAccessToken(req, res) {
     return new Promise(async (resolve, reject) => {
         let activity_token = req.params.activity_token;
-        let access_token = req.params.access_token;
+        let access_token = req.query.access_token;
         let person_token = req.query.person_token;
 
         if (typeof access_token !== 'string') {
@@ -197,6 +197,83 @@ function putCancelActivity(req, res) {
     });
 }
 
+function putNetworkCancelActivity(req, res) {
+    return new Promise(async (resolve, reject) => {
+        let activity_token = req.params.activity_token;
+        let access_token = req.body.access_token;
+        let person_token = req.body.person_token;
+
+        let errors = [];
+
+        if (typeof activity_token !== 'string') {
+            errors.push('Activity token required');
+        }
+
+        if (typeof access_token !== 'string') {
+            errors.push('Access token required');
+        }
+
+        if (typeof person_token !== 'string') {
+            errors.push('Person token required');
+        }
+
+        if (errors.length) {
+            res.json({ message: errors }, 400);
+            return resolve();
+        }
+
+        let person;
+
+        //validate access token
+        try {
+             person = await getPerson(person_token);
+
+             if(!person) {
+                 return res.json(
+                     {
+                         error: 'Person not found'
+                     },
+                     400
+                 );
+             }
+
+             let conn = await dbService.conn();
+
+             let accessTokenQry = await conn('activities_persons')
+                 .where('person_id', person.id)
+                 .where('access_token', access_token)
+                 .first();
+
+             if(!accessTokenQry) {
+                 res.json({ error: 'Invalid access token' }, 401);
+                 return resolve();
+             }
+        } catch(e) {
+            return res.json(
+                {
+                    error: 'Error cancelling activity'
+                },
+                400
+            );
+        }
+
+        try {
+            let result = await activitiesService.cancelActivity(person, activity_token);
+
+            res.json(result, 202);
+        } catch (e) {
+            res.json(
+                {
+                    error: e
+                },
+                400
+            );
+        }
+
+        resolve();
+    });
+}
+
 function putAcceptNotification(req, res) {
     return new Promise(async (resolve, reject) => {
         let activity_token = req.params.activity_token;
@@ -254,10 +331,10 @@ function putAcceptNotification(req, res) {
     });
 }
 
-function putAcceptNetworkNotification(req, res) {
+function putNetworkAcceptNotification(req, res) {
     return new Promise(async (resolve, reject) => {
         let activity_token = req.params.activity_token;
-        let access_token = req.params.access_token;
+        let access_token = req.body.access_token;
         let person_token = req.body.person_token;
         let first_name = req.body.first_name;
         let image_url = req.body.image_url;
@@ -375,10 +452,10 @@ function putDeclineNotification(req, res) {
     });
 }
 
-function putDeclineNetworkNotification(req, res) {
+function putNetworkDeclineNotification(req, res) {
     return new Promise(async (resolve, reject) => {
         let activity_token = req.params.activity_token;
-        let access_token = req.params.access_token;
+        let access_token = req.body.access_token;
         let person_token = req.body.person_token;
 
         try {
@@ -548,13 +625,14 @@ function getMatches(req, res) {
 module.exports = {
     createActivity,
     putCancelActivity,
+    putNetworkCancelActivity,
     getActivityNotification,
     getActivityNotificationWithAccessToken,
     getActivity,
     getActivityWithAccessToken,
     getMatches,
     putAcceptNotification,
-    putAcceptNetworkNotification,
+    putNetworkAcceptNotification,
     putDeclineNotification,
-    putDeclineNetworkNotification,
+    putNetworkDeclineNotification,
 };

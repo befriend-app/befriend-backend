@@ -737,6 +737,14 @@ function acceptNotification(person, activity_token) {
                 console.error(e);
             }
 
+            //append access object
+            if(person_activity_insert.access_token) {
+                person_activity_insert.access = {
+                    token: person_activity_insert.access_token,
+                    domain: getURL(network_self.api_domain)
+                }
+            }
+
             //notify 3rd party network of acceptance
             if (network_self.id !== notification.person_to_network_id) {
                 try {
@@ -805,7 +813,6 @@ function acceptNotification(person, activity_token) {
 
             //notify all persons on my network that accepted this activity with most recent data
             //organize network update with persons->accepted
-
             let personsData = {};
             let personsMatching = {};
             let networksSendPersons = new Set();

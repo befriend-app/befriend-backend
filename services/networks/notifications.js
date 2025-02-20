@@ -523,15 +523,13 @@ module.exports = {
                  }
 
                  //update activity data via ws
-                if(activity_cancelled_at) {
-                    for(let person_token in cache_activity.persons) {
-                        if(person_token in notificationTokens) {
-                            cacheService.publishWS('activities', person_token, {
-                                activity_token,
-                                spots,
-                                activity_cancelled_at
-                            });
-                        }
+                for(let person_token in cache_activity.persons) {
+                    if(person_token in notificationTokens) {
+                        cacheService.publishWS('activities', person_token, {
+                            activity_token,
+                            spots,
+                            activity_cancelled_at
+                        });
                     }
                 }
 
@@ -860,6 +858,82 @@ module.exports = {
                         spots
                     });
                 }
+
+                resolve();
+            } catch(e) {
+                console.error(e);
+                return reject(e);
+            }
+        });
+    },
+    cancelActivity: function(from_network, activity_token, person_token, cancelled_at) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                if(typeof activity_token !== 'string') {
+                    return reject({
+                        message: 'Invalid activity token'
+                    });
+                }
+
+                if(typeof person_token !== 'string') {
+                    return reject({
+                        message: 'Invalid activity token'
+                    });
+                }
+
+                if(!isNumeric(cancelled_at)) {
+                    return reject({
+                        message: 'Invalid cancelled timestamp'
+                    });
+                }
+
+                let conn = await dbService.conn();
+
+                let activity_check = await conn('activities AS a')
+                    .join('persons AS p', 'a.person_id', '=', 'p.id')
+                    .where('network_id', from_network.id)
+                    .where('activity_token', activity_token)
+                    .select('a.*', 'p.person_token AS person_from_token')
+                    .first();
+
+                if(!activity_check) {
+                    return reject({
+                        message: 'Activity not found'
+                    });
+                }
+
+                let cache_key = cacheService.keys.activities(activity_check.person_from_token);
+
+                let cache_activity = await cacheService.hGetItem(cache_key, activity_token);
+
+                if(!cache_activity || !(person_token in cache_activity.persons)) {
+                    return reject({
+                        message: 'Person does not exist on activity'
+                    });
+                }
+
+                cache_activity.persons[person_token].cancelled_at = cancelled_at;
+                await cacheService.hSet(cache_key, activity_token, cache_activity);
+
+                let personActivity = await cacheService.hGetItem(cacheService.keys.persons_activities(person_token), activity_token);
+
+                if(!personActivity) {
+                    return reject({
+                        message: 'Person activity not found'
+                    });
+                }
+
+                personActivity.cancelled_at = cancelled_at;
+
+                await cacheService.hSet(cacheService.keys.persons_activities(person_token), activity_token, personActivity);
+
+                await conn('activities_persons')
+                    .where('activity_id', personActivity.activity_id)
+                    .where('person_id', personActivity.person_id)
+                    .update({
+                        cancelled_at,
+                        updated: timeNow()
+                    });
 
                 resolve();
             } catch(e) {

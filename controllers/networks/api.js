@@ -141,5 +141,24 @@ module.exports = {
             }
         });
     },
+    putCancelActivity: function(req, res) {
+        return new Promise(async (resolve, reject) => {
+            let from_network = req.from_network;
+            let activity_token = req.params.activity_token;
+            let person_token = req.body.person_token;
+            let cancelled_at = req.body.cancelled_at;
 
+            try {
+                let response = await networksNotificationsService.cancelActivity(from_network, activity_token, person_token, cancelled_at);
+
+                res.json(response, 202);
+            } catch (e) {
+                if (e?.message) {
+                    res.json(e.message, 400);
+                } else {
+                    res.json('Error updating activity', 400);
+                }
+            }
+        });
+    },
 };

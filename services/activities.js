@@ -43,6 +43,7 @@ let rules = {
     }
 }
 
+
 function cancelActivity(person, activity_token) {
     return new Promise(async (resolve, reject) => {
         let time = timeNow();
@@ -55,7 +56,6 @@ function cancelActivity(person, activity_token) {
         let debug_enabled = require('../dev/debug').activities.cancel;
 
         try {
-
             let conn = await dbService.conn();
 
             let network_self = await getNetworkSelf();
@@ -92,7 +92,7 @@ function cancelActivity(person, activity_token) {
                 return reject('Activity data not found');
             }
 
-            let notifications = await cacheService.hGetAllObj(notification_cache_key);
+            let notifications = (await cacheService.hGetAllObj(notification_cache_key) || {});
 
             let person_to_network_id = null;
 
@@ -194,9 +194,9 @@ function cancelActivity(person, activity_token) {
                             let r = await axios.put(url, {
                                 network_token: network_self.network_token,
                                 secret_key: secret_key_to,
-                                person_token: person.person_token,
                                 access_token: activityPersonQry.access_token,
-                                accepted_at: time
+                                person_token: person.person_token,
+                                cancelled_at: time
                             }, {
                                 timeout: 1000
                             });
@@ -225,7 +225,7 @@ function cancelActivity(person, activity_token) {
                         spots,
                         activity_cancelled_at
                     });
-                } else { //send update to 3rd-party network
+                } else if(person_notification) { //send update to 3rd-party network
                     networksSendPersons.add(person_notification.person_to_network_id);
                 }
             }
@@ -234,17 +234,12 @@ function cancelActivity(person, activity_token) {
 
             //update notified persons
             for(let _person_token in notifications) {
-                //skip if me
-                if(_person_token === person.person_token) {
-                    continue;
-                }
-
                 let data = notifications[_person_token];
 
                 //notify person via websocket if they're on my network
                 if(data.person_to_network_id === network_self.id) {
-                    //skip if updated above
-                    if(_person_token in activity_data.persons) {
+                    //do not send if self or sent above
+                    if(_person_token === person.person_token || _person_token in activity_data.persons) {
                         continue;
                     }
 
@@ -340,6 +335,7 @@ function cancelActivity(person, activity_token) {
                 success: true,
                 message: 'Activity cancelled successfully',
                 cancelled_at: time,
+                spots: spots,
                 activity_cancelled_at: activity_cancelled_at
             });
         } catch(e) {
@@ -369,7 +365,6 @@ function createActivity(person, activity) {
             // unique across systems
             let network_self = await getNetworkSelf();
             let activity_token = generateToken(20);
-            let access_token = generateToken(20);
 
             activity.activity_token = activity_token;
 
@@ -378,7 +373,6 @@ function createActivity(person, activity) {
             let activity_insert = {
                 activity_token,
                 network_id: network_self.id,
-                access_token,
                 activity_type_id: activity.activity.data.id,
                 fsq_place_id: activity.place?.id || null,
                 mode_id: activity.mode.id,

@@ -156,18 +156,7 @@ router.put('/activity-types/:activity_type_token/places', function (req, res, ne
     });
 });
 
-router.get('/activities/networks/notifications/:activity_token/:access_token', function (req, res, next) {
-    return new Promise(async (resolve, reject) => {
-        try {
-            await activitiesController.getActivityNotificationWithAccessToken(req, res);
-        } catch (e) {
-            console.error(e);
-        }
-        resolve();
-    });
-});
-
-router.get('/activities/networks/:activity_token/:access_token', function (req, res, next) {
+router.get('/activities/networks/:activity_token', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
             await activitiesController.getActivityWithAccessToken(req, res);
@@ -178,10 +167,21 @@ router.get('/activities/networks/:activity_token/:access_token', function (req, 
     });
 });
 
-router.put('/activities/networks/notifications/accept/:activity_token/:access_token', function (req, res, next) {
+router.get('/activities/networks/notifications/:activity_token', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
-            await activitiesController.putAcceptNetworkNotification(req, res);
+            await activitiesController.getActivityNotificationWithAccessToken(req, res);
+        } catch (e) {
+            console.error(e);
+        }
+        resolve();
+    });
+});
+
+router.put('/activities/networks/notifications/accept/:activity_token', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await activitiesController.putNetworkAcceptNotification(req, res);
         } catch (err) {
             console.log(err);
         }
@@ -190,10 +190,22 @@ router.put('/activities/networks/notifications/accept/:activity_token/:access_to
     });
 });
 
-router.put('/activities/networks/notifications/decline/:activity_token/:access_token', function (req, res, next) {
+router.put('/activities/networks/notifications/decline/:activity_token', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
-            await activitiesController.putDeclineNetworkNotification(req, res);
+            await activitiesController.putNetworkDeclineNotification(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
+router.put('/activities/networks/cancel/:activity_token', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await activitiesController.putNetworkCancelActivity(req, res);
         } catch (err) {
             console.log(err);
         }
