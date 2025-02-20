@@ -178,6 +178,9 @@ function cancelActivity(person, activity_token) {
             await cacheService.hSet(activity_cache_key, activity_token, activity_data);
             await cacheService.hSet(person_activity_cache_key, activity_token, personActivity);
 
+            //merge persons data
+            await mergePersonsData(activity_data.persons);
+
             //notify 3rd party network of cancellation
             if (person_to_network_id && network_self.id !== person_to_network_id) {
                 try {
@@ -1707,6 +1710,56 @@ function getMaxFriends(person) {
     });
 }
 
+function mergePersonsData(persons) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            if(!isObject(persons) || !(Object.keys(persons).length)) {
+                return resolve();
+            }
+
+            let pipeline = cacheService.startPipeline();
+
+            for(let person_token in persons) {
+                pipeline.hmGet(cacheService.keys.person(person_token), [
+                    'age',
+                    'gender_id',
+                    'is_new',
+                    'reviews'
+                ])
+            }
+
+            let results = await cacheService.execPipeline(pipeline);
+
+            let idx = 0;
+
+            //merge results into persons object
+            for(let person_token in (persons || {})) {
+                let result = results[idx++];
+
+                let gender = {};
+
+                try {
+                    gender = await getGender(result[1]);
+                } catch(e) {
+
+                }
+
+                persons[person_token] = {
+                    ...persons[person_token],
+                    gender,
+                    age: result[0] ? parseInt(result[0]) : null,
+                    is_new: !!(result[2] && isNumeric(result[2]) && parseInt(result[2])),
+                    reviews: JSON.parse(result[3]),
+                }
+            }
+
+            resolve();
+        } catch(e) {
+            return reject(e);
+        }
+    });
+}
+
 module.exports = {
     rules,
     types: null,
@@ -1775,5 +1828,6 @@ module.exports = {
     tooManyActivitiesCancelled,
     isActivityTypeExcluded,
     validateKidsForActivity,
-    validatePartnerForActivity
+    validatePartnerForActivity,
+    mergePersonsData
 };

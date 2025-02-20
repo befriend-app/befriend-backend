@@ -11,7 +11,7 @@ const { getNetworkSelf, getNetworksLookup, getSecretKeyToForNetwork, getNetwork 
 const { getPerson } = require('./persons');
 const { getGender } = require('./genders');
 const { hGetAllObj } = require('./cache');
-const { validatePartnerForActivity, validateKidsForActivity } = require('./activities');
+const { validatePartnerForActivity, validateKidsForActivity, mergePersonsData } = require('./activities');
 const { getPlaceData } = require('./fsq');
 
 
@@ -731,34 +731,10 @@ function acceptNotification(person, activity_token) {
 
             await cacheService.hSet(person_activity_cache_key, activity_token, person_activity_insert);
 
-            pipeline = cacheService.startPipeline();
-
-            for(let _person_token in activity_data.persons) {
-                pipeline.hmGet(cacheService.keys.person(_person_token), [
-                    'age',
-                    'gender_id',
-                    'is_new',
-                    'reviews'
-                ])
-            }
-
-            let results = await cacheService.execPipeline(pipeline);
-
-            let idx = 0;
-
-            //merge results into persons object
-            for(let _person_token in (activity_data.persons || {})) {
-                let result = results[idx++];
-
-                let gender = await getGender(result[1]);
-
-                activity_data.persons[_person_token] = {
-                    ...activity_data.persons[_person_token],
-                    gender,
-                    age: result[0] ? parseInt(result[0]) : null,
-                    is_new: !!(result[2] && isNumeric(result[2]) && parseInt(result[2])),
-                    reviews: JSON.parse(result[3]),
-                }
+            try {
+                await mergePersonsData(activity_data.persons);
+            } catch(e) {
+                console.error(e);
             }
 
             //notify 3rd party network of acceptance
