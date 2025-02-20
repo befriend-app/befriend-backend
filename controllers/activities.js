@@ -230,7 +230,7 @@ function putAcceptNotification(req, res) {
             try {
                 let result = await acceptNotification(me, activity_token);
 
-                res.json(result);
+                res.json(result, 202);
             } catch(e) {
                 res.json(
                     {
@@ -305,7 +305,7 @@ function putAcceptNetworkNotification(req, res) {
                     image_url
                 }, activity_token);
 
-                res.json(result);
+                res.json(result, 202);
             } catch(e) {
                 res.json({ error: e }, 400);
             }
@@ -351,7 +351,7 @@ function putDeclineNotification(req, res) {
             try {
                 let result = await declineNotification(me, activity_token);
 
-                res.json(result);
+                res.json(result, 202);
             } catch(e) {
                 res.json(
                     {
@@ -432,7 +432,7 @@ function putDeclineNetworkNotification(req, res) {
                     person_token
                 }, activity_token);
 
-                res.json(result);
+                res.json(result, 202);
             } catch(e) {
                 res.json({ error: e }, 400);
             }

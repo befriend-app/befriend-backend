@@ -600,17 +600,13 @@ function acceptNotification(person, activity_token) {
             }
 
             if(activity_data.cancelled_at) {
-                return resolve({
-                    error: 'Activity cancelled'
-                });
+                return reject('Activity cancelled');
             }
 
             let spots = await activitiesService.getActivitySpots(notification.person_from_token, activity_token, activity_data);
 
             if (spots.available <= 0) {
-                return resolve({
-                    error: 'Unavailable: max spots reached'
-                });
+                return reject('Unavailable: max spots reached');
             }
 
             let conn = await dbService.conn();
@@ -1029,6 +1025,18 @@ function declineNotification(person, activity_token) {
 
             if (notification.declined_at) {
                 return reject('Activity already declined');
+            }
+
+            let activity_cache_key = cacheService.keys.activities(notification.person_from_token);
+
+            let activity_data = await cacheService.hGetItem(activity_cache_key, activity_token);
+
+            if(!activity_data) {
+                return reject('Activity data not found');
+            }
+
+            if(activity_data.cancelled_at) {
+                return reject('Activity cancelled');
             }
 
             let conn = await dbService.conn();
