@@ -234,8 +234,8 @@ function cancelActivity(person, activity_token) {
 
             //update notified persons
             for(let _person_token in notifications) {
-                //do not send if sent above or is me
-                if(_person_token in activity_data.persons || _person_token === person.person_token) {
+                //skip if me
+                if(_person_token === person.person_token) {
                     continue;
                 }
 
@@ -243,6 +243,11 @@ function cancelActivity(person, activity_token) {
 
                 //notify person via websocket if they're on my network
                 if(data.person_to_network_id === network_self.id) {
+                    //skip if updated above
+                    if(_person_token in activity_data.persons) {
+                        continue;
+                    }
+
                     cacheService.publishWS('notifications', _person_token, {
                         activity_token,
                         spots,

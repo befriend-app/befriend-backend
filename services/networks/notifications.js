@@ -509,13 +509,31 @@ module.exports = {
                      .where('person_to_network_id', network_self.id)
                      .select('an.id', 'person_token');
 
+                let notificationTokens = {};
+
+                //update notification data via ws
                  for(let person of notification_persons) {
+                     notificationTokens[person.person_token] = true;
+
                      cacheService.publishWS('notifications', person.person_token, {
                          activity_token,
                          spots,
                          activity_cancelled_at
                      });
                  }
+
+                 //update activity data via ws
+                if(activity_cancelled_at) {
+                    for(let person_token in cache_activity.persons) {
+                        if(person_token in notificationTokens) {
+                            cacheService.publishWS('activities', person_token, {
+                                activity_token,
+                                spots,
+                                activity_cancelled_at
+                            });
+                        }
+                    }
+                }
 
                  resolve();
             } catch(e) {
