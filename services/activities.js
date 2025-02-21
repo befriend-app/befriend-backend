@@ -331,6 +331,13 @@ function cancelActivity(person, activity_token) {
                 }
             }
 
+            //send out new notifications
+            try {
+                require('./notifications').sendNewNotifications(person, activity_data);
+            } catch(e) {
+                console.error(e);
+            }
+
             resolve({
                 success: true,
                 message: 'Activity cancelled successfully',
@@ -639,35 +646,53 @@ function getActivityTypesMapping() {
     });
 }
 
-function getActivityType(activity_type_token) {
+function getActivityType(activity_type_token = null, activity_type_id = null) {
     return new Promise(async (resolve, reject) => {
         try {
-            if (module.exports.lookup[activity_type_token]) {
-                return resolve(module.exports.lookup[activity_type_token]);
+            if(activity_type_token) {
+                if (module.exports.lookup.byToken[activity_type_token]) {
+                    return resolve(module.exports.lookup.byToken[activity_type_token]);
+                }
+            } else if(activity_type_id) {
+                if (module.exports.lookup.byId[activity_type_id]) {
+                    return resolve(module.exports.lookup.byId[activity_type_id]);
+                }
             }
 
-            let cache_key = cacheService.keys.activity_type(activity_type_token);
+            if(activity_type_token) {
+                let cache_key = cacheService.keys.activity_type(activity_type_token);
 
-            let cached_data = await cacheService.getObj(cache_key);
+                let cached_data = await cacheService.getObj(cache_key);
 
-            if (cached_data) {
-                module.exports.lookup[activity_type_token] = cached_data;
-                return resolve(cached_data);
+                if (cached_data) {
+                    module.exports.lookup.byToken[activity_type_token] = cached_data;
+                    module.exports.lookup.byId[cached_data.id] = cached_data;
+                    return resolve(cached_data);
+                }
             }
 
             let conn = await dbService.conn();
 
-            let qry = await conn('activity_types')
-                .where('activity_type_token', activity_type_token)
-                .first();
+            let qry;
+
+            if(activity_type_token) {
+                qry = await conn('activity_types')
+                    .where('activity_type_token', activity_type_token)
+                    .first();
+            } else if(activity_type_id) {
+                qry = await conn('activity_types')
+                    .where('id', activity_type_id)
+                    .first();
+            }
 
             if (!qry) {
                 return resolve(null);
             }
 
-            module.exports.lookup[activity_type_token] = qry;
+            module.exports.lookup.byId[qry.id] = qry;
+            module.exports.lookup.byToken[qry.activity_type_token] = qry;
 
-            await cacheService.setCache(cache_key, qry);
+            await cacheService.setCache(cacheService.keys.activity_type(qry.activity_type_token), qry);
 
             resolve(qry);
         } catch (e) {
@@ -1800,7 +1825,10 @@ module.exports = {
     rules,
     types: null,
     activityTypesMapping: null,
-    lookup: {},
+    lookup: {
+        byId: {},
+        byToken: {}
+    },
     maxPerHour: 2,
     durations: {
         min: 10,
