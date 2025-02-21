@@ -443,7 +443,11 @@ function notifyMatches(me, activity, matches) {
                                 }
                             }
                         } catch(e) {
-                            console.error(e);
+                            if(e?.status >= 500) {
+                                //network offline?
+                            } else {
+                                console.error(e);
+                            }
                         }
                     }
                 }

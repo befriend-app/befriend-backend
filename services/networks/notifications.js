@@ -861,6 +861,12 @@ module.exports = {
                         continue;
                     }
 
+                    let personActivity = cache_activity.persons?.[person.person_token];
+
+                    if(personActivity?.cancelled_at) {
+                        continue;
+                    }
+
                     let personMatching = matching[person.person_token];
 
                     cacheService.publishWS('activities', person.person_token, {
