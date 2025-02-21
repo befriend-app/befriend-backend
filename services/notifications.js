@@ -2,7 +2,7 @@ const axios = require('axios');
 const http2 = require('http2');
 const jwt = require('jsonwebtoken');
 
-const { timeNow, generateToken, getURL } = require('./shared');
+const { timeNow, generateToken, getURL, isNumeric } = require('./shared');
 
 const activitiesService = require('./activities');
 const cacheService = require('./cache');
@@ -47,7 +47,7 @@ function getPayload(activity_network, me, activity) {
     let title_arr = [];
     let plus_str = '';
     let emoji_str = '';
-    let time_str = activity.when?.time.formatted || activity.human_time;
+    let time_str = activity.when?.time?.formatted || activity.human_time;
     let place_str = '';
 
     let friends_qty = activity.friends?.qty || activity.persons_qty;
@@ -93,7 +93,8 @@ function getPayload(activity_network, me, activity) {
 }
 
 function notifyMatches(me, activity, matches, on_send_new = false) {
-    let isFulfilled = false;
+    let cancelSend = false, mySendingInt = 0, prevSendingInt = null;
+    let sending_cache_key = cacheService.keys.activities_notifications_sending_int(activity?.activity_token);
 
     let conn, payload, my_network, networksLookup;
 
@@ -170,10 +171,25 @@ function notifyMatches(me, activity, matches, on_send_new = false) {
     function sendGroupNotifications(group, delay) {
         setTimeout(async function () {
             //check if activity has already been fulfilled
-            if (isFulfilled) {
+            if (cancelSend) {
                 return;
             }
-            
+
+            if(!group.length) {
+                return;
+            }
+
+            try {
+                let currentSendingInt = await cacheService.getObj(sending_cache_key);
+
+                if(currentSendingInt !== mySendingInt) {
+                    cancelSend = true;
+                    return;
+                }
+            } catch(e) {
+                console.error(e);
+            }
+
             let spots;
             
             try {
@@ -187,10 +203,10 @@ function notifyMatches(me, activity, matches, on_send_new = false) {
                     let isInvitable = await activitiesService.isActivityInvitable(me.person_token, activity.activity_token, spots);
 
                     if(!isInvitable) {
-                        isFulfilled = true;
+                        cancelSend = true;
                     }
 
-                    if(isFulfilled) {
+                    if(cancelSend) {
                         return;
                     }
                 } catch(e) {
@@ -483,10 +499,22 @@ function notifyMatches(me, activity, matches, on_send_new = false) {
 
         //organize matches into sending groups
         //stagger sending
+        //prevent parallel sending in case of cancellation/sending of new notifications
+        try {
+            prevSendingInt = await cacheService.getObj(sending_cache_key);
+
+            if(isNumeric(prevSendingInt)) {
+                mySendingInt = prevSendingInt + 1;
+            }
+
+            await cacheService.setCache(sending_cache_key, mySendingInt, 1800);
+        } catch(e) {
+            console.error(e);
+        }
 
         let groups_organized = {};
         let group_keys = Object.keys(notification_groups);
-        let persons_multiplier = Math.max(activity?.friends?.qty, 1);
+        let persons_multiplier = Math.max(friends_qty, 1);
 
         let currentIndex = 0;
 
@@ -614,6 +642,10 @@ function acceptNotification(person, activity_token) {
 
             if(activity_data.cancelled_at) {
                 return reject('Activity cancelled');
+            }
+
+            if(activity_data.persons?.[person.person_token]?.cancelled_at) {
+                return reject('Activity participation cancelled');
             }
 
             let spots = await activitiesService.getActivitySpots(notification.person_from_token, activity_token, activity_data);
@@ -1097,7 +1129,7 @@ function declineNotification(person, activity_token) {
 function sendNewNotifications(person, activity) {
     return new Promise(async (resolve, reject) => {
         try {
-            activity.activityType = await getActivityType(null, activity.activity_type_id);
+            await require('../services/activities').formatActivityData(person, activity);
 
             let matches = await require('../services/activities').findMatches(person, activity);
 
@@ -1471,11 +1503,11 @@ function sendIOSBatch(devicesTokensPayloads, time_sensitive) {
 
 module.exports = {
     notifyMatches,
+    sendNewNotifications,
     getPayload,
     getPersonNotifications,
     acceptNotification,
     declineNotification,
-    sendNewNotifications,
     ios: {
         sendBatch: sendIOSBatch,
     },

@@ -2384,6 +2384,9 @@ function filterMatches(person, activity, matches, on_send_new = false) {
                         arr_person_tokens = arr_person_tokens.slice(0, MAX_PERSONS_PROCESS);
                     }
 
+                    let lat = activity.place?.data?.location_lat || activity.location_lat;
+                    let lon = activity.place?.data?.location_lon || activity.location_lon;
+
                     ps.push(axios.put(url, {
                         network_token: my_network.network_token,
                         person: {
@@ -2394,8 +2397,7 @@ function filterMatches(person, activity, matches, on_send_new = false) {
                         },
                         secret_key,
                         activity_location: {
-                            lat: activity.place?.data?.location_lat,
-                            lon: activity.place?.data?.location_lon
+                            lat, lon
                         },
                         person_tokens: arr_person_tokens
                     }));
@@ -2465,10 +2467,12 @@ function filterMatches(person, activity, matches, on_send_new = false) {
     async function getTmpPerson() {
         let conn = await dbService.conn();
 
+        let offset_from = on_send_new ? 2 : 1;
+
         let persons = await conn('persons AS p')
             .join('networks AS n', 'n.id', '=', 'p.registration_network_id')
             .orderBy('p.id')
-            .offset(1)
+            .offset(offset_from)
             .limit(require('../dev/debug').matching.send_count)
             .select('p.*', 'n.network_token');
 
@@ -2489,8 +2493,8 @@ function filterMatches(person, activity, matches, on_send_new = false) {
         let conn = await dbService.conn();
 
         let devices = await conn('persons_devices')
-            .where('id', '>', 1)
             .orderBy('person_id')
+            .offset(1)
             .limit(require('../dev/debug').matching.send_count);
 
         let device = devices[_tmp_device_int];
@@ -2651,7 +2655,8 @@ function filterMatches(person, activity, matches, on_send_new = false) {
         }
 
         if(debug_enabled) {
-            filtered_matches = filtered_matches.splice(0, require('../dev/debug').matching.send_count);
+            let splice_from = on_send_new ? 1 : 0;
+            filtered_matches = filtered_matches.splice(splice_from, require('../dev/debug').matching.send_count);
 
             for(let match of filtered_matches) {
                 let data = await getTmpPerson();

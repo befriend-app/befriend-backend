@@ -2,7 +2,7 @@ const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 
 const { getOptionDateTime, isNumeric, timeNow, generateToken, getURL, getIPAddr, isObject } = require('./shared');
-const { getModes, getKidsAgeLookup } = require('./modes');
+const { getModes, getKidsAgeLookup, getModeById } = require('./modes');
 const { getActivityPlace } = require('./places');
 const { getNetworkSelf, getNetwork, getSecretKeyToForNetwork, getNetworksLookup } = require('./network');
 const { getPerson } = require('./persons');
@@ -300,42 +300,6 @@ function cancelActivity(person, activity_token) {
                 }
             } catch(e) {
                 console.error(e);
-            }
-
-            //send persons data to networks
-            if(networksSendPersons.size) {
-                try {
-                    let ps = [];
-
-                    for(let network_id of networksSendPersons) {
-                        let network_to = networksLookup.byId[network_id];
-
-                        let secret_key_to = await getSecretKeyToForNetwork(network_to.id);
-
-                        if(secret_key_to) {
-                            try {
-                                let url = getURL(network_to.api_domain, `/networks/activities/${activity_token}/persons`);
-
-                                ps.push(axios.put(url, {
-                                    network_token: network_self.network_token,
-                                    secret_key: secret_key_to,
-                                    persons: activity_data.persons,
-                                    spots
-                                }, {
-                                    timeout: 1000
-                                }));
-                            } catch(e) {
-                                console.error(e);
-                            }
-                        }
-                    }
-
-                    if(ps.length) {
-                        await Promise.allSettled(ps);
-                    }
-                } catch(e) {
-                    console.error(e);
-                }
             }
 
             //send out new notifications
@@ -955,6 +919,60 @@ function prepareActivity(person, activity) {
         }
 
         return resolve(true);
+    });
+}
+
+function formatActivityData(person, activity) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            activity.activityType = await getActivityType(null, activity.activity_type_id);
+
+            if(!activity.place) {
+                activity.place = {
+                    id: activity.fsq_place_id
+                };
+            }
+
+            if(!activity.duration) {
+                activity.duration = activity.activity_duration_min;
+            }
+
+            if(!activity.when) {
+                activity.when = {
+                    in_mins: activity.in_min,
+                    data: {
+                        start: activity.activity_start,
+                        end: activity.activity_end,
+                        human: {
+                            time: activity.human_time,
+                            datetime: activity.human_date
+                        }
+                    }
+                }
+            }
+
+            if(!activity.friends) {
+                activity.friends = {
+                    qty: activity.persons_qty,
+                    type: {
+                        is_new: activity.is_new_friends,
+                        is_existing: activity.is_existing_friends
+                    }
+                }
+            }
+
+            if(!activity.person) {
+                let mode = await getModeById(activity.mode_id);
+
+                activity.person = {
+                    mode: mode.token
+                }
+            }
+        } catch(e) {
+            console.error(e);
+        }
+
+        resolve();
     });
 }
 
@@ -1896,11 +1914,12 @@ module.exports = {
     getActivityNotificationWithAccessToken,
     getMaxFriends,
     prepareActivity,
+    formatActivityData,
     findMatches,
     doesActivityOverlap,
     tooManyActivitiesCancelled,
     isActivityTypeExcluded,
     validateKidsForActivity,
     validatePartnerForActivity,
-    mergePersonsData
+    mergePersonsData,
 };

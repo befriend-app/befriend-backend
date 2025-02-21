@@ -58,6 +58,7 @@ const keyFunctions = {
 
     activities: (person_token) => `activities:persons:${person_token}`, //activities organized by person who created them, lookup by activity_token
     activities_notifications: (activity_token) => `activities:${activity_token}:notifications`,
+    activities_notifications_sending_int: (activity_token) => `activities:${activity_token}:notifications:sending_int`,
     activity_type: (token) => `activity_types:${token}`,
     activity_type_venue_categories: (token) => `activity_types:venue_categories:${token}`,
     place_fsq: (fsqId) => `places:fsq:${fsqId}`,

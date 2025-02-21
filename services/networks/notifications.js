@@ -121,7 +121,7 @@ module.exports = {
                     errors.push('FSQ place id required')
                 }
 
-                if(!activity.activity?.token) {
+                if(!activity.activity?.token && !activity.activityType.activity_type_token) {
                     errors.push("Activity type token required");
                 }
 
@@ -227,7 +227,7 @@ module.exports = {
                     .where('activity_token', activity.activity_token)
                     .first();
 
-                let activityType = await getActivityType(activity.activity.token);
+                let activityType = await getActivityType(activity.activity?.token || activity.activityType?.activity_type_token);
 
                 if(!activityType) {
                     return reject({
