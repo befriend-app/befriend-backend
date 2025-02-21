@@ -1497,18 +1497,29 @@ function getActivity(person_token, activity_token, access_token = null) {
         let spots = {}, place = {}, matching = {};
 
         try {
-            if (typeof activity_token !== 'string') {
-                return reject({
-                        message: 'Activity token required',
-                        status: 400
+            //validate access token
+            if(access_token) {
+                let conn = await dbService.conn();
+
+                let access_token_qry = await conn('activities_persons AS ap')
+                    .join('persons AS p', 'p.id', '=', 'ap.person_id')
+                    .where('ap.access_token', access_token)
+                    .where('p.person_token', person_token)
+                    .first();
+
+                if (!access_token_qry) {
+                    return reject({
+                        message: 'Invalid access token',
+                        status: 401
                     });
+                }
             }
 
             let me = await getPerson(person_token);
 
             if (!me) {
                 return reject({
-                    message: 'person token not found',
+                    message: 'Person not found',
                     status: 400
                 });
             }
@@ -1537,28 +1548,17 @@ function getActivity(person_token, activity_token, access_token = null) {
                 });
             }
 
-            //validate access token
-            if(access_token) {
-                let conn = await dbService.conn();
-
-                let access_token_qry = await conn('activities_persons AS ap')
-                    .join('persons AS p', 'p.id', '=', 'ap.person_id')
-                    .where('ap.access_token', access_token)
-                    .where('p.person_token', person_token)
-                    .first();
-
-                if (!access_token_qry) {
-                    return reject({
-                        message: 'Invalid access token',
-                        status: 401
-                    });
-                }
-            }
+            activity.persons = filterActivityPersons(activity.persons, person_token);
 
             spots = {
                 available: activity.spots_available,
                 accepted: activity.persons_qty - activity.spots_available
             };
+
+            //if I cancelled, set accepted to 0
+            if(activity.persons?.[person_token]?.cancelled_at) {
+                spots.accepted = 0;
+            }
 
             place = await getPlaceData(activity.fsq_place_id);
 
@@ -1576,7 +1576,7 @@ function getActivity(person_token, activity_token, access_token = null) {
                         'gender_id',
                         'is_new',
                         'reviews'
-                    ])
+                    ]);
 
                     matching[_person_token] = await require('../services/matching').personToPersonInterests(me, {
                         person_token: _person_token
@@ -1624,7 +1624,7 @@ function getActivity(person_token, activity_token, access_token = null) {
             console.error(e);
 
             return reject({
-                message: 'Errog getting activity matching',
+                message: 'Error getting activity',
                 status: 400
             });
         }
@@ -1669,6 +1669,15 @@ function getPersonActivities(person) {
                     let activity = person_activities[activity_token];
 
                     activity.data = JSON.parse(results[idx++]);
+                }
+            }
+
+            //if I cancelled my participation in the activity, only show the creator
+            for(let activity_token in person_activities) {
+                let activity = person_activities[activity_token];
+
+                if(activity.data?.persons) {
+                    activity.data.persons = filterActivityPersons(activity.data.persons, person.person_token);
                 }
             }
 
@@ -1757,6 +1766,34 @@ function mergePersonsData(persons) {
             return reject(e);
         }
     });
+}
+
+function filterActivityPersons(persons, my_person_token) {
+    if(persons) {
+        let activityPersonsCopy = structuredClone(persons);
+
+        for(let person_token in persons) {
+            let activity_person = persons[person_token];
+
+            if(person_token === my_person_token) {
+                if(activity_person.cancelled_at) {
+                    for(let _person_token in activityPersonsCopy) {
+                        let _activity_person = activityPersonsCopy[_person_token];
+
+                        if(!_activity_person.is_creator && _person_token !== my_person_token) {
+                            delete activityPersonsCopy[_person_token];
+                        }
+                    }
+
+                    break;
+                }
+            }
+        }
+
+        persons = activityPersonsCopy;
+    }
+
+    return persons;
 }
 
 module.exports = {

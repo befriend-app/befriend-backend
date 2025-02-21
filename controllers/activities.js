@@ -58,6 +58,22 @@ function getActivity(req, res) {
         let activity_token = req.params.activity_token;
 
         try {
+            if (typeof activity_token !== 'string') {
+                res.json({
+                    message: 'Activity token required',
+                }, 400);
+
+                return resolve();
+            }
+
+            if (typeof person_token !== 'string') {
+                res.json({
+                    message: 'Person token required',
+                }, 400);
+
+                return resolve();
+            }
+
             let activity = await activitiesService.getActivity(person_token, activity_token);
 
             res.json(activity);
@@ -124,6 +140,22 @@ function getActivityWithAccessToken(req, res) {
             res.json({
                 message: 'Access token required',
             }, 401);
+
+            return resolve();
+        }
+
+        if (typeof activity_token !== 'string') {
+            res.json({
+                message: 'Activity token required',
+            }, 400);
+
+            return resolve();
+        }
+
+        if (typeof person_token !== 'string') {
+            res.json({
+                message: 'Person token required',
+            }, 400);
 
             return resolve();
         }
