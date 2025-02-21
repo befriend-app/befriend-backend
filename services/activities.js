@@ -72,12 +72,19 @@ function cancelActivity(person, activity_token) {
                 return reject('Activity does not include person');
             }
 
-            let personFromQry = await conn('persons')
-                .where('id', activityPersonQry.person_id_from)
+            let personFromQry = await conn('persons AS p')
+                .where('p.id', activityPersonQry.person_id_from)
+                .leftJoin('earth_grid as eg', 'eg.id', '=', 'p.grid_id')
+                .select('p.*', 'eg.token')
                 .first();
 
             if(!personFromQry) {
                 return reject('Person not found');
+            }
+            
+            personFromQry.grid = {
+                id: personFromQry.grid_id,
+                token: personFromQry.token,
             }
 
             if(activityPersonQry.cancelled_at && !debug_enabled) {
@@ -333,7 +340,7 @@ function cancelActivity(person, activity_token) {
 
             //send out new notifications
             try {
-                require('./notifications').sendNewNotifications(person, activity_data);
+                require('./notifications').sendNewNotifications(personFromQry, activity_data);
             } catch(e) {
                 console.error(e);
             }
@@ -1231,10 +1238,10 @@ function getActivitySpots(person_from_token, activity_token, activity_data = nul
         try {
             if(!activity_data) {
                 let cache_key = cacheService.keys.activities(person_from_token);
-                activity_data = (await cacheService.hGetAllObj(cache_key)) || {};
+                activity_data = (await cacheService.hGetItem(cache_key, activity_token)) || {};
             }
 
-            if (!Object.keys(activity_data.persons).length) {
+            if (!Object.keys(activity_data?.persons || {}).length) {
                 return reject('No persons on activity');
             }
 
@@ -1283,22 +1290,24 @@ function getActivitySpots(person_from_token, activity_token, activity_data = nul
     });
 }
 
-function getActivityFulfilledStatus(person_token, activity_token) {
+function isActivityInvitable(person_token, activity_token, spots = null) {
     return new Promise(async (resolve, reject) => {
         try {
             let activity = await cacheService.hGetItem(cacheService.keys.activities(person_token), activity_token);
 
             if(activity.cancelled_at) {
-                return resolve(true);
+                return resolve(false);
             }
-
-            let spots = await getActivitySpots(person_token, activity_token, activity);
+            
+            if(!spots) {
+                spots = await getActivitySpots(person_token, activity_token, activity);
+            }
 
             if (spots.available <= 0) {
-                return resolve(true);
+                return resolve(false);
             }
 
-            resolve(false);
+            resolve(true);
         } catch(e) {
             reject(e);
         }
@@ -1882,7 +1891,7 @@ module.exports = {
     getDefaultActivity,
     getPersonActivities,
     getActivitySpots,
-    getActivityFulfilledStatus,
+    isActivityInvitable,
     getActivityNotification,
     getActivityNotificationWithAccessToken,
     getMaxFriends,

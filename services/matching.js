@@ -126,6 +126,9 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
                         console.error(e);
                     }
                 }
+            } else if(activity?.location_lat && activity.location_lon) {
+                lat = activity.location_lat;
+                lon = activity.location_lon;
             }
 
             if (lat && lon) {
@@ -2295,7 +2298,7 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
  * - Device information
  */
 
-function filterMatches(person, activity, matches) {
+function filterMatches(person, activity, matches, on_send_new = false) {
     let filtered_matches = [];
     let organized_matches = new Map();
     let filter_networks_persons = new Map();

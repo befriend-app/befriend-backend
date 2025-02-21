@@ -2,7 +2,7 @@ const axios = require('axios');
 const http2 = require('http2');
 const jwt = require('jsonwebtoken');
 
-const { timeNow, generateToken, getURL, isNumeric } = require('./shared');
+const { timeNow, generateToken, getURL } = require('./shared');
 
 const activitiesService = require('./activities');
 const cacheService = require('./cache');
@@ -11,7 +11,7 @@ const { getNetworkSelf, getNetworksLookup, getSecretKeyToForNetwork, getNetwork 
 const { getPerson } = require('./persons');
 const { getGender } = require('./genders');
 const { hGetAllObj } = require('./cache');
-const { validatePartnerForActivity, validateKidsForActivity, mergePersonsData } = require('./activities');
+const { validatePartnerForActivity, validateKidsForActivity, mergePersonsData, getActivityType, getActivitySpots } = require('./activities');
 const { getPlaceData } = require('./fsq');
 
 
@@ -43,37 +43,37 @@ let notification_groups = {
 };
 
 
-function getPayload(activity_network, me, activity, notification_activity) {
+function getPayload(activity_network, me, activity) {
     let title_arr = [];
     let plus_str = '';
     let emoji_str = '';
-    let time_str = activity?.when.time.formatted || notification_activity?.human_time;
+    let time_str = activity.when?.time.formatted || activity.human_time;
     let place_str = '';
 
-    let friends_qty = activity?.friends.qty || notification_activity?.persons_qty;
+    let friends_qty = activity.friends?.qty || activity.persons_qty;
 
     if (friends_qty > 1) {
         plus_str = ` (+${friends_qty - 1})`;
     }
 
-    let place_name = activity?.place.data.name || notification_activity?.location_name;
+    let place_name = activity.place?.data?.name || activity.location_name;
 
     if (place_name) {
         place_str = `at ${place_name}`;
     }
 
-    let is_address = activity?.place.is_address || false;
+    let is_address = activity.place?.is_address || activity.is_address || false;
 
     if (is_address) {
         //
     } else {
-        let emoji = activity?.activity.data.activity_emoji || notification_activity?.activityType.activity_emoji;
+        let emoji = activity?.activity?.data.activity_emoji || activity.activityType?.activity_emoji;
 
         if (emoji) {
             emoji_str = emoji + ' ';
         }
 
-        let activityTypeName = activity?.activity.name || notification_activity?.activityType.notification_name;
+        let activityTypeName = activity.activity?.name || activity.activityType?.notification_name;
 
         if (activityTypeName) {
             title_arr.push(activityTypeName);
@@ -86,13 +86,13 @@ function getPayload(activity_network, me, activity, notification_activity) {
         title: `${emoji_str}Invite: ${title_arr.join(' ')}`,
         body: `Join ${me.first_name}${plus_str} ${place_str}`,
         data: {
-            activity_token: activity?.activity_token || notification_activity?.activity_token,
+            activity_token: activity.activity_token,
             network_token: activity_network.network_token,
         },
     };
 }
 
-function notifyMatches(me, activity, matches) {
+function notifyMatches(me, activity, matches, on_send_new = false) {
     let isFulfilled = false;
 
     let conn, payload, my_network, networksLookup;
@@ -100,6 +100,8 @@ function notifyMatches(me, activity, matches) {
     let notifications_cache_key = cacheService.keys.activities_notifications(activity.activity_token);
 
     let activityCopy = structuredClone(activity);
+
+    let friends_qty = activity.friends?.qty || activity.persons_qty;
 
     delete activityCopy.activity_id;
     delete activityCopy.travel;
@@ -171,15 +173,22 @@ function notifyMatches(me, activity, matches) {
             if (isFulfilled) {
                 return;
             }
-
-            let spots = {
-                available: activity.friends.qty,
-                accepted: activity.friends.qty
+            
+            let spots;
+            
+            try {
+                spots = await getActivitySpots(me.person_token, activity.activity_token);
+            } catch(e) {
+                console.error(e);
             }
 
-            if (delay > 0) {
+            if (delay > 0 || on_send_new) {
                 try {
-                    isFulfilled = await activitiesService.getActivityFulfilledStatus(me.person_token, activity.activity_token);
+                    let isInvitable = await activitiesService.isActivityInvitable(me.person_token, activity.activity_token, spots);
+
+                    if(!isInvitable) {
+                        isFulfilled = true;
+                    }
 
                     if(isFulfilled) {
                         return;
@@ -290,7 +299,7 @@ function notifyMatches(me, activity, matches) {
                         let to_person = to_persons[i];
 
                         insert.person_from_token = me.person_token;
-                        insert.friends_qty = activity.friends.qty;
+                        insert.friends_qty = friends_qty;
 
                         pipeline.hSet(
                             notifications_cache_key,
@@ -394,7 +403,7 @@ function notifyMatches(me, activity, matches) {
                             let to_person = organized[organized_person_tokens[i]];
 
                             insert.person_from_token = me.person_token;
-                            insert.friends_qty = activity.friends.qty;
+                            insert.friends_qty = friends_qty;
 
                             pipeline.hSet(
                                 notifications_cache_key,
@@ -1085,6 +1094,26 @@ function declineNotification(person, activity_token) {
     });
 }
 
+function sendNewNotifications(person, activity) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            activity.activityType = await getActivityType(null, activity.activity_type_id);
+
+            let matches = await require('../services/activities').findMatches(person, activity);
+
+            matches = await require('../services/matching').filterMatches(person, activity, matches, true);
+
+            if(matches.length) {
+                await require('../services/notifications').notifyMatches(person, activity, matches, true);
+            }
+        } catch(e) {
+            console.error(e);
+        }
+
+        resolve();
+    });
+}
+
 //ios
 let provider = null;
 
@@ -1446,6 +1475,7 @@ module.exports = {
     getPersonNotifications,
     acceptNotification,
     declineNotification,
+    sendNewNotifications,
     ios: {
         sendBatch: sendIOSBatch,
     },

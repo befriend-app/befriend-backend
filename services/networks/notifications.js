@@ -388,7 +388,7 @@ module.exports = {
                     },
                 };
 
-                let payload = notificationsService.getPayload(from_network, person_from_qry, null, activityData);
+                let payload = notificationsService.getPayload(from_network, person_from_qry, activityData);
 
                 for(let person_token in persons) {
                     if(existingNotificationsLookup[person_token]) {
