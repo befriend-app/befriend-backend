@@ -507,12 +507,17 @@ module.exports = {
                      .join('persons AS p', 'p.id', '=', 'an.person_to_id')
                      .where('activity_id', activity_check.id)
                      .where('person_to_network_id', network_self.id)
-                     .select('an.id', 'person_token');
+                     .select('an.id', 'person_token', 'declined_at');
 
                 let notificationTokens = {};
 
                 //update notification data via ws
                  for(let person of notification_persons) {
+                     //do not send if person declined
+                     if(person.declined_at) {
+                         continue;
+                     }
+
                      notificationTokens[person.person_token] = true;
 
                      cacheService.publishWS('notifications', person.person_token, {
@@ -524,6 +529,13 @@ module.exports = {
 
                  //update activity data via ws
                 for(let person_token in cache_activity.persons) {
+                    let person = cache_activity.persons[person_token];
+
+                    //do not send if person cancelled
+                    if(person.cancelled_at) {
+                        continue;
+                    }
+
                     if(person_token in notificationTokens) {
                         cacheService.publishWS('activities', person_token, {
                             activity_token,
