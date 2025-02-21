@@ -2319,22 +2319,32 @@ function filterMatches(person, activity, matches) {
 
                 let match_networks = [];
 
-                for(let network_token of match.networks) {
-                    if(networksLookup.byToken[network_token]) {
-                        match_networks.push(networksLookup.byToken[network_token]);
+                for(let network_token of (match.networks || [])) {
+                    let matchNetwork = networksLookup.byToken[network_token];
+
+                    if(matchNetwork) {
+                        match_networks.push(matchNetwork);
                     }
+                }
+
+                if(!match_networks.length) {
+                    continue;
                 }
 
                 if (match.networks.includes(my_network.network_token)) {
                     if (match.device?.platform && match.device.token) {
                         organized_matches.set(match.person_token, match)
                     }
-                } else {
-                    //we will call each network with matching person tokens to find which should be excluded
-
+                } else { //3rd-party network
                     //use first network
                     let network = match_networks[0];
 
+                    //do not add if network is offline
+                    if(!network.is_online) {
+                        continue;
+                    }
+
+                    //we will call each network with matching person tokens to find which should be excluded
                     if(!filter_networks_persons.has(network.network_token)) {
                         filter_networks_persons.set(network.network_token, new Set());
                     }
@@ -2456,7 +2466,7 @@ function filterMatches(person, activity, matches) {
             .join('networks AS n', 'n.id', '=', 'p.registration_network_id')
             .orderBy('p.id')
             .offset(1)
-            .limit(3)
+            .limit(require('../dev/debug').matching.send_count)
             .select('p.*', 'n.network_token');
 
         let person = persons[_tmp_person_int];
@@ -2478,7 +2488,7 @@ function filterMatches(person, activity, matches) {
         let devices = await conn('persons_devices')
             .where('id', '>', 1)
             .orderBy('person_id')
-            .limit(3);
+            .limit(require('../dev/debug').matching.send_count);
 
         let device = devices[_tmp_device_int];
 
@@ -2638,7 +2648,7 @@ function filterMatches(person, activity, matches) {
         }
 
         if(debug_enabled) {
-            filtered_matches = filtered_matches.splice(0, 3);
+            filtered_matches = filtered_matches.splice(0, require('../dev/debug').matching.send_count);
 
             for(let match of filtered_matches) {
                 let data = await getTmpPerson();
