@@ -115,7 +115,7 @@ function cancelActivity(person, activity_token) {
 
                 let _person = activity_data.persons[person_token];
 
-                if(!person.cancelled_at) {
+                if(!_person.cancelled_at) {
                     activeParticipants.push(_person);
                 }
             }
