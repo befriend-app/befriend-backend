@@ -13,6 +13,10 @@ const axios = require('axios');
 let debug_create_activity_enabled = require('../dev/debug').activities.create;
 
 let rules = {
+    checkIn: {
+        minsBefore: 30,
+        minsAfter: 20
+    },
     unfulfilled: {
         acceptance: {
             minsThreshold: 10,
@@ -483,6 +487,182 @@ function createActivity(person, activity) {
         } catch(e) {
             console.error(e);
             return reject("Error creating activity");
+        }
+    });
+}
+
+function checkIn(activity_token, person_token, location, access_token = null) {
+    return new Promise(async (resolve, reject) => {
+        let time = timeNow();
+
+        let notification_cache_key = cacheService.keys.activities_notifications(activity_token);
+        let person_activity_cache_key = cacheService.keys.persons_activities(person_token);
+        let debug_enabled = require('../dev/debug').activities.checkIn;
+
+        try {
+            //validate activity token
+            if(typeof activity_token !== 'string') {
+                return reject({
+                    message: 'Invalid activity token'
+                });
+            }
+
+            //validate person
+            if(typeof person_token !== 'string') {
+                return reject({
+                    message: 'Invalid person token'
+                });
+            }
+
+            let conn = await dbService.conn();
+
+            let person = await getPerson(person_token);
+
+            if(!person) {
+                return reject({
+                    message: 'Person not found'
+                });
+            }
+
+            //validate person-activity and access token if provided
+            let activityPersonQry = conn('activities_persons AS ap')
+                .join('activities AS a', 'a.id', '=', 'ap.activity_id')
+                .where('activity_token', activity_token)
+                .where('ap.person_id', person.id)
+                .select('ap.*', 'a.person_id AS person_id_from')
+                .first();
+
+            if(access_token) {
+                activityPersonQry = activityPersonQry.where('access_token', access_token);
+            }
+
+            activityPersonQry = await activityPersonQry;
+
+            if(!activityPersonQry) {
+                if(access_token) {
+                    return reject({
+                        message: 'Invalid access token',
+                        status: 401
+                    });
+                }
+
+                return reject({
+                    message: 'Activity does not include person',
+                    status: 401
+                });
+            }
+
+            let personFromQry = await conn('persons AS p')
+                .where('p.id', activityPersonQry.person_id_from)
+                .leftJoin('earth_grid as eg', 'eg.id', '=', 'p.grid_id')
+                .select('p.*', 'eg.token')
+                .first();
+
+            if(!personFromQry) {
+                return reject({
+                    message: 'Person from not found'
+                });
+            }
+
+            //validate location
+            if(!isObject(location) || !isNumeric(location.lat) || !isNumeric(location.lon)) {
+                return reject({
+                    message: 'Valid location required'
+                });
+            }
+
+            let activity = await cacheService.hGetItem(cacheService.keys.activities(personFromQry.person_token), activity_token);
+
+            if(!activity) {
+                return reject({
+                    message: 'Activity not found'
+                });
+            }
+
+            if(!activity.persons) {
+                return reject({
+                    message: 'Persons missing on activity'
+                });
+            }
+
+            //validate check-in
+            //do not allow check-in if person already cancelled their participation
+            let myParticipation = activity.persons[person_token];
+
+            if(myParticipation?.cancelled_at && !debug_enabled) {
+                return reject({
+                    message: 'Activity participation cancelled'
+                });
+            }
+
+            //do not allow check-in if activity cancelled
+            if(activity.cancelled_at && !debug_enabled) {
+                return reject({
+                    message: `This activity was cancelled`
+                });
+            }
+
+            //prevent check-in before threshold
+            let checkInStart = activity.activity_start - (rules.checkIn.minsBefore * 60);
+
+            if(timeNow(true) < checkInStart && !debug_enabled) {
+                return reject({
+                    message: `Check-in starts ${rules.checkIn.minsBefore} minutes prior to activity time`
+                });
+            }
+
+            let checkInEnd = activity.activity_start + (rules.checkIn.minsAfter * 60);
+
+            let latestAcceptance = null;
+
+            for(let pt in activity.persons) {
+                let p = activity.persons[pt];
+
+                if(p.is_creator || p.cancelled_at) {
+                    continue;
+                }
+
+                if(!latestAcceptance || p.accepted_at > latestAcceptance) {
+                    latestAcceptance = p.accepted_at;
+                }
+            }
+
+            //if the latest invitation was accepted after activity start time, use the later time for check-in end
+            if(latestAcceptance) {
+                latestAcceptance /= 1000; //ms to sec
+
+                if(latestAcceptance > activity.activity_start) {
+                    checkInEnd = latestAcceptance + (rules.checkIn.minsAfter * 60);
+                }
+            }
+
+            //prevent check-in if past check-in end time
+            if(timeNow(true) > checkInEnd && !debug_enabled) {
+                return reject({
+                    message: `This activity is no longer accepting check-ins`
+                });
+            }
+
+            let network_self = await getNetworkSelf();
+            let networksLookup = await getNetworksLookup();
+
+            //update cache
+            // await cacheService.hSet(activity_cache_key, activity_token, activity);
+            // await cacheService.hSet(person_activity_cache_key, activity_token, personActivity);
+
+            //merge persons data
+            // await mergePersonsData(activity.persons);
+
+            resolve({
+                success: true,
+                message: 'Check-in successful',
+            });
+        } catch(e) {
+            console.error(e);
+
+            return reject({
+                message: "Error checking in for activity"
+            });
         }
     });
 }
@@ -1902,6 +2082,7 @@ module.exports = {
     },
     cancelActivity,
     createActivity,
+    checkIn,
     getActivity,
     getActivityTypes,
     getActivityTypesMapping,

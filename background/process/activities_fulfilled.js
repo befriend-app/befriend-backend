@@ -7,7 +7,7 @@ const { batchUpdate } = require('../../services/db');
 
 loadScriptEnv();
 
-const UPDATE_FREQUENCY = 60 * 10 * 1000; //runs every 10 minutes
+const UPDATE_FREQUENCY = 10 * 60 * 1000; //runs every x minutes
 
 let self_network;
 
@@ -167,7 +167,7 @@ function processUpdate() {
             let conn = await dbService.conn();
 
             let acceptanceThreshold = rules.unfulfilled.acceptance.minsThreshold * 60;
-            let noShowThreshold = rules.unfulfilled.noShow.minsThreshold * 60;
+            let defaultNoShowThreshold = rules.unfulfilled.noShow.minsThreshold * 60;
 
             let activities = conn('activities AS a')
                 .join('activities_persons AS ap', 'ap.activity_id', '=', 'a.id')
@@ -231,6 +231,7 @@ function processUpdate() {
                 activitiesOrganized[activity.id].persons.push({
                     person_id: activity.person_id_to,
                     person_token: person_to_token,
+                    accepted_at: activity.accepted_at,
                     arrived_at: activity.arrived_at,
                     cancelled_at: activity.cancelled_at,
                     left_at: activity.left_at,
@@ -257,21 +258,43 @@ function processUpdate() {
                     !p.is_creator
                 );
 
-                if(!participantsWithoutCreator.length) { //set to unfulfilled if zero participants
+                //use default no show threshold unless any participant accepted after activity start time
+                let noShowThreshold = defaultNoShowThreshold;
+
+                if(participantsWithoutCreator.length) {
+                    let latestAcceptTime = null;
+
+                    for(let p of participantsWithoutCreator) {
+                        if(!latestAcceptTime || p.accepted_at > latestAcceptTime) {
+                            latestAcceptTime = p.accepted_at;
+                        }
+                    }
+
+                    if(latestAcceptTime) {
+                        latestAcceptTime /= 1000; //from ms to sec
+
+                        if(latestAcceptTime > activity.activity_start) {
+                            noShowThreshold = rules.unfulfilled.noShow.minsThreshold * 60 + (latestAcceptTime - activity.activity_start);
+                        }
+                    }
+
+                    //use dynamic threshold for determining if activity is fulfilled
+                    if((activity.activity_start + noShowThreshold) < t) {
+                        //count participants who arrived
+                        let arrivedParticipants = activeParticipants.filter(p =>
+                            p.arrived_at
+                        );
+
+                        batch_update.push({
+                            id: activity.id,
+                            is_fulfilled: arrivedParticipants.length >= 2,
+                            updated: timeNow()
+                        });
+                    }
+                } else { //set to unfulfilled if zero participants
                     batch_update.push({
                         id: activity.id,
                         is_fulfilled: false,
-                        updated: timeNow()
-                    });
-                } else if((activity.activity_start + noShowThreshold) < t) { //perform logic after no show threshold
-                    //count participants who arrived
-                    let arrivedParticipants = activeParticipants.filter(p =>
-                        p.arrived_at
-                    );
-
-                    batch_update.push({
-                        id: activity.id,
-                        is_fulfilled: arrivedParticipants.length >= 2,
                         updated: timeNow()
                     });
                 }

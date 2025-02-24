@@ -7,7 +7,8 @@ module.exports = {
     activities: {
         cancel: isProdApp() ? false : false,
         create: isProdApp() ? false : true,
-        accept: isProdApp() ? false : true
+        accept: isProdApp() ? false : true,
+        checkIn: isProdApp() ? false : false,
     },
     matching: {
         logs: isProdApp() ? false : true,

@@ -3,7 +3,7 @@ const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 const matchingService = require('../services/matching');
 
-const { formatObjectTypes, timeNow, getIPAddr } = require('../services/shared');
+const { formatObjectTypes, timeNow, getIPAddr, isObject, isNumeric } = require('../services/shared');
 const { getPerson } = require('../services/persons');
 
 const { getModes } = require('../services/modes');
@@ -49,6 +49,48 @@ function createActivity(req, res) {
         } catch (e) {
             reject(e);
         }
+    });
+}
+
+function checkIn(req, res) {
+    return new Promise(async (resolve, reject) => {
+        let activity_token = req.params.activity_token;
+        let person_token = req.body.person_token;
+        let location = req.body.location;
+
+        try {
+            let result = await activitiesService.checkIn(activity_token, person_token, location);
+
+            res.json(result, 201);
+        } catch(e) {
+            res.json({ error: e.message }, e.status || 400);
+        }
+
+        resolve();
+    });
+}
+
+function checkInWithAccessToken(req, res) {
+    return new Promise(async (resolve, reject) => {
+        let activity_token = req.params.activity_token;
+        let access_token = req.body.access_token;
+        let person_token = req.body.person_token;
+        let location = req.body.location;
+
+        if(typeof access_token !== 'string') {
+            res.json('Access token required', 401);
+            return resolve();
+        }
+
+        try {
+            let result = await activitiesService.checkIn(activity_token, person_token, location, access_token);
+
+            res.json(result, 201);
+        } catch(e) {
+            res.json({ error: e.message }, e.status || 400);
+        }
+
+        resolve();
     });
 }
 
@@ -101,7 +143,6 @@ function getActivity(req, res) {
         resolve();
     });
 }
-
 
 
 function getActivityNotification(req, res) {
@@ -670,6 +711,8 @@ function getMatches(req, res) {
 
 module.exports = {
     createActivity,
+    checkIn,
+    checkInWithAccessToken,
     getActivityRules,
     putCancelActivity,
     putNetworkCancelActivity,

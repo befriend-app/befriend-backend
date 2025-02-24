@@ -179,6 +179,17 @@ router.get('/activities/networks/:activity_token', function (req, res, next) {
     });
 });
 
+router.post('/activities/networks/check-in/:activity_token', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await activitiesController.checkInWithAccessToken(req, res);
+        } catch (e) {
+            console.error(e);
+        }
+        resolve();
+    });
+});
+
 router.get('/activities/networks/notifications/:activity_token', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {

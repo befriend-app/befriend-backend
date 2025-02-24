@@ -522,6 +522,18 @@ router.post('/activities', function (req, res, next) {
     });
 });
 
+router.post('/activities/:activity_token/check-in', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await activitiesController.checkIn(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
 router.get('/activities/matches', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {

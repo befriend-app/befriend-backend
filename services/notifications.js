@@ -700,6 +700,7 @@ function acceptNotification(person, activity_token) {
             let person_network = await getNetwork(notification.person_to_network_id);
 
             let activityPersonData = {
+                accepted_at: time,
                 first_name: person.first_name || null,
                 image_url: person.image_url || null,
                 network: {

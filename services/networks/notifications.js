@@ -682,6 +682,7 @@ module.exports = {
                     }
 
                     activity_data.persons[person_token] = {
+                        accepted_at,
                         first_name: person.first_name,
                         image_url: person.image_url
                     }
