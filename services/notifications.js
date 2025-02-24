@@ -11,7 +11,9 @@ const { getNetworkSelf, getNetworksLookup, getSecretKeyToForNetwork, getNetwork 
 const { getPerson } = require('./persons');
 const { getGender } = require('./genders');
 const { hGetAllObj } = require('./cache');
-const { validatePartnerForActivity, validateKidsForActivity, mergePersonsData, getActivityType, getActivitySpots } = require('./activities');
+const { validatePartnerForActivity, validateKidsForActivity, mergePersonsData, getActivityType, getActivitySpots,
+    rules
+} = require('./activities');
 const { getPlaceData } = require('./fsq');
 
 
@@ -624,10 +626,12 @@ function acceptNotification(person, activity_token) {
                 return reject('Activity does not include person');
             }
 
+            //notification already declined
             if(notification.declined_at) {
                 return reject('Activity cannot be accepted');
             }
 
+            //notification already accepted
             if(notification.accepted_at) {
                 return reject('Activity already accepted');
             }
@@ -640,12 +644,19 @@ function acceptNotification(person, activity_token) {
                 return reject('Activity data not found');
             }
 
+            //entire activity cancelled
             if(activity_data.cancelled_at) {
                 return reject('Activity cancelled');
             }
 
+            //this person already cancelled their participation
             if(activity_data.persons?.[person.person_token]?.cancelled_at) {
                 return reject('Activity participation cancelled');
+            }
+
+            //current time is x minutes past activity start time
+            if(timeNow(true) - activity_data.activity_start > rules.unfulfilled.acceptance.minsThreshold * 60) {
+                return reject(rules.unfulfilled.acceptance.error);
             }
 
             let spots = await activitiesService.getActivitySpots(notification.person_from_token, activity_token, activity_data);

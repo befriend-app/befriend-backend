@@ -15,7 +15,8 @@ let debug_create_activity_enabled = require('../dev/debug').activities.create;
 let rules = {
     unfulfilled: {
         acceptance: {
-            minsThreshold: 10
+            minsThreshold: 10,
+            error: `Current time is past activity start time`
         },
         noShow: {
             minsThreshold: 20
@@ -40,7 +41,7 @@ let rules = {
             is_day: true,
             error: 'Too many activities cancelled, please try again tomorrow'
         }
-    }
+    },
 }
 
 
@@ -1856,7 +1857,6 @@ module.exports = {
         byId: {},
         byToken: {}
     },
-    maxPerHour: 2,
     durations: {
         min: 10,
         max: 360,
