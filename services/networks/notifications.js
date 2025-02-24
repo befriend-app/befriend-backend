@@ -652,6 +652,7 @@ module.exports = {
 
                     let person_activity_insert = {
                         access_token,
+                        accepted_at,
                         activity_id: activity.id,
                         person_id: person.id,
                         is_creator: false,

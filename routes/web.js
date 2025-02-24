@@ -152,11 +152,12 @@ router.put('/activity-types/:activity_type_token/places', function (req, res, ne
         } catch (e) {
             console.error(e);
         }
+
         resolve();
     });
 });
 
-router.get('/activities/rules', function (req, res, next) {
+router.get('/activities/rules', function (req, res) {
     return new Promise(async (resolve, reject) => {
         try {
             await activitiesController.getActivityRules(req, res);

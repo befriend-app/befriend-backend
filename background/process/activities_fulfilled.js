@@ -180,6 +180,7 @@ function processUpdate() {
                     'a.activity_start',
                     'a.activity_end',
                     'a.activity_duration_min',
+                    'ap.accepted_at',
                     'ap.arrived_at',
                     'ap.cancelled_at',
                     'ap.left_at',

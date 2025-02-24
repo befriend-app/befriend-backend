@@ -748,6 +748,7 @@ function acceptNotification(person, activity_token) {
 
             //add to own activities list
             let person_activity_insert = {
+                accepted_at: time,
                 activity_id: notification.activity_id,
                 person_id: person.id,
                 is_creator: false,

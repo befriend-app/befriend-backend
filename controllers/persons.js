@@ -34,6 +34,7 @@ const { rules, getPersonActivities } = require('../services/activities');
 const { getPersonNotifications } = require('../services/notifications');
 const { getNetworkSelf } = require('../services/network');
 
+
 module.exports = {
     getMe: function (req, res) {
         return new Promise(async (resolve, reject) => {

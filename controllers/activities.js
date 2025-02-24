@@ -64,7 +64,6 @@ function getActivityRules(req, res) {
     });
 }
 
-
 function getActivity(req, res) {
     return new Promise(async (resolve, reject) => {
         let person_token = req.query.person_token;
