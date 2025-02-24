@@ -30,7 +30,7 @@ const {
 } = require('../services/me');
 
 const { getKidsAgeOptions } = require('../services/modes');
-const { getPersonActivities } = require('../services/activities');
+const { rules, getPersonActivities } = require('../services/activities');
 const { getPersonNotifications } = require('../services/notifications');
 const { getNetworkSelf } = require('../services/network');
 
@@ -79,7 +79,10 @@ module.exports = {
                 res.json({
                     network,
                     me,
-                    activities,
+                    activities: {
+                        rules,
+                        activities,
+                    },
                     notifications,
                     filters,
                     genders,

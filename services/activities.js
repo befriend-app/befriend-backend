@@ -16,7 +16,7 @@ let rules = {
     unfulfilled: {
         acceptance: {
             minsThreshold: 10,
-            error: `Current time is past activity start time`
+            error: `Activity can no longer be accepted`
         },
         noShow: {
             minsThreshold: 20

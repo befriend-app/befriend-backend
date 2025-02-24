@@ -156,6 +156,17 @@ router.put('/activity-types/:activity_type_token/places', function (req, res, ne
     });
 });
 
+router.get('/activities/rules', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await activitiesController.getActivityRules(req, res);
+        } catch (e) {
+            console.error(e);
+        }
+        resolve();
+    });
+});
+
 router.get('/activities/networks/:activity_token', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {

@@ -931,6 +931,7 @@ module.exports = {
                 }
 
                 cache_activity.persons[person_token].cancelled_at = cancelled_at;
+
                 await cacheService.hSet(cache_key, activity_token, cache_activity);
 
                 let personActivity = await cacheService.hGetItem(cacheService.keys.persons_activities(person_token), activity_token);

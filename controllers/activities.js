@@ -52,6 +52,19 @@ function createActivity(req, res) {
     });
 }
 
+function getActivityRules(req, res) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            res.json(activitiesService.rules);
+        } catch(e) {
+            res.json({ message: e.message }, e.status || 400);
+        }
+
+        resolve();
+    });
+}
+
+
 function getActivity(req, res) {
     return new Promise(async (resolve, reject) => {
         let person_token = req.query.person_token;
@@ -89,6 +102,8 @@ function getActivity(req, res) {
         resolve();
     });
 }
+
+
 
 function getActivityNotification(req, res) {
     return new Promise(async (resolve, reject) => {
@@ -656,6 +671,7 @@ function getMatches(req, res) {
 
 module.exports = {
     createActivity,
+    getActivityRules,
     putCancelActivity,
     putNetworkCancelActivity,
     getActivityNotification,
