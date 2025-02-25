@@ -8,7 +8,7 @@ module.exports = {
         cancel: isProdApp() ? false : false,
         create: isProdApp() ? false : true,
         accept: isProdApp() ? false : true,
-        checkIn: isProdApp() ? false : false,
+        checkIn: isProdApp() ? false : true,
     },
     matching: {
         logs: isProdApp() ? false : true,

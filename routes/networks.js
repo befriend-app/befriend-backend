@@ -43,6 +43,18 @@ router.post('/activities/notifications', function (req, res, next) {
     });
 });
 
+router.post('/activities/:activity_token/check-in', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await networksApiController.networkCheckIn(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
 router.put('/activities/:activity_token/notification/spots', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {

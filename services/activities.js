@@ -567,6 +567,8 @@ function checkIn(activity_token, person_token, location, access_token = null) {
                 });
             }
 
+            let activity_cache_key = cacheService.keys.activities(personFromQry.person_token);
+
             //validate location
             if(!isObject(location) || !isNumeric(location.lat) || !isNumeric(location.lon)) {
                 return reject({
@@ -574,7 +576,7 @@ function checkIn(activity_token, person_token, location, access_token = null) {
                 });
             }
 
-            let activity = await cacheService.hGetItem(cacheService.keys.activities(personFromQry.person_token), activity_token);
+            let activity = await cacheService.hGetItem(activity_cache_key, activity_token);
 
             if(!activity) {
                 return reject({
@@ -589,7 +591,7 @@ function checkIn(activity_token, person_token, location, access_token = null) {
 
             if(distance_ft > rules.checkIn.maxDistance && !debug_enabled) {
                 return reject({
-                    message: `Please check-in after you are within <br>${rules.checkIn.maxDistance}ft of the activity location`
+                    message: `Please check-in when you are within <br>${rules.checkIn.maxDistance}ft of the activity location`
                 });
             }
 
@@ -602,6 +604,12 @@ function checkIn(activity_token, person_token, location, access_token = null) {
             //validate check-in
             //do not allow check-in if person already cancelled their participation
             let myParticipation = activity.persons[person_token];
+
+            if(!myParticipation) {
+                return reject({
+                    message: 'My participation missing on activity'
+                });
+            }
 
             if(myParticipation?.cancelled_at && !debug_enabled) {
                 return reject({
@@ -657,19 +665,135 @@ function checkIn(activity_token, person_token, location, access_token = null) {
                 });
             }
 
-            let network_self = await getNetworkSelf();
-            let networksLookup = await getNetworksLookup();
+            //update db/cache
+            let arrived_at = timeNow();
 
-            //update cache
-            // await cacheService.hSet(activity_cache_key, activity_token, activity);
-            // await cacheService.hSet(person_activity_cache_key, activity_token, personActivity);
+            await conn('activities_persons')
+                .where('id', activityPersonQry.id)
+                .update({
+                    arrived_at,
+                    updated: timeNow()
+                });
+
+            myParticipation.arrived_at = arrived_at;
+
+            try {
+                let personActivity = await cacheService.hGetItem(person_activity_cache_key, activity_token);
+
+                if(personActivity) {
+                    personActivity.arrived_at = arrived_at;
+                    await cacheService.hSet(person_activity_cache_key, activity_token, personActivity);
+                }
+            } catch(e) {
+                console.error(e);
+            }
+
+            await cacheService.hSet(activity_cache_key, activity_token, activity);
 
             //merge persons data
-            // await mergePersonsData(activity.persons);
+            await mergePersonsData(activity.persons);
+
+            //organize ws/cross-network
+            let network_self = await getNetworkSelf();
+            let networksLookup = await getNetworksLookup();
+            let notifications = (await cacheService.hGetAllObj(notification_cache_key) || {});
+
+            let person_to_network_id = null;
+
+            if(!activityPersonQry.is_creator) {
+                let personNetworkQry = await conn('activities_notifications')
+                    .where('activity_id', activityPersonQry.activity_id)
+                    .where('person_to_id', person.id)
+                    .first();
+
+                person_to_network_id = personNetworkQry?.person_to_network_id;
+            }
+
+            //notify 3rd party network of check-in
+            if (person_to_network_id && network_self.id !== person_to_network_id) {
+                try {
+                    let network = await getNetwork(person_to_network_id);
+                    let secret_key_to = await getSecretKeyToForNetwork(person_to_network_id);
+
+                    if(network && secret_key_to) {
+                        try {
+                            let url = getURL(network.api_domain, `networks/activities/${activity_token}/check-in`);
+
+                            let r = await axios.post(url, {
+                                network_token: network_self.network_token,
+                                secret_key: secret_key_to,
+                                person_token: person_token,
+                                arrived_at
+                            }, {
+                                timeout: 1000
+                            });
+                        } catch(e) {
+                            console.error(e);
+                        }
+                    }
+                } catch(e) {
+                    console.error(e);
+                }
+            }
+
+            //notify all persons on my network for this activity with check-in update
+            //organize network update
+            let networksSendPersons = new Set();
+
+            for(let person_token in activity.persons) {
+                let person_notification = notifications[person_token];
+
+                let is_own_network = person_token === personFromQry.person_token || person_notification?.person_to_network_id === network_self.id;
+
+                if(is_own_network) {
+                    cacheService.publishWS('activities', person_token, {
+                        activity_token,
+                        persons: activity.persons,
+                    });
+                } else if(person_notification) { //send update to 3rd-party network
+                    networksSendPersons.add(person_notification.person_to_network_id);
+                }
+            }
+
+            //send persons data to networks
+            if(networksSendPersons.size) {
+                try {
+                    let ps = [];
+
+                    for(let network_id of networksSendPersons) {
+                        let network_to = networksLookup.byId[network_id];
+
+                        let secret_key_to = await getSecretKeyToForNetwork(network_to.id);
+
+                        if(secret_key_to) {
+                            try {
+                                let url = getURL(network_to.api_domain, `/networks/activities/${activity_token}`);
+
+                                ps.push(axios.put(url, {
+                                    network_token: network_self.network_token,
+                                    secret_key: secret_key_to,
+                                    persons: activity.persons,
+                                }, {
+                                    timeout: 1000
+                                }));
+                            } catch(e) {
+                                console.error(e);
+                            }
+                        }
+                    }
+
+                    if(ps.length) {
+                        await Promise.allSettled(ps);
+                    }
+                } catch(e) {
+                    console.error(e);
+                }
+            }
 
             resolve({
+                arrived_at,
                 success: true,
-                message: 'Check-in successful',
+                message: 'Check-in Successful',
             });
         } catch(e) {
             console.error(e);

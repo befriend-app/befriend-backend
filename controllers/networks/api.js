@@ -1,3 +1,4 @@
+const networksActivitiesService = require('../../services/networks/activities');
 const networksMatchingService = require('../../services/networks/matching');
 const networksPersonsService = require('../../services/networks/persons');
 const networksNotificationsService = require('../../services/networks/notifications');
@@ -130,7 +131,7 @@ module.exports = {
             let data = req.body;
 
             try {
-                let response = await networksNotificationsService.updateActivity(from_network, activity_token, data);
+                let response = await networksActivitiesService.updateActivity(from_network, activity_token, data);
 
                 res.json(response, 202);
             } catch (e) {
@@ -162,4 +163,26 @@ module.exports = {
             }
         });
     },
+    networkCheckIn: function(req, res) {
+        return new Promise(async (resolve, reject) => {
+            //received on my network from 3rd-party network person
+            let from_network = req.from_network;
+            let activity_token = req.params.activity_token;
+            let person_token = req.body.person_token;
+            let arrived_at = req.body.arrived_at;
+
+            try {
+                let response = await networksActivitiesService.checkIn(from_network, person_token, activity_token, arrived_at);
+
+                res.json(response, 201);
+            } catch (e) {
+                if (e?.message) {
+                    res.json(e.message, 400);
+                } else {
+                    res.json('Error creating person', 400);
+                }
+            }
+        });
+    },
+
 };
