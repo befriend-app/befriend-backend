@@ -1,7 +1,9 @@
 const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 
-const { getOptionDateTime, isNumeric, timeNow, generateToken, getURL, getIPAddr, isObject } = require('./shared');
+const { getOptionDateTime, isNumeric, timeNow, generateToken, getURL, getIPAddr, isObject, calculateDistanceMeters,
+    calculateDistanceFeet
+} = require('./shared');
 const { getModes, getKidsAgeLookup, getModeById } = require('./modes');
 const { getActivityPlace } = require('./places');
 const { getNetworkSelf, getNetwork, getSecretKeyToForNetwork, getNetworksLookup } = require('./network');
@@ -15,7 +17,8 @@ let debug_create_activity_enabled = require('../dev/debug').activities.create;
 let rules = {
     checkIn: {
         minsBefore: 30,
-        minsAfter: 20
+        minsAfter: 20,
+        maxDistance: 500 //ft
     },
     unfulfilled: {
         acceptance: {
@@ -493,11 +496,10 @@ function createActivity(person, activity) {
 
 function checkIn(activity_token, person_token, location, access_token = null) {
     return new Promise(async (resolve, reject) => {
-        let time = timeNow();
+        let debug_enabled = require('../dev/debug').activities.checkIn;
 
         let notification_cache_key = cacheService.keys.activities_notifications(activity_token);
         let person_activity_cache_key = cacheService.keys.persons_activities(person_token);
-        let debug_enabled = require('../dev/debug').activities.checkIn;
 
         try {
             //validate activity token
@@ -576,6 +578,17 @@ function checkIn(activity_token, person_token, location, access_token = null) {
             if(!activity) {
                 return reject({
                     message: 'Activity not found'
+                });
+            }
+
+            let distance_ft = calculateDistanceFeet({
+                lat: activity.location_lat,
+                lon: activity.location_lon
+            }, location);
+
+            if(distance_ft > rules.checkIn.maxDistance && !debug_enabled) {
+                return reject({
+                    message: `Please check-in after you are within <br>${rules.checkIn.maxDistance}ft of the activity location`
                 });
             }
 
