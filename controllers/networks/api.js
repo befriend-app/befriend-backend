@@ -66,10 +66,11 @@ module.exports = {
             let from_network = req.from_network;
             let activity_token = req.params.activity_token;
             let spots = req.body.spots;
+            let persons = req.body.persons;
             let activity_cancelled_at = req.body.activity_cancelled_at;
 
             try {
-                let response = await networksNotificationsService.onSpotsUpdate(from_network, activity_token, spots, activity_cancelled_at);
+                let response = await networksNotificationsService.onSpotsUpdate(from_network, activity_token, spots, persons, activity_cancelled_at);
 
                 res.json(response, 202);
             } catch (e) {

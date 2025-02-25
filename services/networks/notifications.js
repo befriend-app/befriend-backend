@@ -438,7 +438,7 @@ module.exports = {
             }
         });
     },
-    onSpotsUpdate: function(from_network, activity_token, spots, activity_cancelled_at = null) {
+    onSpotsUpdate: function(from_network, activity_token, spots, persons = null, activity_cancelled_at = null) {
         return new Promise(async (resolve, reject) => {
             try {
                 if(typeof activity_token !== 'string') {
@@ -450,6 +450,12 @@ module.exports = {
                 if(!spots || typeof spots !== 'object' || !(isNumeric(spots.available))) {
                     return reject({
                         message: 'Invalid spots'
+                    });
+                }
+
+                if(persons && !isObject(persons)) {
+                    return reject({
+                        message: 'Invalid persons object'
                     });
                 }
 
@@ -498,6 +504,10 @@ module.exports = {
                          cache_activity.cancelled_at = activity_cancelled_at;
                      }
 
+                     if(persons) {
+                         cache_activity.persons = persons;
+                     }
+
                      await cacheService.hSet(cache_key, activity_token, cache_activity);
                  }
 
@@ -537,11 +547,17 @@ module.exports = {
                     }
 
                     if(person_token in notificationTokens) {
-                        cacheService.publishWS('activities', person_token, {
+                        let data = {
                             activity_token,
                             spots,
                             activity_cancelled_at
-                        });
+                        };
+
+                        if(persons) {
+                            data.persons = persons;
+                        }
+
+                        cacheService.publishWS('activities', person_token, data);
                     }
                 }
 

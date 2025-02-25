@@ -293,6 +293,7 @@ function cancelActivity(person, activity_token) {
                                 network_token: network_self.network_token,
                                 secret_key: secret_key_to,
                                 spots,
+                                persons: activity_data.persons,
                                 activity_cancelled_at: activity_cancelled_at
                             }, {
                                 timeout: 1000
