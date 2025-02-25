@@ -584,23 +584,6 @@ function checkIn(activity_token, person_token, location, access_token = null) {
                 });
             }
 
-            let distance_ft = calculateDistanceFeet({
-                lat: activity.location_lat,
-                lon: activity.location_lon
-            }, location);
-
-            if(distance_ft > rules.checkIn.maxDistance && !debug_enabled) {
-                return reject({
-                    message: `Please check-in when you are within <br>${rules.checkIn.maxDistance}ft of the activity location`
-                });
-            }
-
-            if(!activity.persons) {
-                return reject({
-                    message: 'Persons missing on activity'
-                });
-            }
-
             //validate check-in
             //do not allow check-in if person already cancelled their participation
             let myParticipation = activity.persons[person_token];
@@ -621,6 +604,23 @@ function checkIn(activity_token, person_token, location, access_token = null) {
             if(activity.cancelled_at && !debug_enabled) {
                 return reject({
                     message: `This activity was cancelled`
+                });
+            }
+
+            let distance_ft = calculateDistanceFeet({
+                lat: activity.location_lat,
+                lon: activity.location_lon
+            }, location);
+
+            if(distance_ft > rules.checkIn.maxDistance && !debug_enabled) {
+                return reject({
+                    message: `Please check-in when you are within <br>${rules.checkIn.maxDistance}ft of the activity location`
+                });
+            }
+
+            if(!activity.persons) {
+                return reject({
+                    message: 'Persons missing on activity'
                 });
             }
 
@@ -793,7 +793,7 @@ function checkIn(activity_token, person_token, location, access_token = null) {
             resolve({
                 arrived_at,
                 success: true,
-                message: 'Check-in Successful',
+                message: 'Check-In Successful',
             });
         } catch(e) {
             console.error(e);
