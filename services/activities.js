@@ -320,7 +320,7 @@ function cancelActivity(person, activity_token) {
 
             resolve({
                 success: true,
-                message: 'Activity cancelled successfully',
+                message: activity_cancelled_at ? 'Activity cancelled successfully' : 'Activity participation cancelled',
                 cancelled_at: time,
                 spots: spots,
                 activity_cancelled_at: activity_cancelled_at
