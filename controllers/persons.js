@@ -33,6 +33,7 @@ const { getKidsAgeOptions } = require('../services/modes');
 const { rules, getPersonActivities } = require('../services/activities');
 const { getPersonNotifications } = require('../services/notifications');
 const { getNetworkSelf } = require('../services/network');
+const { getPersonReviews } = require('../services/reviews');
 
 
 module.exports = {
@@ -48,6 +49,7 @@ module.exports = {
                 let activities = await getPersonActivities(me);
                 let notifications = await getPersonNotifications(me);
                 let filters = await getPersonFilters(me);
+                let reviews = await getPersonReviews(me);
 
                 //set country
                 if (me.country_code) {
@@ -80,14 +82,15 @@ module.exports = {
                 res.json({
                     network,
                     me,
-                    activities: {
-                        rules,
-                        activities,
-                    },
                     notifications,
                     filters,
                     genders,
                     sections,
+                    reviews,
+                    activities: {
+                        rules,
+                        activities,
+                    },
                     modes: {
                         kids: {
                             options: kidsAgeOptions,
