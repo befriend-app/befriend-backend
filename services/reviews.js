@@ -1,17 +1,23 @@
 let dbService = require('../services/db');
 
+
 function getReviewsLookup() {
     return new Promise(async (resolve, reject) => {
         if (module.exports.data) {
             return resolve(module.exports.data);
         }
 
+        let lookup = {
+            byId: {},
+            byToken: {},
+        };
+
         try {
             let conn = await dbService.conn();
 
-            let data = await conn('reviews').where('is_active', true).orderBy('sort_position');
-
-            let lookup = {};
+            let data = await conn('reviews')
+                .where('is_active', true)
+                .orderBy('sort_position');
 
             for(let review of data) {
                 lookup.byId[review.id] = review;
