@@ -10,8 +10,9 @@ exports.up = async function(knex) {
         table.bigInteger('person_from_id').unsigned().notNullable();
         table.bigInteger('person_to_id').unsigned().notNullable();
         table.bigInteger('activity_id').unsigned().notNullable();
-        table.integer('review_id').unsigned().nullable();
         table.boolean('no_show').nullable();
+        table.integer('review_id').unsigned().nullable();
+        table.integer('rating').unsigned().nullable();
 
         table.bigInteger('created').notNullable();
         table.bigInteger('updated').notNullable();
