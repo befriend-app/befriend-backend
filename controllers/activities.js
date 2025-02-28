@@ -633,6 +633,70 @@ function putReviews(req, res) {
     });
 }
 
+function putNetworkReviewActivity(req, res) {
+    return new Promise(async (resolve, reject) => {
+        let access_token = req.body.access_token;
+        let activity_token = req.params.activity_token;
+        let person_token = req.body.person_token;
+        let person_to_token = req.body.person_to_token;
+        let no_show = req.body.no_show;
+        let review = req.body.review;
+
+        if (typeof access_token !== 'string') {
+            res.json('Access token required', 401);
+
+            return resolve();
+        }
+
+        //validate access token
+        try {
+            let person = await getPerson(person_token);
+
+            if(!person) {
+                return res.json(
+                    {
+                        error: 'Person not found'
+                    },
+                    400
+                );
+            }
+
+            let conn = await dbService.conn();
+
+            let accessTokenQry = await conn('activities_persons')
+                .where('person_id', person.id)
+                .where('access_token', access_token)
+                .first();
+
+            if(!accessTokenQry) {
+                res.json({ error: 'Invalid access token' }, 401);
+                return resolve();
+            }
+        } catch(e) {
+            return res.json(
+                {
+                    error: 'Error updating activity review'
+                },
+                400
+            );
+        }
+
+        try {
+            let result = await activitiesService.updatePersonReview(activity_token, person_token, person_to_token, no_show, review);
+
+            res.json(result, 202);
+        } catch (e) {
+            res.json(
+                {
+                    error: e?.message ? e.message : 'Error updating person review',
+                },
+                e?.status ? e.status : 400
+            );
+        }
+
+        resolve();
+    });
+}
 
 function getMatches(req, res) {
     return new Promise(async (resolve, reject) => {
@@ -749,5 +813,6 @@ module.exports = {
     putNetworkAcceptNotification,
     putDeclineNotification,
     putNetworkDeclineNotification,
-    putReviews
+    putReviews,
+    putNetworkReviewActivity
 };

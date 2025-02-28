@@ -237,6 +237,18 @@ router.put('/activities/networks/cancel/:activity_token', function (req, res, ne
     });
 });
 
+router.put('/activities/networks/reviews/:activity_token', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await activitiesController.putNetworkReviewActivity(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
 router.get('/mapbox/token', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
