@@ -2300,6 +2300,21 @@ function updatePersonReview(activity_token, person_from_token, person_to_token, 
                 }
             }
 
+            //wait until end of activity and allow reviewing for up to a week
+            let reviewDeadline = activity.activity_end + 7 * 24 * 60 * 60;
+
+            if (timeNow(true) < activity.activity_end) {
+                return reject({
+                    message: 'Please wait until the activity has ended'
+                });
+            }
+
+            if(timeNow(true) > reviewDeadline) {
+                return reject({
+                    message: 'The review period for this activity has expired'
+                });
+            }
+
             if(!activity.persons[person_to_token]) {
                 return reject({
                     message: 'Person for review not found on activity',
