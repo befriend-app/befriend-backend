@@ -606,6 +606,18 @@ router.put('/activities/:activity_token/notification/decline', function (req, re
     });
 });
 
+router.put('/activities/:activity_token/reviews', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await activitiesController.putReviews(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
 router.post('/devices', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {

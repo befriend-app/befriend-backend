@@ -1,5 +1,4 @@
 const activitiesService = require('../services/activities');
-const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 const matchingService = require('../services/matching');
 
@@ -8,7 +7,6 @@ const { getPerson } = require('../services/persons');
 
 const { getModes } = require('../services/modes');
 const { acceptNotification, declineNotification } = require('../services/notifications');
-const { cancelActivity } = require('../services/activities');
 
 
 function createActivity(req, res) {
@@ -258,7 +256,7 @@ function putCancelActivity(req, res) {
             }
 
             try {
-                let result = await cancelActivity(me, activity_token);
+                let result = await activitiesService.cancelActivity(me, activity_token);
 
                 res.json(result, 202);
             } catch(e) {
@@ -610,6 +608,32 @@ function putNetworkDeclineNotification(req, res) {
     });
 }
 
+function putReviews(req, res) {
+    return new Promise(async (resolve, reject) => {
+        let activity_token = req.params.activity_token;
+        let person_token = req.body.person_token;
+        let person_to_token = req.body.person_to_token;
+        let no_show = req.body.no_show;
+        let review = req.body.review;
+
+        try {
+            let result = await activitiesService.updatePersonReview(activity_token, person_token, person_to_token, no_show, review);
+
+            res.json(result, 202);
+        } catch (e) {
+            res.json(
+                {
+                    error: e?.message ? e.message : 'Error updating person review',
+                },
+                e?.status ? e.status : 400
+            );
+        }
+
+        resolve();
+    });
+}
+
+
 function getMatches(req, res) {
     return new Promise(async (resolve, reject) => {
         try {
@@ -725,4 +749,5 @@ module.exports = {
     putNetworkAcceptNotification,
     putDeclineNotification,
     putNetworkDeclineNotification,
+    putReviews
 };
