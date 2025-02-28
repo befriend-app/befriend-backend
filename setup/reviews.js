@@ -12,26 +12,31 @@ function main() {
         let reviewTypes = [
             {
                 review_name: 'Safety',
+                token: 'safety',
                 is_safety: true,
                 is_active: true,
             },
             {
                 review_name: 'Trust',
+                token: 'trust',
                 is_trust: true,
                 is_active: true,
             },
             {
                 review_name: 'Timeliness',
+                token: 'timeliness',
                 is_timeliness: true,
                 is_active: true,
             },
             {
                 review_name: 'Friendliness',
+                token: 'friendliness',
                 is_friendliness: true,
                 is_active: true,
             },
             {
                 review_name: 'Fun',
+                token: 'fun',
                 is_fun: true,
                 is_active: true,
             },
@@ -56,7 +61,7 @@ function main() {
                     }
                 }
 
-                let exists = await conn('reviews').where(is_col, true).first();
+                let exists = await conn(table_review_name).where(is_col, true).first();
 
                 let data = {};
 
@@ -67,11 +72,11 @@ function main() {
                 data.updated = timeNow();
 
                 if (exists) {
-                    await conn('reviews').where('id', exists.id).update(data);
+                    await conn(table_review_name).where('id', exists.id).update(data);
                 } else {
                     data.created = timeNow();
 
-                    await conn('reviews').insert(data);
+                    await conn(table_review_name).insert(data);
                 }
             }
         } catch (e) {

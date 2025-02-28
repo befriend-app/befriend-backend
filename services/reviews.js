@@ -1,6 +1,6 @@
 let dbService = require('../services/db');
 
-function getReviews() {
+function getReviewsLookup() {
     return new Promise(async (resolve, reject) => {
         if (module.exports.data) {
             return resolve(module.exports.data);
@@ -11,9 +11,16 @@ function getReviews() {
 
             let data = await conn('reviews').where('is_active', true).orderBy('sort_position');
 
-            module.exports.data = data;
+            let lookup = {};
 
-            return resolve(data);
+            for(let review of data) {
+                lookup.byId[review.id] = review;
+                lookup.byToken[review.token] = review;
+            }
+
+            module.exports.data = lookup;
+
+            return resolve(lookup);
         } catch (e) {
             console.error(e);
             return reject();
@@ -26,5 +33,5 @@ module.exports = {
         default: 4.5,
     },
     data: null,
-    getReviews,
+    getReviewsLookup,
 };
