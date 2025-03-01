@@ -11,7 +11,7 @@ const { getPerson } = require('./persons');
 const { getGender } = require('./genders');
 const { getPlaceData } = require('./fsq');
 const axios = require('axios');
-const { getReviewsLookup } = require('./reviews');
+const { getReviewsLookup, reviewPeriod } = require('./reviews');
 
 let debug_create_activity_enabled = require('../dev/debug').activities.create;
 
@@ -2023,6 +2023,8 @@ function getPersonActivities(person) {
         try {
             let person_activities = (await cacheService.hGetAllObj(cacheService.keys.persons_activities(person.person_token))) || {};
 
+            let reviewThreshold = timeNow(true) - reviewPeriod;
+
             if(Object.keys(person_activities).length) {
                 let pipeline = cacheService.startPipeline();
 
@@ -2040,6 +2042,8 @@ function getPersonActivities(person) {
                     let activity = person_activities[activity_token];
 
                     activity.data = JSON.parse(results[idx++]);
+
+                    activity.data.is_reviewable = activity.data.activity_end > reviewThreshold;
                 }
             }
 

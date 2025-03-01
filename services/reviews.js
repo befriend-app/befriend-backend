@@ -1,6 +1,8 @@
 let dbService = require('../services/db');
 const { timeNow } = require('./shared');
 
+let reviewPeriod = 7 * 24 * 3600;
+
 
 function getReviewsLookup() {
     return new Promise(async (resolve, reject) => {
@@ -42,7 +44,7 @@ function getPersonReviews(person) {
 
              let reviewsLookup = await getReviewsLookup();
 
-             let threshold = timeNow() - 7 * 24 * 3600 * 1000;
+             let threshold = timeNow() - reviewPeriod * 1000;
 
              let reviewsQry = await conn('activities_persons_reviews AS apr')
                  .join('persons AS p', 'p.id', '=', 'apr.person_to_id')
@@ -99,6 +101,7 @@ function getPersonReviews(person) {
 }
 
 module.exports = {
+    reviewPeriod,
     filters: {
         default: 4.5,
     },
