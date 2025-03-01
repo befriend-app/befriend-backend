@@ -11,7 +11,7 @@ const { getPerson } = require('./persons');
 const { getGender } = require('./genders');
 const { getPlaceData } = require('./fsq');
 const axios = require('axios');
-const { getReviewsLookup, reviewPeriod } = require('./reviews');
+const { getReviewsLookup, isReviewable } = require('./reviews');
 
 let debug_create_activity_enabled = require('../dev/debug').activities.create;
 
@@ -195,6 +195,8 @@ function cancelActivity(person, activity_token) {
 
             //merge persons data
             await mergePersonsData(activity_data.persons);
+
+            activity_data.is_reviewable = isReviewable(activity_data);
 
             //notify 3rd party network of cancellation
             if (person_to_network_id && network_self.id !== person_to_network_id) {
@@ -692,6 +694,8 @@ function checkIn(activity_token, person_token, location, access_token = null) {
 
             //merge persons data
             await mergePersonsData(activity.persons);
+
+            activity.is_reviewable = isReviewable(activity);
 
             //organize ws/cross-network
             let network_self = await getNetworkSelf();
@@ -1919,6 +1923,8 @@ function getActivity(person_token, activity_token, access_token = null) {
                 });
             }
 
+            activity.is_reviewable = isReviewable(activity);
+
             activity.persons = filterActivityPersons(activity.persons, person_token);
 
             spots = {
@@ -2023,8 +2029,6 @@ function getPersonActivities(person) {
         try {
             let person_activities = (await cacheService.hGetAllObj(cacheService.keys.persons_activities(person.person_token))) || {};
 
-            let reviewThreshold = timeNow(true) - reviewPeriod;
-
             if(Object.keys(person_activities).length) {
                 let pipeline = cacheService.startPipeline();
 
@@ -2042,8 +2046,7 @@ function getPersonActivities(person) {
                     let activity = person_activities[activity_token];
 
                     activity.data = JSON.parse(results[idx++]);
-
-                    activity.data.is_reviewable = activity.data.activity_end > reviewThreshold;
+                    activity.data.is_reviewable = isReviewable(activity.data);
                 }
             }
 

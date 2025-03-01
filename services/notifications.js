@@ -11,10 +11,11 @@ const { getNetworkSelf, getNetworksLookup, getSecretKeyToForNetwork, getNetwork 
 const { getPerson } = require('./persons');
 const { getGender } = require('./genders');
 const { hGetAllObj } = require('./cache');
-const { validatePartnerForActivity, validateKidsForActivity, mergePersonsData, getActivityType, getActivitySpots,
+const { validatePartnerForActivity, validateKidsForActivity, mergePersonsData, getActivitySpots,
     rules
 } = require('./activities');
 const { getPlaceData } = require('./fsq');
+const { isReviewable } = require('./reviews');
 
 
 let notification_groups = {
@@ -794,6 +795,8 @@ function acceptNotification(person, activity_token) {
             } catch(e) {
                 console.error(e);
             }
+
+            activity_data.is_reviewable = isReviewable(activity_data);
 
             //append access object
             if(person_activity_insert.access_token) {

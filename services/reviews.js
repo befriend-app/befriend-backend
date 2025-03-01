@@ -100,6 +100,11 @@ function getPersonReviews(person) {
     });
 }
 
+function isReviewable(activity) {
+    let reviewThreshold = timeNow(true) - reviewPeriod;
+    return timeNow(true) > activity.activity_end && activity.activity_end > reviewThreshold;
+}
+
 module.exports = {
     reviewPeriod,
     filters: {
@@ -107,5 +112,6 @@ module.exports = {
     },
     data: null,
     getReviewsLookup,
-    getPersonReviews
+    getPersonReviews,
+    isReviewable
 };

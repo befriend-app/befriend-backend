@@ -33,7 +33,7 @@ const { getKidsAgeOptions } = require('../services/modes');
 const { rules, getPersonActivities } = require('../services/activities');
 const { getPersonNotifications } = require('../services/notifications');
 const { getNetworkSelf } = require('../services/network');
-const { getPersonReviews } = require('../services/reviews');
+const { getPersonReviews, reviewPeriod } = require('../services/reviews');
 
 
 module.exports = {
@@ -86,7 +86,10 @@ module.exports = {
                     filters,
                     genders,
                     sections,
-                    reviews,
+                    reviews: {
+                        reviews,
+                        period: reviewPeriod
+                    },
                     activities: {
                         rules,
                         activities,
