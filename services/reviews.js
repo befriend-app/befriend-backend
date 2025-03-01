@@ -79,20 +79,56 @@ function getPersonReviews(person) {
                  }
 
                  if(!organized[activity_token][person_token]) {
-                     organized[activity_token][person_token] = {
-                         ratings: {}
-                     };
+                     organized[activity_token][person_token] = {};
                  }
 
                  if(!item.review_id) {
-                     organized[activity_token][person_token].no_show = item.no_show;
+                     organized[activity_token][person_token].noShow = item.no_show;
                  } else if(item.rating) {
                      let reviewData = reviewsLookup.byId[item.review_id];
-                     organized[activity_token][person_token].ratings[reviewData.token] = item.rating;
+                     organized[activity_token][person_token][reviewData.token] = item.rating;
                  }
              }
 
              resolve(organized);
+        } catch(e) {
+            console.error(e);
+            return reject();
+        }
+    });
+}
+
+function getActivityReviews(activity_id, person_id) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let conn = await dbService.conn();
+
+            let reviewsLookup = await getReviewsLookup();
+
+            let reviewsQry = await conn('activities_persons_reviews AS apr')
+                .join('persons AS p', 'p.id', '=', 'apr.person_to_id')
+                .where('person_from_id', person_id)
+                .where('activity_id', activity_id)
+                .select('apr.*', 'p.id AS person_id', 'person_token');
+
+            let organized = {};
+
+            for(let item of reviewsQry) {
+                let person_token = item.person_token;
+
+                if(!organized[person_token]) {
+                    organized[person_token] = {};
+                }
+
+                if(!item.review_id) {
+                    organized[person_token].noShow = item.no_show;
+                } else if(item.rating) {
+                    let reviewData = reviewsLookup.byId[item.review_id];
+                    organized[person_token][reviewData.token] = item.rating;
+                }
+            }
+
+            resolve(organized);
         } catch(e) {
             console.error(e);
             return reject();
@@ -113,5 +149,6 @@ module.exports = {
     data: null,
     getReviewsLookup,
     getPersonReviews,
+    getActivityReviews,
     isReviewable
 };

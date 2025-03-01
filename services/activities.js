@@ -11,7 +11,7 @@ const { getPerson } = require('./persons');
 const { getGender } = require('./genders');
 const { getPlaceData } = require('./fsq');
 const axios = require('axios');
-const { getReviewsLookup, isReviewable } = require('./reviews');
+const { getReviewsLookup, isReviewable, getActivityReviews } = require('./reviews');
 
 let debug_create_activity_enabled = require('../dev/debug').activities.create;
 
@@ -1923,7 +1923,9 @@ function getActivity(person_token, activity_token, access_token = null) {
                 });
             }
 
+            activity.reviews = await getActivityReviews(activity.activity_id, me.id);
             activity.is_reviewable = isReviewable(activity);
+
 
             activity.persons = filterActivityPersons(activity.persons, person_token);
 
