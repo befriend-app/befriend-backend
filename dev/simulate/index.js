@@ -17,30 +17,30 @@ function main() {
 
     return new Promise(async (resolve, reject) => {
         try {
-            const personsScript = require('./persons');
-            const meScript = require('./me');
-            const reviewsScript = require('./reviews');
-            const filtersScript = require('./filters');
-            const availabilityScript = require('./availability');
-            const devicesScript = require('./devices');
+            const persons = require('./persons');
+            const me = require('./me');
+            const reviews = require('./reviews');
+            const filters = require('./filters');
+            const availability = require('./availability');
+            const devices = require('./devices');
 
             console.log('Simulate: Persons');
-            await personsScript.main(numPersons);
+            await persons.main(numPersons);
 
             console.log('Simulate: Me');
-            await meScript.main(numPersons);
+            await me.main(numPersons);
 
             console.log('Simulate: Reviews');
-            await reviewsScript.main(numPersons);
+            await reviews.main(numPersons);
 
             console.log('Simulate: Filters');
-            await filtersScript.main(numPersons);
+            await filters.main(numPersons);
 
             console.log('Simulate: Availability');
-            await availabilityScript.main(numPersons);
+            await availability.main(numPersons);
 
             console.log('Simulate: Devices');
-            await devicesScript.main(numPersons);
+            await devices.main(numPersons);
         } catch(e) {
             console.error(e);
         }

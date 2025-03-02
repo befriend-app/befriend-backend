@@ -142,6 +142,7 @@ async function main(qty) {
     }
 
     conn = await dbService.conn();
+
     self_network = await getNetworkSelf();
 
     if (!self_network) {
@@ -154,7 +155,6 @@ async function main(qty) {
     await getPersonsLogins();
 
     await updateDevices();
-
 }
 
 module.exports = { main };

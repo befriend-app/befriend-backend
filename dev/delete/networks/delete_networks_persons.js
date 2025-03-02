@@ -88,6 +88,11 @@ function main() {
                     .whereIn('person_id', ids)
                     .delete();
 
+                await knex('activities_persons_reviews')
+                    .whereIn('person_from_id', ids)
+                    .orWhereIn('person_to_id', ids)
+                    .delete();
+
                 await knex('activities_notifications')
                     .whereIn('person_to_id', ids)
                     .delete();

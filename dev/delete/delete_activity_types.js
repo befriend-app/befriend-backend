@@ -35,6 +35,7 @@ function main() {
                 connection: connection,
             });
 
+            await knex('activities_persons_reviews').delete();
             await knex('activities_persons').delete();
             await knex('activities_filters').delete();
             await knex('activities').delete();

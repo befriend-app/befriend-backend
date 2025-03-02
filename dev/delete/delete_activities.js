@@ -35,6 +35,9 @@ function main() {
                 connection: connection,
             });
 
+            await conn('activities_persons_reviews')
+                .delete();
+
             await conn('activities_persons')
                 .delete();
 
