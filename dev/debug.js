@@ -56,4 +56,7 @@ module.exports = {
     notifications: {
         networks: isProdApp() ? false : true,
     },
+    reviews: {
+        reviewable: isProdApp() ? false : true,
+    }
 };

@@ -7,6 +7,8 @@ const { updateGridSets } = require('./filters');
 
 let reviewPeriod = 7 * 24 * 3600;
 
+let debug_enabled = require('../dev/debug').reviews.reviewable;
+
 function getReviewsLookup() {
     return new Promise(async (resolve, reject) => {
         if (module.exports.data) {
@@ -279,13 +281,13 @@ function setActivityReview(activity_token, person_from_token, person_to_token, n
             //wait until end of activity and allow reviewing for up to a week
             let reviewDeadline = activity.activity_end + 7 * 24 * 60 * 60;
 
-            if (timeNow(true) < activity.activity_end) {
+            if (timeNow(true) < activity.activity_end && !debug_enabled) {
                 return reject({
                     message: 'Please wait until the activity has ended',
                 });
             }
 
-            if (timeNow(true) > reviewDeadline) {
+            if (timeNow(true) > reviewDeadline && !debug_enabled) {
                 return reject({
                     message: 'The review period for this activity has expired',
                 });
@@ -409,8 +411,9 @@ function setActivityReview(activity_token, person_from_token, person_to_token, n
 
 function updatePersonRatings(person) {
     return new Promise(async (resolve, reject) => {
-        let ratingCategories = ['safety', 'trust', 'timeliness', 'friendliness', 'fun'];
+        let reviewsCount = 0;
 
+        let ratingCategories = ['safety', 'trust', 'timeliness', 'friendliness', 'fun'];
         let aggregated = {};
 
         for (let category of ratingCategories) {
@@ -432,8 +435,17 @@ function updatePersonRatings(person) {
 
             let reviewers = new Set();
             let activities = {};
+            let person_activity_keys = {};
 
             for (let item of personReviewsQry) {
+                //reviews count is by activity x person(s)
+                let person_activity_key = `${item.activity_id}_${item.person_from_id}`;
+
+                if(!person_activity_keys[person_activity_key]) {
+                    person_activity_keys[person_activity_key] = true;
+                    reviewsCount++;
+                }
+
                 reviewers.add(item.person_from_id);
 
                 if (!activities[item.activity_id]) {
@@ -496,7 +508,6 @@ function updatePersonRatings(person) {
 
             //calculate averages
             let ratings = {};
-            let totalReviews = Object.keys(activities).length;
 
             for (let category of ratingCategories) {
                 if (aggregated[category].totalWeight > 0) {
@@ -512,12 +523,12 @@ function updatePersonRatings(person) {
                 .where('id', person.id)
                 .update({
                     ...ratings,
-                    reviews_count: totalReviews,
+                    reviews_count: reviewsCount,
                     updated: timeNow(true)
                 });
 
             let cacheRatings = {
-                count: totalReviews
+                count: reviewsCount
             };
 
             for(let key in ratings) {
@@ -542,6 +553,10 @@ function updatePersonRatings(person) {
 }
 
 function isReviewable(activity) {
+    if(debug_enabled) {
+        return true;
+    }
+
     let reviewThreshold = timeNow(true) - reviewPeriod;
 
     return timeNow(true) > activity.activity_end && activity.activity_end > reviewThreshold;
