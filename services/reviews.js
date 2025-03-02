@@ -1,7 +1,9 @@
+let { timeNow, isObject, isNumeric } = require('./shared');
+
+let cacheService = require('../services/cache');
 let dbService = require('../services/db');
-const { timeNow, isObject, isNumeric } = require('./shared');
-const { getPerson } = require('./persons');
-const cacheService = require('./cache');
+let personsService = require('../services/persons');
+const { updateGridSets } = require('./filters');
 
 let reviewPeriod = 7 * 24 * 3600;
 
@@ -193,7 +195,7 @@ function setActivityReview(activity_token, person_from_token, person_to_token, n
                 });
             }
 
-            let person = await getPerson(person_from_token);
+            let person = await personsService.getPerson(person_from_token);
 
             if (!person) {
                 return reject({
@@ -202,7 +204,7 @@ function setActivityReview(activity_token, person_from_token, person_to_token, n
                 });
             }
 
-            let personTo = await getPerson(person_to_token);
+            let personTo = await personsService.getPerson(person_to_token);
 
             if (!personTo) {
                 return reject({
@@ -395,9 +397,9 @@ function setActivityReview(activity_token, person_from_token, person_to_token, n
                 }
             }
 
-            await updatePersonRatings(personTo.id);
+            let personReviews = await updatePersonRatings(personTo);
 
-            resolve();
+            resolve(personReviews);
         } catch (e) {
             console.error(e);
             return reject(e);
@@ -405,15 +407,26 @@ function setActivityReview(activity_token, person_from_token, person_to_token, n
     });
 }
 
-function updatePersonRatings(person_id) {
+function updatePersonRatings(person) {
     return new Promise(async (resolve, reject) => {
+        let ratingCategories = ['safety', 'trust', 'timeliness', 'friendliness', 'fun'];
+
+        let aggregated = {};
+
+        for (let category of ratingCategories) {
+            aggregated[category] = {
+                totalWeight: 0,
+                weightedSum: 0
+            };
+        }
+
         try {
             let conn = await dbService.conn();
 
             let reviewsLookup = await getReviewsLookup();
 
             let personReviewsQry = await conn('activities_persons_reviews')
-                .where('person_to_id', person_id)
+                .where('person_to_id', person.id)
                 .whereNotNull('rating')
                 .whereNull('deleted');
 
@@ -424,13 +437,11 @@ function updatePersonRatings(person_id) {
                 reviewers.add(item.person_from_id);
 
                 if (!activities[item.activity_id]) {
-                    activities[item.activity_id] = {
-                        safety: null,
-                        trust: null,
-                        timeliness: null,
-                        friendliness: null,
-                        fun: null,
-                    };
+                    activities[item.activity_id] = {};
+
+                    for(let category of ratingCategories) {
+                        activities[item.activity_id][category] = null;
+                    }
                 }
 
                 let reviewData = reviewsLookup.byId[item.review_id];
@@ -456,7 +467,73 @@ function updatePersonRatings(person_id) {
                 reviewersLookup[reviewer.id] = reviewer;
             }
 
-            resolve();
+            for (let review of personReviewsQry) {
+                let reviewer = reviewersLookup[review.person_from_id];
+
+                if (!reviewer || !review.review_id) {
+                    continue;
+                }
+
+                let reviewData = reviewsLookup.byId[review.review_id];
+
+                if (!reviewData || !ratingCategories.includes(reviewData.token)) {
+                    continue;
+                }
+
+                let category = reviewData.token;
+
+                //give review more weight if reviewer has many reviews and is highly rated
+                let reviewCountWeight = Math.log10(Math.max(reviewer.reviews_count + 1, 2));
+
+                //person's own rating for this category
+                let reviewerRating = reviewer[`rating_${category}`] || 3; // Default to 3 if no rating
+
+                let weight = reviewCountWeight * (reviewerRating / 3);
+
+                aggregated[category].totalWeight += weight;
+                aggregated[category].weightedSum += review.rating * weight;
+            }
+
+            //calculate averages
+            let ratings = {};
+            let totalReviews = Object.keys(activities).length;
+
+            for (let category of ratingCategories) {
+                if (aggregated[category].totalWeight > 0) {
+                    ratings[`rating_${category}`] = Number(
+                        (aggregated[category].weightedSum / aggregated[category].totalWeight).toFixed(2)
+                    );
+                } else {
+                    ratings[`rating_${category}`] = null;
+                }
+            }
+
+            await conn('persons')
+                .where('id', person.id)
+                .update({
+                    ...ratings,
+                    reviews_count: totalReviews,
+                    updated: timeNow(true)
+                });
+
+            let cacheRatings = {
+                count: totalReviews
+            };
+
+            for(let key in ratings) {
+                let rating = ratings[key];
+                let new_key = key.replace('rating_', '');
+                cacheRatings[new_key] = rating;
+            }
+
+            await cacheService.hSet(cacheService.keys.person(person.person_token), 'reviews', cacheRatings);
+
+            await updateGridSets({
+                ...person,
+                reviews: cacheRatings
+            }, null, 'reviews');
+
+            resolve(cacheRatings);
         } catch (e) {
             console.error(e);
             return reject(e);

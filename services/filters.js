@@ -1,8 +1,6 @@
 const cacheService = require('./cache');
 const dbService = require('./db');
 
-const reviewsService = require('../services/reviews');
-
 const lifeStageService = require('./life_stages');
 const relationshipService = require('./relationships');
 const languagesService = require('../services/languages');
@@ -1064,7 +1062,9 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
     function updateReviews() {
         return new Promise(async (resolve, reject) => {
             try {
-                const reviewTypes = ['safety', 'trust', 'timeliness', 'friendliness', 'fun'];
+                let defaultValue = require('./reviews').filters.default;
+
+                let reviewTypes = ['safety', 'trust', 'timeliness', 'friendliness', 'fun'];
 
                 let reviews_filters = {
                     reviews: null, // top-level
@@ -1072,10 +1072,10 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                 };
 
                 for (let type of reviewTypes) {
-                    //review types
                     reviews_filters[type] = null;
                 }
 
+                //get current filter settings
                 let pipeline = cacheService.startPipeline();
 
                 let filter_key = cacheService.keys.person_filters(person.person_token);
@@ -1107,6 +1107,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                     }
                 }
 
+                //delete from previous grid
                 if (prev_grid_token) {
                     if (person.is_new) {
                         delKeysSet.add(
@@ -1163,7 +1164,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                     }
                 }
 
-                //new person
+                //new person set
                 if (person.is_new) {
                     addKeysSet.add(cacheService.keys.persons_grid_set(grid_token, `is_new_person`));
                 } else {
@@ -1176,14 +1177,15 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                         grid_token,
                         `reviews:match_new`,
                         'send',
-                    ),
+                    )
                 );
+
                 delKeysSet.add(
                     cacheService.keys.persons_grid_exclude_send_receive(
                         grid_token,
                         `reviews:match_new`,
-                        'receive',
-                    ),
+                        'receive'
+                    )
                 );
 
                 for (let type of reviewTypes) {
@@ -1192,7 +1194,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                             grid_token,
                             `reviews:${type}`,
                             'send',
-                        ),
+                        )
                     );
 
                     keysDelSorted.add(
@@ -1229,6 +1231,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                     }
                 }
 
+                //main
                 for (let type of reviewTypes) {
                     let rating = person.reviews?.[type];
                     let filter = reviews_filters[type];
@@ -1251,7 +1254,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
 
                     if (filter?.is_active) {
                         //use custom filter value or default
-                        let value = filter.filter_value || reviewsService.filters.default;
+                        let value = filter.filter_value || defaultValue;
 
                         if (!isNumeric(value)) {
                             continue;
@@ -2186,6 +2189,7 @@ function batchUpdateGridSets(persons) {
 
     return new Promise(async (resolve, reject) => {
         let modesLookup, gendersLookup, networksLookup;
+        let defaultValue = require('./reviews').filters.default;
 
         if (!Object.keys(persons).length) {
             return resolve();
@@ -2534,7 +2538,7 @@ function batchUpdateGridSets(persons) {
 
                             if (filter?.is_active) {
                                 //use custom filter value or default
-                                let value = filter.filter_value || reviewsService.filters.default;
+                                let value = filter.filter_value || defaultValue;
 
                                 if (!isNumeric(value)) {
                                     continue;
