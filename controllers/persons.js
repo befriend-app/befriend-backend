@@ -35,7 +35,6 @@ const { getPersonNotifications } = require('../services/notifications');
 const { getNetworkSelf } = require('../services/network');
 const { getPersonReviews, reviewPeriod } = require('../services/reviews');
 
-
 module.exports = {
     getMe: function (req, res) {
         return new Promise(async (resolve, reject) => {
@@ -88,7 +87,7 @@ module.exports = {
                     sections,
                     reviews: {
                         reviews,
-                        period: reviewPeriod
+                        period: reviewPeriod,
                     },
                     activities: {
                         rules,
@@ -220,7 +219,7 @@ module.exports = {
                 //update cache
                 //person location cache
                 for (let k in dbUpdate) {
-                    if(['grid_id'].includes(k)) {
+                    if (['grid_id'].includes(k)) {
                         continue;
                     }
 

@@ -3,13 +3,15 @@ const networksMatchingService = require('../../services/networks/matching');
 const networksPersonsService = require('../../services/networks/persons');
 const networksNotificationsService = require('../../services/networks/notifications');
 
-
 module.exports = {
-    createPerson: function(req, res) {
+    createPerson: function (req, res) {
         return new Promise(async (resolve, reject) => {
             //received on befriend->home domain from network that registered person
             try {
-                let response = await networksPersonsService.createPerson(req.from_network, req.body);
+                let response = await networksPersonsService.createPerson(
+                    req.from_network,
+                    req.body,
+                );
 
                 res.json(response, 201);
             } catch (e) {
@@ -29,7 +31,12 @@ module.exports = {
             //this enables us to filter by distance without sharing location cross-network
 
             try {
-                let response = await networksMatchingService.excludeMatches(req.from_network, req.body.person, req.body.activity_location, req.body.person_tokens);
+                let response = await networksMatchingService.excludeMatches(
+                    req.from_network,
+                    req.body.person,
+                    req.body.activity_location,
+                    req.body.person_tokens,
+                );
 
                 res.json(response, 202);
             } catch (e) {
@@ -41,7 +48,7 @@ module.exports = {
             }
         });
     },
-    sendNotifications: function(req, res) {
+    sendNotifications: function (req, res) {
         return new Promise(async (resolve, reject) => {
             //received on my network from 3rd-party network person
             let from_network = req.from_network;
@@ -50,7 +57,12 @@ module.exports = {
             let persons = req.body.persons;
 
             try {
-                let response = await networksNotificationsService.sendNotifications(from_network, person_from_token, activity, persons);
+                let response = await networksNotificationsService.sendNotifications(
+                    from_network,
+                    person_from_token,
+                    activity,
+                    persons,
+                );
 
                 res.json(response, 201);
             } catch (e) {
@@ -62,7 +74,7 @@ module.exports = {
             }
         });
     },
-    putNotificationSpots: function(req, res) {
+    putNotificationSpots: function (req, res) {
         return new Promise(async (resolve, reject) => {
             let from_network = req.from_network;
             let activity_token = req.params.activity_token;
@@ -71,7 +83,13 @@ module.exports = {
             let activity_cancelled_at = req.body.activity_cancelled_at;
 
             try {
-                let response = await networksNotificationsService.onSpotsUpdate(from_network, activity_token, spots, persons, activity_cancelled_at);
+                let response = await networksNotificationsService.onSpotsUpdate(
+                    from_network,
+                    activity_token,
+                    spots,
+                    persons,
+                    activity_cancelled_at,
+                );
 
                 res.json(response, 202);
             } catch (e) {
@@ -83,7 +101,7 @@ module.exports = {
             }
         });
     },
-    putAcceptNotification: function(req, res) {
+    putAcceptNotification: function (req, res) {
         return new Promise(async (resolve, reject) => {
             let from_network = req.from_network;
             let activity_token = req.params.activity_token;
@@ -92,7 +110,13 @@ module.exports = {
             let accepted_at = req.body.accepted_at;
 
             try {
-                let response = await networksNotificationsService.acceptNotification(from_network, activity_token, person_token, access_token, accepted_at);
+                let response = await networksNotificationsService.acceptNotification(
+                    from_network,
+                    activity_token,
+                    person_token,
+                    access_token,
+                    accepted_at,
+                );
 
                 res.json(response, 202);
             } catch (e) {
@@ -104,7 +128,7 @@ module.exports = {
             }
         });
     },
-    putDeclineNotification: function(req, res) {
+    putDeclineNotification: function (req, res) {
         return new Promise(async (resolve, reject) => {
             let from_network = req.from_network;
             let activity_token = req.params.activity_token;
@@ -112,7 +136,12 @@ module.exports = {
             let declined_at = req.body.declined_at;
 
             try {
-                let response = await networksNotificationsService.declineNotification(from_network, activity_token, person_token, declined_at);
+                let response = await networksNotificationsService.declineNotification(
+                    from_network,
+                    activity_token,
+                    person_token,
+                    declined_at,
+                );
 
                 res.json(response, 202);
             } catch (e) {
@@ -124,14 +153,18 @@ module.exports = {
             }
         });
     },
-    putActivity: function(req, res) {
+    putActivity: function (req, res) {
         return new Promise(async (resolve, reject) => {
             let from_network = req.from_network;
             let activity_token = req.params.activity_token;
             let data = req.body;
 
             try {
-                let response = await networksActivitiesService.updateActivity(from_network, activity_token, data);
+                let response = await networksActivitiesService.updateActivity(
+                    from_network,
+                    activity_token,
+                    data,
+                );
 
                 res.json(response, 202);
             } catch (e) {
@@ -143,7 +176,7 @@ module.exports = {
             }
         });
     },
-    putCancelActivity: function(req, res) {
+    putCancelActivity: function (req, res) {
         return new Promise(async (resolve, reject) => {
             let from_network = req.from_network;
             let activity_token = req.params.activity_token;
@@ -151,7 +184,12 @@ module.exports = {
             let cancelled_at = req.body.cancelled_at;
 
             try {
-                let response = await networksNotificationsService.cancelActivity(from_network, activity_token, person_token, cancelled_at);
+                let response = await networksNotificationsService.cancelActivity(
+                    from_network,
+                    activity_token,
+                    person_token,
+                    cancelled_at,
+                );
 
                 res.json(response, 202);
             } catch (e) {
@@ -163,7 +201,7 @@ module.exports = {
             }
         });
     },
-    networkCheckIn: function(req, res) {
+    networkCheckIn: function (req, res) {
         return new Promise(async (resolve, reject) => {
             //received on my network from 3rd-party network person
             let from_network = req.from_network;
@@ -172,7 +210,12 @@ module.exports = {
             let arrived_at = req.body.arrived_at;
 
             try {
-                let response = await networksActivitiesService.checkIn(from_network, person_token, activity_token, arrived_at);
+                let response = await networksActivitiesService.checkIn(
+                    from_network,
+                    person_token,
+                    activity_token,
+                    arrived_at,
+                );
 
                 res.json(response, 201);
             } catch (e) {
@@ -184,5 +227,4 @@ module.exports = {
             }
         });
     },
-
 };

@@ -24,7 +24,7 @@ const filterMappings = {
         name: 'Availability',
         filters_table: 'persons_availability',
         multi: true,
-        is_notifications: true
+        is_notifications: true,
     },
     activity_types: {
         token: 'activity_types',
@@ -183,7 +183,7 @@ const filterMappings = {
         cache: {
             type: 'hash',
             key: cacheService.keys.movies,
-        }
+        },
     },
     movie_genres: {
         token: 'movie_genres',
@@ -199,7 +199,7 @@ const filterMappings = {
         cache: {
             type: 'hash',
             key: cacheService.keys.movie_genres,
-        }
+        },
     },
     tv_shows: {
         token: 'tv_shows',
@@ -213,7 +213,7 @@ const filterMappings = {
         cache: {
             type: 'hash',
             key: cacheService.keys.tv_shows,
-        }
+        },
     },
     tv_show_genres: {
         token: 'tv_show_genres',
@@ -229,7 +229,7 @@ const filterMappings = {
         cache: {
             type: 'hash',
             key: cacheService.keys.tv_genres,
-        }
+        },
     },
     sports: {
         token: 'sports',
@@ -240,7 +240,7 @@ const filterMappings = {
         cache: {
             type: 'hash',
             key: cacheService.keys.sports,
-        }
+        },
     },
     sports_play: {
         token: 'sports_play',
@@ -256,7 +256,7 @@ const filterMappings = {
         cache: {
             type: 'hash',
             key: cacheService.keys.sports,
-        }
+        },
     },
     sports_leagues: {
         token: 'sports_league',
@@ -272,7 +272,7 @@ const filterMappings = {
         cache: {
             type: 'hash',
             key: cacheService.keys.sports_leagues,
-        }
+        },
     },
     sports_teams: {
         token: 'sports_team',
@@ -288,7 +288,7 @@ const filterMappings = {
         cache: {
             type: 'hash',
             key: cacheService.keys.sports_teams,
-        }
+        },
     },
     music: {
         token: 'music',
@@ -311,7 +311,7 @@ const filterMappings = {
         cache: {
             type: 'hash',
             key: cacheService.keys.music_artists,
-        }
+        },
     },
     music_genres: {
         token: 'music_genres',
@@ -327,7 +327,7 @@ const filterMappings = {
         cache: {
             type: 'hash',
             key: cacheService.keys.music_genres,
-        }
+        },
     },
     instruments: {
         token: 'instruments',
@@ -340,7 +340,7 @@ const filterMappings = {
         cache: {
             type: 'hash',
             key: cacheService.keys.instruments,
-        }
+        },
     },
     schools: {
         token: 'schools',
@@ -353,7 +353,7 @@ const filterMappings = {
         cache: {
             type: 'hash_token',
             key: cacheService.keys.schools_country,
-        }
+        },
     },
     work: {
         token: 'work',
@@ -376,7 +376,7 @@ const filterMappings = {
         cache: {
             type: 'hash',
             key: cacheService.keys.work_industries,
-        }
+        },
     },
     work_roles: {
         token: 'work_roles',
@@ -392,7 +392,7 @@ const filterMappings = {
         cache: {
             type: 'hash',
             key: cacheService.keys.work_roles,
-        }
+        },
     },
     life_stages: {
         token: 'life_stages',
@@ -460,74 +460,80 @@ const filterMappings = {
 };
 
 const personalFiltersMap = {
-    'life_stages': {
+    life_stages: {
         key: 'life_stages',
         options_fn: lifeStageService.getLifeStages,
         importance: {
             default: lifeStageService.importance.default,
-            threshold: 8
+            threshold: 8,
         },
-        is_multi: true
+        is_multi: true,
     },
-    'relationships': {
+    relationships: {
         key: 'relationships',
         options_fn: relationshipService.getRelationshipStatus,
         importance: {
             default: relationshipService.importance.default,
-            threshold: 8
+            threshold: 8,
         },
-        is_multi: true
+        is_multi: true,
     },
-    'languages': {
+    languages: {
         key: 'languages',
         options_fn: languagesService.getLanguages,
         importance: {
             default: languagesService.importance.default,
-            threshold: 8
+            threshold: 8,
         },
-        is_multi: true
+        is_multi: true,
     },
-    'politics': {
+    politics: {
         key: 'politics',
         options_fn: politicsService.getPolitics,
         importance: {
             default: politicsService.importance.default,
-            threshold: 8
+            threshold: 8,
         },
-        is_single: true
+        is_single: true,
     },
-    'religion': {
+    religion: {
         key: 'religion',
         options_fn: religionService.getReligions,
         importance: {
             default: religionService.importance.default,
-            threshold: 8
+            threshold: 8,
         },
-        is_multi: true
+        is_multi: true,
     },
-    'drinking': {
+    drinking: {
         key: 'drinking',
         options_fn: drinkingService.getDrinking,
         importance: {
             default: drinkingService.importance.default,
-            threshold: 8
+            threshold: 8,
         },
-        is_single: true
+        is_single: true,
     },
-    'smoking': {
+    smoking: {
         key: 'smoking',
         options_fn: smokingService.getSmoking,
         importance: {
             default: smokingService.importance.default,
-            threshold: 8
+            threshold: 8,
         },
-        is_single: true
-    }
+        is_single: true,
+    },
 };
 
-let filterTokensAll = ['online', 'location', 'modes', 'networks', 'reviews', 'verifications', 'genders']
-    .concat(Object.keys(personalFiltersMap));
-
+let filterTokensAll = [
+    'online',
+    'location',
+    'modes',
+    'networks',
+    'reviews',
+    'verifications',
+    'genders',
+].concat(Object.keys(personalFiltersMap));
 
 function getFilters() {
     return new Promise(async (resolve, reject) => {
@@ -572,7 +578,7 @@ function getFilters() {
 
 function getParentFilter(mapping, filter) {
     return new Promise(async (resolve, reject) => {
-        if(!mapping.parent_cache) {
+        if (!mapping.parent_cache) {
             return resolve(filter);
         }
 
@@ -583,17 +589,16 @@ function getParentFilter(mapping, filter) {
 
             let parentFilter = filters.byToken[map.token];
 
-            if(parentFilter) {
+            if (parentFilter) {
                 return resolve(parentFilter);
             }
 
             resolve(filter);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return reject(e);
         }
     });
-
 }
 
 function processFilterRows(rows) {
@@ -746,7 +751,7 @@ function getPersonFilterForKey(person, filter_key) {
 function getPersonFilters(person) {
     return new Promise(async (resolve, reject) => {
         try {
-            if(!person?.id) {
+            if (!person?.id) {
                 return reject('Person id required');
             }
 
@@ -784,13 +789,13 @@ function getPersonsFiltersBatch(persons) {
 
             let person_tokens = Object.keys(persons);
 
-            for(let person_token of person_tokens) {
+            for (let person_token of person_tokens) {
                 pipeline.hGetAll(cacheService.keys.person_filters(person_token));
             }
 
             let results = await cacheService.execPipeline(pipeline);
 
-            for(let i = 0; i < person_tokens.length; i++) {
+            for (let i = 0; i < person_tokens.length; i++) {
                 let person_token = person_tokens[i];
 
                 persons[person_token].filters = cacheService.parseHashData(results[i]);
@@ -811,17 +816,17 @@ function getPersonsItemsBatch(persons) {
         let pipeline = cacheService.startPipeline();
         let personsFiltersDict = {};
 
-        for(let person_token in persons) {
+        for (let person_token in persons) {
             let person = persons[person_token];
             let filter_fields = [];
 
-            for(let filter_token of person.filter_tokens) {
-                if(filter_token in personalFiltersMap) {
+            for (let filter_token of person.filter_tokens) {
+                if (filter_token in personalFiltersMap) {
                     filter_fields.push(filter_token);
                 }
             }
 
-            if(filter_fields.length) {
+            if (filter_fields.length) {
                 personsFiltersDict[person_token] = filter_fields;
                 pipeline.hmGet(cacheService.keys.person_sections(person_token), filter_fields);
             }
@@ -831,28 +836,28 @@ function getPersonsItemsBatch(persons) {
             let results = await cacheService.execPipeline(pipeline);
             let resultIndex = 0;
 
-            for(let person_token in personsFiltersDict) {
+            for (let person_token in personsFiltersDict) {
                 const filter_fields = personsFiltersDict[person_token];
 
-                if(filter_fields.length) {
+                if (filter_fields.length) {
                     let personResults = results[resultIndex++];
 
                     if (!persons[person_token].items) {
                         persons[person_token].items = {};
                     }
 
-                    for(let i = 0; i < filter_fields.length; i++) {
+                    for (let i = 0; i < filter_fields.length; i++) {
                         let filter_section = filter_fields[i];
                         persons[person_token].items[filter_section] = JSON.parse(personResults[i]);
                     }
                 }
             }
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
 
         console.log({
-            time: timeNow() - t
+            time: timeNow() - t,
         });
 
         resolve();
@@ -860,7 +865,14 @@ function getPersonsItemsBatch(persons) {
 }
 
 function updateGridSets(person, person_filters = null, filter_token, prev_grid_token = null) {
-    let grid_token, sectionsOptionsLookup, addKeysSet, delKeysSet, keysDelSorted, keysAddSorted, pipelineRem, pipelineAdd;
+    let grid_token,
+        sectionsOptionsLookup,
+        addKeysSet,
+        delKeysSet,
+        keysDelSorted,
+        keysAddSorted,
+        pipelineRem,
+        pipelineAdd;
 
     function updateOnline() {
         if (prev_grid_token) {
@@ -938,7 +950,11 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                     let is_own_network = network_tokens.includes(network.network_token);
 
                     //own network/filter not active/connect with any network
-                    if (is_own_network || !networksFilter.is_active || networksFilter.is_any_network) {
+                    if (
+                        is_own_network ||
+                        !networksFilter.is_active ||
+                        networksFilter.is_any_network
+                    ) {
                         delKeysSet.add(
                             cacheService.keys.persons_grid_exclude_send_receive(
                                 grid_token,
@@ -1003,7 +1019,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                                         grid_token,
                                         `networks:${network.network_token}`,
                                         'receive',
-                                    )
+                                    ),
                                 );
                             } else if (exclude_networks.has(network.network_token)) {
                                 addKeysSet.add(
@@ -1011,7 +1027,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                                         grid_token,
                                         `networks:${network.network_token}`,
                                         'receive',
-                                    )
+                                    ),
                                 );
                             }
                         }
@@ -1149,13 +1165,9 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
 
                 //new person
                 if (person.is_new) {
-                    addKeysSet.add(
-                        cacheService.keys.persons_grid_set(grid_token, `is_new_person`),
-                    );
+                    addKeysSet.add(cacheService.keys.persons_grid_set(grid_token, `is_new_person`));
                 } else {
-                    delKeysSet.add(
-                        cacheService.keys.persons_grid_set(grid_token, `is_new_person`),
-                    );
+                    delKeysSet.add(cacheService.keys.persons_grid_set(grid_token, `is_new_person`));
                 }
 
                 //remove self from previous exclude keys
@@ -1286,10 +1298,8 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
 
                 for (let mode of Object.values(modes.byId) || {}) {
                     //person sets
-                    delKeysSet.add(
-                        cacheService.keys.persons_grid_set(grid_token, mode.token)
-                    );
-                    
+                    delKeysSet.add(cacheService.keys.persons_grid_set(grid_token, mode.token));
+
                     //filter sets
                     delKeysSet.add(
                         cacheService.keys.persons_grid_exclude_send_receive(
@@ -1309,9 +1319,9 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
 
                     if (prev_grid_token) {
                         delKeysSet.add(
-                            cacheService.keys.persons_grid_set(prev_grid_token, mode.token)
+                            cacheService.keys.persons_grid_set(prev_grid_token, mode.token),
                         );
-                        
+
                         delKeysSet.add(
                             cacheService.keys.persons_grid_exclude_send_receive(
                                 prev_grid_token,
@@ -1329,13 +1339,11 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                         );
                     }
                 }
-                
+
                 //person sets
-                if(person.modes?.selected?.length) {
-                    for(let mode_token of person.modes.selected) {
-                        addKeysSet.add(
-                            cacheService.keys.persons_grid_set(grid_token, mode_token)
-                        );
+                if (person.modes?.selected?.length) {
+                    for (let mode_token of person.modes.selected) {
+                        addKeysSet.add(cacheService.keys.persons_grid_set(grid_token, mode_token));
                     }
                 }
 
@@ -1535,7 +1543,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                                 prev_grid_token,
                                 `verifications:${type}`,
                                 'send',
-                            )
+                            ),
                         );
 
                         delKeysSet.add(
@@ -1663,7 +1671,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                                         grid_token,
                                         `genders:${gender.gender_token}`,
                                         'send',
-                                    )
+                                    ),
                                 );
                             }
                         }
@@ -1984,18 +1992,18 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                 await updateGenders();
 
                 //personal filters
-                for(let k in personalFiltersMap) {
+                for (let k in personalFiltersMap) {
                     let data = personalFiltersMap[k];
 
-                    if(data.is_single) {
+                    if (data.is_single) {
                         await updateSingleFilter(data.key);
-                    } else if(data.is_multi) {
+                    } else if (data.is_multi) {
                         await updateMultiFilter(data.key);
                     }
                 }
 
                 resolve();
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
                 return reject(e);
             }
@@ -2035,8 +2043,8 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
         }
 
         //get data options needed for single/multi filters
-        for(let key in personalFiltersMap) {
-            if(prev_grid_token || key.includes(filter_token) || filter_token.includes(key)) {
+        for (let key in personalFiltersMap) {
+            if (prev_grid_token || key.includes(filter_token) || filter_token.includes(key)) {
                 sectionsOptionsLookup[key] = await personalFiltersMap[key].options_fn();
             }
         }
@@ -2081,13 +2089,13 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                 await updateGenders();
             }
 
-            for(let k in personalFiltersMap) {
+            for (let k in personalFiltersMap) {
                 let data = personalFiltersMap[k];
 
-                if(filter_token === data.key) {
-                    if(data.is_single) {
+                if (filter_token === data.key) {
+                    if (data.is_single) {
                         await updateSingleFilter(filter_token);
-                    } else if(data.is_multi) {
+                    } else if (data.is_multi) {
                         await updateMultiFilter(filter_token);
                     }
                     break;
@@ -2141,38 +2149,38 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
 function batchUpdateGridSets(persons) {
     function addGridIfNeeded() {
         return new Promise(async (resolve, reject) => {
-             try {
-                 //add grid token to person if not included
-                 let missingPersonsGrid = {};
+            try {
+                //add grid token to person if not included
+                let missingPersonsGrid = {};
 
-                 for(let person_token in persons) {
-                     let personObj = persons[person_token];
+                for (let person_token in persons) {
+                    let personObj = persons[person_token];
 
-                     if(!personObj.grid?.token) {
-                         missingPersonsGrid[person_token] = true;
-                     }
-                 }
+                    if (!personObj.grid?.token) {
+                        missingPersonsGrid[person_token] = true;
+                    }
+                }
 
-                 if(Object.keys(missingPersonsGrid).length) {
-                     let conn = await dbService.conn();
+                if (Object.keys(missingPersonsGrid).length) {
+                    let conn = await dbService.conn();
 
-                     let gridsQry = await conn('persons')
-                         .whereIn('person_token', Object.keys(missingPersonsGrid))
-                         .select('person_token', 'grid_id');
+                    let gridsQry = await conn('persons')
+                        .whereIn('person_token', Object.keys(missingPersonsGrid))
+                        .select('person_token', 'grid_id');
 
-                     for(let person of gridsQry) {
-                         let grid = await getGridById(person.grid_id);
+                    for (let person of gridsQry) {
+                        let grid = await getGridById(person.grid_id);
 
-                         if(grid) {
-                             persons[person.person_token].grid = grid;
-                         }
-                     }
-                 }
-             } catch(e) {
-                 return reject(e);
-             }
+                        if (grid) {
+                            persons[person.person_token].grid = grid;
+                        }
+                    }
+                }
+            } catch (e) {
+                return reject(e);
+            }
 
-             resolve();
+            resolve();
         });
     }
 
@@ -2206,36 +2214,36 @@ function batchUpdateGridSets(persons) {
         let pipelineAdd = cacheService.startPipeline();
 
         try {
-             await addGridIfNeeded();
-        } catch(e) {
+            await addGridIfNeeded();
+        } catch (e) {
             console.error(e);
         }
 
         //find sections needing options data
         let filter_sections = {};
 
-        for(let person_token in persons) {
+        for (let person_token in persons) {
             let personObj = persons[person_token];
 
-            for(let filter of personObj.filter_tokens) {
+            for (let filter of personObj.filter_tokens) {
                 filter_sections[filter] = true;
             }
         }
 
-        for(let filter in filter_sections) {
-            if(filter in personalFiltersMap) {
+        for (let filter in filter_sections) {
+            if (filter in personalFiltersMap) {
                 try {
                     sectionsOptionsLookup[filter] = await personalFiltersMap[filter].options_fn();
-                } catch(e) {
+                } catch (e) {
                     console.error(e);
                 }
             }
         }
 
-        for(let person_token in persons) {
+        for (let person_token in persons) {
             let personObj = persons[person_token];
 
-            if(!personObj.items) {
+            if (!personObj.items) {
                 personObj.items = {};
             }
 
@@ -2243,7 +2251,7 @@ function batchUpdateGridSets(persons) {
 
             let prev_grid_token = personObj.prev_grid?.token;
 
-            if(!grid_token && !prev_grid_token) {
+            if (!grid_token && !prev_grid_token) {
                 continue;
             }
 
@@ -2273,12 +2281,12 @@ function batchUpdateGridSets(persons) {
 
                     await updateGenders();
 
-                    for(let k in personalFiltersMap) {
+                    for (let k in personalFiltersMap) {
                         let data = personalFiltersMap[k];
 
-                        if(data.is_single) {
+                        if (data.is_single) {
                             await updateSingleFilter(data.key);
-                        } else if(data.is_multi) {
+                        } else if (data.is_multi) {
                             await updateMultiFilter(data.key);
                         }
                     }
@@ -2290,13 +2298,19 @@ function batchUpdateGridSets(persons) {
             function updateOnline() {
                 return new Promise(async (resolve, reject) => {
                     if (prev_grid_token) {
-                        delKeysSet.add(cacheService.keys.persons_grid_exclude(prev_grid_token, 'online'));
+                        delKeysSet.add(
+                            cacheService.keys.persons_grid_exclude(prev_grid_token, 'online'),
+                        );
                     }
 
                     if (person.is_online) {
-                        delKeysSet.add(cacheService.keys.persons_grid_exclude(grid_token, 'online'));
+                        delKeysSet.add(
+                            cacheService.keys.persons_grid_exclude(grid_token, 'online'),
+                        );
                     } else {
-                        addKeysSet.add(cacheService.keys.persons_grid_exclude(grid_token, 'online'));
+                        addKeysSet.add(
+                            cacheService.keys.persons_grid_exclude(grid_token, 'online'),
+                        );
                     }
 
                     resolve();
@@ -2306,7 +2320,9 @@ function batchUpdateGridSets(persons) {
             function updateLocation() {
                 return new Promise(async (resolve, reject) => {
                     if (prev_grid_token) {
-                        delKeysSet.add(cacheService.keys.persons_grid_set(prev_grid_token, 'location'));
+                        delKeysSet.add(
+                            cacheService.keys.persons_grid_set(prev_grid_token, 'location'),
+                        );
                     }
 
                     addKeysSet.add(cacheService.keys.persons_grid_set(grid_token, 'location'));
@@ -2318,7 +2334,13 @@ function batchUpdateGridSets(persons) {
             function updateReviews() {
                 return new Promise(async (resolve, reject) => {
                     try {
-                        const reviewTypes = ['safety', 'trust', 'timeliness', 'friendliness', 'fun'];
+                        const reviewTypes = [
+                            'safety',
+                            'trust',
+                            'timeliness',
+                            'friendliness',
+                            'fun',
+                        ];
 
                         let reviews_filters = {
                             reviews: null, // top-level
@@ -2348,7 +2370,9 @@ function batchUpdateGridSets(persons) {
                         let reviews_filter = results[idx++];
                         let new_filter = results[idx++];
 
-                        reviews_filters.reviews = reviews_filter ? JSON.parse(reviews_filter) : null;
+                        reviews_filters.reviews = reviews_filter
+                            ? JSON.parse(reviews_filter)
+                            : null;
                         reviews_filters.new = new_filter ? JSON.parse(new_filter) : null;
 
                         for (let type of reviewTypes) {
@@ -2364,7 +2388,10 @@ function batchUpdateGridSets(persons) {
                         if (prev_grid_token) {
                             if (person.is_new) {
                                 delKeysSet.add(
-                                    cacheService.keys.persons_grid_set(prev_grid_token, `is_new_person`),
+                                    cacheService.keys.persons_grid_set(
+                                        prev_grid_token,
+                                        `is_new_person`,
+                                    ),
                                 );
                                 addKeysSet.add(
                                     cacheService.keys.persons_grid_set(grid_token, `is_new_person`),
@@ -2553,7 +2580,7 @@ function batchUpdateGridSets(persons) {
                         for (let mode of Object.values(modesLookup.byId) || {}) {
                             //person sets
                             delKeysSet.add(
-                                cacheService.keys.persons_grid_set(grid_token, mode.token)
+                                cacheService.keys.persons_grid_set(grid_token, mode.token),
                             );
 
                             //filter sets
@@ -2575,7 +2602,7 @@ function batchUpdateGridSets(persons) {
 
                             if (prev_grid_token) {
                                 delKeysSet.add(
-                                    cacheService.keys.persons_grid_set(prev_grid_token, mode.token)
+                                    cacheService.keys.persons_grid_set(prev_grid_token, mode.token),
                                 );
 
                                 delKeysSet.add(
@@ -2597,10 +2624,10 @@ function batchUpdateGridSets(persons) {
                         }
 
                         //person sets
-                        if(person.modes?.selected?.length) {
-                            for(let mode_token of person.modes.selected) {
+                        if (person.modes?.selected?.length) {
+                            for (let mode_token of person.modes.selected) {
                                 addKeysSet.add(
-                                    cacheService.keys.persons_grid_set(grid_token, mode_token)
+                                    cacheService.keys.persons_grid_set(grid_token, mode_token),
                                 );
                             }
                         }
@@ -2682,7 +2709,11 @@ function batchUpdateGridSets(persons) {
                         for (let network of Object.values(networksLookup.byToken)) {
                             let is_own_network = network_tokens.includes(network.network_token);
 
-                            if (is_own_network || !networksFilter.is_active || networksFilter.is_any_network) {
+                            if (
+                                is_own_network ||
+                                !networksFilter.is_active ||
+                                networksFilter.is_any_network
+                            ) {
                                 delKeysSet.add(
                                     cacheService.keys.persons_grid_exclude_send_receive(
                                         grid_token,
@@ -2698,7 +2729,8 @@ function batchUpdateGridSets(persons) {
                                         'receive',
                                     ),
                                 );
-                            } else { //send/receive
+                            } else {
+                                //send/receive
                                 if (!networksFilter.is_send) {
                                     delKeysSet.add(
                                         cacheService.keys.persons_grid_exclude_send_receive(
@@ -2792,11 +2824,17 @@ function batchUpdateGridSets(persons) {
 
                         if (person.is_verified_in_person) {
                             addKeysSet.add(
-                                cacheService.keys.persons_grid_set(grid_token, `verified:in_person`),
+                                cacheService.keys.persons_grid_set(
+                                    grid_token,
+                                    `verified:in_person`,
+                                ),
                             );
                         } else {
                             delKeysSet.add(
-                                cacheService.keys.persons_grid_set(grid_token, `verified:in_person`),
+                                cacheService.keys.persons_grid_set(
+                                    grid_token,
+                                    `verified:in_person`,
+                                ),
                             );
                         }
 
@@ -2946,7 +2984,10 @@ function batchUpdateGridSets(persons) {
                         if (prev_grid_token) {
                             for (let type of verificationTypes) {
                                 delKeysSet.add(
-                                    cacheService.keys.persons_grid_set(prev_grid_token, `verified:${type}`),
+                                    cacheService.keys.persons_grid_set(
+                                        prev_grid_token,
+                                        `verified:${type}`,
+                                    ),
                                 );
 
                                 delKeysSet.add(
@@ -2954,7 +2995,7 @@ function batchUpdateGridSets(persons) {
                                         prev_grid_token,
                                         `verifications:${type}`,
                                         'send',
-                                    )
+                                    ),
                                 );
 
                                 delKeysSet.add(
@@ -3053,7 +3094,8 @@ function batchUpdateGridSets(persons) {
                             (item) => item.gender_token === anyToken,
                         );
 
-                        let isAnySelected = anyItem?.is_active && !anyItem.is_negative && !anyItem.deleted;
+                        let isAnySelected =
+                            anyItem?.is_active && !anyItem.is_negative && !anyItem.deleted;
 
                         //if any is selected, do not add self to excluded gender sets
                         if (!isAnySelected && genderFilter.is_active) {
@@ -3065,7 +3107,7 @@ function batchUpdateGridSets(persons) {
                                 }
 
                                 let genderItem = Object.values(genderFilter.items).find(
-                                    (item) => item.gender_token === gender_token
+                                    (item) => item.gender_token === gender_token,
                                 );
 
                                 if (genderFilter.is_send) {
@@ -3124,7 +3166,8 @@ function batchUpdateGridSets(persons) {
 
                         if (!filter) {
                             //try key without s
-                            filter = personObj.filters[sectionKey.substring(0, sectionKey.length - 1)];
+                            filter =
+                                personObj.filters[sectionKey.substring(0, sectionKey.length - 1)];
                         }
 
                         // Clear existing keys for this grid
@@ -3199,7 +3242,8 @@ function batchUpdateGridSets(persons) {
                         let filterItems = Object.values(filter.items);
 
                         let default_importance = personalFiltersMap[sectionKey].importance.default;
-                        let importance_threshold = personalFiltersMap[sectionKey].importance.threshold;
+                        let importance_threshold =
+                            personalFiltersMap[sectionKey].importance.threshold;
 
                         for (let item of filterItems) {
                             if (item.is_active && !item.is_negative && !item.deleted) {
@@ -3262,7 +3306,8 @@ function batchUpdateGridSets(persons) {
 
                         if (!filter) {
                             //try key without s
-                            filter = personObj.filters[sectionKey.substring(0, sectionKey.length - 1)];
+                            filter =
+                                personObj.filters[sectionKey.substring(0, sectionKey.length - 1)];
                         }
 
                         // Clear existing keys for this grid
@@ -3316,7 +3361,7 @@ function batchUpdateGridSets(persons) {
                         if (Object.keys(section_data).length) {
                             let item = Object.values(section_data)[0];
 
-                            if(!item.deleted) {
+                            if (!item.deleted) {
                                 addKeysSet.add(
                                     cacheService.keys.persons_grid_set(
                                         grid_token,
@@ -3336,7 +3381,8 @@ function batchUpdateGridSets(persons) {
                         // Check selected filters for importance
                         let filterItems = Object.values(filter.items);
                         let default_importance = personalFiltersMap[sectionKey].importance.default;
-                        let importance_threshold = personalFiltersMap[sectionKey].importance.threshold;
+                        let importance_threshold =
+                            personalFiltersMap[sectionKey].importance.threshold;
 
                         for (let item of filterItems) {
                             if (item.is_active && !item.is_negative && !item.deleted) {
@@ -3392,7 +3438,7 @@ function batchUpdateGridSets(persons) {
             if (prev_grid_token) {
                 await updateAll();
             } else {
-                for(let filter_token of filter_tokens) {
+                for (let filter_token of filter_tokens) {
                     if (filter_token === 'online') {
                         await updateOnline();
                     }
@@ -3421,13 +3467,13 @@ function batchUpdateGridSets(persons) {
                         await updateGenders();
                     }
 
-                    for(let k in personalFiltersMap) {
+                    for (let k in personalFiltersMap) {
                         let data = personalFiltersMap[k];
 
-                        if(filter_token === data.key) {
-                            if(data.is_single) {
+                        if (filter_token === data.key) {
+                            if (data.is_single) {
                                 await updateSingleFilter(filter_token);
-                            } else if(data.is_multi) {
+                            } else if (data.is_multi) {
                                 await updateMultiFilter(filter_token);
                             }
 
@@ -3473,18 +3519,18 @@ function batchUpdateGridSets(persons) {
             }
         }
 
-        if(hasPipelineRem) {
+        if (hasPipelineRem) {
             try {
                 await cacheService.execPipeline(pipelineRem);
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
             }
         }
 
-        if(hasPipelineAdd) {
+        if (hasPipelineAdd) {
             try {
                 await cacheService.execPipeline(pipelineAdd);
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
             }
         }
@@ -3523,5 +3569,5 @@ module.exports = {
     getSchoolsWorkSections,
     getPersonalSections,
     updateGridSets,
-    batchUpdateGridSets
+    batchUpdateGridSets,
 };

@@ -2,7 +2,7 @@
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
-exports.up = async function(knex) {
+exports.up = async function (knex) {
     await knex.schema.alterTable('reviews', (table) => {
         table.string('token').notNullable().after('review_name');
     });
@@ -12,7 +12,7 @@ exports.up = async function(knex) {
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
-exports.down = async function(knex) {
+exports.down = async function (knex) {
     await knex.schema.alterTable('reviews', (table) => {
         table.dropColumn('token');
     });

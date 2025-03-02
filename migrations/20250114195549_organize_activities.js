@@ -2,7 +2,7 @@
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
-exports.up = async function(knex) {
+exports.up = async function (knex) {
     const hasColumn1 = await knex.schema.hasColumn('activities_persons', 'activity_started');
     const hasColumn2 = await knex.schema.hasColumn('activities', 'is_cancelled');
 
@@ -28,7 +28,7 @@ exports.up = async function(knex) {
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
-exports.down = async function(knex) {
+exports.down = async function (knex) {
     await knex.schema.alterTable('activities', (table) => {
         table.dropColumn('started_at');
         table.dropColumn('cancelled_at');

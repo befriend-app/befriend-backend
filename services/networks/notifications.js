@@ -11,7 +11,6 @@ const { getActivityType, doesActivityOverlap } = require('../activities');
 const { getModeByToken } = require('../modes');
 const { getPerson } = require('../persons');
 
-
 module.exports = {
     sendNotifications: function (from_network, person_from_token, activity, persons) {
         let network_self, personsLookup;
@@ -26,10 +25,7 @@ module.exports = {
 
                     let batch_insert = [];
 
-                    let results = await notificationsService.ios.sendBatch(
-                        ios.tokens,
-                        true
-                    );
+                    let results = await notificationsService.ios.sendBatch(ios.tokens, true);
 
                     //2. add to db/cache
                     for (let result of results) {
@@ -68,7 +64,7 @@ module.exports = {
                             sent_at: timeNow(),
                             access_token: to_person.access_token,
                             created: timeNow(),
-                            updated: timeNow()
+                            updated: timeNow(),
                         };
 
                         if (is_success) {
@@ -82,7 +78,11 @@ module.exports = {
                         let insertCopy = structuredClone(insert);
 
                         insertCopy.person_from_token = person_from_token;
-                        pipeline.hSet(cacheService.keys.persons_notifications(to_person.person_to_token), activity.activity_token, JSON.stringify(insertCopy));
+                        pipeline.hSet(
+                            cacheService.keys.persons_notifications(to_person.person_to_token),
+                            activity.activity_token,
+                            JSON.stringify(insertCopy),
+                        );
                     }
 
                     if (batch_insert.length) {
@@ -105,65 +105,65 @@ module.exports = {
             try {
                 let errors = [];
 
-                if(typeof person_from_token !== 'string') {
+                if (typeof person_from_token !== 'string') {
                     errors.push('Invalid person token');
                 }
 
-                if(!persons || typeof persons !== 'object' || !(Object.keys(persons).length)) {
+                if (!persons || typeof persons !== 'object' || !Object.keys(persons).length) {
                     errors.push('Invalid persons');
                 }
 
-                if(!activity?.activity_token) {
+                if (!activity?.activity_token) {
                     errors.push('Activity token required');
                 }
 
-                if(!activity.place?.id) {
-                    errors.push('FSQ place id required')
+                if (!activity.place?.id) {
+                    errors.push('FSQ place id required');
                 }
 
-                if(!activity.activity?.token && !activity.activityType.activity_type_token) {
-                    errors.push("Activity type token required");
+                if (!activity.activity?.token && !activity.activityType.activity_type_token) {
+                    errors.push('Activity type token required');
                 }
 
-                if(!activity.duration) {
+                if (!activity.duration) {
                     errors.push('Activity duration required');
                 }
 
-                if(!activity.when?.data?.start || activity.when.data.start < timeNow(true)) {
+                if (!activity.when?.data?.start || activity.when.data.start < timeNow(true)) {
                     errors.push('Invalid activity start time');
                 }
 
-                if(!activity.when?.data?.end || activity.when.data.end < timeNow(true)) {
+                if (!activity.when?.data?.end || activity.when.data.end < timeNow(true)) {
                     errors.push('Invalid activity end time');
                 }
 
-                if(!activity.when?.in_mins) {
+                if (!activity.when?.in_mins) {
                     errors.push('In minutes required');
                 }
 
-                if(!activity.when?.data?.human?.time || !activity.when?.data?.human?.datetime) {
+                if (!activity.when?.data?.human?.time || !activity.when?.data?.human?.datetime) {
                     errors.push('Human time required');
                 }
 
-                if(!activity.friends?.type || !isNumeric(activity.friends?.qty)) {
+                if (!activity.friends?.type || !isNumeric(activity.friends?.qty)) {
                     errors.push('Friends type and qty required');
                 }
 
-                if(!activity.spots?.available) {
+                if (!activity.spots?.available) {
                     errors.push('Available spots needed');
                 }
 
-                if(!activity.mode) {
+                if (!activity.mode) {
                     errors.push('Mode required');
                 }
 
-                if(!activity.person?.mode) {
+                if (!activity.person?.mode) {
                     errors.push('Mode token required');
                 }
 
-                if(errors.length) {
+                if (errors.length) {
                     return reject({
-                        message: errors
+                        message: errors,
                     });
                 }
 
@@ -174,7 +174,7 @@ module.exports = {
 
                 personsLookup = {
                     byId: {},
-                    byToken: {}
+                    byToken: {},
                 };
 
                 network_self = await getNetworkSelf();
@@ -183,15 +183,15 @@ module.exports = {
                     .where('person_token', person_from_token)
                     .first();
 
-                if(!person_from_qry) {
+                if (!person_from_qry) {
                     return reject({
-                        message: 'Person from not found'
+                        message: 'Person from not found',
                     });
                 }
 
-                if(person_from_qry.is_blocked) {
+                if (person_from_qry.is_blocked) {
                     return reject({
-                        message: 'Person not allowed on this network'
+                        message: 'Person not allowed on this network',
                     });
                 }
 
@@ -204,21 +204,21 @@ module.exports = {
                     .where('is_active', true)
                     .select('p.id', 'person_token');
 
-                for(let person of existingPersonsQry) {
+                for (let person of existingPersonsQry) {
                     personsLookup.byToken[person.person_token] = person.id;
                     personsLookup.byId[person.id] = person.person_token;
                 }
 
-                for(let person_token in persons) {
-                    if(!personsLookup.byToken[person_token]) {
+                for (let person_token in persons) {
+                    if (!personsLookup.byToken[person_token]) {
                         invalidPersons[person_token] = true;
                     }
                 }
 
-                if(Object.keys(invalidPersons).length) {
+                if (Object.keys(invalidPersons).length) {
                     return reject({
                         message: 'Invalid persons found',
-                        invalidPersons
+                        invalidPersons,
                     });
                 }
 
@@ -227,46 +227,55 @@ module.exports = {
                     .where('activity_token', activity.activity_token)
                     .first();
 
-                let activityType = await getActivityType(activity.activity?.token || activity.activityType?.activity_type_token);
+                let activityType = await getActivityType(
+                    activity.activity?.token || activity.activityType?.activity_type_token,
+                );
 
-                if(!activityType) {
+                if (!activityType) {
                     return reject({
-                        message: 'Activity type not found'
+                        message: 'Activity type not found',
                     });
                 }
 
-                if(!activityData) {
+                if (!activityData) {
                     // Validate and get place details
                     let place_details = await fsqService.getPlaceData(activity.place.id);
 
                     if (!place_details) {
                         return reject({
-                            message: 'Place not found'
+                            message: 'Place not found',
                         });
                     }
 
                     let mode = await getModeByToken(activity.person.mode);
 
-                    if(!mode) {
+                    if (!mode) {
                         return reject({
-                            message: 'Mode not found'
+                            message: 'Mode not found',
                         });
                     }
 
                     let location = place_details.location;
 
-                    let lat = place_details.geocodes?.main?.latitude || place_details.location_lat || location?.location_lat;
-                    let lon = place_details.geocodes?.main?.longitude || place_details.location_lon || location?.location_lon;
+                    let lat =
+                        place_details.geocodes?.main?.latitude ||
+                        place_details.location_lat ||
+                        location?.location_lat;
+                    let lon =
+                        place_details.geocodes?.main?.longitude ||
+                        place_details.location_lon ||
+                        location?.location_lon;
 
                     let address = place_details.location_address || location?.address;
-                    let address_2 = place_details.location_address_2 || location?.address_extended || null;
+                    let address_2 =
+                        place_details.location_address_2 || location?.address_extended || null;
                     let locality = place_details.location_locality || location?.locality;
                     let region = place_details.location_region || location?.region;
                     let country = place_details.location_country || location?.country;
 
-                    if(!lat || !lon || !address || !locality || !region || !country) {
+                    if (!lat || !lon || !address || !locality || !region || !country) {
                         return reject({
-                            message: 'Location required'
+                            message: 'Location required',
                         });
                     }
 
@@ -297,7 +306,7 @@ module.exports = {
                         location_region: region,
                         location_country: country,
                         created: timeNow(),
-                        updated: activity.updated
+                        updated: activity.updated,
                     };
 
                     let [activity_id] = await conn('activities').insert(activityData);
@@ -306,20 +315,24 @@ module.exports = {
                     activityData.mode = activity.mode;
 
                     let activityPersonData = {
-                        is_creator: true
+                        is_creator: true,
                     };
 
-                    if(activity.mode?.token.includes('partner')) {
+                    if (activity.mode?.token.includes('partner')) {
                         activityPersonData.partner = activity.mode.partner;
-                    } else if(activity.mode?.token.includes('kids')) {
+                    } else if (activity.mode?.token.includes('kids')) {
                         activityPersonData.kids = activity.mode.kids;
                     }
 
                     activityData.persons = {
-                        [person_from_token]: activityPersonData
-                    }
+                        [person_from_token]: activityPersonData,
+                    };
 
-                    await cacheService.hSet(cacheService.keys.activities(person_from_token), activity.activity_token, activityData);
+                    await cacheService.hSet(
+                        cacheService.keys.activities(person_from_token),
+                        activity.activity_token,
+                        activityData,
+                    );
 
                     activityData.id = activity_id;
                 }
@@ -337,14 +350,17 @@ module.exports = {
 
                 let existingNotificationsLookup = {};
 
-                for(let person of existing_notifications) {
+                for (let person of existing_notifications) {
                     let token = personsLookup.byId[person.person_id];
 
                     existingNotificationsLookup[token] = true;
                 }
 
                 if (activities_notifications.length) {
-                    await dbService.batchInsert('activities_notifications', activities_notifications);
+                    await dbService.batchInsert(
+                        'activities_notifications',
+                        activities_notifications,
+                    );
                 }
 
                 let devices = await conn('persons_devices AS pd')
@@ -353,12 +369,12 @@ module.exports = {
                     .where('pd.is_current', true)
                     .select('pd.*', 'p.person_token');
 
-                if(!debug_enabled) {
-                    for(let pd of devices) {
+                if (!debug_enabled) {
+                    for (let pd of devices) {
                         persons[pd.person_token].device = {
                             token: pd.token,
-                            platform: pd.platform
-                        }
+                            platform: pd.platform,
+                        };
                     }
                 } else {
                     devices = await conn('persons_devices AS pd')
@@ -367,12 +383,12 @@ module.exports = {
                         .orderBy('p.id')
                         .limit(3);
 
-                    for(let device of devices) {
-                        if(persons[device.person_token]) {
+                    for (let device of devices) {
+                        if (persons[device.person_token]) {
                             persons[device.person_token].device = {
                                 token: device.token,
-                                platform: device.platform
-                            }
+                                platform: device.platform,
+                            };
                         }
                     }
                 }
@@ -388,16 +404,20 @@ module.exports = {
                     },
                 };
 
-                let payload = notificationsService.getPayload(from_network, person_from_qry, activityData);
+                let payload = notificationsService.getPayload(
+                    from_network,
+                    person_from_qry,
+                    activityData,
+                );
 
-                for(let person_token in persons) {
-                    if(existingNotificationsLookup[person_token]) {
+                for (let person_token in persons) {
+                    if (existingNotificationsLookup[person_token]) {
                         continue;
                     }
 
                     let to_person = persons[person_token];
 
-                    if(!to_person.device) {
+                    if (!to_person.device) {
                         continue;
                     }
 
@@ -405,8 +425,8 @@ module.exports = {
 
                     payloadCopy.data.access = {
                         token: to_person.access_token,
-                        domain: getURL(from_network.api_domain)
-                    }
+                        domain: getURL(from_network.api_domain),
+                    };
 
                     if (to_person.device.platform === 'ios') {
                         platforms.ios.tokens[to_person.device.token] = payloadCopy;
@@ -417,143 +437,147 @@ module.exports = {
                     }
                 }
 
-                if(Object.keys(platforms.ios.tokens).length) {
+                if (Object.keys(platforms.ios.tokens).length) {
                     try {
-                         await iosSend(person_from_qry, activityData, platforms.ios);
-                    } catch(e) {
+                        await iosSend(person_from_qry, activityData, platforms.ios);
+                    } catch (e) {
                         console.error(e);
                     }
                 }
 
-                if(Object.keys(platforms.android.tokens).length) {
+                if (Object.keys(platforms.android.tokens).length) {
                     //todo android
                 }
 
                 resolve({
-                    success: true
+                    success: true,
                 });
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
                 return reject(e);
             }
         });
     },
-    onSpotsUpdate: function(from_network, activity_token, spots, persons = null, activity_cancelled_at = null) {
+    onSpotsUpdate: function (
+        from_network,
+        activity_token,
+        spots,
+        persons = null,
+        activity_cancelled_at = null,
+    ) {
         return new Promise(async (resolve, reject) => {
             try {
-                if(typeof activity_token !== 'string') {
+                if (typeof activity_token !== 'string') {
                     return reject({
-                        message: 'Invalid activity token'
+                        message: 'Invalid activity token',
                     });
                 }
 
-                if(!spots || typeof spots !== 'object' || !(isNumeric(spots.available))) {
+                if (!spots || typeof spots !== 'object' || !isNumeric(spots.available)) {
                     return reject({
-                        message: 'Invalid spots'
+                        message: 'Invalid spots',
                     });
                 }
 
-                if(persons && !isObject(persons)) {
+                if (persons && !isObject(persons)) {
                     return reject({
-                        message: 'Invalid persons object'
+                        message: 'Invalid persons object',
                     });
                 }
 
-                if(activity_cancelled_at && !isNumeric(activity_cancelled_at) ) {
+                if (activity_cancelled_at && !isNumeric(activity_cancelled_at)) {
                     return reject({
-                        message: 'Invalid cancellation time'
+                        message: 'Invalid cancellation time',
                     });
                 }
 
-                 let conn = await dbService.conn();
+                let conn = await dbService.conn();
 
-                 let activity_check = await conn('activities AS a')
-                     .join('persons AS p', 'a.person_id', '=', 'p.id')
-                     .where('network_id', from_network.id)
-                     .where('activity_token', activity_token)
-                     .select('a.*', 'p.person_token AS person_from_token')
-                     .first();
+                let activity_check = await conn('activities AS a')
+                    .join('persons AS p', 'a.person_id', '=', 'p.id')
+                    .where('network_id', from_network.id)
+                    .where('activity_token', activity_token)
+                    .select('a.*', 'p.person_token AS person_from_token')
+                    .first();
 
-                 if(!activity_check) {
-                     return reject({
-                         message: 'Activity not found'
-                     });
-                 }
+                if (!activity_check) {
+                    return reject({
+                        message: 'Activity not found',
+                    });
+                }
 
                 let cache_key = cacheService.keys.activities(activity_check.person_from_token);
 
                 let updateData = {
                     spots_available: spots.available,
-                    updated: timeNow()
+                    updated: timeNow(),
                 };
 
-                if(activity_cancelled_at) {
+                if (activity_cancelled_at) {
                     updateData.cancelled_at = activity_cancelled_at;
                 }
 
-                await conn('activities')
-                    .where('id', activity_check.id)
-                    .update(updateData);
+                await conn('activities').where('id', activity_check.id).update(updateData);
 
-                 let cache_activity = await cacheService.hGetItem(cache_key, activity_token);
+                let cache_activity = await cacheService.hGetItem(cache_key, activity_token);
 
-                 if(cache_activity) {
-                     cache_activity.spots_available = spots.available;
+                if (cache_activity) {
+                    cache_activity.spots_available = spots.available;
 
-                     if(activity_cancelled_at) {
-                         cache_activity.cancelled_at = activity_cancelled_at;
-                     }
+                    if (activity_cancelled_at) {
+                        cache_activity.cancelled_at = activity_cancelled_at;
+                    }
 
-                     if(persons) {
-                         cache_activity.persons = persons;
-                     }
+                    if (persons) {
+                        cache_activity.persons = persons;
+                    }
 
-                     await cacheService.hSet(cache_key, activity_token, cache_activity);
-                 }
+                    await cacheService.hSet(cache_key, activity_token, cache_activity);
+                }
 
-                 let network_self = await getNetworkSelf();
+                let network_self = await getNetworkSelf();
 
                 let notification_persons = await conn('activities_notifications AS an')
-                     .join('persons AS p', 'p.id', '=', 'an.person_to_id')
-                     .where('activity_id', activity_check.id)
-                     .where('person_to_network_id', network_self.id)
-                     .select('an.id', 'person_token', 'declined_at');
+                    .join('persons AS p', 'p.id', '=', 'an.person_to_id')
+                    .where('activity_id', activity_check.id)
+                    .where('person_to_network_id', network_self.id)
+                    .select('an.id', 'person_token', 'declined_at');
 
                 let notificationTokens = {};
 
                 //update notification data via ws
-                 for(let person of notification_persons) {
-                     //do not send if person declined
-                     if(person.declined_at) {
-                         continue;
-                     }
-
-                     notificationTokens[person.person_token] = true;
-
-                     cacheService.publishWS('notifications', person.person_token, {
-                         activity_token,
-                         spots,
-                         activity_cancelled_at
-                     });
-                 }
-
-                 //update activity data via ws
-                for(let person_token in cache_activity.persons) {
-                    let person = cache_activity.persons[person_token];
-
-                    //do not send if person cancelled
-                    if(person.cancelled_at) {
+                for (let person of notification_persons) {
+                    //do not send if person declined
+                    if (person.declined_at) {
                         continue;
                     }
 
-                    if(person_token in notificationTokens) {
+                    notificationTokens[person.person_token] = true;
+
+                    cacheService.publishWS('notifications', person.person_token, {
+                        activity_token,
+                        spots,
+                        activity_cancelled_at,
+                    });
+                }
+
+                //update activity data via ws
+                for (let person_token in cache_activity.persons) {
+                    let person = cache_activity.persons[person_token];
+
+                    //do not send if person cancelled
+                    if (person.cancelled_at) {
+                        continue;
+                    }
+
+                    if (person_token in notificationTokens) {
                         let data = {
                             activity_token,
                             spots,
-                            activity_cancelled_at
+                            activity_cancelled_at,
                         };
 
-                        if(persons) {
+                        if (persons) {
                             data.persons = persons;
                         }
 
@@ -561,36 +585,41 @@ module.exports = {
                     }
                 }
 
-                 resolve();
-            } catch(e) {
+                resolve();
+            } catch (e) {
                 console.error(e);
                 return reject(e);
             }
         });
     },
-    acceptNotification: function(from_network, activity_token, person_token, access_token, accepted_at) {
+    acceptNotification: function (
+        from_network,
+        activity_token,
+        person_token,
+        access_token,
+        accepted_at,
+    ) {
         return new Promise(async (resolve, reject) => {
             let debug_enabled = require('../../dev/debug').activities.accept;
 
             try {
-
                 let errors = [];
 
-                if(!person_token) {
+                if (!person_token) {
                     errors.push('Person token required');
                 }
 
-                if(!activity_token) {
+                if (!activity_token) {
                     errors.push('Activity token required');
                 }
 
-                if(errors.length) {
+                if (errors.length) {
                     return reject({ message: errors });
                 }
 
                 let person = await getPerson(person_token);
 
-                if(!person) {
+                if (!person) {
                     return reject({ message: 'Person not found' });
                 }
 
@@ -600,7 +629,7 @@ module.exports = {
                     .where('activity_token', activity_token)
                     .first();
 
-                if(!activity) {
+                if (!activity) {
                     return reject({ message: 'Activity not found' });
                 }
 
@@ -614,7 +643,7 @@ module.exports = {
 
                 if (!notification) {
                     return reject({
-                        message: 'Activity does not include person'
+                        message: 'Activity does not include person',
                     });
                 }
 
@@ -631,40 +660,50 @@ module.exports = {
                     .where('person_id', person.id)
                     .first();
 
-                if(person_activity_qry) {
+                if (person_activity_qry) {
                     return reject('Activity for person already exists');
                 }
 
-                let personActivities = await cacheService.hGetAllObj(cacheService.keys.persons_activities(person_token));
+                let personActivities = await cacheService.hGetAllObj(
+                    cacheService.keys.persons_activities(person_token),
+                );
 
                 //prevent accepting if person accepted a different activity during the same time
-                let activity_overlaps = await doesActivityOverlap(person_token, {
-                    start: activity.activity_start,
-                    end: activity.activity_end,
-                }, personActivities);
+                let activity_overlaps = await doesActivityOverlap(
+                    person_token,
+                    {
+                        start: activity.activity_start,
+                        end: activity.activity_end,
+                    },
+                    personActivities,
+                );
 
-                if(activity_overlaps && !debug_enabled) {
+                if (activity_overlaps && !debug_enabled) {
                     return reject('Activity overlaps with existing activity');
                 }
 
                 let update_data = {
                     accepted_at: accepted_at,
-                    updated: accepted_at
-                }
+                    updated: accepted_at,
+                };
 
                 let update_result = await conn('activities_notifications AS an')
                     .where('id', notification.id)
                     .update(update_data);
 
-                if(update_result) {
-                    let activity_cache_key = cacheService.keys.activities(notification.person_from_token);
-                    let person_activities_cache_key = cacheService.keys.persons_activities(person_token);
-                    let person_notification_cache_key = cacheService.keys.persons_notifications(person_token);
+                if (update_result) {
+                    let activity_cache_key = cacheService.keys.activities(
+                        notification.person_from_token,
+                    );
+                    let person_activities_cache_key =
+                        cacheService.keys.persons_activities(person_token);
+                    let person_notification_cache_key =
+                        cacheService.keys.persons_notifications(person_token);
 
                     let notification_data = {
                         ...notification,
-                        ...update_data
-                    }
+                        ...update_data,
+                    };
 
                     let person_activity_insert = {
                         access_token,
@@ -673,11 +712,10 @@ module.exports = {
                         person_id: person.id,
                         is_creator: false,
                         created: timeNow(),
-                        updated: timeNow()
+                        updated: timeNow(),
                     };
 
-                    await conn('activities_persons')
-                        .insert(person_activity_insert);
+                    await conn('activities_persons').insert(person_activity_insert);
 
                     person_activity_insert = {
                         ...person_activity_insert,
@@ -687,41 +725,56 @@ module.exports = {
                         activity_end: activity.activity_end,
                         access: {
                             token: access_token,
-                            domain: getURL(from_network.api_domain)
-                        }
-                    }
+                            domain: getURL(from_network.api_domain),
+                        },
+                    };
 
-                    let activity_data = await cacheService.hGetItem(activity_cache_key, activity_token);
+                    let activity_data = await cacheService.hGetItem(
+                        activity_cache_key,
+                        activity_token,
+                    );
 
-                    if(!activity_data.persons) {
+                    if (!activity_data.persons) {
                         activity_data.persons = {};
                     }
 
                     activity_data.persons[person_token] = {
                         accepted_at,
                         first_name: person.first_name,
-                        image_url: person.image_url
-                    }
+                        image_url: person.image_url,
+                    };
 
                     let pipeline = cacheService.startPipeline();
 
-                    pipeline.hSet(activity_cache_key, activity_token, JSON.stringify(activity_data));
+                    pipeline.hSet(
+                        activity_cache_key,
+                        activity_token,
+                        JSON.stringify(activity_data),
+                    );
 
-                    pipeline.hSet(person_activities_cache_key, activity_token, JSON.stringify(person_activity_insert));
+                    pipeline.hSet(
+                        person_activities_cache_key,
+                        activity_token,
+                        JSON.stringify(person_activity_insert),
+                    );
 
-                    pipeline.hSet(person_notification_cache_key, activity_token, JSON.stringify(notification_data));
+                    pipeline.hSet(
+                        person_notification_cache_key,
+                        activity_token,
+                        JSON.stringify(notification_data),
+                    );
 
                     await cacheService.execPipeline(pipeline);
 
                     return resolve({
                         first_name: person.first_name,
                         image_url: person.image_url,
-                        success: true
+                        success: true,
                     });
                 }
 
                 return reject({
-                    message: 'Activity notification status could not be updated'
+                    message: 'Activity notification status could not be updated',
                 });
             } catch (e) {
                 console.error(e);
@@ -729,7 +782,7 @@ module.exports = {
             }
         });
     },
-    declineNotification: function(from_network, activity_token, person_token, declined_at) {
+    declineNotification: function (from_network, activity_token, person_token, declined_at) {
         return new Promise(async (resolve, reject) => {
             try {
                 let errors = [];
@@ -747,7 +800,7 @@ module.exports = {
 
                 let person = await getPerson(person_token);
 
-                if(!person) {
+                if (!person) {
                     return reject({ message: 'Person not found' });
                 }
 
@@ -757,7 +810,7 @@ module.exports = {
                     .where('activity_token', activity_token)
                     .first();
 
-                if(!activity) {
+                if (!activity) {
                     return reject({ message: 'Activity not found' });
                 }
 
@@ -771,46 +824,47 @@ module.exports = {
 
                 if (!notification) {
                     return reject({
-                        message: 'Activity does not include person'
+                        message: 'Activity does not include person',
                     });
                 }
 
                 if (notification.accepted_at) {
                     return reject({
-                        message: 'Activity cannot be declined'
+                        message: 'Activity cannot be declined',
                     });
                 }
 
                 if (notification.declined_at) {
                     return reject({
-                        message: 'Activity already declined'
+                        message: 'Activity already declined',
                     });
                 }
 
                 let update_data = {
                     declined_at: declined_at,
-                    updated: declined_at
+                    updated: declined_at,
                 };
 
                 let update_result = await conn('activities_notifications AS an')
                     .where('id', notification.id)
                     .update(update_data);
 
-                if(update_result) {
-                    let person_notification_cache_key = cacheService.keys.persons_notifications(person_token);
+                if (update_result) {
+                    let person_notification_cache_key =
+                        cacheService.keys.persons_notifications(person_token);
 
                     await cacheService.hSet(person_notification_cache_key, activity_token, {
                         ...notification,
-                        ...update_data
+                        ...update_data,
                     });
 
                     return resolve({
-                        success: true
+                        success: true,
                     });
                 }
 
                 return reject({
-                    message: 'Activity notification status could not be updated'
+                    message: 'Activity notification status could not be updated',
                 });
             } catch (e) {
                 console.error(e);
@@ -818,24 +872,24 @@ module.exports = {
             }
         });
     },
-    cancelActivity: function(from_network, activity_token, person_token, cancelled_at) {
+    cancelActivity: function (from_network, activity_token, person_token, cancelled_at) {
         return new Promise(async (resolve, reject) => {
             try {
-                if(typeof activity_token !== 'string') {
+                if (typeof activity_token !== 'string') {
                     return reject({
-                        message: 'Invalid activity token'
+                        message: 'Invalid activity token',
                     });
                 }
 
-                if(typeof person_token !== 'string') {
+                if (typeof person_token !== 'string') {
                     return reject({
-                        message: 'Invalid activity token'
+                        message: 'Invalid activity token',
                     });
                 }
 
-                if(!isNumeric(cancelled_at)) {
+                if (!isNumeric(cancelled_at)) {
                     return reject({
-                        message: 'Invalid cancelled timestamp'
+                        message: 'Invalid cancelled timestamp',
                     });
                 }
 
@@ -848,9 +902,9 @@ module.exports = {
                     .select('a.*', 'p.person_token AS person_from_token')
                     .first();
 
-                if(!activity_check) {
+                if (!activity_check) {
                     return reject({
-                        message: 'Activity not found'
+                        message: 'Activity not found',
                     });
                 }
 
@@ -858,9 +912,9 @@ module.exports = {
 
                 let cache_activity = await cacheService.hGetItem(cache_key, activity_token);
 
-                if(!cache_activity || !(person_token in cache_activity.persons)) {
+                if (!cache_activity || !(person_token in cache_activity.persons)) {
                     return reject({
-                        message: 'Person does not exist on activity'
+                        message: 'Person does not exist on activity',
                     });
                 }
 
@@ -868,31 +922,38 @@ module.exports = {
 
                 await cacheService.hSet(cache_key, activity_token, cache_activity);
 
-                let personActivity = await cacheService.hGetItem(cacheService.keys.persons_activities(person_token), activity_token);
+                let personActivity = await cacheService.hGetItem(
+                    cacheService.keys.persons_activities(person_token),
+                    activity_token,
+                );
 
-                if(!personActivity) {
+                if (!personActivity) {
                     return reject({
-                        message: 'Person activity not found'
+                        message: 'Person activity not found',
                     });
                 }
 
                 personActivity.cancelled_at = cancelled_at;
 
-                await cacheService.hSet(cacheService.keys.persons_activities(person_token), activity_token, personActivity);
+                await cacheService.hSet(
+                    cacheService.keys.persons_activities(person_token),
+                    activity_token,
+                    personActivity,
+                );
 
                 await conn('activities_persons')
                     .where('activity_id', personActivity.activity_id)
                     .where('person_id', personActivity.person_id)
                     .update({
                         cancelled_at,
-                        updated: timeNow()
+                        updated: timeNow(),
                     });
 
                 resolve();
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
                 return reject(e);
             }
         });
-    }
+    },
 };

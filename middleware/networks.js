@@ -1,10 +1,9 @@
 const { getNetwork } = require('../services/network');
 const cacheService = require('../services/cache');
 
-
 module.exports = function (req, res, next) {
     return new Promise(async (resolve, reject) => {
-        if(['/networks', '/networks/'].includes(req.originalUrl)) {
+        if (['/networks', '/networks/'].includes(req.originalUrl)) {
             next();
             return resolve();
         }
@@ -18,7 +17,7 @@ module.exports = function (req, res, next) {
                 return resolve();
             }
 
-            if(typeof secret_key !== 'string') {
+            if (typeof secret_key !== 'string') {
                 res.json('secret key required', 401);
                 return resolve();
             }
@@ -35,9 +34,12 @@ module.exports = function (req, res, next) {
                 return resolve();
             }
 
-            let network_secrets = await cacheService.hGetItem(cacheService.keys.networks_secrets, network_token);
+            let network_secrets = await cacheService.hGetItem(
+                cacheService.keys.networks_secrets,
+                network_token,
+            );
 
-            if(network_secrets?.from !== secret_key) {
+            if (network_secrets?.from !== secret_key) {
                 res.json('invalid secret key', 401);
                 return resolve();
             }

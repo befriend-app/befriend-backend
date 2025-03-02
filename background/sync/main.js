@@ -4,10 +4,7 @@ const personsSync = require('./persons');
 const meSync = require('./me');
 const filtersSync = require('./filters');
 
-const {
-    loadScriptEnv,
-    timeoutAwait,
-} = require('../../services/shared');
+const { loadScriptEnv, timeoutAwait } = require('../../services/shared');
 
 const runInterval = 60 * 30 * 1000; //every 30 minutes
 
@@ -21,7 +18,7 @@ const runInterval = 60 * 30 * 1000; //every 30 minutes
             await personsSync.main();
             await meSync.main();
             await filtersSync.main();
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
 

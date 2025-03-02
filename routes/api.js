@@ -7,7 +7,6 @@ let personsController = require('../controllers/persons');
 
 router.use(require('../middleware/auth'));
 
-
 router.get('/me', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {

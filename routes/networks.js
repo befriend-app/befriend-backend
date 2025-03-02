@@ -4,7 +4,6 @@ const networksApiController = require('../controllers/networks/api');
 
 router.use(require('../middleware/networks'));
 
-
 router.put('/activities/matching/exclude', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         //3rd-party network to my network to find persons that would be excluded by distance
@@ -114,6 +113,5 @@ router.put('/activities/:activity_token/cancel', function (req, res, next) {
         resolve();
     });
 });
-
 
 module.exports = router;

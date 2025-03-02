@@ -35,9 +35,7 @@ function main() {
                 connection: connection,
             });
 
-            let network_self = await knex('networks')
-                .where('is_self', true)
-                .first();
+            let network_self = await knex('networks').where('is_self', true).first();
 
             let bulk_delete_count = 50000;
 
@@ -48,29 +46,33 @@ function main() {
             for (let i = 0; i < persons.length; i += bulk_delete_count) {
                 let chunk = persons.slice(i, i + bulk_delete_count);
 
-                let ids = chunk.map(x => x.id);
+                let ids = chunk.map((x) => x.id);
 
                 let grids = {};
 
-                for(let p of chunk) {
+                for (let p of chunk) {
                     let grid = await getGridById(p.grid_id);
 
-                    if(grid) {
+                    if (grid) {
                         grids[grid.token] = true;
                     }
                 }
 
-                let tables = ['persons_filters', 'persons_availability', 'persons_filters_networks'];
+                let tables = [
+                    'persons_filters',
+                    'persons_availability',
+                    'persons_filters_networks',
+                ];
 
-                for(let table of tables) {
-                    await knex(table)
-                        .whereIn('person_id', ids)
-                        .delete();
+                for (let table of tables) {
+                    await knex(table).whereIn('person_id', ids).delete();
                 }
             }
 
             try {
-                await knex('sync').where('sync_process', systemKeys.sync.network.persons_filters).delete();
+                await knex('sync')
+                    .where('sync_process', systemKeys.sync.network.persons_filters)
+                    .delete();
             } catch (e) {
                 console.error(e);
             }

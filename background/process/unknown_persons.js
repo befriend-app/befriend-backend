@@ -1,7 +1,18 @@
 const cacheService = require('../../services/cache');
 const dbService = require('../../services/db');
-const { timeNow, loadScriptEnv, calculateAge, timeoutAwait, getURL } = require('../../services/shared');
-const { getNetworkSelf, homeDomains, getNetworksLookup, getSecretKeyToForNetwork } = require('../../services/network');
+const {
+    timeNow,
+    loadScriptEnv,
+    calculateAge,
+    timeoutAwait,
+    getURL,
+} = require('../../services/shared');
+const {
+    getNetworkSelf,
+    homeDomains,
+    getNetworksLookup,
+    getSecretKeyToForNetwork,
+} = require('../../services/network');
 const axios = require('axios');
 
 loadScriptEnv();
@@ -18,7 +29,7 @@ function processUpdate() {
     return new Promise(async (resolve, reject) => {
         try {
             let t = timeNow();
-            
+
             let conn = await dbService.conn();
 
             let hasMorePersons = true;
@@ -42,21 +53,21 @@ function processUpdate() {
                     let home_domains = await homeDomains();
                     let networksLookup = await getNetworksLookup();
 
-                    for(let domain of home_domains) {
+                    for (let domain of home_domains) {
                         //skip notifying own domain
-                        if(self_network.api_domain.includes(domain)) {
+                        if (self_network.api_domain.includes(domain)) {
                             continue;
                         }
 
                         let network_to = null;
 
-                        for(let network of Object.values(networksLookup.byToken)) {
-                            if(network.api_domain.includes(domain)) {
+                        for (let network of Object.values(networksLookup.byToken)) {
+                            if (network.api_domain.includes(domain)) {
                                 network_to = network;
                             }
                         }
 
-                        if(!network_to) {
+                        if (!network_to) {
                             continue;
                         }
 
@@ -69,32 +80,30 @@ function processUpdate() {
 
                         let has_error = false;
 
-                        for(let person of persons) {
+                        for (let person of persons) {
                             try {
                                 let r = await axios.post(getURL(domain, 'networks/persons'), {
                                     secret_key: secret_key_to,
                                     network_token: self_network.network_token,
                                     person_token: person.person_token,
-                                    updated: person.updated
+                                    updated: person.updated,
                                 });
 
-                                if(r.status === 201) {
-                                    await conn('persons')
-                                        .where('id', person.id)
-                                        .update({
-                                            is_person_known: true,
-                                            updated: timeNow()
-                                        });
+                                if (r.status === 201) {
+                                    await conn('persons').where('id', person.id).update({
+                                        is_person_known: true,
+                                        updated: timeNow(),
+                                    });
                                 } else {
                                     has_error = true;
                                 }
-                            } catch(e) {
+                            } catch (e) {
                                 has_error = true;
                                 console.error(e);
                             }
                         }
 
-                        if(!has_error) {
+                        if (!has_error) {
                             break;
                         }
                     }
@@ -140,8 +149,8 @@ async function main() {
 }
 
 module.exports = {
-    main
-}
+    main,
+};
 
 if (require.main === module) {
     (async function () {

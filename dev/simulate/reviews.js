@@ -2,10 +2,7 @@ const yargs = require('yargs');
 const dbService = require('../../services/db');
 const { getNetworkSelf } = require('../../services/network');
 
-const {
-    loadScriptEnv,
-    timeNow,
-} = require('../../services/shared');
+const { loadScriptEnv, timeNow } = require('../../services/shared');
 
 const { batchUpdate } = require('../../services/db');
 const cacheService = require('../../services/cache');
@@ -126,11 +123,7 @@ async function simulateReviews() {
 
         person_obj.reviews = reviews;
 
-        await cacheService.hSet(
-            cacheService.keys.person(person.person_token),
-            'reviews',
-            reviews,
-        );
+        await cacheService.hSet(cacheService.keys.person(person.person_token), 'reviews', reviews);
 
         await updateGridSets(person_obj, null, 'reviews');
     }
@@ -141,7 +134,7 @@ async function simulateReviews() {
 }
 
 async function main(qty) {
-    if(qty) {
+    if (qty) {
         num_persons = qty;
     }
 

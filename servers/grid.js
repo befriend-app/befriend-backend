@@ -1,7 +1,12 @@
 const express = require('express');
 const logger = require('morgan');
 
-const { loadScriptEnv, km_per_degree_lat, calculateDistanceMeters, timeNow } = require('../services/shared');
+const {
+    loadScriptEnv,
+    km_per_degree_lat,
+    calculateDistanceMeters,
+    timeNow,
+} = require('../services/shared');
 const dbService = require('../services/db');
 
 loadScriptEnv();
@@ -17,7 +22,6 @@ server.use(logger('dev'));
 server.use('/', router);
 server.use(express.json());
 
-
 const TABLE_NAME = 'earth_grid';
 const COORD_PRECISION = 1000;
 const DEFAULT_RADIUS_KM = 30;
@@ -28,7 +32,7 @@ let gridStructure = {
 
 let gridLookup = {
     byId: {},
-    byToken: {}
+    byToken: {},
 };
 
 let gridInitialization = {
@@ -225,9 +229,7 @@ function findNearby(lat, lon, radiusKm = DEFAULT_RADIUS_KM, limit = null) {
 
         if (latBand) {
             const currentLat = currentBucketLat / COORD_PRECISION;
-            const lonBucketsToSearch = Math.ceil(
-                radiusKm / (kmPerDegreeLon(currentLat) / 10),
-            );
+            const lonBucketsToSearch = Math.ceil(radiusKm / (kmPerDegreeLon(currentLat) / 10));
 
             for (let lonDiff = -lonBucketsToSearch; lonDiff <= lonBucketsToSearch; lonDiff++) {
                 const currentBucketLon = lon_key + lonDiff * 100;
@@ -281,7 +283,7 @@ module.exports = {
     DEFAULT_RADIUS_KM,
     router,
     getPort,
-    main
+    main,
 };
 
 if (require.main === module) {

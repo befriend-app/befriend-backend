@@ -2,20 +2,20 @@ const dbService = require('../db');
 const { getNetworkSelf, getNetworksLookup } = require('../network');
 const { timeNow } = require('../shared');
 const { results_limit, data_since_ms_extra } = require('./common');
-const { filterMappings} = require('../filters');
+const { filterMappings } = require('../filters');
 const { getFilters } = require('../filters');
 
 function getFilterMapByItem(item) {
-    for(let k in item) {
-        if(['person_id', 'filter_id'].includes(k)) {
+    for (let k in item) {
+        if (['person_id', 'filter_id'].includes(k)) {
             continue;
         }
 
         let v = item[k];
 
-        if(k.endsWith('_id') && v) {
-            for(let f in filterMappings) {
-                if(k === filterMappings[f].column) {
+        if (k.endsWith('_id') && v) {
+            for (let f in filterMappings) {
+                if (k === filterMappings[f].column) {
                     return filterMappings[f];
                 }
             }
@@ -26,8 +26,8 @@ function getFilterMapByItem(item) {
 }
 
 function getFilterMapByTable(table) {
-    for(let f in filterMappings) {
-        if(table === filterMappings[f].table) {
+    for (let f in filterMappings) {
+        if (table === filterMappings[f].table) {
             return filterMappings[f];
         }
     }
@@ -35,8 +35,7 @@ function getFilterMapByTable(table) {
     return null;
 }
 
-
-function syncFilters (inputs) {
+function syncFilters(inputs) {
     return new Promise(async (resolve, reject) => {
         try {
             let conn = await dbService.conn();
@@ -45,11 +44,13 @@ function syncFilters (inputs) {
             let request_sent = inputs.request_sent ? parseInt(inputs.request_sent) : null;
             let data_since_timestamp = inputs.data_since ? parseInt(inputs.data_since) : null;
             let prev_data_since = inputs.prev_data_since ? parseInt(inputs.prev_data_since) : null;
-            let pagination_updated = inputs.pagination_updated ? parseInt(inputs.pagination_updated) : null;
+            let pagination_updated = inputs.pagination_updated
+                ? parseInt(inputs.pagination_updated)
+                : null;
 
             if (!request_sent) {
                 return reject({
-                    message: 'request timestamp required'
+                    message: 'request timestamp required',
                 });
             }
 
@@ -64,11 +65,7 @@ function syncFilters (inputs) {
             let timestamp_updated = prev_data_since || data_since_timestamp_w_extra;
 
             let filters_qry = conn('persons AS p')
-                .select(
-                    'p.id AS person_id',
-                    'p.person_token',
-                    'pf.*'
-                )
+                .select('p.id AS person_id', 'p.person_token', 'pf.*')
                 .where('np.network_id', my_network.id)
                 .where('np.is_active', true)
                 .join('networks_persons AS np', 'np.person_id', '=', 'p.id')
@@ -137,16 +134,16 @@ function syncFilters (inputs) {
             let filters_data = [
                 {
                     name: 'filters',
-                    results: filters_qry
+                    results: filters_qry,
                 },
                 {
                     name: 'availability',
-                    results: availability_qry
+                    results: availability_qry,
                 },
                 {
                     name: 'networks',
-                    results: networks_qry
-                }
+                    results: networks_qry,
+                },
             ];
 
             //organize lookups
@@ -156,11 +153,11 @@ function syncFilters (inputs) {
             let tablesIds = {};
 
             //find cols with ids and organize by their respective tables
-            for(let item of filters_qry) {
+            for (let item of filters_qry) {
                 let filterMapping = getFilterMapByItem(item);
 
-                if(filterMapping) {
-                    if(!(filterMapping.table in tablesIds)) {
+                if (filterMapping) {
+                    if (!(filterMapping.table in tablesIds)) {
                         tablesIds[filterMapping.table] = {};
                     }
 
@@ -169,12 +166,12 @@ function syncFilters (inputs) {
                 }
             }
 
-            for(let table in tablesIds) {
+            for (let table in tablesIds) {
                 let filterMapping = getFilterMapByTable(table);
 
                 let token_col = 'token';
 
-                if(filterMapping?.column_token) {
+                if (filterMapping?.column_token) {
                     token_col = `${filterMapping.column_token} AS token`;
                 }
 
@@ -184,7 +181,7 @@ function syncFilters (inputs) {
 
                 tablesLookup[table] = {};
 
-                for(let item of qry) {
+                for (let item of qry) {
                     tablesLookup[table][item.id] = item.token;
                 }
             }
@@ -192,18 +189,20 @@ function syncFilters (inputs) {
             //organize return object
             let persons_filters = {};
 
-            for(let data of filters_data) {
-                let persons_data = persons_filters[data.name] = {};
+            for (let data of filters_data) {
+                let persons_data = (persons_filters[data.name] = {});
 
-                if(data.name === 'networks') {
-                    for(let item of data.results) {
+                if (data.name === 'networks') {
+                    for (let item of data.results) {
                         let person_token = item.person_token;
 
-                        if(!persons_data[person_token]) {
+                        if (!persons_data[person_token]) {
                             persons_data[person_token] = {};
                         }
 
-                        item.network_token = item.network_id ? networksLookup.byId[item.network_id]?.network_token : null;
+                        item.network_token = item.network_id
+                            ? networksLookup.byId[item.network_id]?.network_token
+                            : null;
 
                         persons_data[person_token][item.token] = item;
 
@@ -212,22 +211,24 @@ function syncFilters (inputs) {
                         delete item.network_id;
                     }
                 } else {
-                    for(let item of data.results) {
+                    for (let item of data.results) {
                         //add filter token
-                        if(item.filter_id) {
+                        if (item.filter_id) {
                             item.filter_token = filtersLookup.byId[item.filter_id].token;
                         }
 
                         //add item token
                         let filterMapping = getFilterMapByItem(item);
 
-                        if(filterMapping?.column) {
-                            item.item_token = tablesLookup[filterMapping.table][item[filterMapping.column]] || null;
+                        if (filterMapping?.column) {
+                            item.item_token =
+                                tablesLookup[filterMapping.table][item[filterMapping.column]] ||
+                                null;
                         }
 
                         let person_token = item.person_token;
 
-                        if(!persons_data[person_token]) {
+                        if (!persons_data[person_token]) {
                             persons_data[person_token] = {};
                         }
 
@@ -237,8 +238,8 @@ function syncFilters (inputs) {
                         delete item.id;
                         delete item.created;
 
-                        for(let k in item) {
-                            if(k.includes('_id')) {
+                        for (let k in item) {
+                            if (k.includes('_id')) {
                                 delete item[k];
                             }
                         }
@@ -248,7 +249,7 @@ function syncFilters (inputs) {
 
             const lastTimestamps = [];
 
-            for(let data of filters_data) {
+            for (let data of filters_data) {
                 let results = data.results;
 
                 if (results.length === results_limit) {
@@ -256,23 +257,25 @@ function syncFilters (inputs) {
                 }
             }
 
-            let return_pagination_updated = lastTimestamps.length ? Math.max(...lastTimestamps) : null;
+            let return_pagination_updated = lastTimestamps.length
+                ? Math.max(...lastTimestamps)
+                : null;
 
             return resolve({
                 pagination_updated: return_pagination_updated,
                 prev_data_since: prev_data_since || data_since_timestamp_w_extra,
-                filters: persons_filters
+                filters: persons_filters,
             });
         } catch (e) {
             console.error('Error syncing persons filters:', e);
 
             return reject({
-                message: 'Error syncing persons filters'
+                message: 'Error syncing persons filters',
             });
         }
     });
 }
 
 module.exports = {
-    syncFilters
-}
+    syncFilters,
+};

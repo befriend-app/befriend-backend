@@ -4,7 +4,6 @@ const { deleteKeys, getKeysWithPrefix } = require('../../services/cache');
 
 loadScriptEnv();
 
-
 function main() {
     return new Promise(async (resolve, reject) => {
         console.log('Delete: activities');
@@ -35,28 +34,24 @@ function main() {
                 connection: connection,
             });
 
-            await conn('activities_persons_reviews')
-                .delete();
+            await conn('activities_persons_reviews').delete();
 
-            await conn('activities_persons')
-                .delete();
+            await conn('activities_persons').delete();
 
-            await conn('activities_notifications')
-                .delete();
+            await conn('activities_notifications').delete();
 
-            await conn('activities')
-                .delete();
+            await conn('activities').delete();
 
             let ps = [
                 getKeysWithPrefix(cacheService.keys.activities('')),
                 getKeysWithPrefix(cacheService.keys.activities_notifications('*')),
                 getKeysWithPrefix(cacheService.keys.persons_activities('')),
-                getKeysWithPrefix(cacheService.keys.persons_notifications(''))
+                getKeysWithPrefix(cacheService.keys.persons_notifications('')),
             ];
 
             let delete_keys = [];
 
-            for(let p of ps) {
+            for (let p of ps) {
                 let keys = await p;
 
                 delete_keys = delete_keys.concat(keys);

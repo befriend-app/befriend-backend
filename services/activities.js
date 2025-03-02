@@ -1,12 +1,25 @@
 const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 
-const { getOptionDateTime, isNumeric, timeNow, generateToken, getURL, getIPAddr, isObject, calculateDistanceMeters,
-    calculateDistanceFeet
+const {
+    getOptionDateTime,
+    isNumeric,
+    timeNow,
+    generateToken,
+    getURL,
+    getIPAddr,
+    isObject,
+    calculateDistanceMeters,
+    calculateDistanceFeet,
 } = require('./shared');
 const { getModes, getKidsAgeLookup, getModeById } = require('./modes');
 const { getActivityPlace } = require('./places');
-const { getNetworkSelf, getNetwork, getSecretKeyToForNetwork, getNetworksLookup } = require('./network');
+const {
+    getNetworkSelf,
+    getNetwork,
+    getSecretKeyToForNetwork,
+    getNetworksLookup,
+} = require('./network');
 const { getPerson } = require('./persons');
 const { getGender } = require('./genders');
 const { getPlaceData } = require('./fsq');
@@ -19,38 +32,38 @@ let rules = {
     checkIn: {
         minsBefore: 30,
         minsAfter: 20,
-        maxDistance: 500 //ft
+        maxDistance: 500, //ft
     },
     unfulfilled: {
         acceptance: {
             minsThreshold: 10,
-            error: `Activity can no longer be accepted`
+            error: `Activity can no longer be accepted`,
         },
         noShow: {
-            minsThreshold: 20
-        }
+            minsThreshold: 20,
+        },
     },
     cancellation: {
         'hours-3': {
             max_cancellations: 1,
             time_span_mins: 180,
             is_day: false,
-            error: 'Too many activities cancelled in the last 3 hours'
+            error: 'Too many activities cancelled in the last 3 hours',
         },
         'hours-6': {
             max_cancellations: 2,
             time_span_mins: 360,
             is_day: false,
-            error: 'Too many activities cancelled in the last 6 hours'
+            error: 'Too many activities cancelled in the last 6 hours',
         },
-        'day': {
+        day: {
             max_cancellations: 3,
             time_span_mins: 1440,
             is_day: true,
-            error: 'Too many activities cancelled, please try again tomorrow'
-        }
+            error: 'Too many activities cancelled, please try again tomorrow',
+        },
     },
-}
+};
 
 function cancelActivity(person, activity_token) {
     return new Promise(async (resolve, reject) => {
@@ -76,7 +89,7 @@ function cancelActivity(person, activity_token) {
                 .select('ap.*', 'a.person_id AS person_id_from')
                 .first();
 
-            if(!activityPersonQry) {
+            if (!activityPersonQry) {
                 return reject('Activity does not include person');
             }
 
@@ -86,16 +99,16 @@ function cancelActivity(person, activity_token) {
                 .select('p.*', 'eg.token')
                 .first();
 
-            if(!personFromQry) {
+            if (!personFromQry) {
                 return reject('Person not found');
             }
-            
+
             personFromQry.grid = {
                 id: personFromQry.grid_id,
                 token: personFromQry.token,
-            }
+            };
 
-            if(activityPersonQry.cancelled_at && !debug_enabled) {
+            if (activityPersonQry.cancelled_at && !debug_enabled) {
                 return reject('Activity already cancelled');
             }
 
@@ -103,15 +116,15 @@ function cancelActivity(person, activity_token) {
 
             let activity_data = await cacheService.hGetItem(activity_cache_key, activity_token);
 
-            if(!activity_data) {
+            if (!activity_data) {
                 return reject('Activity data not found');
             }
 
-            let notifications = (await cacheService.hGetAllObj(notification_cache_key) || {});
+            let notifications = (await cacheService.hGetAllObj(notification_cache_key)) || {};
 
             let person_to_network_id = null;
 
-            if(!activityPersonQry.is_creator) {
+            if (!activityPersonQry.is_creator) {
                 let personNetworkQry = await conn('activities_notifications')
                     .where('activity_id', activityPersonQry.activity_id)
                     .where('person_to_id', person.id)
@@ -123,21 +136,21 @@ function cancelActivity(person, activity_token) {
             //calc active participants remaining
             let activeParticipants = [];
 
-            for(let person_token in (activity_data.persons || {})) {
-                if(person_token === person.person_token) {
+            for (let person_token in activity_data.persons || {}) {
+                if (person_token === person.person_token) {
                     continue;
                 }
 
                 let _person = activity_data.persons[person_token];
 
-                if(!_person.cancelled_at) {
+                if (!_person.cancelled_at) {
                     activeParticipants.push(_person);
                 }
             }
 
             //update cached persons object
-            for(let person_token in (activity_data.persons || {})) {
-                if(person_token === person.person_token) {
+            for (let person_token in activity_data.persons || {}) {
+                if (person_token === person.person_token) {
                     let _person = activity_data.persons[person_token];
                     _person.cancelled_at = time;
                     break;
@@ -145,21 +158,17 @@ function cancelActivity(person, activity_token) {
             }
 
             //update db
-            await conn('activities_persons')
-                .where('id', activityPersonQry.id)
-                .update({
-                    cancelled_at: time,
-                    updated: time
-                });
+            await conn('activities_persons').where('id', activityPersonQry.id).update({
+                cancelled_at: time,
+                updated: time,
+            });
 
             //if cancellation is by creator and there are less than two participants remaining, cancel entire activity
-            if(activityPersonQry.is_creator && activeParticipants.length < 2) {
-                await conn('activities')
-                    .where('id', activityPersonQry.activity_id)
-                    .update({
-                        cancelled_at: time,
-                        updated: time
-                    });
+            if (activityPersonQry.is_creator && activeParticipants.length < 2) {
+                await conn('activities').where('id', activityPersonQry.activity_id).update({
+                    cancelled_at: time,
+                    updated: time,
+                });
 
                 activity_data.cancelled_at = time;
 
@@ -169,23 +178,28 @@ function cancelActivity(person, activity_token) {
             let prev_spots_available = activity_data.spots_available;
 
             //get updated spots
-            let spots = await getActivitySpots(personFromQry.person_token, activity_token, activity_data);
+            let spots = await getActivitySpots(
+                personFromQry.person_token,
+                activity_token,
+                activity_data,
+            );
 
-            if(prev_spots_available !== spots.available) {
+            if (prev_spots_available !== spots.available) {
                 activity_data.spots_available = spots.available;
 
-                await conn('activities')
-                    .where('id', activityPersonQry.activity_id)
-                    .update({
-                        spots_available: spots.available,
-                        updated: timeNow()
-                    });
+                await conn('activities').where('id', activityPersonQry.activity_id).update({
+                    spots_available: spots.available,
+                    updated: timeNow(),
+                });
             }
 
             //set cancelled on person activity
-            let personActivity = await cacheService.hGetItem(person_activity_cache_key, activity_token);
+            let personActivity = await cacheService.hGetItem(
+                person_activity_cache_key,
+                activity_token,
+            );
 
-            if(personActivity) {
+            if (personActivity) {
                 personActivity.cancelled_at = time;
             }
 
@@ -204,24 +218,31 @@ function cancelActivity(person, activity_token) {
                     let network = await getNetwork(person_to_network_id);
                     let secret_key_to = await getSecretKeyToForNetwork(person_to_network_id);
 
-                    if(network && secret_key_to) {
+                    if (network && secret_key_to) {
                         try {
-                            let url = getURL(network.api_domain, `networks/activities/${activity_token}/cancel`);
+                            let url = getURL(
+                                network.api_domain,
+                                `networks/activities/${activity_token}/cancel`,
+                            );
 
-                            let r = await axios.put(url, {
-                                network_token: network_self.network_token,
-                                secret_key: secret_key_to,
-                                access_token: activityPersonQry.access_token,
-                                person_token: person.person_token,
-                                cancelled_at: time
-                            }, {
-                                timeout: 1000
-                            });
-                        } catch(e) {
+                            let r = await axios.put(
+                                url,
+                                {
+                                    network_token: network_self.network_token,
+                                    secret_key: secret_key_to,
+                                    access_token: activityPersonQry.access_token,
+                                    person_token: person.person_token,
+                                    cancelled_at: time,
+                                },
+                                {
+                                    timeout: 1000,
+                                },
+                            );
+                        } catch (e) {
                             console.error(e);
                         }
                     }
-                } catch(e) {
+                } catch (e) {
                     console.error(e);
                 }
             }
@@ -230,19 +251,22 @@ function cancelActivity(person, activity_token) {
             //organize network update
             let networksSendPersons = new Set();
 
-            for(let person_token in activity_data.persons) {
+            for (let person_token in activity_data.persons) {
                 let person_notification = notifications[person_token];
 
-                let is_own_network = person_token === personFromQry.person_token || person_notification?.person_to_network_id === network_self.id;
+                let is_own_network =
+                    person_token === personFromQry.person_token ||
+                    person_notification?.person_to_network_id === network_self.id;
 
-                if(is_own_network) {
+                if (is_own_network) {
                     cacheService.publishWS('activities', person_token, {
                         activity_token,
                         persons: activity_data.persons,
                         spots,
-                        activity_cancelled_at
+                        activity_cancelled_at,
                     });
-                } else if(person_notification) { //send update to 3rd-party network
+                } else if (person_notification) {
+                    //send update to 3rd-party network
                     networksSendPersons.add(person_notification.person_to_network_id);
                 }
             }
@@ -250,29 +274,33 @@ function cancelActivity(person, activity_token) {
             let notify_networks = {};
 
             //update notified persons
-            for(let _person_token in notifications) {
+            for (let _person_token in notifications) {
                 let data = notifications[_person_token];
 
                 //notify person via websocket if they're on my network
-                if(data.person_to_network_id === network_self.id) {
+                if (data.person_to_network_id === network_self.id) {
                     //do not send if self or sent above
-                    if(_person_token === person.person_token || _person_token in activity_data.persons) {
+                    if (
+                        _person_token === person.person_token ||
+                        _person_token in activity_data.persons
+                    ) {
                         continue;
                     }
 
                     cacheService.publishWS('notifications', _person_token, {
                         activity_token,
                         spots,
-                        activity_cancelled_at
+                        activity_cancelled_at,
                     });
-                } else { //organize 3rd-party networks
+                } else {
+                    //organize 3rd-party networks
                     let network_to = networksLookup.byId[data.person_to_network_id];
 
-                    if(!network_to) {
+                    if (!network_to) {
                         continue;
                     }
 
-                    if(!notify_networks[network_to.network_token]) {
+                    if (!notify_networks[network_to.network_token]) {
                         notify_networks[network_to.network_token] = network_to;
                     }
                 }
@@ -282,54 +310,65 @@ function cancelActivity(person, activity_token) {
             try {
                 let ps = [];
 
-                for(let network_token in notify_networks) {
+                for (let network_token in notify_networks) {
                     let network_to = notify_networks[network_token];
 
                     let secret_key_to = await getSecretKeyToForNetwork(network_to.id);
 
-                    if(secret_key_to) {
+                    if (secret_key_to) {
                         try {
-                            let url = getURL(network_to.api_domain, `/networks/activities/${activity_token}/notification/spots`);
+                            let url = getURL(
+                                network_to.api_domain,
+                                `/networks/activities/${activity_token}/notification/spots`,
+                            );
 
-                            ps.push(axios.put(url, {
-                                network_token: network_self.network_token,
-                                secret_key: secret_key_to,
-                                spots,
-                                persons: activity_data.persons,
-                                activity_cancelled_at: activity_cancelled_at
-                            }, {
-                                timeout: 1000
-                            }));
-                        } catch(e) {
+                            ps.push(
+                                axios.put(
+                                    url,
+                                    {
+                                        network_token: network_self.network_token,
+                                        secret_key: secret_key_to,
+                                        spots,
+                                        persons: activity_data.persons,
+                                        activity_cancelled_at: activity_cancelled_at,
+                                    },
+                                    {
+                                        timeout: 1000,
+                                    },
+                                ),
+                            );
+                        } catch (e) {
                             console.error(e);
                         }
                     }
                 }
 
-                if(ps.length) {
+                if (ps.length) {
                     await Promise.allSettled(ps);
                 }
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
             }
 
             //send out new notifications
             try {
                 require('./notifications').sendNewNotifications(personFromQry, activity_data);
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
             }
 
             resolve({
                 success: true,
-                message: activity_cancelled_at ? 'Activity cancelled successfully' : 'Activity participation cancelled',
+                message: activity_cancelled_at
+                    ? 'Activity cancelled successfully'
+                    : 'Activity participation cancelled',
                 cancelled_at: time,
                 spots: spots,
-                activity_cancelled_at: activity_cancelled_at
+                activity_cancelled_at: activity_cancelled_at,
             });
-        } catch(e) {
+        } catch (e) {
             console.error(e);
-            return reject("Error cancelling activity")
+            return reject('Error cancelling activity');
         }
     });
 }
@@ -415,11 +454,11 @@ function createActivity(person, activity) {
                 person_id: person.id,
                 is_creator: true,
                 created: timeNow(),
-                updated: timeNow()
+                updated: timeNow(),
             };
 
-            let person_activity_id = await conn('activities_persons')
-                .insert(person_activity_insert);
+            let person_activity_id =
+                await conn('activities_persons').insert(person_activity_insert);
 
             person_activity_id = person_activity_id[0];
             person_activity_insert.id = person_activity_id;
@@ -442,23 +481,27 @@ function createActivity(person, activity) {
                     icon: network.app_icon,
                     domain: getURL(network.base_domain),
                     verified: network.is_verified ? 1 : 0,
-                }
+                },
             };
 
-            if(activity.mode?.token.includes('partner')) {
+            if (activity.mode?.token.includes('partner')) {
                 activityPersonData.partner = activity.mode.partner;
-            } else if(activity.mode?.token.includes('kids')) {
+            } else if (activity.mode?.token.includes('kids')) {
                 activityPersonData.kids = activity.mode.kids;
             }
 
             activity_insert.persons = {
-                [person.person_token]: activityPersonData
-            }
+                [person.person_token]: activityPersonData,
+            };
 
             //save to cache
             try {
                 await cacheService.hSet(activity_cache_key, activity_token, activity_insert);
-                await cacheService.hSet(person_activity_cache_key, activity_token, person_activity_insert);
+                await cacheService.hSet(
+                    person_activity_cache_key,
+                    activity_token,
+                    person_activity_insert,
+                );
             } catch (e) {
                 console.error(e);
             }
@@ -466,33 +509,43 @@ function createActivity(person, activity) {
             try {
                 matches = await findMatches(person, activity);
 
-                matches = await require('../services/matching').filterMatches(person, activity, matches);
+                matches = await require('../services/matching').filterMatches(
+                    person,
+                    activity,
+                    matches,
+                );
 
-                if(matches.length) {
-                    await require('../services/notifications').notifyMatches(person, activity, matches);
+                if (matches.length) {
+                    await require('../services/notifications').notifyMatches(
+                        person,
+                        activity,
+                        matches,
+                    );
 
                     activity_insert.place = activity.place.data;
                     activity_insert.activity_type = activity.activity.data;
 
                     let organized = {
                         ...person_activity_insert,
-                        data: activity_insert
-                    }
+                        data: activity_insert,
+                    };
 
                     return resolve(organized);
                 } else {
-                    return reject('No persons found. Please check your filters or try again later.');
+                    return reject(
+                        'No persons found. Please check your filters or try again later.',
+                    );
                 }
             } catch (e) {
-                if(!e?.message) {
+                if (!e?.message) {
                     console.error(e);
                 }
 
                 return reject(e?.message ? e.message : 'Error notifying matches');
             }
-        } catch(e) {
+        } catch (e) {
             console.error(e);
-            return reject("Error creating activity");
+            return reject('Error creating activity');
         }
     });
 }
@@ -506,16 +559,16 @@ function checkIn(activity_token, person_token, location, access_token = null) {
 
         try {
             //validate activity token
-            if(typeof activity_token !== 'string') {
+            if (typeof activity_token !== 'string') {
                 return reject({
-                    message: 'Invalid activity token'
+                    message: 'Invalid activity token',
                 });
             }
 
             //validate person
-            if(typeof person_token !== 'string') {
+            if (typeof person_token !== 'string') {
                 return reject({
-                    message: 'Invalid person token'
+                    message: 'Invalid person token',
                 });
             }
 
@@ -523,9 +576,9 @@ function checkIn(activity_token, person_token, location, access_token = null) {
 
             let person = await getPerson(person_token);
 
-            if(!person) {
+            if (!person) {
                 return reject({
-                    message: 'Person not found'
+                    message: 'Person not found',
                 });
             }
 
@@ -537,23 +590,23 @@ function checkIn(activity_token, person_token, location, access_token = null) {
                 .select('ap.*', 'a.person_id AS person_id_from')
                 .first();
 
-            if(access_token) {
+            if (access_token) {
                 activityPersonQry = activityPersonQry.where('access_token', access_token);
             }
 
             activityPersonQry = await activityPersonQry;
 
-            if(!activityPersonQry) {
-                if(access_token) {
+            if (!activityPersonQry) {
+                if (access_token) {
                     return reject({
                         message: 'Invalid access token',
-                        status: 401
+                        status: 401,
                     });
                 }
 
                 return reject({
                     message: 'Activity does not include person',
-                    status: 401
+                    status: 401,
                 });
             }
 
@@ -563,26 +616,26 @@ function checkIn(activity_token, person_token, location, access_token = null) {
                 .select('p.*', 'eg.token')
                 .first();
 
-            if(!personFromQry) {
+            if (!personFromQry) {
                 return reject({
-                    message: 'Person from not found'
+                    message: 'Person from not found',
                 });
             }
 
             let activity_cache_key = cacheService.keys.activities(personFromQry.person_token);
 
             //validate location
-            if(!isObject(location) || !isNumeric(location.lat) || !isNumeric(location.lon)) {
+            if (!isObject(location) || !isNumeric(location.lat) || !isNumeric(location.lon)) {
                 return reject({
-                    message: 'Valid location required'
+                    message: 'Valid location required',
                 });
             }
 
             let activity = await cacheService.hGetItem(activity_cache_key, activity_token);
 
-            if(!activity) {
+            if (!activity) {
                 return reject({
-                    message: 'Activity not found'
+                    message: 'Activity not found',
                 });
             }
 
@@ -590,103 +643,111 @@ function checkIn(activity_token, person_token, location, access_token = null) {
             //do not allow check-in if person already cancelled their participation
             let myParticipation = activity.persons[person_token];
 
-            if(!myParticipation) {
+            if (!myParticipation) {
                 return reject({
-                    message: 'My participation missing on activity'
+                    message: 'My participation missing on activity',
                 });
             }
 
-            if(myParticipation?.cancelled_at && !debug_enabled) {
+            if (myParticipation?.cancelled_at && !debug_enabled) {
                 return reject({
-                    message: 'Activity participation cancelled'
+                    message: 'Activity participation cancelled',
                 });
             }
 
             //do not allow check-in if activity cancelled
-            if(activity.cancelled_at && !debug_enabled) {
+            if (activity.cancelled_at && !debug_enabled) {
                 return reject({
-                    message: `This activity was cancelled`
+                    message: `This activity was cancelled`,
                 });
             }
 
-            let distance_ft = calculateDistanceFeet({
-                lat: activity.location_lat,
-                lon: activity.location_lon
-            }, location);
+            let distance_ft = calculateDistanceFeet(
+                {
+                    lat: activity.location_lat,
+                    lon: activity.location_lon,
+                },
+                location,
+            );
 
-            if(distance_ft > rules.checkIn.maxDistance && !debug_enabled) {
+            if (distance_ft > rules.checkIn.maxDistance && !debug_enabled) {
                 return reject({
-                    message: `Please check-in when you are within <br>${rules.checkIn.maxDistance}ft of the activity location`
+                    message: `Please check-in when you are within <br>${rules.checkIn.maxDistance}ft of the activity location`,
                 });
             }
 
-            if(!activity.persons) {
+            if (!activity.persons) {
                 return reject({
-                    message: 'Persons missing on activity'
+                    message: 'Persons missing on activity',
                 });
             }
 
             //prevent check-in before threshold
-            let checkInStart = activity.activity_start - (rules.checkIn.minsBefore * 60);
+            let checkInStart = activity.activity_start - rules.checkIn.minsBefore * 60;
 
-            if(timeNow(true) < checkInStart && !debug_enabled) {
+            if (timeNow(true) < checkInStart && !debug_enabled) {
                 return reject({
-                    message: `Check-in starts ${rules.checkIn.minsBefore} minutes prior to activity time`
+                    message: `Check-in starts ${rules.checkIn.minsBefore} minutes prior to activity time`,
                 });
             }
 
-            let checkInEnd = activity.activity_start + (rules.checkIn.minsAfter * 60);
+            let checkInEnd = activity.activity_start + rules.checkIn.minsAfter * 60;
 
             let latestAcceptance = null;
 
-            for(let pt in activity.persons) {
+            for (let pt in activity.persons) {
                 let p = activity.persons[pt];
 
-                if(p.is_creator || p.cancelled_at) {
+                if (p.is_creator || p.cancelled_at) {
                     continue;
                 }
 
-                if(!latestAcceptance || p.accepted_at > latestAcceptance) {
+                if (!latestAcceptance || p.accepted_at > latestAcceptance) {
                     latestAcceptance = p.accepted_at;
                 }
             }
 
             //if the latest invitation was accepted after activity start time, use the later time for check-in end
-            if(latestAcceptance) {
+            if (latestAcceptance) {
                 latestAcceptance /= 1000; //ms to sec
 
-                if(latestAcceptance > activity.activity_start) {
-                    checkInEnd = latestAcceptance + (rules.checkIn.minsAfter * 60);
+                if (latestAcceptance > activity.activity_start) {
+                    checkInEnd = latestAcceptance + rules.checkIn.minsAfter * 60;
                 }
             }
 
             //prevent check-in if past check-in end time
-            if(timeNow(true) > checkInEnd && !debug_enabled) {
+            if (timeNow(true) > checkInEnd && !debug_enabled) {
                 return reject({
-                    message: `This activity is no longer accepting check-ins`
+                    message: `This activity is no longer accepting check-ins`,
                 });
             }
 
             //update db/cache
             let arrived_at = timeNow();
 
-            await conn('activities_persons')
-                .where('id', activityPersonQry.id)
-                .update({
-                    arrived_at,
-                    updated: timeNow()
-                });
+            await conn('activities_persons').where('id', activityPersonQry.id).update({
+                arrived_at,
+                updated: timeNow(),
+            });
 
             myParticipation.arrived_at = arrived_at;
 
             try {
-                let personActivity = await cacheService.hGetItem(person_activity_cache_key, activity_token);
+                let personActivity = await cacheService.hGetItem(
+                    person_activity_cache_key,
+                    activity_token,
+                );
 
-                if(personActivity) {
+                if (personActivity) {
                     personActivity.arrived_at = arrived_at;
-                    await cacheService.hSet(person_activity_cache_key, activity_token, personActivity);
+                    await cacheService.hSet(
+                        person_activity_cache_key,
+                        activity_token,
+                        personActivity,
+                    );
                 }
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
             }
 
@@ -700,11 +761,11 @@ function checkIn(activity_token, person_token, location, access_token = null) {
             //organize ws/cross-network
             let network_self = await getNetworkSelf();
             let networksLookup = await getNetworksLookup();
-            let notifications = (await cacheService.hGetAllObj(notification_cache_key) || {});
+            let notifications = (await cacheService.hGetAllObj(notification_cache_key)) || {};
 
             let person_to_network_id = null;
 
-            if(!activityPersonQry.is_creator) {
+            if (!activityPersonQry.is_creator) {
                 let personNetworkQry = await conn('activities_notifications')
                     .where('activity_id', activityPersonQry.activity_id)
                     .where('person_to_id', person.id)
@@ -719,23 +780,30 @@ function checkIn(activity_token, person_token, location, access_token = null) {
                     let network = await getNetwork(person_to_network_id);
                     let secret_key_to = await getSecretKeyToForNetwork(person_to_network_id);
 
-                    if(network && secret_key_to) {
+                    if (network && secret_key_to) {
                         try {
-                            let url = getURL(network.api_domain, `networks/activities/${activity_token}/check-in`);
+                            let url = getURL(
+                                network.api_domain,
+                                `networks/activities/${activity_token}/check-in`,
+                            );
 
-                            let r = await axios.post(url, {
-                                network_token: network_self.network_token,
-                                secret_key: secret_key_to,
-                                person_token: person_token,
-                                arrived_at
-                            }, {
-                                timeout: 1000
-                            });
-                        } catch(e) {
+                            let r = await axios.post(
+                                url,
+                                {
+                                    network_token: network_self.network_token,
+                                    secret_key: secret_key_to,
+                                    person_token: person_token,
+                                    arrived_at,
+                                },
+                                {
+                                    timeout: 1000,
+                                },
+                            );
+                        } catch (e) {
                             console.error(e);
                         }
                     }
-                } catch(e) {
+                } catch (e) {
                     console.error(e);
                 }
             }
@@ -744,52 +812,64 @@ function checkIn(activity_token, person_token, location, access_token = null) {
             //organize network update
             let networksSendPersons = new Set();
 
-            for(let person_token in activity.persons) {
+            for (let person_token in activity.persons) {
                 let person_notification = notifications[person_token];
 
-                let is_own_network = person_token === personFromQry.person_token || person_notification?.person_to_network_id === network_self.id;
+                let is_own_network =
+                    person_token === personFromQry.person_token ||
+                    person_notification?.person_to_network_id === network_self.id;
 
-                if(is_own_network) {
+                if (is_own_network) {
                     cacheService.publishWS('activities', person_token, {
                         activity_token,
                         persons: activity.persons,
                     });
-                } else if(person_notification) { //send update to 3rd-party network
+                } else if (person_notification) {
+                    //send update to 3rd-party network
                     networksSendPersons.add(person_notification.person_to_network_id);
                 }
             }
 
             //send persons data to networks
-            if(networksSendPersons.size) {
+            if (networksSendPersons.size) {
                 try {
                     let ps = [];
 
-                    for(let network_id of networksSendPersons) {
+                    for (let network_id of networksSendPersons) {
                         let network_to = networksLookup.byId[network_id];
 
                         let secret_key_to = await getSecretKeyToForNetwork(network_to.id);
 
-                        if(secret_key_to) {
+                        if (secret_key_to) {
                             try {
-                                let url = getURL(network_to.api_domain, `/networks/activities/${activity_token}`);
+                                let url = getURL(
+                                    network_to.api_domain,
+                                    `/networks/activities/${activity_token}`,
+                                );
 
-                                ps.push(axios.put(url, {
-                                    network_token: network_self.network_token,
-                                    secret_key: secret_key_to,
-                                    persons: activity.persons,
-                                }, {
-                                    timeout: 1000
-                                }));
-                            } catch(e) {
+                                ps.push(
+                                    axios.put(
+                                        url,
+                                        {
+                                            network_token: network_self.network_token,
+                                            secret_key: secret_key_to,
+                                            persons: activity.persons,
+                                        },
+                                        {
+                                            timeout: 1000,
+                                        },
+                                    ),
+                                );
+                            } catch (e) {
                                 console.error(e);
                             }
                         }
                     }
 
-                    if(ps.length) {
+                    if (ps.length) {
                         await Promise.allSettled(ps);
                     }
-                } catch(e) {
+                } catch (e) {
                     console.error(e);
                 }
             }
@@ -799,11 +879,11 @@ function checkIn(activity_token, person_token, location, access_token = null) {
                 success: true,
                 message: 'Check-In Successful',
             });
-        } catch(e) {
+        } catch (e) {
             console.error(e);
 
             return reject({
-                message: "Error checking in for activity"
+                message: 'Error checking in for activity',
             });
         }
     });
@@ -943,17 +1023,17 @@ function getActivityTypesMapping() {
 function getActivityType(activity_type_token = null, activity_type_id = null) {
     return new Promise(async (resolve, reject) => {
         try {
-            if(activity_type_token) {
+            if (activity_type_token) {
                 if (module.exports.lookup.byToken[activity_type_token]) {
                     return resolve(module.exports.lookup.byToken[activity_type_token]);
                 }
-            } else if(activity_type_id) {
+            } else if (activity_type_id) {
                 if (module.exports.lookup.byId[activity_type_id]) {
                     return resolve(module.exports.lookup.byId[activity_type_id]);
                 }
             }
 
-            if(activity_type_token) {
+            if (activity_type_token) {
                 let cache_key = cacheService.keys.activity_type(activity_type_token);
 
                 let cached_data = await cacheService.getObj(cache_key);
@@ -969,14 +1049,12 @@ function getActivityType(activity_type_token = null, activity_type_id = null) {
 
             let qry;
 
-            if(activity_type_token) {
+            if (activity_type_token) {
                 qry = await conn('activity_types')
                     .where('activity_type_token', activity_type_token)
                     .first();
-            } else if(activity_type_id) {
-                qry = await conn('activity_types')
-                    .where('id', activity_type_id)
-                    .first();
+            } else if (activity_type_id) {
+                qry = await conn('activity_types').where('id', activity_type_id).first();
             }
 
             if (!qry) {
@@ -986,7 +1064,10 @@ function getActivityType(activity_type_token = null, activity_type_id = null) {
             module.exports.lookup.byId[qry.id] = qry;
             module.exports.lookup.byToken[qry.activity_type_token] = qry;
 
-            await cacheService.setCache(cacheService.keys.activity_type(qry.activity_type_token), qry);
+            await cacheService.setCache(
+                cacheService.keys.activity_type(qry.activity_type_token),
+                qry,
+            );
 
             resolve(qry);
         } catch (e) {
@@ -1027,18 +1108,22 @@ function prepareActivity(person, activity) {
                     };
 
                     //validate/prepare partner/kids
-                    if(mode.token.includes('partner')) {
+                    if (mode.token.includes('partner')) {
                         try {
-                            activity.mode.partner = await validatePartnerForActivity(activity.mode, person.person_token, errors);
-                        } catch(e) {
-
-                        }
-                    } else if(mode.token.includes('kids')) {
+                            activity.mode.partner = await validatePartnerForActivity(
+                                activity.mode,
+                                person.person_token,
+                                errors,
+                            );
+                        } catch (e) {}
+                    } else if (mode.token.includes('kids')) {
                         try {
-                            activity.mode.kids = await validateKidsForActivity(activity.mode, person.person_token, errors);
-                        } catch(e) {
-
-                        }
+                            activity.mode.kids = await validateKidsForActivity(
+                                activity.mode,
+                                person.person_token,
+                                errors,
+                            );
+                        } catch (e) {}
                     }
                 }
             } catch (e) {
@@ -1202,12 +1287,16 @@ function prepareActivity(person, activity) {
         try {
             let activity_friends_max = await getMaxFriends(person);
 
-            if (!activity.friends || !isNumeric(activity.friends?.qty) || activity.friends.qty < 1) {
+            if (
+                !activity.friends ||
+                !isNumeric(activity.friends?.qty) ||
+                activity.friends.qty < 1
+            ) {
                 errors.push('Friends qty required');
             } else if (activity.friends.qty > activity_friends_max) {
                 errors.push(`Max friends: ${activity_friends_max}`);
             }
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             errors.push('Error validating friends qty');
         }
@@ -1231,9 +1320,13 @@ function prepareActivity(person, activity) {
             }
 
             //prevent creation of too many activities within a short time period in the event of cancellation
-            let too_many_activities_cancelled = await tooManyActivitiesCancelled(person.person_token, time, activitiesData);
+            let too_many_activities_cancelled = await tooManyActivitiesCancelled(
+                person.person_token,
+                time,
+                activitiesData,
+            );
 
-            if(too_many_activities_cancelled && !debug_create_activity_enabled) {
+            if (too_many_activities_cancelled && !debug_create_activity_enabled) {
                 return reject([too_many_activities_cancelled]);
             }
         } catch (e) {
@@ -1250,17 +1343,17 @@ function formatActivityData(person, activity) {
         try {
             activity.activityType = await getActivityType(null, activity.activity_type_id);
 
-            if(!activity.place) {
+            if (!activity.place) {
                 activity.place = {
-                    id: activity.fsq_place_id
+                    id: activity.fsq_place_id,
                 };
             }
 
-            if(!activity.duration) {
+            if (!activity.duration) {
                 activity.duration = activity.activity_duration_min;
             }
 
-            if(!activity.when) {
+            if (!activity.when) {
                 activity.when = {
                     in_mins: activity.in_min,
                     data: {
@@ -1268,30 +1361,30 @@ function formatActivityData(person, activity) {
                         end: activity.activity_end,
                         human: {
                             time: activity.human_time,
-                            datetime: activity.human_date
-                        }
-                    }
-                }
+                            datetime: activity.human_date,
+                        },
+                    },
+                };
             }
 
-            if(!activity.friends) {
+            if (!activity.friends) {
                 activity.friends = {
                     qty: activity.persons_qty,
                     type: {
                         is_new: activity.is_new_friends,
-                        is_existing: activity.is_existing_friends
-                    }
-                }
+                        is_existing: activity.is_existing_friends,
+                    },
+                };
             }
 
-            if(!activity.person) {
+            if (!activity.person) {
                 let mode = await getModeById(activity.mode_id);
 
                 activity.person = {
-                    mode: mode.token
-                }
+                    mode: mode.token,
+                };
             }
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
 
@@ -1301,26 +1394,29 @@ function formatActivityData(person, activity) {
 
 function validatePartnerForActivity(mode, person_token, errors = []) {
     return new Promise(async (resolve, reject) => {
-        if(!mode?.token?.includes('partner')) {
+        if (!mode?.token?.includes('partner')) {
             return resolve();
         }
 
         let partner = {};
 
         try {
-            let person_modes = await cacheService.hGetItem(cacheService.keys.person(person_token), 'modes');
+            let person_modes = await cacheService.hGetItem(
+                cacheService.keys.person(person_token),
+                'modes',
+            );
 
-            if(!person_modes) {
+            if (!person_modes) {
                 errors.push('Modes missing');
-            } else if(!person_modes?.selected?.includes('mode-partner')) {
+            } else if (!person_modes?.selected?.includes('mode-partner')) {
                 errors.push('Partner mode not active');
             } else {
-                if(!isObject(person_modes.partner)) {
+                if (!isObject(person_modes.partner)) {
                     errors.push('No partner available');
                 } else {
                     let isValid = !!person_modes.partner?.gender_id;
 
-                    if(!isValid) {
+                    if (!isValid) {
                         errors.push('Active partner and gender required');
                     } else {
                         try {
@@ -1328,10 +1424,10 @@ function validatePartnerForActivity(mode, person_token, errors = []) {
 
                             partner = {
                                 gender: {
-                                    name: gender.gender_name
-                                }
-                            }
-                        } catch(e) {
+                                    name: gender.gender_name,
+                                },
+                            };
+                        } catch (e) {
                             console.error(e);
                             errors.push('Error preparing partner');
                         }
@@ -1339,12 +1435,12 @@ function validatePartnerForActivity(mode, person_token, errors = []) {
                 }
             }
 
-            if(errors.length) {
+            if (errors.length) {
                 return reject(errors);
             }
 
             resolve(partner);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return reject();
         }
@@ -1353,42 +1449,45 @@ function validatePartnerForActivity(mode, person_token, errors = []) {
 
 function validateKidsForActivity(mode, person_token, errors = []) {
     return new Promise(async (resolve, reject) => {
-        if(!mode?.token?.includes('kids')) {
+        if (!mode?.token?.includes('kids')) {
             return resolve();
         }
 
         let organized_kids = {};
 
         try {
-            let person_modes = await cacheService.hGetItem(cacheService.keys.person(person_token), 'modes');
+            let person_modes = await cacheService.hGetItem(
+                cacheService.keys.person(person_token),
+                'modes',
+            );
 
-            if(!person_modes) {
+            if (!person_modes) {
                 errors.push('Modes missing');
-            } else if(!person_modes?.selected?.includes('mode-kids')) {
+            } else if (!person_modes?.selected?.includes('mode-kids')) {
                 errors.push('Kids mode not active');
             } else {
-                if(!isObject(person_modes.kids)) {
+                if (!isObject(person_modes.kids)) {
                     errors.push('No kids available');
                 } else {
                     let isValid = false;
 
-                    for(let k in person_modes.kids) {
+                    for (let k in person_modes.kids) {
                         let kid = person_modes.kids[k];
 
-                        if(kid.age_id && kid.gender_id && kid.is_active && !kid.deleted) {
+                        if (kid.age_id && kid.gender_id && kid.is_active && !kid.deleted) {
                             isValid = true;
                             break;
                         }
                     }
 
-                    if(!isValid) {
+                    if (!isValid) {
                         errors.push('Active kid age and gender required');
                     } else {
                         try {
                             let kidsAgeLookup = await getKidsAgeLookup();
 
                             //key of age token-gender token
-                            for(let k in person_modes.kids) {
+                            for (let k in person_modes.kids) {
                                 let kid = person_modes.kids[k];
 
                                 let age = kidsAgeLookup.byId[kid.age_id];
@@ -1396,22 +1495,22 @@ function validateKidsForActivity(mode, person_token, errors = []) {
 
                                 let key = `${age.token}-${gender.gender_token}`;
 
-                                if(!organized_kids[key]) {
+                                if (!organized_kids[key]) {
                                     organized_kids[key] = {
                                         age: {
                                             name: `${age.range.min} - ${age.range.max}`,
                                         },
                                         gender: {
                                             token: gender.gender_token,
-                                            name: gender.gender_name
+                                            name: gender.gender_name,
                                         },
-                                        qty: 0
-                                    }
+                                        qty: 0,
+                                    };
                                 }
 
                                 organized_kids[key].qty++;
                             }
-                        } catch(e) {
+                        } catch (e) {
                             console.error(e);
                             errors.push('Error preparing kids data');
                         }
@@ -1419,12 +1518,12 @@ function validateKidsForActivity(mode, person_token, errors = []) {
                 }
             }
 
-            if(errors.length) {
+            if (errors.length) {
                 return reject(errors);
             }
 
             resolve(organized_kids);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return reject();
         }
@@ -1436,11 +1535,11 @@ function doesActivityOverlap(person_token, time, activitiesData = null) {
         let overlaps = false;
 
         try {
-            if(!time?.start || !time?.end) {
+            if (!time?.start || !time?.end) {
                 return resolve(false);
             }
 
-            if(!activitiesData) {
+            if (!activitiesData) {
                 let cache_key = cacheService.keys.persons_activities(person_token);
                 activitiesData = await cacheService.hGetAllObj(cache_key);
             }
@@ -1453,7 +1552,10 @@ function doesActivityOverlap(person_token, time, activitiesData = null) {
                 let activity = activitiesData[k];
 
                 //skip cancelled or unfulfilled activities
-                if(activity.cancelled_at || ('is_fulfilled' in activity && !activity.is_fulfilled)) {
+                if (
+                    activity.cancelled_at ||
+                    ('is_fulfilled' in activity && !activity.is_fulfilled)
+                ) {
                     continue;
                 }
 
@@ -1498,10 +1600,11 @@ function tooManyActivitiesCancelled(person_token, time, activitiesData = null) {
             let startOfDay = new Date(currentTime).setHours(0, 0, 0, 0);
 
             let todayCancelledActivities = Object.values(activitiesData)
-                .filter(activity =>
-                    activity.cancelled_at &&
-                    activity.cancelled_at >= startOfDay &&
-                    activity.cancelled_at <= currentTime
+                .filter(
+                    (activity) =>
+                        activity.cancelled_at &&
+                        activity.cancelled_at >= startOfDay &&
+                        activity.cancelled_at <= currentTime,
                 )
                 .sort((a, b) => b.cancelled_at - a.cancelled_at);
 
@@ -1511,10 +1614,10 @@ function tooManyActivitiesCancelled(person_token, time, activitiesData = null) {
 
             for (const [ruleKey, rule] of Object.entries(rules.cancellation)) {
                 let timeSpanMs = rule.time_span_mins * 60 * 1000;
-                let timeThreshold = rule.is_day ? startOfDay : (currentTime - timeSpanMs);
+                let timeThreshold = rule.is_day ? startOfDay : currentTime - timeSpanMs;
 
                 let cancellationsInTimespan = todayCancelledActivities.filter(
-                    activity => activity.cancelled_at >= timeThreshold
+                    (activity) => activity.cancelled_at >= timeThreshold,
                 ).length;
 
                 if (cancellationsInTimespan > rule.max_cancellations) {
@@ -1577,7 +1680,7 @@ function findMatches(person, activity) {
 function getActivitySpots(person_from_token, activity_token, activity_data = null) {
     return new Promise(async (resolve, reject) => {
         try {
-            if(!activity_data) {
+            if (!activity_data) {
                 let cache_key = cacheService.keys.activities(person_from_token);
                 activity_data = (await cacheService.hGetItem(cache_key, activity_token)) || {};
             }
@@ -1594,7 +1697,7 @@ function getActivitySpots(person_from_token, activity_token, activity_data = nul
             for (let person_token in activity_data.persons) {
                 let person = activity_data.persons[person_token];
 
-                if(person.is_creator && person.cancelled_at) {
+                if (person.is_creator && person.cancelled_at) {
                     creatorCancelled = true;
                     break;
                 }
@@ -1603,26 +1706,26 @@ function getActivitySpots(person_from_token, activity_token, activity_data = nul
             for (let person_token in activity_data.persons) {
                 let person = activity_data.persons[person_token];
 
-                if(!person.is_creator && !person.cancelled_at) {
+                if (!person.is_creator && !person.cancelled_at) {
                     persons_accepted++;
                 }
             }
 
             //add an extra spot if creator cancelled
-            if(creatorCancelled) {
+            if (creatorCancelled) {
                 friends_qty++;
             }
 
             let availableSpots = friends_qty - persons_accepted;
 
             //if activity is cancelled, set spots to 0
-            if(activity_data.cancelled_at) {
+            if (activity_data.cancelled_at) {
                 availableSpots = 0;
             }
 
             resolve({
                 accepted: persons_accepted,
-                available: availableSpots
+                available: availableSpots,
             });
         } catch (e) {
             console.error(e);
@@ -1634,13 +1737,16 @@ function getActivitySpots(person_from_token, activity_token, activity_data = nul
 function isActivityInvitable(person_token, activity_token, spots = null) {
     return new Promise(async (resolve, reject) => {
         try {
-            let activity = await cacheService.hGetItem(cacheService.keys.activities(person_token), activity_token);
+            let activity = await cacheService.hGetItem(
+                cacheService.keys.activities(person_token),
+                activity_token,
+            );
 
-            if(activity.cancelled_at) {
+            if (activity.cancelled_at) {
                 return resolve(false);
             }
-            
-            if(!spots) {
+
+            if (!spots) {
                 spots = await getActivitySpots(person_token, activity_token, activity);
             }
 
@@ -1649,7 +1755,7 @@ function isActivityInvitable(person_token, activity_token, spots = null) {
             }
 
             resolve(true);
-        } catch(e) {
+        } catch (e) {
             reject(e);
         }
     });
@@ -1660,7 +1766,7 @@ function getActivityNotification(activity_token, person_token) {
         try {
             if (typeof activity_token !== 'string') {
                 return reject({
-                    message: 'Activity token required'
+                    message: 'Activity token required',
                 });
             }
 
@@ -1668,19 +1774,19 @@ function getActivityNotification(activity_token, person_token) {
 
             if (!me) {
                 return reject({
-                    message: 'person token not found'
+                    message: 'person token not found',
                 });
             }
 
             //ensure person exists on activity invite
             let notification = await cacheService.hGetItem(
                 cacheService.keys.activities_notifications(activity_token),
-                person_token
+                person_token,
             );
 
             if (!notification) {
                 return reject({
-                    message: 'Activity does not include person'
+                    message: 'Activity does not include person',
                 });
             }
 
@@ -1690,7 +1796,7 @@ function getActivityNotification(activity_token, person_token) {
 
             if (!activity) {
                 return reject({
-                    message: 'Activity not found'
+                    message: 'Activity not found',
                 });
             }
 
@@ -1724,7 +1830,7 @@ function getActivityNotification(activity_token, person_token) {
             console.error(e);
 
             return reject({
-                message: 'Error getting activity'
+                message: 'Error getting activity',
             });
         }
     });
@@ -1736,21 +1842,21 @@ function getActivityNotificationWithAccessToken(activity_token, access_token, pe
             if (typeof activity_token !== 'string') {
                 return reject({
                     message: 'Activity token required',
-                    status: 400
+                    status: 400,
                 });
             }
 
             if (typeof access_token !== 'string') {
                 return reject({
                     message: 'Access token required',
-                    status: 400
+                    status: 400,
                 });
             }
 
             if (typeof person_token !== 'string') {
                 return reject({
                     message: 'Person token required',
-                    status: 400
+                    status: 400,
                 });
             }
 
@@ -1759,7 +1865,7 @@ function getActivityNotificationWithAccessToken(activity_token, access_token, pe
             if (!me) {
                 return reject({
                     message: 'Person token not found',
-                    status: 400
+                    status: 400,
                 });
             }
 
@@ -1776,7 +1882,7 @@ function getActivityNotificationWithAccessToken(activity_token, access_token, pe
             if (!access_token_qry) {
                 return reject({
                     message: 'Invalid activity person/access token',
-                    status: 401
+                    status: 401,
                 });
             }
 
@@ -1787,20 +1893,20 @@ function getActivityNotificationWithAccessToken(activity_token, access_token, pe
                     .update({
                         access_token_used_at: timeNow(),
                         access_token_ip: getIPAddr(req),
-                        updated: timeNow()
+                        updated: timeNow(),
                     });
             }
 
             //ensure person exists on activity invite
             const notification = await cacheService.hGetItem(
                 cacheService.keys.activities_notifications(activity_token),
-                person_token
+                person_token,
             );
 
             if (!notification) {
                 return reject({
                     message: 'Activity does not include person',
-                    status: 400
+                    status: 400,
                 });
             }
 
@@ -1811,7 +1917,7 @@ function getActivityNotificationWithAccessToken(activity_token, access_token, pe
             if (!activity) {
                 return reject({
                     message: 'Activity not found',
-                    status: 400
+                    status: 400,
                 });
             }
 
@@ -1847,21 +1953,21 @@ function getActivityNotificationWithAccessToken(activity_token, access_token, pe
                 },
                 access: {
                     token: access_token,
-                    domain: getURL(networkSelf.api_domain)
+                    domain: getURL(networkSelf.api_domain),
                 },
                 network: {
                     token: networkSelf.network_token,
                     name: networkSelf.network_name,
                     icon: networkSelf.app_icon,
                     website: getURL(networkSelf.base_domain),
-                    verified: networkSelf.is_verified
-                }
+                    verified: networkSelf.is_verified,
+                },
             });
         } catch (e) {
             console.error(e);
             return reject({
                 message: 'Error getting activity',
-                status: 400
+                status: 400,
             });
         }
     });
@@ -1869,11 +1975,13 @@ function getActivityNotificationWithAccessToken(activity_token, access_token, pe
 
 function getActivity(person_token, activity_token, access_token = null) {
     return new Promise(async (resolve, reject) => {
-        let spots = {}, place = {}, matching = {};
+        let spots = {},
+            place = {},
+            matching = {};
 
         try {
             //validate access token
-            if(access_token) {
+            if (access_token) {
                 let conn = await dbService.conn();
 
                 let access_token_qry = await conn('activities_persons AS ap')
@@ -1885,7 +1993,7 @@ function getActivity(person_token, activity_token, access_token = null) {
                 if (!access_token_qry) {
                     return reject({
                         message: 'Invalid access token',
-                        status: 401
+                        status: 401,
                     });
                 }
             }
@@ -1895,20 +2003,20 @@ function getActivity(person_token, activity_token, access_token = null) {
             if (!me) {
                 return reject({
                     message: 'Person not found',
-                    status: 400
+                    status: 400,
                 });
             }
 
             //ensure person exists on activity
             let person_activity = await cacheService.hGetItem(
                 cacheService.keys.persons_activities(person_token),
-                activity_token
+                activity_token,
             );
 
             if (!person_activity) {
                 return reject({
                     message: 'Activity does not include person',
-                    status: 400
+                    status: 400,
                 });
             }
 
@@ -1919,23 +2027,22 @@ function getActivity(person_token, activity_token, access_token = null) {
             if (!activity) {
                 return reject({
                     message: 'Activity not found',
-                    status: 400
+                    status: 400,
                 });
             }
 
             activity.reviews = await getActivityReviews(activity.activity_id, me.id);
             activity.is_reviewable = isReviewable(activity);
 
-
             activity.persons = filterActivityPersons(activity.persons, person_token);
 
             spots = {
                 available: activity.spots_available,
-                accepted: activity.persons_qty - activity.spots_available
+                accepted: activity.persons_qty - activity.spots_available,
             };
 
             //if I cancelled, set accepted to 0
-            if(activity.persons?.[person_token]?.cancelled_at) {
+            if (activity.persons?.[person_token]?.cancelled_at) {
                 spots.accepted = 0;
             }
 
@@ -1944,8 +2051,8 @@ function getActivity(person_token, activity_token, access_token = null) {
             let pipeline = cacheService.startPipeline();
 
             //get person attributes and matching data
-            for(let _person_token in activity.persons) {
-                if(_person_token === person_token) {
+            for (let _person_token in activity.persons) {
+                if (_person_token === person_token) {
                     continue;
                 }
 
@@ -1954,13 +2061,14 @@ function getActivity(person_token, activity_token, access_token = null) {
                         'age',
                         'gender_id',
                         'is_new',
-                        'reviews'
+                        'reviews',
                     ]);
 
-                    matching[_person_token] = await require('../services/matching').personToPersonInterests(me, {
-                        person_token: _person_token
-                    });
-                } catch(e) {
+                    matching[_person_token] =
+                        await require('../services/matching').personToPersonInterests(me, {
+                            person_token: _person_token,
+                        });
+                } catch (e) {
                     console.error(e);
                 }
             }
@@ -1970,8 +2078,8 @@ function getActivity(person_token, activity_token, access_token = null) {
             let idx = 0;
 
             //merge results into persons object
-            for(let _person_token in (activity.persons || {})) {
-                if(_person_token === person_token) {
+            for (let _person_token in activity.persons || {}) {
+                if (_person_token === person_token) {
                     continue;
                 }
 
@@ -1984,8 +2092,8 @@ function getActivity(person_token, activity_token, access_token = null) {
                     gender,
                     age: result[0] ? parseInt(result[0]) : null,
                     is_new: !!(result[2] && isNumeric(result[2]) && parseInt(result[2])),
-                    reviews: JSON.parse(result[3])
-                }
+                    reviews: JSON.parse(result[3]),
+                };
             }
 
             let organized = {
@@ -1994,9 +2102,9 @@ function getActivity(person_token, activity_token, access_token = null) {
                     ...activity,
                     place,
                     spots,
-                    matching
-                }
-            }
+                    matching,
+                },
+            };
 
             resolve(organized);
         } catch (e) {
@@ -2004,7 +2112,7 @@ function getActivity(person_token, activity_token, access_token = null) {
 
             return reject({
                 message: 'Error getting activity',
-                status: 400
+                status: 400,
             });
         }
     });
@@ -2029,22 +2137,28 @@ function isActivityTypeExcluded(activity, filter) {
 function getPersonActivities(person) {
     return new Promise(async (resolve, reject) => {
         try {
-            let person_activities = (await cacheService.hGetAllObj(cacheService.keys.persons_activities(person.person_token))) || {};
+            let person_activities =
+                (await cacheService.hGetAllObj(
+                    cacheService.keys.persons_activities(person.person_token),
+                )) || {};
 
-            if(Object.keys(person_activities).length) {
+            if (Object.keys(person_activities).length) {
                 let pipeline = cacheService.startPipeline();
 
-                for(let activity_token in person_activities) {
+                for (let activity_token in person_activities) {
                     let activity = person_activities[activity_token];
 
-                    pipeline.hGet(cacheService.keys.activities(activity.person_from_token), activity_token);
+                    pipeline.hGet(
+                        cacheService.keys.activities(activity.person_from_token),
+                        activity_token,
+                    );
                 }
 
                 let results = await cacheService.execPipeline(pipeline);
 
                 let idx = 0;
 
-                for(let activity_token in person_activities) {
+                for (let activity_token in person_activities) {
                     let activity = person_activities[activity_token];
 
                     activity.data = JSON.parse(results[idx++]);
@@ -2053,16 +2167,19 @@ function getPersonActivities(person) {
             }
 
             //if I cancelled my participation in the activity, only show the creator
-            for(let activity_token in person_activities) {
+            for (let activity_token in person_activities) {
                 let activity = person_activities[activity_token];
 
-                if(activity.data?.persons) {
-                    activity.data.persons = filterActivityPersons(activity.data.persons, person.person_token);
+                if (activity.data?.persons) {
+                    activity.data.persons = filterActivityPersons(
+                        activity.data.persons,
+                        person.person_token,
+                    );
                 }
             }
 
             resolve(person_activities);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return reject(e);
         }
@@ -2072,18 +2189,18 @@ function getPersonActivities(person) {
 function getMaxFriends(person) {
     return new Promise(async (resolve, reject) => {
         try {
-             let person_activities = await getPersonActivities(person);
+            let person_activities = await getPersonActivities(person);
 
-             if(!Object.keys(person_activities).length) {
-                 return resolve(module.exports.friends.max.default);
-             }
+            if (!Object.keys(person_activities).length) {
+                return resolve(module.exports.friends.max.default);
+            }
 
             let activities_count = 0;
 
-            for(let activity_token in person_activities) {
+            for (let activity_token in person_activities) {
                 let activity = person_activities[activity_token];
 
-                if(!activity.cancelled_at && timeNow(true) > activity.activity_end) {
+                if (!activity.cancelled_at && timeNow(true) > activity.activity_end) {
                     activities_count++;
                 }
             }
@@ -2091,7 +2208,7 @@ function getMaxFriends(person) {
             let max = Math.min(activities_count + 2, module.exports.friends.max.max);
 
             return resolve(max);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return reject(e);
         }
@@ -2101,19 +2218,19 @@ function getMaxFriends(person) {
 function mergePersonsData(persons) {
     return new Promise(async (resolve, reject) => {
         try {
-            if(!isObject(persons) || !(Object.keys(persons).length)) {
+            if (!isObject(persons) || !Object.keys(persons).length) {
                 return resolve();
             }
 
             let pipeline = cacheService.startPipeline();
 
-            for(let person_token in persons) {
+            for (let person_token in persons) {
                 pipeline.hmGet(cacheService.keys.person(person_token), [
                     'age',
                     'gender_id',
                     'is_new',
-                    'reviews'
-                ])
+                    'reviews',
+                ]);
             }
 
             let results = await cacheService.execPipeline(pipeline);
@@ -2121,16 +2238,14 @@ function mergePersonsData(persons) {
             let idx = 0;
 
             //merge results into persons object
-            for(let person_token in (persons || {})) {
+            for (let person_token in persons || {}) {
                 let result = results[idx++];
 
                 let gender = {};
 
                 try {
                     gender = await getGender(result[1]);
-                } catch(e) {
-
-                }
+                } catch (e) {}
 
                 persons[person_token] = {
                     ...persons[person_token],
@@ -2138,29 +2253,29 @@ function mergePersonsData(persons) {
                     age: result[0] ? parseInt(result[0]) : null,
                     is_new: !!(result[2] && isNumeric(result[2]) && parseInt(result[2])),
                     reviews: JSON.parse(result[3]),
-                }
+                };
             }
 
             resolve();
-        } catch(e) {
+        } catch (e) {
             return reject(e);
         }
     });
 }
 
 function filterActivityPersons(persons, my_person_token) {
-    if(persons) {
+    if (persons) {
         let activityPersonsCopy = structuredClone(persons);
 
-        for(let person_token in persons) {
+        for (let person_token in persons) {
             let activity_person = persons[person_token];
 
-            if(person_token === my_person_token) {
-                if(activity_person.cancelled_at) {
-                    for(let _person_token in activityPersonsCopy) {
+            if (person_token === my_person_token) {
+                if (activity_person.cancelled_at) {
+                    for (let _person_token in activityPersonsCopy) {
                         let _activity_person = activityPersonsCopy[_person_token];
 
-                        if(!_activity_person.is_creator && _person_token !== my_person_token) {
+                        if (!_activity_person.is_creator && _person_token !== my_person_token) {
                             delete activityPersonsCopy[_person_token];
                         }
                     }
@@ -2176,14 +2291,13 @@ function filterActivityPersons(persons, my_person_token) {
     return persons;
 }
 
-
 module.exports = {
     rules,
     types: null,
     activityTypesMapping: null,
     lookup: {
         byId: {},
-        byToken: {}
+        byToken: {},
     },
     durations: {
         min: 10,
@@ -2201,8 +2315,8 @@ module.exports = {
         types: ['is_new', 'is_existing', 'is_both'],
         max: {
             default: 2,
-            max: 10
-        }
+            max: 10,
+        },
     },
     when: {
         options: {

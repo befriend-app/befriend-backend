@@ -18,11 +18,7 @@ const { schoolAutoComplete } = require('../services/schools');
 const { getTopArtistsForGenre, musicAutoComplete } = require('../services/music');
 const { getTopTeamsBySport, sportsAutoComplete } = require('../services/sports');
 
-const {
-    timeNow,
-    generateToken,
-    normalizeSearch,
-} = require('../services/shared');
+const { timeNow, generateToken, normalizeSearch } = require('../services/shared');
 const { getActivityTypes } = require('../services/activities');
 const { getPlaceData } = require('../services/fsq');
 
@@ -83,7 +79,7 @@ module.exports = {
                 let new_network = await networkService.addNetwork(req.body);
 
                 res.json(new_network);
-            } catch(e) {
+            } catch (e) {
                 res.json(e, 400);
             }
 
@@ -94,12 +90,15 @@ module.exports = {
         return new Promise(async (resolve, reject) => {
             //network n
             try {
-                 await networkService.exchangeKeysHomeFrom(req.body);
+                await networkService.exchangeKeysHomeFrom(req.body);
 
-                res.json({
-                    message: 'Step completed successfully',
-                }, 201);
-            } catch(e) {
+                res.json(
+                    {
+                        message: 'Step completed successfully',
+                    },
+                    201,
+                );
+            } catch (e) {
                 res.json(e, 400);
             }
 
@@ -112,10 +111,13 @@ module.exports = {
             try {
                 await networkService.exchangeKeysHomeTo(req.body);
 
-                res.json({
+                res.json(
+                    {
                         message: 'Keys exchanged successfully',
-                    }, 201);
-            } catch(e) {
+                    },
+                    201,
+                );
+            } catch (e) {
                 res.json(e, 400);
             }
 
@@ -128,10 +130,13 @@ module.exports = {
             try {
                 await networkService.exchangeKeysHomeSave(req.body);
 
-                res.json({
-                    message: 'Keys saved successfully',
-                }, 201);
-            } catch(e) {
+                res.json(
+                    {
+                        message: 'Keys saved successfully',
+                    },
+                    201,
+                );
+            } catch (e) {
                 res.json(e, 400);
             }
 
@@ -143,10 +148,13 @@ module.exports = {
             try {
                 await networkService.keysExchangeEncrypt(req.body);
 
-                res.json({
-                    message: 'Keys encrypted successfully',
-                }, 201);
-            } catch(e) {
+                res.json(
+                    {
+                        message: 'Keys encrypted successfully',
+                    },
+                    201,
+                );
+            } catch (e) {
                 res.json(e, 400);
             }
 
@@ -160,7 +168,7 @@ module.exports = {
                 await networkService.keysExchangeDecrypt(req.body);
 
                 res.json('Keys exchanged successfully', 201);
-            } catch(e) {
+            } catch (e) {
                 res.json(e, 400);
             }
 
@@ -174,7 +182,7 @@ module.exports = {
                 let keys = await networkService.keysExchangeSave(req.body);
 
                 res.json(keys, 201);
-            } catch(e) {
+            } catch (e) {
                 res.json(e, 400);
             }
         });
@@ -992,16 +1000,16 @@ module.exports = {
         return new Promise(async (resolve, reject) => {
             let id = req.params.id;
 
-            if(!id) {
+            if (!id) {
                 res.json('FSQ id required', 400);
                 return resolve();
             }
 
             try {
-                 let data = await getPlaceData(id);
+                let data = await getPlaceData(id);
 
-                 res.json(data);
-            } catch(e) {
+                res.json(data);
+            } catch (e) {
                 console.error(e);
                 res.json('Could not retrieve place data', 400);
                 return resolve();
@@ -1009,5 +1017,5 @@ module.exports = {
 
             resolve();
         });
-    }
+    },
 };

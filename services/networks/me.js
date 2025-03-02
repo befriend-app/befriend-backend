@@ -24,17 +24,17 @@ let tables = [
     'persons_politics',
     'persons_religions',
     'persons_drinking',
-    'persons_smoking'
+    'persons_smoking',
 ];
 
-function getTableRelations (table_name) {
-    for(let k in sectionsData) {
+function getTableRelations(table_name) {
+    for (let k in sectionsData) {
         let sectionData = sectionsData[k];
 
-        for(let t in sectionData.tables) {
+        for (let t in sectionData.tables) {
             let tableData = sectionData.tables[t];
 
-            if(tableData.user.name === table_name) {
+            if (tableData.user.name === table_name) {
                 return {
                     section_key: k,
                     table_key: t,
@@ -42,15 +42,14 @@ function getTableRelations (table_name) {
                     source_table: tableData.data.name,
                     col_id: tableData.user.cols.id,
                     col_secondary: tableData.user.cols.secondary || null,
-                    has_hash_token: !!(sectionData.cacheKeys?.[t].byHashKey)
-                }
+                    has_hash_token: !!sectionData.cacheKeys?.[t].byHashKey,
+                };
             }
         }
     }
 }
 
-
-function syncMe (inputs) {
+function syncMe(inputs) {
     return new Promise(async (resolve, reject) => {
         try {
             let conn = await dbService.conn();
@@ -60,11 +59,13 @@ function syncMe (inputs) {
             let request_sent = inputs.request_sent ? parseInt(inputs.request_sent) : null;
             let data_since_timestamp = inputs.data_since ? parseInt(inputs.data_since) : null;
             let prev_data_since = inputs.prev_data_since ? parseInt(inputs.prev_data_since) : null;
-            let pagination_updated = inputs.pagination_updated ? parseInt(inputs.pagination_updated) : null;
+            let pagination_updated = inputs.pagination_updated
+                ? parseInt(inputs.pagination_updated)
+                : null;
 
             if (!request_sent) {
                 return reject({
-                    message: 'request timestamp required'
+                    message: 'request timestamp required',
                 });
             }
 
@@ -81,7 +82,7 @@ function syncMe (inputs) {
             let timestamp_updated = prev_data_since || data_since_timestamp_w_extra;
 
             //query all sections
-            for(let table of tables) {
+            for (let table of tables) {
                 let tableData = getTableRelations(table);
 
                 let select_cols = [
@@ -89,18 +90,18 @@ function syncMe (inputs) {
                     'p.person_token',
                     'st.token',
                     't.updated',
-                    't.deleted'
+                    't.deleted',
                 ];
 
-                if(tableData.is_favorable) {
+                if (tableData.is_favorable) {
                     select_cols.push('is_favorite', 'favorite_position');
                 }
 
-                if(tableData.col_secondary) {
+                if (tableData.col_secondary) {
                     select_cols.push(tableData.col_secondary);
                 }
 
-                if(tableData.has_hash_token) {
+                if (tableData.has_hash_token) {
                     select_cols.push('hash_token');
                 }
 
@@ -130,7 +131,7 @@ function syncMe (inputs) {
                     'st.token',
                     't.position',
                     't.updated',
-                    't.deleted'
+                    't.deleted',
                 )
                 .where('np.network_id', my_network.id)
                 .where('np.is_active', true)
@@ -148,24 +149,24 @@ function syncMe (inputs) {
                 qryDict.sections = qryDict.sections.where('t.updated', '<=', pagination_updated);
             }
 
-            for(let table in qryDict) {
-                qryDict[table] = await qryDict[table]
+            for (let table in qryDict) {
+                qryDict[table] = await qryDict[table];
             }
 
             //process/return data
             let persons = {};
 
-            for(let table in qryDict) {
+            for (let table in qryDict) {
                 let tableInfo = getTableRelations(table);
 
                 let items = qryDict[table];
 
-                for(let item of items) {
+                for (let item of items) {
                     if (!persons[item.person_token]) {
                         persons[item.person_token] = {
                             person_token: item.person_token,
                             sections: {},
-                            me: {}
+                            me: {},
                         };
                     }
 
@@ -174,7 +175,7 @@ function syncMe (inputs) {
                             token: item.token,
                             position: item.position,
                             updated: item.updated,
-                            deleted: item.deleted
+                            deleted: item.deleted,
                         };
                     } else {
                         if (!persons[item.person_token].me[table]) {
@@ -184,19 +185,19 @@ function syncMe (inputs) {
                         let itemData = {
                             token: item.token,
                             updated: item.updated,
-                            deleted: item.deleted
-                        }
+                            deleted: item.deleted,
+                        };
 
-                        if(tableInfo.is_favorable) {
+                        if (tableInfo.is_favorable) {
                             itemData.is_favorite = item.is_favorite || null;
                             itemData.favorite_position = item.favorite_position || null;
                         }
 
-                        if(tableInfo.col_secondary) {
+                        if (tableInfo.col_secondary) {
                             itemData[tableInfo.col_secondary] = item[tableInfo.col_secondary];
                         }
 
-                        if(tableInfo.has_hash_token) {
+                        if (tableInfo.has_hash_token) {
                             itemData.hash_token = item.hash_token;
                         }
 
@@ -208,7 +209,7 @@ function syncMe (inputs) {
             // Calculate next pagination cursor
             const lastTimestamps = [];
 
-            for(let table in qryDict) {
+            for (let table in qryDict) {
                 const tableResults = qryDict[table];
 
                 if (tableResults.length === results_limit) {
@@ -216,18 +217,20 @@ function syncMe (inputs) {
                 }
             }
 
-            let return_pagination_updated = lastTimestamps.length ? Math.max(...lastTimestamps) : null;
+            let return_pagination_updated = lastTimestamps.length
+                ? Math.max(...lastTimestamps)
+                : null;
 
             return resolve({
                 pagination_updated: return_pagination_updated,
                 prev_data_since: prev_data_since || data_since_timestamp_w_extra,
-                persons: Object.values(persons)
+                persons: Object.values(persons),
             });
         } catch (e) {
             console.error('Error syncing me:', e);
 
             return reject({
-                message: 'Error syncing me'
+                message: 'Error syncing me',
             });
         }
     });
@@ -236,4 +239,4 @@ function syncMe (inputs) {
 module.exports = {
     tables,
     syncMe,
-}
+};

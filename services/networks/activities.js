@@ -5,39 +5,38 @@ const { results_limit, data_since_ms_extra } = require('./common');
 const cacheService = require('../cache');
 const { getPerson } = require('../persons');
 
-
 function updateActivity(from_network, activity_token, activity_data) {
     return new Promise(async (resolve, reject) => {
         try {
-            if(typeof activity_token !== 'string') {
+            if (typeof activity_token !== 'string') {
                 return reject({
-                    message: 'Invalid activity token'
+                    message: 'Invalid activity token',
                 });
             }
 
-            if(!isObject(activity_data)) {
+            if (!isObject(activity_data)) {
                 return reject({
-                    message: 'Invalid update data'
+                    message: 'Invalid update data',
                 });
             }
 
             let { persons, matching, spots } = activity_data;
 
-            if(persons && !isObject(persons)) {
+            if (persons && !isObject(persons)) {
                 return reject({
-                    message: 'Invalid persons object'
+                    message: 'Invalid persons object',
                 });
             }
 
-            if(matching && !isObject(matching)) {
+            if (matching && !isObject(matching)) {
                 return reject({
-                    message: 'Invalid matching format'
+                    message: 'Invalid matching format',
                 });
             }
 
-            if(spots && !isObject(spots)) {
+            if (spots && !isObject(spots)) {
                 return reject({
-                    message: 'Invalid spots object'
+                    message: 'Invalid spots object',
                 });
             }
 
@@ -50,9 +49,9 @@ function updateActivity(from_network, activity_token, activity_data) {
                 .select('a.*', 'p.person_token AS person_from_token')
                 .first();
 
-            if(!activity_check) {
+            if (!activity_check) {
                 return reject({
-                    message: 'Activity not found'
+                    message: 'Activity not found',
                 });
             }
 
@@ -60,7 +59,7 @@ function updateActivity(from_network, activity_token, activity_data) {
 
             let cache_activity = await cacheService.hGetItem(cache_key, activity_token);
 
-            if(cache_activity && persons) {
+            if (cache_activity && persons) {
                 cache_activity.persons = persons;
 
                 await cacheService.hSet(cache_key, activity_token, cache_activity);
@@ -74,41 +73,41 @@ function updateActivity(from_network, activity_token, activity_data) {
                 .where('person_to_network_id', network_self.id)
                 .select('person_token');
 
-            for(let person of notification_persons) {
-                if(!persons || !(person.person_token in persons)) {
+            for (let person of notification_persons) {
+                if (!persons || !(person.person_token in persons)) {
                     continue;
                 }
 
                 let personActivity = cache_activity.persons?.[person.person_token];
 
-                if(personActivity?.cancelled_at) {
+                if (personActivity?.cancelled_at) {
                     continue;
                 }
 
                 let update = {};
 
-                if(persons) {
+                if (persons) {
                     update.persons = persons;
                 }
 
-                if(matching) {
+                if (matching) {
                     update.matching = matching[person.person_token];
                 }
 
-                if(spots) {
+                if (spots) {
                     update.spots = spots;
                 }
 
-                if(Object.keys(update).length) {
+                if (Object.keys(update).length) {
                     cacheService.publishWS('activities', person.person_token, {
                         activity_token,
-                        ...update
+                        ...update,
                     });
                 }
             }
 
             resolve();
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return reject(e);
         }
@@ -118,29 +117,29 @@ function updateActivity(from_network, activity_token, activity_data) {
 function checkIn(from_network, person_token, activity_token, arrived_at) {
     return new Promise(async (resolve, reject) => {
         try {
-            if(typeof person_token !== 'string') {
+            if (typeof person_token !== 'string') {
                 return reject({
-                    message: 'Invalid person token'
+                    message: 'Invalid person token',
                 });
             }
 
-            if(typeof activity_token !== 'string') {
+            if (typeof activity_token !== 'string') {
                 return reject({
-                    message: 'Invalid activity token'
+                    message: 'Invalid activity token',
                 });
             }
 
-            if(!isNumeric(arrived_at)) {
+            if (!isNumeric(arrived_at)) {
                 return reject({
-                    message: 'Invalid check-in timestamp'
+                    message: 'Invalid check-in timestamp',
                 });
             }
 
             let person = await getPerson(person_token);
 
-            if(!person) {
+            if (!person) {
                 return reject({
-                    message: `Person not found`
+                    message: `Person not found`,
                 });
             }
 
@@ -153,9 +152,9 @@ function checkIn(from_network, person_token, activity_token, arrived_at) {
                 .select('a.*', 'p.person_token AS person_from_token')
                 .first();
 
-            if(!activity_check) {
+            if (!activity_check) {
                 return reject({
-                    message: 'Activity not found'
+                    message: 'Activity not found',
                 });
             }
 
@@ -163,25 +162,28 @@ function checkIn(from_network, person_token, activity_token, arrived_at) {
             let person_activity_cache_key = cacheService.keys.persons_activities(person_token);
 
             let cache_activity = await cacheService.hGetItem(cache_key, activity_token);
-            let personActivity = await cacheService.hGetItem(person_activity_cache_key, activity_token);
+            let personActivity = await cacheService.hGetItem(
+                person_activity_cache_key,
+                activity_token,
+            );
 
             let activityPerson = cache_activity?.persons?.[person_token];
 
-            if(!activityPerson) {
+            if (!activityPerson) {
                 return reject({
-                    message: `Person not found on activity`
+                    message: `Person not found on activity`,
                 });
             }
 
-            if(activityPerson.cancelled_at) {
+            if (activityPerson.cancelled_at) {
                 return reject({
-                    message: `Activity participation cancelled`
+                    message: `Activity participation cancelled`,
                 });
             }
 
-            if(activityPerson.arrived_at) {
+            if (activityPerson.arrived_at) {
                 return reject({
-                    message: `Person already checked-in`
+                    message: `Person already checked-in`,
                 });
             }
 
@@ -196,7 +198,7 @@ function checkIn(from_network, person_token, activity_token, arrived_at) {
                 .where('person_id', person.id)
                 .update({
                     arrived_at,
-                    updated: timeNow()
+                    updated: timeNow(),
                 });
 
             let network_self = await getNetworkSelf();
@@ -207,27 +209,26 @@ function checkIn(from_network, person_token, activity_token, arrived_at) {
                 .where('person_to_network_id', network_self.id)
                 .select('person_token');
 
-            for(let person of notification_persons) {
+            for (let person of notification_persons) {
                 let personActivity = cache_activity.persons?.[person.person_token];
 
-                if(!personActivity || personActivity?.cancelled_at) {
+                if (!personActivity || personActivity?.cancelled_at) {
                     continue;
                 }
 
                 cacheService.publishWS('activities', person.person_token, {
                     activity_token,
-                    persons: cache_activity.persons
+                    persons: cache_activity.persons,
                 });
             }
 
             resolve();
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return reject(e);
         }
     });
 }
-
 
 function syncActivities(from_network, inputs) {
     return new Promise(async (resolve, reject) => {
@@ -239,11 +240,13 @@ function syncActivities(from_network, inputs) {
             let request_sent = inputs.request_sent ? parseInt(inputs.request_sent) : null;
             let data_since_timestamp = inputs.data_since ? parseInt(inputs.data_since) : null;
             let prev_data_since = inputs.prev_data_since ? parseInt(inputs.prev_data_since) : null;
-            let pagination_updated = inputs.pagination_updated ? parseInt(inputs.pagination_updated) : null;
+            let pagination_updated = inputs.pagination_updated
+                ? parseInt(inputs.pagination_updated)
+                : null;
 
             if (!request_sent) {
                 return reject({
-                    message: 'request timestamp required'
+                    message: 'request timestamp required',
                 });
             }
 
@@ -264,7 +267,7 @@ function syncActivities(from_network, inputs) {
                     'an.person_to_id AS person_id',
                     'a.activity_token',
                     'a.is_fulfilled',
-                    'a.updated'
+                    'a.updated',
                 )
                 .where('a.network_id', my_network.id)
                 .where('an.person_to_network_id', from_network.id)
@@ -304,8 +307,8 @@ function syncActivities(from_network, inputs) {
             let duplicateCheck = {};
             let formattedActivities = [];
 
-            for(let activity of activities) {
-                if(activity.activity_token in duplicateCheck) {
+            for (let activity of activities) {
+                if (activity.activity_token in duplicateCheck) {
                     continue;
                 }
 
@@ -313,7 +316,7 @@ function syncActivities(from_network, inputs) {
                     // person_token: personIdTokenMap[activity.person_id],
                     activity_token: activity.activity_token,
                     is_fulfilled: activity.is_fulfilled,
-                    updated: activity.updated
+                    updated: activity.updated,
                 });
 
                 duplicateCheck[activity.activity_token] = true;
@@ -328,13 +331,13 @@ function syncActivities(from_network, inputs) {
             return resolve({
                 pagination_updated: return_pagination_updated,
                 prev_data_since: prev_data_since || data_since_timestamp_w_extra,
-                activities: formattedActivities
+                activities: formattedActivities,
             });
         } catch (e) {
             console.error('Error syncing activities:', e);
 
             return reject({
-                message: 'Error syncing activities'
+                message: 'Error syncing activities',
             });
         }
     });

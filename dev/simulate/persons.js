@@ -2,14 +2,20 @@ const axios = require('axios');
 const yargs = require('yargs');
 const dbService = require('../../services/db');
 const encryptionService = require('../../services/encryption');
-const { getNetworkSelf, homeDomains, getNetworksLookup, getSecretKeyToForNetwork } = require('../../services/network');
+const {
+    getNetworkSelf,
+    homeDomains,
+    getNetworksLookup,
+    getSecretKeyToForNetwork,
+} = require('../../services/network');
 
 const {
     loadScriptEnv,
     generateToken,
     timeNow,
     birthDatePure,
-    calculateAge, getURL,
+    calculateAge,
+    getURL,
 } = require('../../services/shared');
 
 const { batchInsert } = require('../../services/db');
@@ -22,7 +28,7 @@ let args = yargs.argv;
 
 let numPersons = 1000;
 
-if(args.n) {
+if (args.n) {
     numPersons = args.n;
 } else if (args._ && args._.length) {
     numPersons = args._[0];
@@ -135,28 +141,28 @@ async function addPersons() {
                 current_count,
             });
 
-            if(self_network.is_befriend) {
+            if (self_network.is_befriend) {
                 return;
             }
 
             let home_domains = await homeDomains();
             let networksLookup = await getNetworksLookup();
 
-            for(let domain of home_domains) {
+            for (let domain of home_domains) {
                 //skip notifying own domain
-                if(self_network.api_domain.includes(domain)) {
+                if (self_network.api_domain.includes(domain)) {
                     continue;
                 }
 
                 let network_to = null;
 
-                for(let network of Object.values(networksLookup.byToken)) {
-                    if(network.api_domain.includes(domain)) {
+                for (let network of Object.values(networksLookup.byToken)) {
+                    if (network.api_domain.includes(domain)) {
                         network_to = network;
                     }
                 }
 
-                if(!network_to) {
+                if (!network_to) {
                     continue;
                 }
 
@@ -169,31 +175,29 @@ async function addPersons() {
 
                 let has_error = false;
 
-                for(let person of batch_insert) {
+                for (let person of batch_insert) {
                     try {
                         let r = await axios.post(getURL(domain, 'networks/persons'), {
                             secret_key: secret_key_to,
                             network_token: self_network.network_token,
                             person_token: person.person_token,
-                            updated: person.updated
+                            updated: person.updated,
                         });
 
-                        if(r.status === 201) {
-                            await conn('persons')
-                                .where('id', person.id)
-                                .update({
-                                    is_person_known: true
-                                });
+                        if (r.status === 201) {
+                            await conn('persons').where('id', person.id).update({
+                                is_person_known: true,
+                            });
                         } else {
                             has_error = true;
                         }
-                    } catch(e) {
+                    } catch (e) {
                         has_error = true;
                         console.error(e);
                     }
                 }
 
-                if(!has_error) {
+                if (!has_error) {
                     break;
                 }
             }
@@ -255,14 +259,16 @@ async function updateAge() {
 }
 
 async function main(qty) {
-    if(qty) {
+    if (qty) {
         numPersons = qty;
     }
 
     self_network = await getNetworkSelf();
 
     if (!self_network) {
-        console.error('Network not setup: 1) Setup system: node setup 2) Start server: node servers');
+        console.error(
+            'Network not setup: 1) Setup system: node setup 2) Start server: node servers',
+        );
         process.exit(1);
     }
 

@@ -15,7 +15,11 @@ const {
 const { getNetworkSelf, getSecretKeyToForNetwork } = require('../../services/network');
 const { deleteKeys } = require('../../services/cache');
 const { getGendersLookup } = require('../../services/genders');
-const { keys: systemKeys, getNetworkSyncProcess, setNetworkSyncProcess } = require('../../services/system');
+const {
+    keys: systemKeys,
+    getNetworkSyncProcess,
+    setNetworkSyncProcess,
+} = require('../../services/system');
 const { getGridByToken, getGridById } = require('../../services/grid');
 const { batchInsert, batchUpdate } = require('../../services/db');
 const { getKidsAgeLookup } = require('../../services/modes');
@@ -34,11 +38,11 @@ function processPersons(network_id, persons) {
         let person_data = structuredClone(new_data);
 
         //grid
-        if(grid) {
-            if(!prev_grid || prev_grid.token !== grid.token) {
+        if (grid) {
+            if (!prev_grid || prev_grid.token !== grid.token) {
                 person_data.grid = {
                     id: grid.id,
-                    token: grid.token
+                    token: grid.token,
                 };
             }
         } else {
@@ -49,7 +53,7 @@ function processPersons(network_id, persons) {
         let new_selected_modes = JSON.parse(new_data.modes) || [];
 
         person_data.modes = {
-            selected: new_selected_modes
+            selected: new_selected_modes,
         };
 
         //networks
@@ -65,20 +69,20 @@ function processPersons(network_id, persons) {
             fun: floatOrNull(person_data.rating_fun),
         };
 
-        if(prev_data) {
+        if (prev_data) {
             let prev_person_data = structuredClone(prev_data);
 
             person_data = {
                 ...prev_person_data,
-                ...person_data
-            }
+                ...person_data,
+            };
 
             //merge new selected modes with prev modes data (synced through sequential process)
-            if(prev_data.prev_modes) {
+            if (prev_data.prev_modes) {
                 person_data.modes = {
                     ...prev_data.prev_modes,
-                    selected: new_selected_modes
-                }
+                    selected: new_selected_modes,
+                };
             }
         }
 
@@ -90,12 +94,12 @@ function processPersons(network_id, persons) {
             return resolve();
         }
 
-        if(!persons.length) {
+        if (!persons.length) {
             return resolve(true);
         }
 
-        if(persons.length > 50000) {
-            console.error("Response too large, check network data");
+        if (persons.length > 50000) {
+            console.error('Response too large, check network data');
             return resolve();
         }
 
@@ -126,7 +130,7 @@ function processPersons(network_id, persons) {
                 let batchPersonTokens = [];
                 let batchPersonTokensDict = {};
 
-                for(let person of batch) {
+                for (let person of batch) {
                     batchPersonTokens.push(person.person_token);
                     batchPersonTokensDict[person.person_id] = true;
                 }
@@ -139,7 +143,7 @@ function processPersons(network_id, persons) {
 
                 let existingPersonIds = [];
 
-                for(let person of existingPersons) {
+                for (let person of existingPersons) {
                     existingPersonIds.push(person.id);
                     existingPersonsDict[person.person_token] = person;
                 }
@@ -150,8 +154,8 @@ function processPersons(network_id, persons) {
                     .where('np.is_active', 1)
                     .select('network_token', 'person_id');
 
-                for(let np of existingNetworks) {
-                    if(!existingNetworksDict[np.person_id]) {
+                for (let np of existingNetworks) {
+                    if (!existingNetworksDict[np.person_id]) {
                         existingNetworksDict[np.person_id] = new Set();
                     }
 
@@ -159,14 +163,14 @@ function processPersons(network_id, persons) {
                 }
 
                 //ensure this network has permission to provide updated data for these persons
-                for(let person of batch) {
-                    if(!existingPersonsDict[person.person_token]) {
+                for (let person of batch) {
+                    if (!existingPersonsDict[person.person_token]) {
                         invalidPersons[person.person_token] = true;
                         has_invalid_persons = true;
                     }
                 }
 
-                if(Object.keys(invalidPersons).length) {
+                if (Object.keys(invalidPersons).length) {
                     console.warn({
                         invalid_persons_count: Object.keys(invalidPersons).length,
                     });
@@ -180,11 +184,12 @@ function processPersons(network_id, persons) {
                 try {
                     let modes_results = await cacheService.execPipeline(prev_modes_pipeline);
 
-                    for(let i = 0; i < existingPersons.length; i++) {
+                    for (let i = 0; i < existingPersons.length; i++) {
                         let person = existingPersons[i];
-                        existingPersonsDict[person.person_token].prev_modes = JSON.parse(modes_results[i]) || null;
+                        existingPersonsDict[person.person_token].prev_modes =
+                            JSON.parse(modes_results[i]) || null;
                     }
-                } catch(e) {
+                } catch (e) {
                     console.error(e);
                 }
 
@@ -195,11 +200,13 @@ function processPersons(network_id, persons) {
 
                     let existingPerson = existingPersonsDict[person.person_token];
 
-                    if(!existingPerson) {
+                    if (!existingPerson) {
                         continue;
                     }
 
-                    let networks = existingNetworksDict[existingPerson.id] ? Array.from(existingNetworksDict[existingPerson.id]) : [];
+                    let networks = existingNetworksDict[existingPerson.id]
+                        ? Array.from(existingNetworksDict[existingPerson.id])
+                        : [];
 
                     networks = Array.from(networks);
 
@@ -208,7 +215,7 @@ function processPersons(network_id, persons) {
 
                     let prev_grid = null;
 
-                    if(grid && existingPerson.grid_id && grid.id !== existingPerson.grid_id) {
+                    if (grid && existingPerson.grid_id && grid.id !== existingPerson.grid_id) {
                         prev_grid = await getGridById(existingPerson.grid_id);
                     }
 
@@ -233,7 +240,7 @@ function processPersons(network_id, persons) {
                             age: person.age,
                             is_blocked: person.is_blocked,
                             updated: person.updated,
-                            deleted: person.deleted || null
+                            deleted: person.deleted || null,
                         };
 
                         personsToUpdate.push(person_data);
@@ -241,46 +248,67 @@ function processPersons(network_id, persons) {
                         let cache_person_data = preparePersonCache(person_data, existingPerson, {
                             grid,
                             prev_grid,
-                            networks
+                            networks,
                         });
 
-                        pipeline.hSet(cacheService.keys.person(person.person_token), cacheService.prepareSetHash(cache_person_data));
+                        pipeline.hSet(
+                            cacheService.keys.person(person.person_token),
+                            cacheService.prepareSetHash(cache_person_data),
+                        );
 
                         personsGrids[person.person_token] = {
                             person: cache_person_data,
                             filter_tokens: [],
                             grid,
-                            prev_grid
-                        }
-                        
+                            prev_grid,
+                        };
+
                         //if prev grid token, process all filter tokens for person
-                        if(prev_grid) {
+                        if (prev_grid) {
                             personsGrids[person.person_token].filter_tokens = filterTokensAll;
                         } else {
-                            if(person.is_online !== existingPerson.is_online || debug_sync_enabled) {
+                            if (
+                                person.is_online !== existingPerson.is_online ||
+                                debug_sync_enabled
+                            ) {
                                 personsGrids[person.person_token].filter_tokens.push('online');
                             }
 
-                            if(grid?.id !== prev_grid?.id || debug_sync_enabled) {
+                            if (grid?.id !== prev_grid?.id || debug_sync_enabled) {
                                 personsGrids[person.person_token].filter_tokens.push('location');
                             }
 
-                            if(person.modes !== existingPerson.modes || debug_sync_enabled) {
+                            if (person.modes !== existingPerson.modes || debug_sync_enabled) {
                                 personsGrids[person.person_token].filter_tokens.push('modes');
                             }
 
-                            if(reviewsChanged(person_data, existingPerson) || person.is_new !== existingPerson.is_new || debug_sync_enabled) {
+                            if (
+                                reviewsChanged(person_data, existingPerson) ||
+                                person.is_new !== existingPerson.is_new ||
+                                debug_sync_enabled
+                            ) {
                                 personsGrids[person.person_token].filter_tokens.push('reviews');
                             }
 
-                            if(person.is_verified_in_person !== existingPerson?.is_verified_in_person ||
-                                person.is_verified_linkedin !== existingPerson?.is_verified_linkedin || debug_sync_enabled) {
-                                personsGrids[person.person_token].filter_tokens.push('verifications');
+                            if (
+                                person.is_verified_in_person !==
+                                    existingPerson?.is_verified_in_person ||
+                                person.is_verified_linkedin !==
+                                    existingPerson?.is_verified_linkedin ||
+                                debug_sync_enabled
+                            ) {
+                                personsGrids[person.person_token].filter_tokens.push(
+                                    'verifications',
+                                );
                             }
 
                             let existingGender = gendersLookup.byId[existingPerson?.gender_id];
 
-                            if(!existingGender || person.gender_token !== existingGender.gender_token || debug_sync_enabled) {
+                            if (
+                                !existingGender ||
+                                person.gender_token !== existingGender.gender_token ||
+                                debug_sync_enabled
+                            ) {
                                 personsGrids[person.person_token].filter_tokens.push('genders');
                             }
                         }
@@ -297,36 +325,40 @@ function processPersons(network_id, persons) {
                     //add gender to person sections
                     let genders_pipeline = cacheService.startPipeline();
 
-                    for(let person_token in personsGrids) {
+                    for (let person_token in personsGrids) {
                         let person = personsGrids[person_token];
 
-                        if(person.filter_tokens.includes('genders')) {
+                        if (person.filter_tokens.includes('genders')) {
                             let gender = gendersLookup.byId[person.person.gender_id];
 
-                            if(gender) {
+                            if (gender) {
                                 let data = {
                                     [gender.gender_token]: {
                                         id: person.person.id,
                                         token: gender.gender_token,
-                                        name: gender.gender_name
-                                    }
+                                        name: gender.gender_name,
+                                    },
                                 };
 
-                                genders_pipeline.hSet(cacheService.keys.person_sections(person_token), 'genders', JSON.stringify(data));
+                                genders_pipeline.hSet(
+                                    cacheService.keys.person_sections(person_token),
+                                    'genders',
+                                    JSON.stringify(data),
+                                );
                             }
                         }
                     }
 
                     try {
                         await cacheService.execPipeline(genders_pipeline);
-                    } catch(e) {
+                    } catch (e) {
                         console.error(e);
                     }
 
                     await batchUpdateGridSets(personsGrids);
 
                     console.log({
-                        grid_sets_time: timeNow() - t
+                        grid_sets_time: timeNow() - t,
                     });
                 }
             }
@@ -340,26 +372,28 @@ function processPersons(network_id, persons) {
 }
 
 function reviewsChanged(newData, oldData) {
-    return newData.reviews_count !== oldData.reviews_count ||
+    return (
+        newData.reviews_count !== oldData.reviews_count ||
         newData.rating_safety !== oldData.rating_safety ||
         newData.rating_trust !== oldData.rating_trust ||
         newData.rating_timeliness !== oldData.rating_timeliness ||
         newData.rating_friendliness !== oldData.rating_friendliness ||
-        newData.rating_fun !== oldData.rating_fun;
+        newData.rating_fun !== oldData.rating_fun
+    );
 }
 
 function processPersonsModes(network_id, persons_modes) {
     return new Promise(async (resolve, reject) => {
-        if(!persons_modes) {
+        if (!persons_modes) {
             return resolve();
         }
 
-        if(!persons_modes.length) {
+        if (!persons_modes.length) {
             return resolve(true);
         }
 
-        if(persons_modes.length > 50000) {
-            console.error("Response too large, check network data");
+        if (persons_modes.length > 50000) {
+            console.error('Response too large, check network data');
             return resolve();
         }
 
@@ -375,7 +409,7 @@ function processPersonsModes(network_id, persons_modes) {
 
             let [gendersLookup, agesLookup] = await Promise.all([
                 getGendersLookup(),
-                getKidsAgeLookup()
+                getKidsAgeLookup(),
             ]);
 
             for (let batch of batches) {
@@ -383,27 +417,31 @@ function processPersonsModes(network_id, persons_modes) {
 
                 let batch_insert = {
                     partners: [],
-                    kids: []
+                    kids: [],
                 };
 
                 let batch_update = {
                     partners: [],
-                    kids: []
-                }
+                    kids: [],
+                };
 
-                let batchPersonTokens = batch.map(p => p.person_token);
+                let batchPersonTokens = batch.map((p) => p.person_token);
 
                 let existingPersons = await conn('persons')
                     .whereIn('person_token', batchPersonTokens)
                     .select('id', 'person_token', 'updated');
 
-                let existingPersonsIds = existingPersons.map(p => p.id);
+                let existingPersonsIds = existingPersons.map((p) => p.id);
 
-                let existingPersonsPartners = await conn('persons_partner')
-                    .whereIn('person_id', existingPersonsIds);
+                let existingPersonsPartners = await conn('persons_partner').whereIn(
+                    'person_id',
+                    existingPersonsIds,
+                );
 
-                let existingPersonsKids = await conn('persons_kids')
-                    .whereIn('person_id', existingPersonsIds);
+                let existingPersonsKids = await conn('persons_kids').whereIn(
+                    'person_id',
+                    existingPersonsIds,
+                );
 
                 let personsIdTokenMap = {};
                 let personsLookup = {};
@@ -416,11 +454,11 @@ function processPersonsModes(network_id, persons_modes) {
                     personsIdTokenMap[person.id] = person.person_token;
                 }
 
-                for(let p of existingPersonsPartners) {
+                for (let p of existingPersonsPartners) {
                     existingPartnersLookup[p.token] = p;
                 }
 
-                for(let k of existingPersonsKids) {
+                for (let k of existingPersonsKids) {
                     existingKidsLookup[k.token] = k;
                 }
 
@@ -453,7 +491,7 @@ function processPersonsModes(network_id, persons_modes) {
                             token: partner.partner_token,
                             gender_id: gender?.id || null,
                             updated: partner.updated,
-                            deleted: partner.deleted || null
+                            deleted: partner.deleted || null,
                         };
 
                         let existingPartner = existingPartnersLookup[partner.partner_token];
@@ -481,7 +519,7 @@ function processPersonsModes(network_id, persons_modes) {
                                 age_id: age?.id || null,
                                 is_active: kid.is_active,
                                 updated: kid.updated,
-                                deleted: kid.deleted || null
+                                deleted: kid.deleted || null,
                             };
 
                             const existingKid = existingKidsLookup[kidToken];
@@ -499,24 +537,28 @@ function processPersonsModes(network_id, persons_modes) {
                     }
                 }
 
-                if(!batch_insert.partners.length && !batch_insert.kids.length &&
-                    !batch_update.partners.length && !batch_update.kids.length) {
+                if (
+                    !batch_insert.partners.length &&
+                    !batch_insert.kids.length &&
+                    !batch_update.partners.length &&
+                    !batch_update.kids.length
+                ) {
                     return resolve();
                 }
 
-                if(batch_insert.partners.length) {
+                if (batch_insert.partners.length) {
                     await batchInsert('persons_partner', batch_insert.partners, true);
                 }
 
-                if(batch_update.partners.length) {
+                if (batch_update.partners.length) {
                     await batchUpdate('persons_partner', batch_update.partners);
                 }
 
-                if(batch_insert.kids.length) {
+                if (batch_insert.kids.length) {
                     await batchInsert('persons_kids', batch_insert.kids, true);
                 }
 
-                if(batch_update.kids.length) {
+                if (batch_update.kids.length) {
                     await batchUpdate('persons_kids', batch_update.kids);
                 }
 
@@ -536,30 +578,32 @@ function processPersonsModes(network_id, persons_modes) {
                     .select('id', 'person_id', 'token', 'age_id', 'gender_id', 'is_active');
 
                 let [modes, partners, kids] = await Promise.all([
-                    modes_qry, partners_qry, kids_qry
+                    modes_qry,
+                    partners_qry,
+                    kids_qry,
                 ]);
 
                 let personsModes = {};
 
-                for(let p of modes) {
+                for (let p of modes) {
                     personsModes[p.person_token] = {
                         selected: JSON.parse(p.modes) || [],
                         partner: {},
-                        kids: {}
-                    }
+                        kids: {},
+                    };
                 }
 
-                for(let p of partners) {
+                for (let p of partners) {
                     let person_token = personsIdTokenMap[p.person_id];
 
                     personsModes[person_token].partner = {
                         id: p.id,
                         token: p.token,
                         gender_id: p.gender_id,
-                    }
+                    };
                 }
 
-                for(let k of kids) {
+                for (let k of kids) {
                     let person_token = personsIdTokenMap[k.person_id];
 
                     personsModes[person_token].kids[k.token] = {
@@ -567,17 +611,17 @@ function processPersonsModes(network_id, persons_modes) {
                         token: k.token,
                         gender_id: k.gender_id,
                         age_id: k.age_id,
-                        is_active: k.is_active
-                    }
+                        is_active: k.is_active,
+                    };
                 }
 
-                for(let person_token in personsModes) {
+                for (let person_token in personsModes) {
                     let data = personsModes[person_token];
 
                     pipeline.hSet(
                         cacheService.keys.person(person_token),
                         'modes',
-                        JSON.stringify(data)
+                        JSON.stringify(data),
                     );
                 }
 
@@ -588,7 +632,7 @@ function processPersonsModes(network_id, persons_modes) {
             return reject(e);
         }
 
-         resolve(!has_invalid_persons);
+        resolve(!has_invalid_persons);
     });
 }
 
@@ -637,7 +681,7 @@ function updatePersonsCount() {
 }
 
 function syncPersons() {
-    console.log("Sync: persons");
+    console.log('Sync: persons');
 
     let sync_name = systemKeys.sync.network.persons;
 
@@ -646,7 +690,7 @@ function syncPersons() {
 
         try {
             network_self = await getNetworkSelf();
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
 
@@ -701,7 +745,7 @@ function syncPersons() {
                     }
 
                     const axiosInstance = axios.create({
-                        timeout: defaultTimeout
+                        timeout: defaultTimeout,
                     });
 
                     let response = await axiosInstance.get(sync_url, {
@@ -710,7 +754,7 @@ function syncPersons() {
                             network_token: network_self.network_token,
                             data_since: timestamps.last,
                             request_sent: timeNow(),
-                        }
+                        },
                     });
 
                     if (response.status !== 202) {
@@ -719,7 +763,7 @@ function syncPersons() {
 
                     let success = await processPersons(network.id, response.data.persons);
 
-                    if(!success) {
+                    if (!success) {
                         skipSaveTimestamps = true;
                     }
 
@@ -733,7 +777,7 @@ function syncPersons() {
                                     last_person_token: response.data.last_person_token,
                                     prev_data_since: response.data.prev_data_since,
                                     request_sent: timeNow(),
-                                }
+                                },
                             });
 
                             if (response.status !== 202) {
@@ -742,7 +786,7 @@ function syncPersons() {
 
                             let success = await processPersons(network.id, response.data.persons);
 
-                            if(!success) {
+                            if (!success) {
                                 skipSaveTimestamps = true;
                             }
                         } catch (e) {
@@ -758,14 +802,14 @@ function syncPersons() {
                             network_id: network.id,
                             last_updated: timestamps.current,
                             created: sync_qry ? sync_qry.created : timeNow(),
-                            updated: timeNow()
+                            updated: timeNow(),
                         };
 
                         await setNetworkSyncProcess(sync_name, network.network_id, sync_update);
                     }
 
                     console.log({
-                        process_time: timeNow() - t
+                        process_time: timeNow() - t,
                     });
                 } catch (e) {
                     console.error(e);
@@ -784,7 +828,7 @@ function syncPersonsModes() {
 
         try {
             network_self = await getNetworkSelf();
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
 
@@ -809,7 +853,7 @@ function syncPersonsModes() {
 
                     let timestamps = {
                         current: timeNow(),
-                        last: null
+                        last: null,
                     };
 
                     let sync_qry = await getNetworkSyncProcess(sync_name, network.network_id);
@@ -827,7 +871,7 @@ function syncPersonsModes() {
                     let sync_url = getURL(network.api_domain, joinPaths('sync', 'persons/modes'));
 
                     const axiosInstance = axios.create({
-                        timeout: defaultTimeout
+                        timeout: defaultTimeout,
                     });
 
                     let response = await axiosInstance.get(sync_url, {
@@ -835,17 +879,20 @@ function syncPersonsModes() {
                             secret_key: secret_key_to,
                             network_token: network_self.network_token,
                             data_since: timestamps.last,
-                            request_sent: timeNow()
-                        }
+                            request_sent: timeNow(),
+                        },
                     });
 
                     if (response.status !== 202) {
                         continue;
                     }
 
-                    let success = await processPersonsModes(network.id, response.data.persons_modes);
+                    let success = await processPersonsModes(
+                        network.id,
+                        response.data.persons_modes,
+                    );
 
-                    if(!success) {
+                    if (!success) {
                         skipSaveTimestamps = true;
                     }
 
@@ -858,17 +905,20 @@ function syncPersonsModes() {
                                     network_token: network_self.network_token,
                                     pagination_updated: response.data.pagination_updated,
                                     prev_data_since: response.data.prev_data_since,
-                                    request_sent: timeNow()
-                                }
+                                    request_sent: timeNow(),
+                                },
                             });
 
                             if (response.status !== 202) {
                                 break;
                             }
 
-                            let success = await processPersonsModes(network.id, response.data.persons_modes);
+                            let success = await processPersonsModes(
+                                network.id,
+                                response.data.persons_modes,
+                            );
 
-                            if(!success) {
+                            if (!success) {
                                 skipSaveTimestamps = true;
                             }
                         } catch (e) {
@@ -884,7 +934,7 @@ function syncPersonsModes() {
                             network_id: network.id,
                             last_updated: timestamps.current,
                             created: sync_qry ? sync_qry.created : timeNow(),
-                            updated: timeNow()
+                            updated: timeNow(),
                         };
 
                         await setNetworkSyncProcess(sync_name, network.network_id, sync_update);
@@ -912,7 +962,7 @@ function main() {
             await syncPersons();
             await syncPersonsModes();
             await updatePersonsCount();
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
 
@@ -921,8 +971,8 @@ function main() {
 }
 
 module.exports = {
-    main
-}
+    main,
+};
 
 if (require.main === module) {
     (async function () {

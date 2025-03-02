@@ -15,18 +15,18 @@
 ### Run Servers
 
 #### Production
+
 `pm2 start pm2.config.js`
 
 #### Development
-`node servers`
 
+`node servers`
 
 ### Push Notifications
 
 #### iOS
 
 1. Download Private Key
-   
 2. Set environment variables
 
 `APPLE_APP_ID=`
@@ -36,4 +36,3 @@
 `APPLE_TEAM_ID=`
 
 `APPLE_PRIVATE_KEY=""`
-

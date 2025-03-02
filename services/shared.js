@@ -303,7 +303,7 @@ function downloadURL(url, output_path) {
 }
 
 function floatOrNull(value) {
-    if(isNumeric(value)) {
+    if (isNumeric(value)) {
         return parseFloat(value);
     }
 

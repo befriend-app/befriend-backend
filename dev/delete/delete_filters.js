@@ -52,7 +52,9 @@ function main() {
 
             await require('./delete_grid_sets').main();
 
-            await knex('sync').where('sync_process', systemKeys.sync.network.persons_filters).delete();
+            await knex('sync')
+                .where('sync_process', systemKeys.sync.network.persons_filters)
+                .delete();
         }
 
         resolve();

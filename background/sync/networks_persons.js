@@ -13,8 +13,17 @@ const {
     timeNow,
 } = require('../../services/shared');
 
-const { getNetworkSelf, homeDomains, getNetworksLookup, getSecretKeyToForNetwork } = require('../../services/network');
-const { keys: systemKeys, getNetworkSyncProcess, setNetworkSyncProcess } = require('../../services/system');
+const {
+    getNetworkSelf,
+    homeDomains,
+    getNetworksLookup,
+    getSecretKeyToForNetwork,
+} = require('../../services/network');
+const {
+    keys: systemKeys,
+    getNetworkSyncProcess,
+    setNetworkSyncProcess,
+} = require('../../services/system');
 const { batchInsert, batchUpdate } = require('../../services/db');
 
 let batch_process = 1000;
@@ -24,8 +33,8 @@ let debug_sync_enabled = require('../../dev/debug').sync.networks_persons;
 
 function processNetworksPersons(persons_networks) {
     return new Promise(async (resolve, reject) => {
-        if(!persons_networks || typeof persons_networks !== 'object') {
-            console.error("Invalid response");
+        if (!persons_networks || typeof persons_networks !== 'object') {
+            console.error('Invalid response');
             return resolve();
         }
 
@@ -35,8 +44,8 @@ function processNetworksPersons(persons_networks) {
             return resolve(true);
         }
 
-        if(personTokens.length > 50000) {
-            console.error("Response too large, check network data");
+        if (personTokens.length > 50000) {
+            console.error('Response too large, check network data');
             return resolve();
         }
 
@@ -52,7 +61,7 @@ function processNetworksPersons(persons_networks) {
 
             let unknown_networks = new Set();
 
-            for(let person_tokens of batches) {
+            for (let person_tokens of batches) {
                 let existingPersons = await conn('persons')
                     .whereIn('person_token', person_tokens)
                     .select('id', 'person_token', 'updated');
@@ -65,15 +74,15 @@ function processNetworksPersons(persons_networks) {
                 let personsLookup = {};
                 let tokenIdMap = {};
 
-                for(let p of existingPersons) {
+                for (let p of existingPersons) {
                     personsLookup[p.person_token] = p;
                     tokenIdMap[p.person_token] = p.id;
                 }
 
                 let networksPersonsLookup = {};
 
-                for(let np of existingNetworksPersons) {
-                    if(!networksPersonsLookup[np.person_token]) {
+                for (let np of existingNetworksPersons) {
+                    if (!networksPersonsLookup[np.person_token]) {
                         networksPersonsLookup[np.person_token] = {};
                     }
 
@@ -84,19 +93,20 @@ function processNetworksPersons(persons_networks) {
 
                 let batch_insert_persons = [];
 
-                for(let token of person_tokens) {
-                    if(!personsLookup[token]) {
+                for (let token of person_tokens) {
+                    if (!personsLookup[token]) {
                         let person = persons_networks[token];
 
-                        if(person.length) {
+                        if (person.length) {
                             let item = person[0];
 
                             let registration_network = null;
 
-                            if(item.registration_network_token) {
-                                registration_network = networksLookup.byToken[item.registration_network_token];
+                            if (item.registration_network_token) {
+                                registration_network =
+                                    networksLookup.byToken[item.registration_network_token];
 
-                                if(!registration_network) {
+                                if (!registration_network) {
                                     unknown_networks.add(item.registration_network_token);
                                     continue;
                                 }
@@ -104,10 +114,10 @@ function processNetworksPersons(persons_networks) {
                                 continue;
                             }
 
-                            if(item.network_token) {
+                            if (item.network_token) {
                                 let network = networksLookup.byToken[item.network_token];
 
-                                if(!network) {
+                                if (!network) {
                                     unknown_networks.add(item.network_token);
                                 }
                             }
@@ -117,16 +127,16 @@ function processNetworksPersons(persons_networks) {
                                 is_person_known: true,
                                 person_token: token,
                                 created: timeNow(),
-                                updated: item.person_updated
+                                updated: item.person_updated,
                             });
                         }
                     }
                 }
 
-                if(batch_insert_persons.length) {
+                if (batch_insert_persons.length) {
                     await batchInsert('persons', batch_insert_persons, true);
 
-                    for(let person of batch_insert_persons) {
+                    for (let person of batch_insert_persons) {
                         personsLookup[person.person_token] = person;
                         tokenIdMap[person.person_token] = person.id;
                     }
@@ -135,33 +145,34 @@ function processNetworksPersons(persons_networks) {
                 let batch_insert_networks_persons = [];
                 let batch_update_networks_persons = [];
 
-                for(let person_token of person_tokens) {
+                for (let person_token of person_tokens) {
                     let person = persons_networks[person_token];
 
-                    for(let item of person) {
-                        if(networksPersonsLookup[person_token]?.[item.network_token]) {
-                            let existing_row = networksPersonsLookup[person_token]?.[item.network_token];
+                    for (let item of person) {
+                        if (networksPersonsLookup[person_token]?.[item.network_token]) {
+                            let existing_row =
+                                networksPersonsLookup[person_token]?.[item.network_token];
 
-                            if(item.updated > existing_row.updated) {
+                            if (item.updated > existing_row.updated) {
                                 batch_update_networks_persons.push({
                                     id: existing_row.id,
                                     is_active: item.is_active,
                                     updated: item.updated,
-                                    deleted: item.deleted || null
+                                    deleted: item.deleted || null,
                                 });
                             }
                         } else {
                             let db_person = personsLookup[person_token];
 
-                            if(!db_person) {
-                                console.warn("Person not found in DB");
+                            if (!db_person) {
+                                console.warn('Person not found in DB');
                                 continue;
                             }
 
                             let network = networksLookup.byToken[item.network_token];
 
-                            if(!network) {
-                                console.warn("Network not found in DB");
+                            if (!network) {
+                                console.warn('Network not found in DB');
                                 continue;
                             }
 
@@ -171,26 +182,26 @@ function processNetworksPersons(persons_networks) {
                                 is_active: item.is_active,
                                 created: timeNow(),
                                 updated: item.updated,
-                                deleted: item.deleted || null
+                                deleted: item.deleted || null,
                             });
                         }
                     }
                 }
 
-                if(batch_insert_networks_persons.length) {
+                if (batch_insert_networks_persons.length) {
                     await batchInsert('networks_persons', batch_insert_networks_persons);
                 }
 
-                if(batch_update_networks_persons.length) {
+                if (batch_update_networks_persons.length) {
                     await batchUpdate('networks_persons', batch_update_networks_persons);
                 }
             }
 
-            if(unknown_networks.size) {
-                console.warn("Unknown networks: ", Array.from(unknown_networks));
+            if (unknown_networks.size) {
+                console.warn('Unknown networks: ', Array.from(unknown_networks));
             }
 
-            return resolve(!unknown_networks.size)
+            return resolve(!unknown_networks.size);
         } catch (e) {
             console.error(e);
             return reject(e);
@@ -199,16 +210,18 @@ function processNetworksPersons(persons_networks) {
 }
 
 function syncNetworksPersons() {
-    console.log("Sync: networks->persons");
+    console.log('Sync: networks->persons');
 
     let sync_name = systemKeys.sync.network.networks_persons;
 
     return new Promise(async (resolve, reject) => {
-        let conn, network_self, home_networks = [];
+        let conn,
+            network_self,
+            home_networks = [];
 
         try {
             network_self = await getNetworkSelf();
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
 
@@ -229,9 +242,9 @@ function syncNetworksPersons() {
                 .where('is_online', true)
                 .where('is_blocked', false);
 
-            for(let domain of home_domains) {
-                for(let network of networks) {
-                    if(network.api_domain.includes(domain)) {
+            for (let domain of home_domains) {
+                for (let network of networks) {
+                    if (network.api_domain.includes(domain)) {
                         home_networks.push(network);
                     }
                 }
@@ -270,7 +283,7 @@ function syncNetworksPersons() {
                 }
 
                 const axiosInstance = axios.create({
-                    timeout: defaultTimeout
+                    timeout: defaultTimeout,
                 });
 
                 let response = await axiosInstance.get(sync_url, {
@@ -279,7 +292,7 @@ function syncNetworksPersons() {
                         network_token: network_self.network_token,
                         data_since: timestamps.last,
                         request_sent: timeNow(),
-                    }
+                    },
                 });
 
                 if (response.status !== 202) {
@@ -288,7 +301,7 @@ function syncNetworksPersons() {
 
                 let success = await processNetworksPersons(response.data.networks_persons);
 
-                if(!success) {
+                if (!success) {
                     skipSaveTimestamps = true;
                 }
 
@@ -302,7 +315,7 @@ function syncNetworksPersons() {
                                 pagination_updated: response.data.pagination_updated,
                                 prev_data_since: response.data.prev_data_since,
                                 request_sent: timeNow(),
-                            }
+                            },
                         });
 
                         if (response.status !== 202) {
@@ -311,7 +324,7 @@ function syncNetworksPersons() {
 
                         let success = await processNetworksPersons(response.data.networks_persons);
 
-                        if(!success) {
+                        if (!success) {
                             skipSaveTimestamps = true;
                         }
                     } catch (e) {
@@ -327,14 +340,14 @@ function syncNetworksPersons() {
                         network_id: network.id,
                         last_updated: timestamps.current,
                         created: sync_qry ? sync_qry.created : timeNow(),
-                        updated: timeNow()
+                        updated: timeNow(),
                     };
 
                     await setNetworkSyncProcess(sync_name, network.network_id, sync_update);
                 }
 
                 console.log({
-                    process_time: timeNow() - t
+                    process_time: timeNow() - t,
                 });
             } catch (e) {
                 console.error(e);
@@ -353,7 +366,7 @@ function main() {
             await cacheService.init();
 
             await syncNetworksPersons();
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
 
@@ -362,8 +375,8 @@ function main() {
 }
 
 module.exports = {
-    main
-}
+    main,
+};
 
 if (require.main === module) {
     (async function () {

@@ -9,7 +9,6 @@ const { getPerson } = require('../services/persons');
 const { getModes } = require('../services/modes');
 const { acceptNotification, declineNotification } = require('../services/notifications');
 
-
 function createActivity(req, res) {
     return new Promise(async (resolve, reject) => {
         try {
@@ -35,12 +34,12 @@ function createActivity(req, res) {
                 let activityData = await activitiesService.createActivity(person, activity);
 
                 res.json(activityData, 201);
-            } catch(e) {
+            } catch (e) {
                 res.json(
                     {
                         error: e,
                     },
-                    400
+                    400,
                 );
             }
 
@@ -61,7 +60,7 @@ function checkIn(req, res) {
             let result = await activitiesService.checkIn(activity_token, person_token, location);
 
             res.json(result, 201);
-        } catch(e) {
+        } catch (e) {
             res.json({ error: e.message }, e.status || 400);
         }
 
@@ -76,16 +75,21 @@ function checkInWithAccessToken(req, res) {
         let person_token = req.body.person_token;
         let location = req.body.location;
 
-        if(typeof access_token !== 'string') {
+        if (typeof access_token !== 'string') {
             res.json('Access token required', 401);
             return resolve();
         }
 
         try {
-            let result = await activitiesService.checkIn(activity_token, person_token, location, access_token);
+            let result = await activitiesService.checkIn(
+                activity_token,
+                person_token,
+                location,
+                access_token,
+            );
 
             res.json(result, 201);
-        } catch(e) {
+        } catch (e) {
             res.json({ error: e.message }, e.status || 400);
         }
 
@@ -97,7 +101,7 @@ function getActivityRules(req, res) {
     return new Promise(async (resolve, reject) => {
         try {
             res.json(activitiesService.rules);
-        } catch(e) {
+        } catch (e) {
             res.json({ message: e.message }, e.status || 400);
         }
 
@@ -112,17 +116,23 @@ function getActivity(req, res) {
 
         try {
             if (typeof activity_token !== 'string') {
-                res.json({
-                    message: 'Activity token required',
-                }, 400);
+                res.json(
+                    {
+                        message: 'Activity token required',
+                    },
+                    400,
+                );
 
                 return resolve();
             }
 
             if (typeof person_token !== 'string') {
-                res.json({
-                    message: 'Person token required',
-                }, 400);
+                res.json(
+                    {
+                        message: 'Person token required',
+                    },
+                    400,
+                );
 
                 return resolve();
             }
@@ -143,14 +153,16 @@ function getActivity(req, res) {
     });
 }
 
-
 function getActivityNotification(req, res) {
     return new Promise(async (resolve, reject) => {
         let activity_token = req.params.activity_token;
         let person_token = req.query.person_token;
 
         try {
-            let notification = await activitiesService.getActivityNotification(activity_token, person_token);
+            let notification = await activitiesService.getActivityNotification(
+                activity_token,
+                person_token,
+            );
 
             res.json(notification);
         } catch (e) {
@@ -173,10 +185,15 @@ function getActivityNotificationWithAccessToken(req, res) {
         let person_token = req.query.person_token;
 
         try {
-            let result = await activitiesService.getActivityNotificationWithAccessToken(activity_token, access_token, person_token, req);
+            let result = await activitiesService.getActivityNotificationWithAccessToken(
+                activity_token,
+                access_token,
+                person_token,
+                req,
+            );
 
             res.json(result);
-        } catch(e) {
+        } catch (e) {
             res.json({ message: e.message }, e.status || 400);
         }
 
@@ -191,34 +208,47 @@ function getActivityWithAccessToken(req, res) {
         let person_token = req.query.person_token;
 
         if (typeof access_token !== 'string') {
-            res.json({
-                message: 'Access token required',
-            }, 401);
+            res.json(
+                {
+                    message: 'Access token required',
+                },
+                401,
+            );
 
             return resolve();
         }
 
         if (typeof activity_token !== 'string') {
-            res.json({
-                message: 'Activity token required',
-            }, 400);
+            res.json(
+                {
+                    message: 'Activity token required',
+                },
+                400,
+            );
 
             return resolve();
         }
 
         if (typeof person_token !== 'string') {
-            res.json({
-                message: 'Person token required',
-            }, 400);
+            res.json(
+                {
+                    message: 'Person token required',
+                },
+                400,
+            );
 
             return resolve();
         }
 
         try {
-            let result = await activitiesService.getActivity(person_token, activity_token, access_token);
+            let result = await activitiesService.getActivity(
+                person_token,
+                activity_token,
+                access_token,
+            );
 
             res.json(result);
-        } catch(e) {
+        } catch (e) {
             res.json({ message: e.message }, e.status || 400);
         }
 
@@ -260,12 +290,12 @@ function putCancelActivity(req, res) {
                 let result = await activitiesService.cancelActivity(me, activity_token);
 
                 res.json(result, 202);
-            } catch(e) {
+            } catch (e) {
                 res.json(
                     {
-                        error: e
+                        error: e,
                     },
-                    400
+                    400,
                 );
             }
         } catch (e) {
@@ -312,34 +342,34 @@ function putNetworkCancelActivity(req, res) {
 
         //validate access token
         try {
-             person = await getPerson(person_token);
+            person = await getPerson(person_token);
 
-             if(!person) {
-                 return res.json(
-                     {
-                         error: 'Person not found'
-                     },
-                     400
-                 );
-             }
+            if (!person) {
+                return res.json(
+                    {
+                        error: 'Person not found',
+                    },
+                    400,
+                );
+            }
 
-             let conn = await dbService.conn();
+            let conn = await dbService.conn();
 
-             let accessTokenQry = await conn('activities_persons')
-                 .where('person_id', person.id)
-                 .where('access_token', access_token)
-                 .first();
+            let accessTokenQry = await conn('activities_persons')
+                .where('person_id', person.id)
+                .where('access_token', access_token)
+                .first();
 
-             if(!accessTokenQry) {
-                 res.json({ error: 'Invalid access token' }, 401);
-                 return resolve();
-             }
-        } catch(e) {
+            if (!accessTokenQry) {
+                res.json({ error: 'Invalid access token' }, 401);
+                return resolve();
+            }
+        } catch (e) {
             return res.json(
                 {
-                    error: 'Error cancelling activity'
+                    error: 'Error cancelling activity',
                 },
-                400
+                400,
             );
         }
 
@@ -350,9 +380,9 @@ function putNetworkCancelActivity(req, res) {
         } catch (e) {
             res.json(
                 {
-                    error: e
+                    error: e,
                 },
-                400
+                400,
             );
         }
 
@@ -394,12 +424,12 @@ function putAcceptNotification(req, res) {
                 let result = await acceptNotification(me, activity_token);
 
                 res.json(result, 202);
-            } catch(e) {
+            } catch (e) {
                 res.json(
                     {
-                        error: e
+                        error: e,
                     },
-                    400
+                    400,
                 );
             }
         } catch (e) {
@@ -429,11 +459,11 @@ function putNetworkAcceptNotification(req, res) {
             let errors = [];
 
             if (!activity_token) {
-                errors.push('Activity token required')
+                errors.push('Activity token required');
             }
 
             if (!access_token) {
-                errors.push('Access token required')
+                errors.push('Access token required');
             }
 
             if (!person_token) {
@@ -461,15 +491,18 @@ function putNetworkAcceptNotification(req, res) {
             }
 
             try {
-                let result = await acceptNotification({
-                    id: access_token_qry.person_id,
-                    person_token,
-                    first_name,
-                    image_url
-                }, activity_token);
+                let result = await acceptNotification(
+                    {
+                        id: access_token_qry.person_id,
+                        person_token,
+                        first_name,
+                        image_url,
+                    },
+                    activity_token,
+                );
 
                 res.json(result, 202);
-            } catch(e) {
+            } catch (e) {
                 res.json({ error: e }, 400);
             }
         } catch (e) {
@@ -515,12 +548,12 @@ function putDeclineNotification(req, res) {
                 let result = await declineNotification(me, activity_token);
 
                 res.json(result, 202);
-            } catch(e) {
+            } catch (e) {
                 res.json(
                     {
-                        error: e
+                        error: e,
                     },
-                    400
+                    400,
                 );
             }
         } catch (e) {
@@ -586,20 +619,22 @@ function putNetworkDeclineNotification(req, res) {
                     .update({
                         access_token_used_at: timeNow(),
                         access_token_ip: getIPAddr(req),
-                        updated: timeNow()
+                        updated: timeNow(),
                     });
             }
 
             try {
-                let result = await declineNotification({
-                    person_token
-                }, activity_token);
+                let result = await declineNotification(
+                    {
+                        person_token,
+                    },
+                    activity_token,
+                );
 
                 res.json(result, 202);
-            } catch(e) {
+            } catch (e) {
                 res.json({ error: e }, 400);
             }
-
         } catch (e) {
             console.error(e);
             res.json({ error: 'Error declining network notification' }, 400);
@@ -618,7 +653,13 @@ function putReviews(req, res) {
         let review = req.body.review;
 
         try {
-            let result = await reviewsService.setActivityReview(activity_token, person_token, person_to_token, no_show, review);
+            let result = await reviewsService.setActivityReview(
+                activity_token,
+                person_token,
+                person_to_token,
+                no_show,
+                review,
+            );
 
             res.json(result, 202);
         } catch (e) {
@@ -626,7 +667,7 @@ function putReviews(req, res) {
                 {
                     error: e?.message ? e.message : 'Error updating person review',
                 },
-                e?.status ? e.status : 400
+                e?.status ? e.status : 400,
             );
         }
 
@@ -653,12 +694,12 @@ function putNetworkReviewActivity(req, res) {
         try {
             let person = await getPerson(person_token);
 
-            if(!person) {
+            if (!person) {
                 return res.json(
                     {
-                        error: 'Person not found'
+                        error: 'Person not found',
                     },
-                    400
+                    400,
                 );
             }
 
@@ -669,21 +710,27 @@ function putNetworkReviewActivity(req, res) {
                 .where('access_token', access_token)
                 .first();
 
-            if(!accessTokenQry) {
+            if (!accessTokenQry) {
                 res.json({ error: 'Invalid access token' }, 401);
                 return resolve();
             }
-        } catch(e) {
+        } catch (e) {
             return res.json(
                 {
-                    error: 'Error updating activity review'
+                    error: 'Error updating activity review',
                 },
-                400
+                400,
             );
         }
 
         try {
-            let result = await reviewsService.setActivityReview(activity_token, person_token, person_to_token, no_show, review);
+            let result = await reviewsService.setActivityReview(
+                activity_token,
+                person_token,
+                person_to_token,
+                no_show,
+                review,
+            );
 
             res.json(result, 202);
         } catch (e) {
@@ -691,7 +738,7 @@ function putNetworkReviewActivity(req, res) {
                 {
                     error: e?.message ? e.message : 'Error updating person review',
                 },
-                e?.status ? e.status : 400
+                e?.status ? e.status : 400,
             );
         }
 
@@ -815,5 +862,5 @@ module.exports = {
     putDeclineNotification,
     putNetworkDeclineNotification,
     putReviews,
-    putNetworkReviewActivity
+    putNetworkReviewActivity,
 };

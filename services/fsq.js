@@ -4,7 +4,6 @@ const { getMetersFromMilesOrKm, joinPaths } = require('./shared');
 
 const cacheService = require('./cache');
 
-
 module.exports = {
     base_url: 'https://api.foursquare.com/v3',
     limit: 50,
@@ -187,7 +186,7 @@ module.exports = {
             try {
                 let cache_data = await cacheService.getObj(cache_key);
 
-                if(cache_data) {
+                if (cache_data) {
                     return resolve(cache_data);
                 }
 
@@ -206,14 +205,16 @@ module.exports = {
                 });
 
                 //get lat/lon if missing in response
-                if(!r.data.location.location_lat) {
-                    if(!r.data?.location?.formatted_address) {
+                if (!r.data.location.location_lat) {
+                    if (!r.data?.location?.formatted_address) {
                         return reject('Formatted address needed');
                     }
 
-                    let geo = await require('./places').convertAddressToCoordinates(r.data.location.formatted_address);
+                    let geo = await require('./places').convertAddressToCoordinates(
+                        r.data.location.formatted_address,
+                    );
 
-                    if(!geo) {
+                    if (!geo) {
                         return reject('Coordinates required for place');
                     }
 
@@ -229,5 +230,5 @@ module.exports = {
                 return reject();
             }
         });
-    }
+    },
 };

@@ -19,7 +19,8 @@ const {
     getFilters,
     getPersonFilterForKey,
     getPersonFilters,
-    updateGridSets, getParentFilter,
+    updateGridSets,
+    getParentFilter,
 } = require('../services/filters');
 const { getActivityTypesMapping } = require('../services/activities');
 const { getLifeStages } = require('../services/life_stages');
@@ -166,7 +167,7 @@ function ensureParentEntry(person, filter, filterData = null) {
                     is_parent: true,
                     is_send: filterData?.is_send ?? true,
                     is_receive: filterData?.is_receive ?? true,
-                    is_active: filterData?.is_active ?? true
+                    is_active: filterData?.is_active ?? true,
                 });
 
                 const [parentId] = await conn('persons_filters').insert(parentEntry);
@@ -175,7 +176,7 @@ function ensureParentEntry(person, filter, filterData = null) {
                     filterData = {
                         ...parentEntry,
                         id: parentId,
-                        items: {}
+                        items: {},
                     };
                 } else {
                     filterData.id = parentId;
@@ -189,16 +190,16 @@ function ensureParentEntry(person, filter, filterData = null) {
                     is_receive: parentCheck.is_receive,
                     is_active: parentCheck.is_active,
                     is_negative: parentCheck.is_negative ?? false,
-                    items: {}
+                    items: {},
                 };
             }
 
-            if(!filterData.items) {
+            if (!filterData.items) {
                 filterData.items = {};
             }
 
             return resolve(filterData);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return reject(e);
         }
@@ -329,7 +330,7 @@ function handleFilterUpdate(req, res, filterType) {
                         .where('filter_id', filter.id)
                         .update({
                             is_any: false,
-                            updated: now
+                            updated: now,
                         });
 
                     // Update existing item
@@ -452,38 +453,36 @@ function putActive(req, res) {
                     .where('is_parent', 1)
                     .first();
 
-                if(!parent_check) {
-                    let [id] = await conn('persons_filters')
-                        .insert({
-                            token: generateToken(10),
-                            person_id: person.id,
-                            filter_id: filter.id,
-                            is_parent: true,
-                            is_active: active,
-                            created: now,
-                            updated: now
-                        });
+                if (!parent_check) {
+                    let [id] = await conn('persons_filters').insert({
+                        token: generateToken(10),
+                        person_id: person.id,
+                        filter_id: filter.id,
+                        is_parent: true,
+                        is_active: active,
+                        created: now,
+                        updated: now,
+                    });
 
                     filterData.id = id;
                     filterData.is_send = true;
                     filterData.is_receive = true;
                 } else {
-                    await conn('persons_filters')
-                        .where('id', parent_check.id)
-                        .update({
-                            is_active: active,
-                            updated: now
-                        });
+                    await conn('persons_filters').where('id', parent_check.id).update({
+                        is_active: active,
+                        updated: now,
+                    });
                 }
 
                 // Update cache
                 filterData.is_active = active;
                 filterData.updated = now;
-            } else { //no previous filter data
+            } else {
+                //no previous filter data
                 // Create new filter entry
                 const filterEntry = createFilterEntry(filter.id, {
                     person_id: person.id,
-                    is_active: active
+                    is_active: active,
                 });
 
                 const [id] = await conn('persons_filters').insert({
@@ -682,39 +681,36 @@ function putSendReceive(req, res) {
                     .where('is_parent', 1)
                     .first();
 
-                if(!parent_check) {
+                if (!parent_check) {
                     let data = {
                         token: generateToken(10),
                         person_id: person.id,
                         filter_id: filter.id,
                         is_parent: true,
                         created: now,
-                        updated: now
+                        updated: now,
                     };
 
-                    if(type === 'send') {
+                    if (type === 'send') {
                         data.is_send = enabled;
                         data.is_receive = true;
                     } else {
-                        data.is_receive  = enabled;
+                        data.is_receive = enabled;
                         data.is_send = true;
                     }
 
-                    let [id] = await conn('persons_filters')
-                        .insert(data);
+                    let [id] = await conn('persons_filters').insert(data);
 
                     filterData.id = id;
                     filterData.is_active = true;
                 } else {
                     let updateData = {
-                        updated: now
+                        updated: now,
                     };
 
                     updateData[type === 'send' ? 'is_send' : 'is_receive'] = enabled;
 
-                    await conn('persons_filters')
-                        .where('id', parent_check.id)
-                        .update(updateData);
+                    await conn('persons_filters').where('id', parent_check.id).update(updateData);
                 }
 
                 // Update cache
@@ -727,11 +723,10 @@ function putSendReceive(req, res) {
                     is_receive: type === 'receive' ? enabled : true,
                 });
 
-                const [id] = await conn('persons_filters')
-                    .insert({
-                        ...filterEntry,
-                        is_parent: true,
-                    });
+                const [id] = await conn('persons_filters').insert({
+                    ...filterEntry,
+                    is_parent: true,
+                });
 
                 filterData = mapping.multi
                     ? {
@@ -891,7 +886,7 @@ function putMode(req, res) {
 
                 const [id] = await conn('persons_filters').insert({
                     ...baseEntry,
-                    is_parent: true
+                    is_parent: true,
                 });
 
                 filterData = {
@@ -919,7 +914,7 @@ function putMode(req, res) {
                     person_id: person.id,
                     [mapping.column]: soloMode.id,
                     is_negative: false,
-                    filterData
+                    filterData,
                 });
 
                 const [soloId] = await conn('persons_filters').insert(soloEntry);
@@ -1397,7 +1392,7 @@ function putAge(req, res) {
 
                 const [id] = await conn('persons_filters').insert({
                     ...filterEntry,
-                    is_parent: true
+                    is_parent: true,
                 });
 
                 filterData = {
@@ -1481,11 +1476,10 @@ function putGender(req, res) {
                 });
 
                 // Create base filter entry in database
-                const [id] = await conn('persons_filters')
-                    .insert({
-                        ...baseEntry,
-                        is_parent: true,
-                    });
+                const [id] = await conn('persons_filters').insert({
+                    ...baseEntry,
+                    is_parent: true,
+                });
 
                 filterData = {
                     ...baseEntry,
@@ -1500,18 +1494,18 @@ function putGender(req, res) {
 
             // Get existing 'any' selection if it exists
             const existingAny = Object.values(filterItems).find(
-                (item) => item[mapping.column_token] && item[mapping.column_token] === anyOption.gender_token,
+                (item) =>
+                    item[mapping.column_token] &&
+                    item[mapping.column_token] === anyOption.gender_token,
             );
 
             // Handle 'any' gender selection
             if (gender_token === 'any' && active) {
                 // Mark all non-any items as negative
-                await conn('persons_filters')
-                    .whereIn('id', Object.keys(filterData.items))
-                    .update({
-                        is_negative: true,
-                        updated: now,
-                    });
+                await conn('persons_filters').whereIn('id', Object.keys(filterData.items)).update({
+                    is_negative: true,
+                    updated: now,
+                });
 
                 for (let id in filterData.items) {
                     filterData.items[id].is_negative = true;
@@ -1520,12 +1514,10 @@ function putGender(req, res) {
 
                 // Create or update 'any' entry
                 if (existingAny) {
-                    await conn('persons_filters')
-                        .where('id', existingAny.id)
-                        .update({
-                            is_negative: false,
-                            updated: now,
-                        });
+                    await conn('persons_filters').where('id', existingAny.id).update({
+                        is_negative: false,
+                        updated: now,
+                    });
 
                     existingAny.is_negative = false;
                     existingAny.updated = now;
@@ -1563,12 +1555,10 @@ function putGender(req, res) {
 
                 // Mark 'any' selection as negative if it exists
                 if (existingAny) {
-                    await conn('persons_filters')
-                        .where('id', existingAny.id)
-                        .update({
-                            is_negative: true,
-                            updated: now,
-                        });
+                    await conn('persons_filters').where('id', existingAny.id).update({
+                        is_negative: true,
+                        updated: now,
+                    });
 
                     existingAny.is_negative = true;
                     existingAny.updated = now;
@@ -1576,17 +1566,16 @@ function putGender(req, res) {
 
                 // Check for existing selection
                 const existingItem = Object.values(filterData.items).find(
-                    (item) => item[mapping.column_token] && item[mapping.column_token] === gender_token,
+                    (item) =>
+                        item[mapping.column_token] && item[mapping.column_token] === gender_token,
                 );
 
                 if (existingItem) {
                     // Update existing entry
-                    await conn('persons_filters')
-                        .where('id', existingItem.id)
-                        .update({
-                            is_negative: !active,
-                            updated: now
-                        });
+                    await conn('persons_filters').where('id', existingItem.id).update({
+                        is_negative: !active,
+                        updated: now,
+                    });
 
                     existingItem.is_negative = !active;
                     existingItem.updated = now;
@@ -1598,8 +1587,7 @@ function putGender(req, res) {
                         is_negative: !active,
                     });
 
-                    const [id] = await conn('persons_filters')
-                        .insert(filterEntry);
+                    const [id] = await conn('persons_filters').insert(filterEntry);
 
                     filterData.items[id] = {
                         ...filterEntry,
@@ -1703,7 +1691,7 @@ function putDistance(req, res) {
 
                 const [id] = await conn('persons_filters').insert({
                     ...filterEntry,
-                    is_parent: true
+                    is_parent: true,
                 });
 
                 filterData = {

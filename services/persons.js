@@ -64,15 +64,14 @@ module.exports = {
                 //networks
                 let networks = new Set();
 
-                let networks_qry = await conn('networks_persons')
-                    .where('person_id', person.id);
+                let networks_qry = await conn('networks_persons').where('person_id', person.id);
 
                 let networksLookup = await getNetworksLookup();
 
-                for(let network of networks_qry) {
+                for (let network of networks_qry) {
                     let token = networksLookup.byId[network.network_id]?.network_token;
 
-                    if(token) {
+                    if (token) {
                         networks.add(token);
                     }
                 }
@@ -156,7 +155,7 @@ module.exports = {
             }
         });
     },
-    getBatchPersons: function(person_tokens) {
+    getBatchPersons: function (person_tokens) {
         return new Promise(async (resolve, reject) => {
             if (!person_tokens || !person_tokens.length) {
                 return resolve({});
@@ -167,7 +166,7 @@ module.exports = {
             const missingTokens = [];
 
             for (const token of person_tokens) {
-                if(!(token in personsMap)) {
+                if (!(token in personsMap)) {
                     personsMap[token] = null;
                     unique_tokens.push(token);
                 }
@@ -184,17 +183,17 @@ module.exports = {
 
                 const results = await cacheService.execPipeline(pipeline);
 
-                for(let i = 0; i < results.length; i++) {
+                for (let i = 0; i < results.length; i++) {
                     let result = results[i];
                     let token = unique_tokens[i];
 
                     try {
-                        if(result && Object.keys(result).length) {
+                        if (result && Object.keys(result).length) {
                             personsMap[token] = cacheService.parseHashData(result);
                         } else {
                             missingTokens.push(token);
                         }
-                    } catch(e) {
+                    } catch (e) {
                         console.error(e);
                         missingTokens.push(token);
                     }
@@ -204,21 +203,19 @@ module.exports = {
                 if (missingTokens.length) {
                     const conn = await dbService.conn();
 
-                    const persons = await conn('persons')
-                        .whereIn('person_token', missingTokens);
+                    const persons = await conn('persons').whereIn('person_token', missingTokens);
 
                     //lookup
                     let personsLookup = {};
 
-                    for(let p of persons) {
+                    for (let p of persons) {
                         personsLookup[p.id] = p;
                     }
 
-                    const personIds = persons.map(p => p.id);
+                    const personIds = persons.map((p) => p.id);
 
                     const [devices, partners, kids] = await Promise.all([
-                        conn('persons_devices')
-                            .whereIn('person_id', personIds),
+                        conn('persons_devices').whereIn('person_id', personIds),
 
                         conn('persons_partner')
                             .whereIn('person_id', personIds)
@@ -233,8 +230,8 @@ module.exports = {
 
                     let devicesLookup = {};
 
-                    for(let d of devices) {
-                        if(!(devicesLookup[d.person_id])) {
+                    for (let d of devices) {
+                        if (!devicesLookup[d.person_id]) {
                             devicesLookup[d.person_id] = [];
                         }
 
@@ -243,14 +240,14 @@ module.exports = {
 
                     let partnersLookup = {};
 
-                    for(let p of partners) {
+                    for (let p of partners) {
                         partnersLookup[p.person_id] = p;
                     }
 
                     let kidsLookup = {};
 
-                    for(let k of kids) {
-                        if(!(kidsLookup[k.person_id])) {
+                    for (let k of kids) {
+                        if (!kidsLookup[k.person_id]) {
                             kidsLookup[k.person_id] = {};
                         }
 
@@ -260,7 +257,7 @@ module.exports = {
                             gender_id: k.gender_id,
                             age_id: k.age_id,
                             is_active: k.is_active,
-                        }
+                        };
                     }
 
                     // Process each missing person
@@ -281,17 +278,17 @@ module.exports = {
                         person.modes = {
                             selected: selected_modes,
                             partner: partnersLookup[person.id] || {},
-                            kids: kidsLookup[person.id] || {}
+                            kids: kidsLookup[person.id] || {},
                         };
 
                         //grid
                         if (person.grid_id) {
                             let grid = await getGridById(person.grid_id);
 
-                            if(grid) {
+                            if (grid) {
                                 person.grid = {
                                     id: grid.id,
-                                    token: grid.token
+                                    token: grid.token,
                                 };
                             }
                         }
@@ -303,7 +300,7 @@ module.exports = {
                             trust: person.rating_trust,
                             timeliness: person.rating_timeliness,
                             friendliness: person.rating_friendliness,
-                            fun: person.rating_fun
+                            fun: person.rating_fun,
                         };
 
                         personsMap[person.person_token] = person;
@@ -319,7 +316,7 @@ module.exports = {
 
                     await cacheService.execPipeline(pipeline);
                 }
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
                 return reject(e);
             }
@@ -368,7 +365,7 @@ module.exports = {
 
                     if ('is_online' in data) {
                         await updateGridSets(person, null, 'online');
-                    } else if('gender_id' in data) {
+                    } else if ('gender_id' in data) {
                         await updateGridSets(person, null, 'genders');
                     }
                 }

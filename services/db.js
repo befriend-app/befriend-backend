@@ -143,7 +143,7 @@ module.exports = {
             }
         });
     },
-    getSchema: function(table_name) {
+    getSchema: function (table_name) {
         return new Promise(async (resolve, reject) => {
             try {
                 let conn = await module.exports.conn();
@@ -151,10 +151,10 @@ module.exports = {
                 const cols = await conn(table_name).columnInfo();
 
                 resolve(cols);
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
                 return reject(e);
             }
         });
-    }
+    },
 };

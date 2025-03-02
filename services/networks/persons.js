@@ -9,9 +9,9 @@ const { getGridById } = require('../grid');
 function createPerson(network, inputs) {
     return new Promise(async (resolve, reject) => {
         try {
-            if(typeof inputs.person_token !== 'string' || !isNumeric(inputs.updated)) {
+            if (typeof inputs.person_token !== 'string' || !isNumeric(inputs.updated)) {
                 return reject({
-                    message: 'Person token and updated fields required'
+                    message: 'Person token and updated fields required',
                 });
             }
 
@@ -21,32 +21,30 @@ function createPerson(network, inputs) {
                 .where('person_token', inputs.person_token)
                 .first();
 
-            if(person_check) {
+            if (person_check) {
                 return reject({
-                    message: 'Person already known'
+                    message: 'Person already known',
                 });
             }
 
-            let [id] = await conn('persons')
-                .insert({
-                    is_person_known: true,
-                    registration_network_id: network.id,
-                    person_token: inputs.person_token,
-                    created: timeNow(),
-                    updated: inputs.updated - 1 //this ensures sync will work
-                });
+            let [id] = await conn('persons').insert({
+                is_person_known: true,
+                registration_network_id: network.id,
+                person_token: inputs.person_token,
+                created: timeNow(),
+                updated: inputs.updated - 1, //this ensures sync will work
+            });
 
-            await conn('networks_persons')
-                .insert({
-                    network_id: network.id,
-                    person_id: id,
-                    is_active: true,
-                    created: timeNow(),
-                    updated: timeNow()
-                });
+            await conn('networks_persons').insert({
+                network_id: network.id,
+                person_id: id,
+                is_active: true,
+                created: timeNow(),
+                updated: timeNow(),
+            });
 
             resolve();
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return reject(e);
         }
@@ -62,11 +60,13 @@ function syncNetworksPersons(inputs) {
             let request_sent = inputs.request_sent ? parseInt(inputs.request_sent) : null;
             let data_since_timestamp = inputs.data_since ? parseInt(inputs.data_since) : null;
             let prev_data_since = inputs.prev_data_since ? parseInt(inputs.prev_data_since) : null;
-            let pagination_updated = inputs.pagination_updated ? parseInt(inputs.pagination_updated) : null;
+            let pagination_updated = inputs.pagination_updated
+                ? parseInt(inputs.pagination_updated)
+                : null;
 
             if (!request_sent) {
                 return reject({
-                    message: 'request timestamp required'
+                    message: 'request timestamp required',
                 });
             }
 
@@ -90,7 +90,7 @@ function syncNetworksPersons(inputs) {
                     'n.network_token',
                     'np.is_active',
                     'np.updated',
-                    'np.deleted'
+                    'np.deleted',
                 )
                 .join('persons AS p', 'np.person_id', '=', 'p.id')
                 .join('networks AS n', 'np.network_id', '=', 'n.id')
@@ -98,19 +98,27 @@ function syncNetworksPersons(inputs) {
                 .limit(results_limit);
 
             if (timestamp_updated) {
-                networks_persons_qry = networks_persons_qry.where('np.updated', '>', timestamp_updated);
+                networks_persons_qry = networks_persons_qry.where(
+                    'np.updated',
+                    '>',
+                    timestamp_updated,
+                );
             }
 
             if (pagination_updated) {
-                networks_persons_qry = networks_persons_qry.where('np.updated', '<=', pagination_updated);
+                networks_persons_qry = networks_persons_qry.where(
+                    'np.updated',
+                    '<=',
+                    pagination_updated,
+                );
             }
 
             let networks_persons = await networks_persons_qry;
 
             let organized = {};
 
-            for(let row of networks_persons) {
-                if(!(organized[row.person_token])) {
+            for (let row of networks_persons) {
+                if (!organized[row.person_token]) {
                     organized[row.person_token] = [];
                 }
 
@@ -124,7 +132,7 @@ function syncNetworksPersons(inputs) {
                     network_token: row.network_token,
                     is_active: row.is_active,
                     updated: row.updated,
-                    deleted: row.deleted
+                    deleted: row.deleted,
                 });
             }
 
@@ -134,24 +142,26 @@ function syncNetworksPersons(inputs) {
                 lastTimestamps.push(networks_persons[networks_persons.length - 1].updated);
             }
 
-            let return_pagination_updated = lastTimestamps.length ? Math.max(...lastTimestamps) : null;
+            let return_pagination_updated = lastTimestamps.length
+                ? Math.max(...lastTimestamps)
+                : null;
 
             return resolve({
                 pagination_updated: return_pagination_updated,
                 prev_data_since: prev_data_since || data_since_timestamp_w_extra,
-                networks_persons: organized
+                networks_persons: organized,
             });
         } catch (e) {
             console.error(e);
 
             return reject({
-                message: 'Error syncing persons modes'
+                message: 'Error syncing persons modes',
             });
         }
     });
 }
 
-function syncPersons (inputs) {
+function syncPersons(inputs) {
     return new Promise(async (resolve, reject) => {
         //returns persons on this network
         //recursive request process to support pagination and most recent data
@@ -174,7 +184,7 @@ function syncPersons (inputs) {
 
             if (!request_sent) {
                 return reject({
-                    message: 'request timestamp required'
+                    message: 'request timestamp required',
                 });
             }
 
@@ -211,13 +221,13 @@ function syncPersons (inputs) {
                     'p.deleted',
                 );
 
-            if(data_since_timestamp) {
+            if (data_since_timestamp) {
                 data_since_timestamp_w_extra = data_since_timestamp - add_data_since_ms;
             }
 
             let timestamp_updated = prev_data_since || data_since_timestamp_w_extra;
 
-            if(timestamp_updated) {
+            if (timestamp_updated) {
                 persons_qry = persons_qry.where('p.updated', '>', timestamp_updated);
             }
 
@@ -239,7 +249,7 @@ function syncPersons (inputs) {
 
             genders = structuredClone(genders);
 
-            for(let k in genders.byId) {
+            for (let k in genders.byId) {
                 let g = genders.byId[k];
                 delete g.id;
                 delete g.created;
@@ -254,7 +264,7 @@ function syncPersons (inputs) {
                 delete person.gender_id;
                 delete person.grid_id;
 
-                if(grid) {
+                if (grid) {
                     person.grid_token = grid.token;
                 }
 
@@ -282,7 +292,7 @@ function syncPersons (inputs) {
             });
         } catch (e) {
             return reject({
-                message: 'Error syncing persons'
+                message: 'Error syncing persons',
             });
         }
     });
@@ -297,11 +307,13 @@ function syncModes(inputs) {
             let request_sent = inputs.request_sent ? parseInt(inputs.request_sent) : null;
             let data_since_timestamp = inputs.data_since ? parseInt(inputs.data_since) : null;
             let prev_data_since = inputs.prev_data_since ? parseInt(inputs.prev_data_since) : null;
-            let pagination_updated = inputs.pagination_updated ? parseInt(inputs.pagination_updated) : null;
+            let pagination_updated = inputs.pagination_updated
+                ? parseInt(inputs.pagination_updated)
+                : null;
 
             if (!request_sent) {
                 return reject({
-                    message: 'request timestamp required'
+                    message: 'request timestamp required',
                 });
             }
 
@@ -316,7 +328,7 @@ function syncModes(inputs) {
                     'pp.token',
                     'pp.gender_id',
                     'pp.updated',
-                    'pp.deleted'
+                    'pp.deleted',
                 )
                 .where('np.network_id', my_network.id)
                 .join('networks_persons AS np', 'np.person_id', '=', 'p.id')
@@ -357,15 +369,9 @@ function syncModes(inputs) {
                 kids_qry = kids_qry.where('pp.updated', '<=', pagination_updated);
             }
 
-            let [partners, kids] = await Promise.all([
-                partner_qry,
-                kids_qry
-            ]);
+            let [partners, kids] = await Promise.all([partner_qry, kids_qry]);
 
-            let [genders, ages] = await Promise.all([
-                getGendersLookup(),
-                getKidsAgeLookup()
-            ]);
+            let [genders, ages] = await Promise.all([getGendersLookup(), getKidsAgeLookup()]);
 
             let persons_modes = {};
 
@@ -385,7 +391,7 @@ function syncModes(inputs) {
                     partner_token: partner.token,
                     gender_token: gender?.gender_token || null,
                     updated: partner.updated,
-                    deleted: partner.deleted
+                    deleted: partner.deleted,
                 };
             }
 
@@ -408,7 +414,7 @@ function syncModes(inputs) {
                     age_token: age?.token || null,
                     is_active: kid.is_active,
                     updated: kid.updated,
-                    deleted: kid.deleted
+                    deleted: kid.deleted,
                 };
             }
 
@@ -423,18 +429,20 @@ function syncModes(inputs) {
                 lastTimestamps.push(kids[kids.length - 1].updated);
             }
 
-            let return_pagination_updated = lastTimestamps.length ? Math.max(...lastTimestamps) : null;
+            let return_pagination_updated = lastTimestamps.length
+                ? Math.max(...lastTimestamps)
+                : null;
 
             return resolve({
                 pagination_updated: return_pagination_updated,
                 prev_data_since: prev_data_since || data_since_timestamp_w_extra,
-                persons_modes: results
+                persons_modes: results,
             });
         } catch (e) {
             console.error(e);
 
             return reject({
-                message: 'Error syncing persons modes'
+                message: 'Error syncing persons modes',
             });
         }
     });
@@ -444,5 +452,5 @@ module.exports = {
     createPerson,
     syncNetworksPersons,
     syncPersons,
-    syncModes
+    syncModes,
 };

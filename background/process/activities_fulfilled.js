@@ -22,7 +22,7 @@ function processUpdate() {
         return new Promise(async (resolve, reject) => {
             let pipeline = cacheService.startPipeline();
 
-            for(let activity of batch_update) {
+            for (let activity of batch_update) {
                 let data = activitiesOrganized[activity.id];
 
                 pipeline.hGet(cacheService.keys.activities(data.person_token), data.activity_token);
@@ -35,28 +35,35 @@ function processUpdate() {
 
                 pipeline = cacheService.startPipeline();
 
-                for(let activity of batch_update) {
+                for (let activity of batch_update) {
                     let data = activitiesOrganized[activity.id];
 
                     let activityData = JSON.parse(results[idx++]);
 
                     activityData.is_fulfilled = activity.is_fulfilled;
-                    pipeline.hSet(cacheService.keys.activities(data.person_token), data.activity_token, JSON.stringify(activityData));
+                    pipeline.hSet(
+                        cacheService.keys.activities(data.person_token),
+                        data.activity_token,
+                        JSON.stringify(activityData),
+                    );
                 }
 
                 await cacheService.execPipeline(pipeline);
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
             }
 
             //update cache for activity->person
             pipeline = cacheService.startPipeline();
 
-            for(let activity of batch_update) {
+            for (let activity of batch_update) {
                 let data = activitiesOrganized[activity.id];
 
-                for(let person of data.persons) {
-                    pipeline.hGet(cacheService.keys.persons_activities(person.person_token), data.activity_token);
+                for (let person of data.persons) {
+                    pipeline.hGet(
+                        cacheService.keys.persons_activities(person.person_token),
+                        data.activity_token,
+                    );
                 }
             }
 
@@ -67,18 +74,22 @@ function processUpdate() {
 
                 pipeline = cacheService.startPipeline();
 
-                for(let activity of batch_update) {
+                for (let activity of batch_update) {
                     let data = activitiesOrganized[activity.id];
 
-                    for(let person of data.persons) {
+                    for (let person of data.persons) {
                         let activityData = JSON.parse(results[idx++]);
                         activityData.is_fulfilled = activity.is_fulfilled;
-                        pipeline.hSet(cacheService.keys.persons_activities(data.person_token), data.activity_token, JSON.stringify(activityData));
+                        pipeline.hSet(
+                            cacheService.keys.persons_activities(data.person_token),
+                            data.activity_token,
+                            JSON.stringify(activityData),
+                        );
                     }
                 }
 
                 await cacheService.execPipeline(pipeline);
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
             }
 
@@ -93,14 +104,14 @@ function processUpdate() {
                 let personIds = new Set();
                 let ownNetworkPersonsDict = {};
 
-                for(let activity of batch_update) {
+                for (let activity of batch_update) {
                     activityIds.push(activity.id);
 
                     let data = activitiesOrganized[activity.id];
 
                     personIds.add(data.person_id_from);
 
-                    for(let person of data.persons) {
+                    for (let person of data.persons) {
                         personIds.add(person.person_id);
                     }
                 }
@@ -114,45 +125,45 @@ function processUpdate() {
                         .whereIn('person_to_id', Array.from(personIds))
                         .select('person_to_id');
 
-                    for(let p of ownNetworkPersons) {
+                    for (let p of ownNetworkPersons) {
                         ownNetworkPersonsDict[p.person_to_id] = true;
                     }
-                } catch(e) {
+                } catch (e) {
                     console.error(e);
                 }
 
-                for(let activity of batch_update) {
+                for (let activity of batch_update) {
                     let data = activitiesOrganized[activity.id];
 
-                    if(data.network_id === self_network.id) {
+                    if (data.network_id === self_network.id) {
                         try {
-                             cacheService.publishWS('activities', data.person_token, {
-                                 activity_token: data.activity_token,
-                                 is_fulfilled: activity.is_fulfilled,
-                             } );
-                        } catch(e) {
+                            cacheService.publishWS('activities', data.person_token, {
+                                activity_token: data.activity_token,
+                                is_fulfilled: activity.is_fulfilled,
+                            });
+                        } catch (e) {
                             console.error(e);
                         }
                     }
 
-                    for(let person of data.persons) {
-                        if(person.is_creator) {
+                    for (let person of data.persons) {
+                        if (person.is_creator) {
                             continue;
                         }
 
-                        if(person.person_id in ownNetworkPersonsDict) {
+                        if (person.person_id in ownNetworkPersonsDict) {
                             try {
                                 cacheService.publishWS('activities', person.person_token, {
                                     activity_token: data.activity_token,
                                     is_fulfilled: activity.is_fulfilled,
-                                } );
-                            } catch(e) {
+                                });
+                            } catch (e) {
                                 console.error(e);
                             }
                         }
                     }
                 }
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
             }
 
@@ -187,7 +198,7 @@ function processUpdate() {
                     'ap.is_creator',
                 );
 
-            if(!debug_enabled) {
+            if (!debug_enabled) {
                 activities = activities.whereNull('a.is_fulfilled');
             }
 
@@ -195,7 +206,7 @@ function processUpdate() {
 
             let personIds = new Set();
 
-            for(let a of activities) {
+            for (let a of activities) {
                 personIds.add(a.person_id_from);
                 personIds.add(a.person_id_to);
             }
@@ -206,11 +217,11 @@ function processUpdate() {
 
             let personsMap = {};
 
-            for(let p of personsQry) {
+            for (let p of personsQry) {
                 personsMap[p.id] = p.person_token;
             }
 
-            for(let activity of activities) {
+            for (let activity of activities) {
                 if (!activitiesOrganized[activity.id]) {
                     let person_token = personsMap[activity.person_id_from];
 
@@ -222,7 +233,7 @@ function processUpdate() {
                         person_id_from: activity.person_id_from,
                         activity_start: activity.activity_start,
                         activity_end: activity.activity_end,
-                        persons: []
+                        persons: [],
                     };
                 }
 
@@ -235,7 +246,7 @@ function processUpdate() {
                     arrived_at: activity.arrived_at,
                     cancelled_at: activity.cancelled_at,
                     left_at: activity.left_at,
-                    is_creator: activity.is_creator
+                    is_creator: activity.is_creator,
                 });
             }
 
@@ -250,73 +261,70 @@ function processUpdate() {
                 }
 
                 //filter out cancelled participants
-                let activeParticipants = activity.persons.filter(p =>
-                    !p.cancelled_at
-                );
+                let activeParticipants = activity.persons.filter((p) => !p.cancelled_at);
 
-                let participantsWithoutCreator = activeParticipants.filter(p =>
-                    !p.is_creator
-                );
+                let participantsWithoutCreator = activeParticipants.filter((p) => !p.is_creator);
 
                 //use default no show threshold unless any participant accepted after activity start time
                 let noShowThreshold = defaultNoShowThreshold;
 
-                if(participantsWithoutCreator.length) {
+                if (participantsWithoutCreator.length) {
                     let latestAcceptTime = null;
 
-                    for(let p of participantsWithoutCreator) {
-                        if(!latestAcceptTime || p.accepted_at > latestAcceptTime) {
+                    for (let p of participantsWithoutCreator) {
+                        if (!latestAcceptTime || p.accepted_at > latestAcceptTime) {
                             latestAcceptTime = p.accepted_at;
                         }
                     }
 
-                    if(latestAcceptTime) {
+                    if (latestAcceptTime) {
                         latestAcceptTime /= 1000; //from ms to sec
 
-                        if(latestAcceptTime > activity.activity_start) {
-                            noShowThreshold = rules.unfulfilled.noShow.minsThreshold * 60 + (latestAcceptTime - activity.activity_start);
+                        if (latestAcceptTime > activity.activity_start) {
+                            noShowThreshold =
+                                rules.unfulfilled.noShow.minsThreshold * 60 +
+                                (latestAcceptTime - activity.activity_start);
                         }
                     }
 
                     //use dynamic threshold for determining if activity is fulfilled
-                    if((activity.activity_start + noShowThreshold) < t) {
+                    if (activity.activity_start + noShowThreshold < t) {
                         //count participants who arrived
-                        let arrivedParticipants = activeParticipants.filter(p =>
-                            p.arrived_at
-                        );
+                        let arrivedParticipants = activeParticipants.filter((p) => p.arrived_at);
 
                         batch_update.push({
                             id: activity.id,
                             is_fulfilled: arrivedParticipants.length >= 2,
-                            updated: timeNow()
+                            updated: timeNow(),
                         });
                     }
-                } else { //set to unfulfilled if zero participants
+                } else {
+                    //set to unfulfilled if zero participants
                     batch_update.push({
                         id: activity.id,
                         is_fulfilled: false,
-                        updated: timeNow()
+                        updated: timeNow(),
                     });
                 }
             }
 
-            if(batch_update.length) {
+            if (batch_update.length) {
                 try {
                     await batchUpdate('activities', batch_update);
-                } catch(e) {
+                } catch (e) {
                     console.error(e);
                 }
 
                 //update cache for activity
                 try {
                     await updateCache(batch_update);
-                } catch(e) {
+                } catch (e) {
                     console.error(e);
                 }
 
                 try {
                     await updateWS(batch_update);
-                } catch(e) {
+                } catch (e) {
                     console.error(e);
                 }
 
@@ -325,7 +333,7 @@ function processUpdate() {
                         time: getDateTimeStr(),
                         name: 'activity_fulfilled',
                         count: batch_update.length,
-                    }
+                    },
                 });
             }
         } catch (e) {
@@ -357,8 +365,8 @@ async function main() {
 }
 
 module.exports = {
-    main
-}
+    main,
+};
 
 if (require.main === module) {
     (async function () {

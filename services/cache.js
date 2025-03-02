@@ -14,7 +14,7 @@ const standardKeys = {
 };
 
 const filterKeys = {
-    modes: 'modes'
+    modes: 'modes',
 };
 
 const sectionKeys = {
@@ -58,7 +58,8 @@ const keyFunctions = {
 
     activities: (person_token) => `activities:persons:${person_token}`, //activities organized by person who created them, lookup by activity_token
     activities_notifications: (activity_token) => `activities:${activity_token}:notifications`,
-    activities_notifications_sending_int: (activity_token) => `activities:${activity_token}:notifications:sending_int`,
+    activities_notifications_sending_int: (activity_token) =>
+        `activities:${activity_token}:notifications:sending_int`,
     activity_type: (token) => `activity_types:${token}`,
     activity_type_venue_categories: (token) => `activity_types:venue_categories:${token}`,
     place_fsq: (fsqId) => `places:fsq:${fsqId}`,
@@ -72,7 +73,8 @@ const keyFunctions = {
     travel_times: (token) => `activities:travel:${token}`,
 
     person: (tokenOrEmail = '') => `persons:${tokenOrEmail.toLowerCase()}`,
-    person_login_tokens: (person_token = '') => `persons:${person_token.toLowerCase()}:login_tokens`,
+    person_login_tokens: (person_token = '') =>
+        `persons:${person_token.toLowerCase()}:login_tokens`,
     persons_activities: (person_token) => `persons:activities:${person_token}`,
     persons_notifications: (person_token) => `persons:notifications:${person_token}`,
     person_filters: (person_token) => `persons:filters:${person_token}`,
@@ -125,7 +127,7 @@ const keyFunctions = {
 module.exports = {
     conn: null,
     publishers: {
-        ws: null
+        ws: null,
     },
     keys: {
         ...standardKeys,
@@ -383,8 +385,8 @@ module.exports = {
             }
         });
     },
-    prepareSetHash: function(data) {
-        if(typeof data !== 'object') {
+    prepareSetHash: function (data) {
+        if (typeof data !== 'object') {
             return data;
         }
 
@@ -446,7 +448,7 @@ module.exports = {
                     await module.exports.conn.hSet(key, field, data);
                 } else {
                     let preparedData = module.exports.prepareSetHash(data);
-                    
+
                     await module.exports.conn.hSet(key, preparedData);
                 }
 
@@ -561,7 +563,7 @@ module.exports = {
             try {
                 await pipeline.discard();
                 resolve();
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
                 return reject(e);
             }
@@ -889,19 +891,22 @@ module.exports = {
     },
     publishWS: function (namespace, person_token, data) {
         return new Promise(async (resolve, reject) => {
-            if(!namespace || !person_token || !data) {
+            if (!namespace || !person_token || !data) {
                 return resolve();
             }
 
             let message = {
                 namespace,
                 person_token,
-                data
-            }
+                data,
+            };
 
             try {
-                await module.exports.publishers.ws.publish(module.exports.keys.ws, JSON.stringify(message));
-            } catch(e) {
+                await module.exports.publishers.ws.publish(
+                    module.exports.keys.ws,
+                    JSON.stringify(message),
+                );
+            } catch (e) {
                 console.error(e);
             }
 

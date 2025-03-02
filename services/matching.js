@@ -50,7 +50,6 @@ let interestScoreThresholds = {
 
 let debug_logs = require('../dev/debug').matching.logs;
 
-
 function getMatches(me, params = {}, custom_filters = null, initial_person_tokens = []) {
     function skipFilter(filter_name) {
         if (custom_filters && !custom_filters.includes(filter_name)) {
@@ -69,8 +68,8 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
     let neighbor_grid_tokens = new Set();
     let person_tokens = new Set();
 
-    if(initial_person_tokens.length) {
-        initial_person_tokens.map(person_token => person_tokens.add(person_token));
+    if (initial_person_tokens.length) {
+        initial_person_tokens.map((person_token) => person_tokens.add(person_token));
     }
 
     let personsInterests = new Map();
@@ -104,7 +103,8 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
 
     function setActivityLocation() {
         return new Promise(async (resolve, reject) => {
-            let lat = null, lon = null;
+            let lat = null,
+                lon = null;
 
             if (location?.lat && location.lon) {
                 lat = location.lat;
@@ -126,7 +126,7 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
                         console.error(e);
                     }
                 }
-            } else if(activity?.location_lat && activity.location_lon) {
+            } else if (activity?.location_lat && activity.location_lon) {
                 lat = activity.location_lat;
                 lon = activity.location_lon;
             }
@@ -134,8 +134,8 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
             if (lat && lon) {
                 activity_location = {
                     lat,
-                    lon
-                }
+                    lon,
+                };
             }
 
             resolve();
@@ -143,7 +143,7 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
     }
 
     function sortMatches() {
-        organized.matches.send.sort(function(a, b) {
+        organized.matches.send.sort(function (a, b) {
             if (b.matches.total_score !== a.matches.total_score) {
                 return b.matches.total_score - a.matches.total_score;
             }
@@ -297,21 +297,26 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
                     myInterests.filters[section.token] = my_filters[section.token] || {};
                 }
 
-                let my_sections = await cacheService.hGetAllObj(cacheService.keys.person_sections(my_token));
+                let my_sections = await cacheService.hGetAllObj(
+                    cacheService.keys.person_sections(my_token),
+                );
 
                 for (let s in my_sections) {
                     if (s === 'active') {
                         continue;
                     }
 
-                    if(my_sections.active[s] && !my_sections.active[s].deleted) {
+                    if (my_sections.active[s] && !my_sections.active[s].deleted) {
                         myInterests.sections[s] = my_sections[s];
                     }
                 }
 
                 //filter remaining person tokens for retrieval of person/filter data
                 for (let person_token of persons_not_excluded_after_stage_1) {
-                    if (personsExclude.send.has(person_token) && personsExclude.receive.has(person_token)) {
+                    if (
+                        personsExclude.send.has(person_token) &&
+                        personsExclude.receive.has(person_token)
+                    ) {
                         continue;
                     }
 
@@ -357,7 +362,10 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
                                 continue;
                             }
 
-                            if (person_sections?.active?.[s] && !person_sections.active[s].deleted) {
+                            if (
+                                person_sections?.active?.[s] &&
+                                !person_sections.active[s].deleted
+                            ) {
                                 personInterests.sections[s] = person_sections[s];
                             }
                         }
@@ -432,7 +440,11 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
 
                 max_distance *= kms_per_mile;
 
-                let grids = await gridService.findNearby(use_location.lat, use_location.lon, max_distance);
+                let grids = await gridService.findNearby(
+                    use_location.lat,
+                    use_location.lon,
+                    max_distance,
+                );
 
                 for (let grid of grids) {
                     if (grid.token !== my_grid_token) {
@@ -548,10 +560,14 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
                 let network_person_tokens = Array.from(persons_not_excluded_after_stage_1);
 
                 for (let person_token of network_person_tokens) {
-                    persons_networks_pipeline.hGet(cacheService.keys.person(person_token), 'networks');
+                    persons_networks_pipeline.hGet(
+                        cacheService.keys.person(person_token),
+                        'networks',
+                    );
                 }
 
-                let persons_networks_results = await cacheService.execPipeline(persons_networks_pipeline);
+                let persons_networks_results =
+                    await cacheService.execPipeline(persons_networks_pipeline);
 
                 let networks_persons = new Map();
                 let persons_networks = new Map();
@@ -610,7 +626,7 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
                     if (!networks_persons_exclude.has(network.network_token)) {
                         networks_persons_exclude.set(network.network_token, {
                             send: new Set(),
-                            receive: new Set()
+                            receive: new Set(),
                         });
                     }
 
@@ -633,7 +649,7 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
 
                 let me_networks_exclude = {
                     send: new Set(),
-                    receive: new Set()
+                    receive: new Set(),
                 };
 
                 for (let [network_token, data] of networks_persons_exclude) {
@@ -651,17 +667,21 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
                     //bi-directional
 
                     //exclude sending to this person if all of their networks are excluded by me
-                    let their_networks_excluded_by_me = Array.from(person_networks).every(network_token =>
-                        me_networks_exclude.send.has(network_token)
+                    let their_networks_excluded_by_me = Array.from(person_networks).every(
+                        (network_token) => me_networks_exclude.send.has(network_token),
                     );
 
                     //check if this person has excluded sending to all of my networks
-                    let my_networks_excluded_by_them = Array.from(my_network_tokens).every(network_token => {
-                        if (networks_persons_exclude.has(network_token)) {
-                            return networks_persons_exclude.get(network_token).receive.has(person_token);
-                        }
-                        return false;
-                    });
+                    let my_networks_excluded_by_them = Array.from(my_network_tokens).every(
+                        (network_token) => {
+                            if (networks_persons_exclude.has(network_token)) {
+                                return networks_persons_exclude
+                                    .get(network_token)
+                                    .receive.has(person_token);
+                            }
+                            return false;
+                        },
+                    );
 
                     if (their_networks_excluded_by_me || my_networks_excluded_by_them) {
                         personsExclude.send.add(person_token);
@@ -669,16 +689,20 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
 
                     //same as above, receiving
                     if (!send_only) {
-                        their_networks_excluded_by_me = Array.from(person_networks).every(network_token =>
-                            me_networks_exclude.receive.has(network_token)
+                        their_networks_excluded_by_me = Array.from(person_networks).every(
+                            (network_token) => me_networks_exclude.receive.has(network_token),
                         );
 
-                        my_networks_excluded_by_them = Array.from(my_network_tokens).every(network_token => {
-                            if (networks_persons_exclude.has(network_token)) {
-                                return networks_persons_exclude.get(network_token).send.has(person_token);
-                            }
-                            return false;
-                        });
+                        my_networks_excluded_by_them = Array.from(my_network_tokens).every(
+                            (network_token) => {
+                                if (networks_persons_exclude.has(network_token)) {
+                                    return networks_persons_exclude
+                                        .get(network_token)
+                                        .send.has(person_token);
+                                }
+                                return false;
+                            },
+                        );
 
                         if (their_networks_excluded_by_me || my_networks_excluded_by_them) {
                             personsExclude.receive.add(person_token);
@@ -851,7 +875,7 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
 
     function filterVerifications() {
         return new Promise(async (resolve, reject) => {
-            if(skipFilter('verifications')) {
+            if (skipFilter('verifications')) {
                 return resolve();
             }
 
@@ -971,7 +995,7 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
                     }
                 }
 
-                if(debug_logs) {
+                if (debug_logs) {
                     console.log({
                         after_verifications_excluded: {
                             send: personsExclude.send.size,
@@ -990,7 +1014,7 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
 
     function filterGenders() {
         return new Promise(async (resolve, reject) => {
-            if(skipFilter('genders')) {
+            if (skipFilter('genders')) {
                 return resolve();
             }
 
@@ -1116,7 +1140,7 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
                             }
                         }
 
-                        if(!personGender) {
+                        if (!personGender) {
                             personsExclude.send.add(token);
 
                             if (!send_only) {
@@ -1146,7 +1170,7 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
                     }
                 }
 
-                if(debug_logs) {
+                if (debug_logs) {
                     console.log({
                         after_genders_excluded: {
                             send: personsExclude.send.size,
@@ -1165,7 +1189,7 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
 
     function filterDistance() {
         return new Promise(async (resolve, reject) => {
-            if(skipFilter('distance')) {
+            if (skipFilter('distance')) {
                 return resolve();
             }
 
@@ -1288,19 +1312,20 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
 
                         const now = timeNow(true);
 
-                        if(activity?.when?.data?.start) {
+                        if (activity?.when?.data?.start) {
                             activityStartTime = activity.when.data.start;
-                        } else if(activity?.when?.in_mins) {
+                        } else if (activity?.when?.in_mins) {
                             activityStartTime = new Date(now + activity.when.in_mins * 60);
                         }
 
                         if (activityStartTime) {
                             const AVERAGE_TRAVEL_SPEED_MPH = 30;
                             const timeToActivityMins = (new Date(activityStartTime) - now) / 60;
-                            const travelTimeNeededMins = (compare_distance / AVERAGE_TRAVEL_SPEED_MPH) * 60;
+                            const travelTimeNeededMins =
+                                (compare_distance / AVERAGE_TRAVEL_SPEED_MPH) * 60;
                             const BUFFER_MINS_LATE = 5;
 
-                            if (timeToActivityMins < (travelTimeNeededMins - BUFFER_MINS_LATE)) {
+                            if (timeToActivityMins < travelTimeNeededMins - BUFFER_MINS_LATE) {
                                 personsExclude.send.add(person_token);
 
                                 if (!send_only) {
@@ -1324,7 +1349,10 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
                         let their_exclude_send_distance = DEFAULT_DISTANCE_MILES;
                         let their_exclude_receive_distance = DEFAULT_DISTANCE_MILES;
 
-                        if (their_distance_filter?.is_active && their_distance_filter.filter_value) {
+                        if (
+                            their_distance_filter?.is_active &&
+                            their_distance_filter.filter_value
+                        ) {
                             if (their_distance_filter.is_send) {
                                 their_exclude_send_distance = their_distance_filter.filter_value;
                             }
@@ -1353,7 +1381,7 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
                     }
                 }
 
-                if(debug_logs) {
+                if (debug_logs) {
                     console.log({
                         after_filter_distance_excluded: {
                             send: personsExclude.send.size,
@@ -1372,7 +1400,7 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
 
     function filterAges() {
         return new Promise(async (resolve, reject) => {
-            if(skipFilter('ages')) {
+            if (skipFilter('ages')) {
                 return resolve();
             }
 
@@ -1426,8 +1454,10 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
 
                         // Check their age preferences
                         if (their_age_filter?.is_active) {
-                            let their_min_age = parseInt(their_age_filter.filter_value_min) || minAge;
-                            let their_max_age = parseInt(their_age_filter.filter_value_max) || maxAge;
+                            let their_min_age =
+                                parseInt(their_age_filter.filter_value_min) || minAge;
+                            let their_max_age =
+                                parseInt(their_age_filter.filter_value_max) || maxAge;
 
                             if (me.age < their_min_age || me.age > their_max_age) {
                                 if (their_age_filter.is_receive) {
@@ -1447,13 +1477,12 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
                         if (should_exclude_receive && !send_only) {
                             personsExclude.receive.add(person_token);
                         }
-
                     } catch (e) {
                         console.error('Error processing person:', person_token, e);
                     }
                 }
 
-                if(debug_logs) {
+                if (debug_logs) {
                     console.log({
                         after_filter_ages_excluded: {
                             send: personsExclude.send.size,
@@ -1472,7 +1501,7 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
 
     function filterReviews() {
         return new Promise(async (resolve, reject) => {
-            if(skipFilter('reviews')) {
+            if (skipFilter('reviews')) {
                 return resolve();
             }
 
@@ -1683,7 +1712,11 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
                                 auto_include.send = true;
                             }
 
-                            if (!me_exclude_receive_new && !exclude_match_new.send.has(token) && !send_only) {
+                            if (
+                                !me_exclude_receive_new &&
+                                !exclude_match_new.send.has(token) &&
+                                !send_only
+                            ) {
                                 auto_include.receive = true;
                             }
                         } else {
@@ -1726,7 +1759,7 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
                                 (their_threshold && !isNumeric(myRatings[type])) ||
                                 (their_threshold && myRatings[type] < their_threshold)
                             ) {
-                                if (me.is_new && !(exclude_match_new.receive.has(token))) {
+                                if (me.is_new && !exclude_match_new.receive.has(token)) {
                                     continue;
                                 }
 
@@ -1757,7 +1790,7 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
                                 (their_threshold && !isNumeric(myRatings[type])) ||
                                 (their_threshold && myRatings[type] < their_threshold)
                             ) {
-                                if (me.is_new && !(exclude_match_new.send.has(token))) {
+                                if (me.is_new && !exclude_match_new.send.has(token)) {
                                     continue;
                                 }
 
@@ -1776,7 +1809,7 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
                     }
                 }
 
-                if(debug_logs) {
+                if (debug_logs) {
                     console.log({
                         after_reviews_excluded: {
                             send: personsExclude.send.size,
@@ -1795,7 +1828,7 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
 
     function filterPersonsAvailability() {
         return new Promise(async (resolve, reject) => {
-            if(skipFilter('availability')) {
+            if (skipFilter('availability')) {
                 return resolve();
             }
 
@@ -1843,7 +1876,7 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
                     }
                 }
 
-                if(debug_logs) {
+                if (debug_logs) {
                     console.log({
                         after_filter_availability_excluded: {
                             send: personsExclude.send.size,
@@ -1862,7 +1895,7 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
 
     function filterSection(sectionKey, getOptions, isMultiSelect) {
         return new Promise(async (resolve, reject) => {
-            if(skipFilter(sectionKey)) {
+            if (skipFilter(sectionKey)) {
                 return resolve();
             }
 
@@ -1986,7 +2019,7 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
                         }
                     }
 
-                    if(debug_logs) {
+                    if (debug_logs) {
                         console.log({
                             [`after_${sectionKey}_excluded`]: {
                                 send: personsExclude.send.size,
@@ -2085,7 +2118,7 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
                     }
                 }
 
-                if(debug_logs) {
+                if (debug_logs) {
                     console.log({
                         [`after_${sectionKey}_excluded`]: {
                             send: personsExclude.send.size,
@@ -2159,7 +2192,9 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
 
                         if (personInterests.matches.total_score >= interestScoreThresholds.ultra) {
                             organized.counts.interests.ultra++;
-                        } else if (personInterests.matches.total_score >= interestScoreThresholds.super) {
+                        } else if (
+                            personInterests.matches.total_score >= interestScoreThresholds.super
+                        ) {
                             organized.counts.interests.super++;
                         } else {
                             organized.counts.interests.regular++;
@@ -2192,7 +2227,7 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
 
             if (debug_logs) {
                 console.log({
-                    time_my_filters: timeNow() - t
+                    time_my_filters: timeNow() - t,
                 });
             }
 
@@ -2269,7 +2304,7 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
             persons_not_excluded_final = null;
 
             if (exclude_only) {
-                return resolve(personsExclude)
+                return resolve(personsExclude);
             }
 
             personsExclude = null;
@@ -2316,39 +2351,40 @@ function filterMatches(person, activity, matches, on_send_new = false) {
         return new Promise(async (resolve, reject) => {
             for (let match of matches) {
                 //do not add to organized matches if excluded
-                if(persons_excluded.has(match.person_token)) {
+                if (persons_excluded.has(match.person_token)) {
                     continue;
                 }
 
                 let match_networks = [];
 
-                for(let network_token of (match.networks || [])) {
+                for (let network_token of match.networks || []) {
                     let matchNetwork = networksLookup.byToken[network_token];
 
-                    if(matchNetwork) {
+                    if (matchNetwork) {
                         match_networks.push(matchNetwork);
                     }
                 }
 
-                if(!match_networks.length) {
+                if (!match_networks.length) {
                     continue;
                 }
 
                 if (match.networks.includes(my_network.network_token)) {
                     if (match.device?.platform && match.device.token) {
-                        organized_matches.set(match.person_token, match)
+                        organized_matches.set(match.person_token, match);
                     }
-                } else { //3rd-party network
+                } else {
+                    //3rd-party network
                     //use first network
                     let network = match_networks[0];
 
                     //do not add if network is offline
-                    if(!network.is_online) {
+                    if (!network.is_online) {
                         continue;
                     }
 
                     //we will call each network with matching person tokens to find which should be excluded
-                    if(!filter_networks_persons.has(network.network_token)) {
+                    if (!filter_networks_persons.has(network.network_token)) {
                         filter_networks_persons.set(network.network_token, new Set());
                     }
 
@@ -2364,13 +2400,13 @@ function filterMatches(person, activity, matches, on_send_new = false) {
 
     function excludeNetworksPersons() {
         return new Promise(async (resolve, reject) => {
-            if(!filter_networks_persons.size) {
+            if (!filter_networks_persons.size) {
                 return resolve();
             }
 
             let ps = [];
 
-            for(let [network_token, person_tokens] of filter_networks_persons) {
+            for (let [network_token, person_tokens] of filter_networks_persons) {
                 try {
                     let network = networksLookup.byToken[network_token];
 
@@ -2380,28 +2416,31 @@ function filterMatches(person, activity, matches, on_send_new = false) {
 
                     let arr_person_tokens = Array.from(person_tokens);
 
-                    if(person_tokens.size > MAX_PERSONS_PROCESS) {
+                    if (person_tokens.size > MAX_PERSONS_PROCESS) {
                         arr_person_tokens = arr_person_tokens.slice(0, MAX_PERSONS_PROCESS);
                     }
 
                     let lat = activity.place?.data?.location_lat || activity.location_lat;
                     let lon = activity.place?.data?.location_lon || activity.location_lon;
 
-                    ps.push(axios.put(url, {
-                        network_token: my_network.network_token,
-                        person: {
-                            person_token: person.person_token,
-                            grid: {
-                                token: person.grid?.token
-                            }
-                        },
-                        secret_key,
-                        activity_location: {
-                            lat, lon
-                        },
-                        person_tokens: arr_person_tokens
-                    }));
-                } catch(e) {
+                    ps.push(
+                        axios.put(url, {
+                            network_token: my_network.network_token,
+                            person: {
+                                person_token: person.person_token,
+                                grid: {
+                                    token: person.grid?.token,
+                                },
+                            },
+                            secret_key,
+                            activity_location: {
+                                lat,
+                                lon,
+                            },
+                            person_tokens: arr_person_tokens,
+                        }),
+                    );
+                } catch (e) {
                     console.error(e);
                 }
             }
@@ -2412,19 +2451,19 @@ function filterMatches(person, activity, matches, on_send_new = false) {
 
                 let filter_idx = 0;
 
-                for(let [network_token, person_tokens] of filter_networks_persons) {
+                for (let [network_token, person_tokens] of filter_networks_persons) {
                     let result = results[filter_idx++];
 
                     let exclude_person_tokens = result.value?.data?.excluded ?? [];
 
-                    if(exclude_person_tokens.length) {
-                        for(let person_token of exclude_person_tokens) {
+                    if (exclude_person_tokens.length) {
+                        for (let person_token of exclude_person_tokens) {
                             //remove excluded person tokens
                             organized_matches.delete(person_token);
                         }
                     }
                 }
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
             }
 
@@ -2435,27 +2474,30 @@ function filterMatches(person, activity, matches, on_send_new = false) {
     function excludeRecentNotifications(personNotifications) {
         let most_recent_notification = null;
 
-        for(let k in personNotifications) {
+        for (let k in personNotifications) {
             let personNotification = personNotifications[k];
 
-            if(personNotification.declined_at) {
+            if (personNotification.declined_at) {
                 continue;
             }
 
             let time_sent = personNotification.sent_at || personNotification.sent_to_network_at;
 
-            if(!time_sent) {
+            if (!time_sent) {
                 continue;
             }
 
             personNotification.time_sent = time_sent;
 
-            if(!most_recent_notification || timeNow() - time_sent < timeNow() - most_recent_notification.time_sent) {
+            if (
+                !most_recent_notification ||
+                timeNow() - time_sent < timeNow() - most_recent_notification.time_sent
+            ) {
                 most_recent_notification = personNotification;
             }
         }
 
-        if(most_recent_notification) {
+        if (most_recent_notification) {
             let sent_secs_ago = (timeNow() - most_recent_notification.time_sent) / 1000;
 
             return sent_secs_ago < NOTIFICATION_MINS_BUFFER * 60;
@@ -2552,11 +2594,12 @@ function filterMatches(person, activity, matches, on_send_new = false) {
         }
 
         let activity_notification_key = cacheService.keys.activities_notifications(
-            activity.activity_token
+            activity.activity_token,
         );
 
         try {
-            prev_notifications_persons = (await cacheService.hGetAllObj(activity_notification_key)) || {};
+            prev_notifications_persons =
+                (await cacheService.hGetAllObj(activity_notification_key)) || {};
         } catch (e) {
             console.error(e);
         }
@@ -2569,7 +2612,7 @@ function filterMatches(person, activity, matches, on_send_new = false) {
                 let activitiesFilter = JSON.parse(results[idx++]);
 
                 //exclude if notifications already sent for this activity
-                if(match.person_token in prev_notifications_persons) {
+                if (match.person_token in prev_notifications_persons) {
                     persons_excluded.add(match.person_token);
                     continue;
                 }
@@ -2578,10 +2621,10 @@ function filterMatches(person, activity, matches, on_send_new = false) {
                 match.networks = JSON.parse(personData[1]) || [];
                 let personDevices = JSON.parse(personData[2]);
 
-                if(!match.networks.length) {
+                if (!match.networks.length) {
                     console.warn({
                         person_token: match.person_token,
-                        error: 'missing cached networks field'
+                        error: 'missing cached networks field',
                     });
 
                     persons_excluded.add(match.person_token);
@@ -2589,33 +2632,40 @@ function filterMatches(person, activity, matches, on_send_new = false) {
                 }
 
                 //exclude if this activity overlaps with existing activities
-                if(Object.keys(personActivities).length && !debug_enabled) {
+                if (Object.keys(personActivities).length && !debug_enabled) {
                     const activityStart = activity.when?.data?.start;
                     const activityEnd = activity.when?.data?.end;
 
-                    let activity_overlaps = await activitiesService.doesActivityOverlap(person.person_token, {
-                        start: activityStart,
-                        end: activityEnd
-                    }, personActivities);
+                    let activity_overlaps = await activitiesService.doesActivityOverlap(
+                        person.person_token,
+                        {
+                            start: activityStart,
+                            end: activityEnd,
+                        },
+                        personActivities,
+                    );
 
-                    if(activity_overlaps) {
+                    if (activity_overlaps) {
                         persons_excluded.add(match.person_token);
                         continue;
                     }
                 }
 
                 //exclude by recent notifications
-                if(Object.keys(personNotifications).length) {
+                if (Object.keys(personNotifications).length) {
                     let exclude_recent = excludeRecentNotifications(personNotifications);
 
-                    if(exclude_recent) {
+                    if (exclude_recent) {
                         persons_excluded.add(match.person_token);
                         continue;
                     }
                 }
 
                 //exclude by activity type
-                let is_activity_excluded = activitiesService.isActivityTypeExcluded(activity, activitiesFilter);
+                let is_activity_excluded = activitiesService.isActivityTypeExcluded(
+                    activity,
+                    activitiesFilter,
+                );
 
                 if (is_activity_excluded) {
                     persons_excluded.add(match.person_token);
@@ -2628,7 +2678,7 @@ function filterMatches(person, activity, matches, on_send_new = false) {
 
                 let currentDevice = personDevices?.find((device) => device.is_current);
 
-                if(!currentDevice) {
+                if (!currentDevice) {
                     currentDevice = personDevices[0];
                 }
 
@@ -2650,15 +2700,18 @@ function filterMatches(person, activity, matches, on_send_new = false) {
         await excludeNetworksPersons();
 
         //prepare return data
-        for(let [person_token, match] of organized_matches) {
+        for (let [person_token, match] of organized_matches) {
             filtered_matches.push(match);
         }
 
-        if(debug_enabled) {
+        if (debug_enabled) {
             let splice_from = on_send_new ? 1 : 0;
-            filtered_matches = filtered_matches.splice(splice_from, require('../dev/debug').matching.send_count);
+            filtered_matches = filtered_matches.splice(
+                splice_from,
+                require('../dev/debug').matching.send_count,
+            );
 
-            for(let match of filtered_matches) {
+            for (let match of filtered_matches) {
                 let data = await getTmpPerson();
 
                 match.networks = data.networks;
@@ -2667,7 +2720,7 @@ function filterMatches(person, activity, matches, on_send_new = false) {
 
                 let device = await getTmpDevice();
 
-                if(match.networks.includes(my_network.network_token)) {
+                if (match.networks.includes(my_network.network_token)) {
                     match.device = device;
                 }
             }
@@ -2675,7 +2728,7 @@ function filterMatches(person, activity, matches, on_send_new = false) {
 
         if (!filtered_matches.length) {
             return reject({
-                message: 'No persons available to notify'
+                message: 'No persons available to notify',
             });
         }
 
@@ -2684,7 +2737,17 @@ function filterMatches(person, activity, matches, on_send_new = false) {
 }
 
 function organizePersonInterests(sections, myInterests, otherPersonInterests) {
-    function setMatchData(section, item_token, match_types, table_key = null, name, favorite_position, secondary, importance, totals) {
+    function setMatchData(
+        section,
+        item_token,
+        match_types,
+        table_key = null,
+        name,
+        favorite_position,
+        secondary,
+        importance,
+        totals,
+    ) {
         otherPersonInterests.matches.items[item_token] = {
             section: section.token,
             token: item_token,

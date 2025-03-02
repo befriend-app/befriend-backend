@@ -2,7 +2,7 @@
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
-exports.up = async function(knex) {
+exports.up = async function (knex) {
     await knex.schema.dropTableIfExists('activities_filters');
 
     await knex.schema.alterTable('activities', (table) => {
@@ -27,13 +27,15 @@ exports.up = async function(knex) {
             .inTable('networks')
             .after('person_to_id');
 
-        table
-            .integer('person_to_network_id')
-            .unsigned()
-            .notNullable()
-            .alter();
+        table.integer('person_to_network_id').unsigned().notNullable().alter();
 
-        table.bigInteger('sent_at').nullable().alter().comment('If notification is being handled by 3rd party network, this field would be null at first');
+        table
+            .bigInteger('sent_at')
+            .nullable()
+            .alter()
+            .comment(
+                'If notification is being handled by 3rd party network, this field would be null at first',
+            );
 
         table.boolean('did_network_receive').nullable().after('sent_to_network_at');
 
@@ -49,12 +51,12 @@ exports.up = async function(knex) {
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
-exports.down = async function(knex) {
+exports.down = async function (knex) {
     await knex.schema.alterTable('activities', (table) => {
         table.dropForeign('network_id');
 
         table.dropColumn('network_id');
-        table.dropColumn('access_token')
+        table.dropColumn('access_token');
     });
 
     await knex.schema.alterTable('activities_notifications', (table) => {
@@ -63,12 +65,12 @@ exports.down = async function(knex) {
             'did_network_receive',
             'access_token',
             'access_token_used_at',
-            'access_token_ip'
+            'access_token_ip',
         ];
 
         table.dropForeign('person_from_network_id');
 
-        for(let col of cols) {
+        for (let col of cols) {
             table.dropColumn(col);
         }
     });

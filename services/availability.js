@@ -206,11 +206,10 @@ function saveAvailabilityData(person, availabilityData) {
 
                 try {
                     await dbService.batchInsert('persons_availability', recordsToInsert, true);
-                } catch(e) {
+                } catch (e) {
                     console.error(e);
                     return reject(e);
                 }
-
 
                 for (let i = 0; i < recordsToInsert.length; i++) {
                     let record = recordsToInsert[i];
@@ -225,7 +224,7 @@ function saveAvailabilityData(person, availabilityData) {
             if (recordsToUpdate.length > 0) {
                 try {
                     await dbService.batchUpdate('persons_availability', recordsToUpdate);
-                } catch(e) {
+                } catch (e) {
                     console.error(e);
                     return reject(e);
                 }
@@ -234,7 +233,7 @@ function saveAvailabilityData(person, availabilityData) {
             if (recordsToDelete.length > 0) {
                 try {
                     await dbService.batchUpdate('persons_availability', recordsToDelete);
-                } catch(e) {
+                } catch (e) {
                     console.error(e);
                     return reject(e);
                 }

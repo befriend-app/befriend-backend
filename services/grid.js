@@ -6,15 +6,14 @@ loadScriptEnv();
 
 let cacheData = {
     byId: {},
-    byToken: {}
-}
+    byToken: {},
+};
 
 let grid_server_port = getPort();
 
-
 function getGridById(id) {
     return new Promise(async (resolve, reject) => {
-        if(cacheData.byId[id]) {
+        if (cacheData.byId[id]) {
             return resolve(cacheData.byId[id]);
         }
 
@@ -24,7 +23,7 @@ function getGridById(id) {
             cacheData.byId[id] = r.data;
 
             resolve(r.data);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return reject(e);
         }
@@ -34,7 +33,7 @@ function getGridById(id) {
 function getGridByToken(token) {
     return new Promise(async (resolve, reject) => {
         try {
-            if(cacheData.byToken[token]) {
+            if (cacheData.byToken[token]) {
                 return resolve(cacheData.byToken[token]);
             }
 
@@ -44,11 +43,11 @@ function getGridByToken(token) {
                 cacheData.byToken[token] = r.data;
 
                 resolve(r.data);
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
                 return reject(e);
             }
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return reject(e);
         }
@@ -61,7 +60,7 @@ function findNearby(lat, lon, radiusKm = DEFAULT_RADIUS_KM, limit = null) {
             const params = {
                 lat,
                 lon,
-                radius: radiusKm
+                radius: radiusKm,
             };
 
             if (limit !== null) {
@@ -69,7 +68,7 @@ function findNearby(lat, lon, radiusKm = DEFAULT_RADIUS_KM, limit = null) {
             }
 
             let r = await axios.get(`http://localhost:${grid_server_port}/grid/nearby`, {
-                params
+                params,
             });
 
             resolve(r.data);
@@ -85,11 +84,11 @@ function findNearest(lat, lon, radiusKm = DEFAULT_RADIUS_KM) {
             const params = {
                 lat,
                 lon,
-                radius: radiusKm
+                radius: radiusKm,
             };
 
             let r = await axios.get(`http://localhost:${grid_server_port}/grid/nearest`, {
-                params
+                params,
             });
 
             resolve(r.data);
@@ -103,5 +102,5 @@ module.exports = {
     getGridById,
     getGridByToken,
     findNearby,
-    findNearest
+    findNearest,
 };

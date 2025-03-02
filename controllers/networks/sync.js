@@ -4,10 +4,13 @@ const networksMeService = require('../../services/networks/me');
 const networksPersonsService = require('../../services/networks/persons');
 
 module.exports = {
-    syncActivities: function(req, res) {
+    syncActivities: function (req, res) {
         return new Promise(async (resolve, reject) => {
             try {
-                let response = await networksActivitiesService.syncActivities(req.from_network, req.query);
+                let response = await networksActivitiesService.syncActivities(
+                    req.from_network,
+                    req.query,
+                );
 
                 res.json(response, 202);
             } catch (e) {
@@ -21,7 +24,7 @@ module.exports = {
             resolve();
         });
     },
-    syncNetworksPersons: function(req, res) {
+    syncNetworksPersons: function (req, res) {
         return new Promise(async (resolve, reject) => {
             //received on befriend->home domain
             try {
@@ -106,5 +109,5 @@ module.exports = {
 
             resolve();
         });
-    }
+    },
 };

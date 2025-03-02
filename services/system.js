@@ -2,7 +2,6 @@ const cacheService = require('./cache');
 const dbService = require('./db');
 const { timeNow, isNumeric } = require('./shared');
 
-
 function getProcessRan(system_key) {
     return new Promise(async (resolve, reject) => {
         try {
@@ -62,14 +61,15 @@ function setProcessRan(system_key) {
     });
 }
 
-
 function getNetworkSyncProcess(sync_name, network_id) {
     return new Promise(async (resolve, reject) => {
         try {
-            let data = await cacheService.getObj(cacheService.keys.sync_networks(sync_name, network_id));
+            let data = await cacheService.getObj(
+                cacheService.keys.sync_networks(sync_name, network_id),
+            );
 
             resolve(data);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             reject();
         }
@@ -79,16 +79,18 @@ function getNetworkSyncProcess(sync_name, network_id) {
 function setNetworkSyncProcess(sync_name, network_id, data) {
     return new Promise(async (resolve, reject) => {
         try {
-            await cacheService.setCache(cacheService.keys.sync_networks(sync_name, network_id), data);
+            await cacheService.setCache(
+                cacheService.keys.sync_networks(sync_name, network_id),
+                data,
+            );
 
             resolve();
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             reject();
         }
     });
 }
-
 
 module.exports = {
     keys: {

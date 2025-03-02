@@ -715,21 +715,21 @@ module.exports = {
             },
         },
     },
-    getSectionByTableName: function(tableName) {
-        for(let k in this) {
-            if(!this[k].tables) {
+    getSectionByTableName: function (tableName) {
+        for (let k in this) {
+            if (!this[k].tables) {
                 continue;
             }
 
             let sectionData = this[k];
 
-            for(let t in sectionData.tables) {
+            for (let t in sectionData.tables) {
                 let tableData = sectionData.tables[t];
 
-                if(tableData.user.name === tableName) {
+                if (tableData.user.name === tableName) {
                     return sectionData;
                 }
             }
         }
-    }
+    },
 };

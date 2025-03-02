@@ -33,7 +33,7 @@ async function deleteDb() {
             'politics',
             'religions',
             'drinking',
-            'smoking'
+            'smoking',
         ];
 
         for (let table of tables) {
@@ -50,9 +50,14 @@ async function deleteDb() {
 async function deleteRedis() {
     await cacheService.init();
 
-    let keys = [cacheService.keys.life_stages, cacheService.keys.relationship_status,
-        cacheService.keys.languages, cacheService.keys.politics, cacheService.keys.religions,
-        cacheService.keys.drinking, cacheService.keys.smoking
+    let keys = [
+        cacheService.keys.life_stages,
+        cacheService.keys.relationship_status,
+        cacheService.keys.languages,
+        cacheService.keys.politics,
+        cacheService.keys.religions,
+        cacheService.keys.drinking,
+        cacheService.keys.smoking,
     ];
 
     let languages_countries_keys = await getKeys(cacheService.keys.languages_country(''));

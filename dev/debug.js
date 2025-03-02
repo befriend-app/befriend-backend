@@ -17,7 +17,6 @@ module.exports = {
         send_count: 3,
         filters: [
             //notifications
-
             // 'online',
             // 'availability',
             // 'activity_types',
@@ -25,13 +24,10 @@ module.exports = {
             // 'networks',
             // 'reviews',
             // 'verifications',
-
             //general
-
             // 'distance',
             // 'ages',
             // 'genders',
-
             //personal
             // 'life_stages',
             // 'relationships',
@@ -40,17 +36,15 @@ module.exports = {
             // 'religion',
             // 'drinking',
             // 'smoking',
-
             //interests
-
         ],
-        skipDebugFilter: function(filter) {
-            if(!module.exports.matching.get_matches) {
+        skipDebugFilter: function (filter) {
+            if (!module.exports.matching.get_matches) {
                 return false;
             }
 
-            return !(module.exports.matching.filters.includes(filter));
-        }
+            return !module.exports.matching.filters.includes(filter);
+        },
     },
     sync: {
         activities: isProdApp() ? false : true,
@@ -61,5 +55,5 @@ module.exports = {
     },
     notifications: {
         networks: isProdApp() ? false : true,
-    }
+    },
 };

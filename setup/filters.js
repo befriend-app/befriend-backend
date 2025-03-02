@@ -22,7 +22,7 @@ function main() {
                     token: filter.token,
                     name: filter.name,
                     position: index,
-                    updated: now
+                    updated: now,
                 };
 
                 if (filter.single) {
@@ -41,9 +41,7 @@ function main() {
                         created: now,
                     });
                 } else {
-                    await conn('filters')
-                        .where('id', exists.id)
-                        .update(data);
+                    await conn('filters').where('id', exists.id).update(data);
                 }
             }
 

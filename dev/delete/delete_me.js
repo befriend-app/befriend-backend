@@ -69,7 +69,9 @@ function main(is_me) {
             await cacheService.deleteKeys(keys);
 
             try {
-                await knex('sync').where('sync_process', systemKeys.sync.network.persons_me).delete();
+                await knex('sync')
+                    .where('sync_process', systemKeys.sync.network.persons_me)
+                    .delete();
             } catch (e) {
                 console.error(e);
             }

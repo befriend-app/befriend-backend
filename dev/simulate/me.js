@@ -29,19 +29,19 @@ let args = yargs.argv;
 let numPersons = 1000;
 let parallelCount = 20;
 
-if(args.n) {
+if (args.n) {
     numPersons = args.n;
 } else if (args._ && args._.length) {
     numPersons = args._[0];
 }
 
-if(args.p) {
+if (args.p) {
     parallelCount = args.p;
 }
 
 console.log({
     numPersons,
-    parallelCount
+    parallelCount,
 });
 
 let chunks = [];
@@ -174,7 +174,9 @@ async function getPersonsLogins() {
 
     let ts = timeNow();
 
-    persons = await conn('persons').where('registration_network_id', self_network.id).limit(numPersons);
+    persons = await conn('persons')
+        .where('registration_network_id', self_network.id)
+        .limit(numPersons);
 
     let persons_logins = await conn('persons_login_tokens').whereIn(
         'person_id',
@@ -335,7 +337,7 @@ async function processGenders() {
 
     let genders = await getGendersLookup();
 
-    let selectable_genders = Object.values(genders.byId).filter(g => g.is_visible);
+    let selectable_genders = Object.values(genders.byId).filter((g) => g.is_visible);
 
     for (let chunk of chunks) {
         await Promise.all(
@@ -350,21 +352,24 @@ async function processGenders() {
 
                 let gender_token = gender.gender_token;
 
-                if(!gender_token) {
+                if (!gender_token) {
                     gender_token = shuffleFunc(selectable_genders)[0].gender_token;
                 }
 
                 processed++;
 
                 try {
-                    let r = await axios.put(joinPaths(process.env.APP_URL, '/me/sections/selection'), {
-                        login_token: person.login_token,
-                        person_token: person.person_token,
-                        section_key: 'genders',
-                        table_key: 'genders',
-                        item_token: gender_token,
-                        is_select: true
-                    });
+                    let r = await axios.put(
+                        joinPaths(process.env.APP_URL, '/me/sections/selection'),
+                        {
+                            login_token: person.login_token,
+                            person_token: person.person_token,
+                            section_key: 'genders',
+                            table_key: 'genders',
+                            item_token: gender_token,
+                            is_select: true,
+                        },
+                    );
                 } catch (error) {
                     console.error(
                         `Error processing online status for person ${person.person_token}:`,
@@ -375,7 +380,6 @@ async function processGenders() {
         );
     }
 }
-
 
 async function processLocation() {
     console.log({
@@ -421,7 +425,7 @@ async function processLocation() {
                         person_token: person.person_token,
                         lat: newLocation.lat,
                         lon: newLocation.lon,
-                        force_update: true
+                        force_update: true,
                     });
                 } catch (error) {
                     console.error(
@@ -1020,7 +1024,7 @@ async function processButtonSection({
 
     try {
         // Get options using the provided function
-        if(!options) {
+        if (!options) {
             options = await getOptionsFunc();
         }
 
@@ -1173,7 +1177,7 @@ async function processSmoking() {
 }
 
 async function main(qty) {
-    if(qty) {
+    if (qty) {
         numPersons = qty;
     }
 

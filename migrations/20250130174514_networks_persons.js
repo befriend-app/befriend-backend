@@ -2,7 +2,7 @@
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
-exports.up = async function(knex) {
+exports.up = async function (knex) {
     await knex.schema.dropTableIfExists('persons_networks');
 
     await knex.schema.dropTableIfExists('networks_persons');
@@ -34,7 +34,12 @@ exports.up = async function(knex) {
     }
 
     await knex.schema.alterTable('persons', (table) => {
-        table.integer('registration_network_id').unsigned().notNullable().after('id').comment('First network person registered with');
+        table
+            .integer('registration_network_id')
+            .unsigned()
+            .notNullable()
+            .after('id')
+            .comment('First network person registered with');
         table.boolean('is_person_known').defaultTo(false).notNullable().after('person_token');
 
         table.foreign('registration_network_id').references('id').inTable('networks');
@@ -66,7 +71,7 @@ exports.up = async function(knex) {
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
-exports.down = async function(knex) {
+exports.down = async function (knex) {
     await knex.schema.dropTableIfExists('networks_persons');
     await knex.schema.dropTableIfExists('networks_persons_registration');
 

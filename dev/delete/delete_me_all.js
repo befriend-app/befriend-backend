@@ -47,9 +47,7 @@ function main(is_me) {
                 connection: connection,
             });
 
-            let tables = [
-                'me_sections',
-            ];
+            let tables = ['me_sections'];
 
             for (let table of tables) {
                 await knex(table).delete();

@@ -90,7 +90,7 @@ function getKidsAgeOptions() {
             let ages_dict = await setKidAgesCache();
 
             resolve(ages_dict);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return reject(e);
         }
@@ -108,10 +108,10 @@ function getKidsAgeLookup() {
 
             let lookup = {
                 byId: {},
-                byToken: {}
-            }
+                byToken: {},
+            };
 
-            for(let k in options) {
+            for (let k in options) {
                 let v = options[k];
 
                 lookup.byId[v.id] = v;
@@ -121,7 +121,7 @@ function getKidsAgeLookup() {
             module.exports.kidsAgeLookup = lookup;
 
             resolve(lookup);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return reject(e);
         }
@@ -159,7 +159,7 @@ function setKidAgesCache() {
             module.exports.kidsAgeOptions = ages_dict;
 
             resolve(ages_dict);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return reject(e);
         }
@@ -285,5 +285,5 @@ module.exports = {
     getKidsAgeOptions,
     getKidsAgeLookup,
     getPersonExcludedModes,
-    setKidAgesCache
+    setKidAgesCache,
 };

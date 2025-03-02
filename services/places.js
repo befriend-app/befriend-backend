@@ -144,7 +144,7 @@ module.exports = {
                     let batch_places = Object.values(batch_dict);
 
                     for (let place of batch_places) {
-                        if(!place.id) {
+                        if (!place.id) {
                             continue;
                         }
 
@@ -1210,24 +1210,24 @@ module.exports = {
                 const response = await axios.get(url, {
                     params: {
                         access_token: process.env.MAPBOX_SECRET_KEY,
-                        limit: 1
-                    }
+                        limit: 1,
+                    },
                 });
 
                 if (response.data.features && response.data.features[0]) {
                     const [lon, lat] = response.data.features[0].center;
 
                     return resolve({
-                        lat, lon
+                        lat,
+                        lon,
                     });
                 }
 
                 return reject('No results found');
-
             } catch (error) {
                 console.error('Geocoding failed:', error);
                 return reject();
             }
         });
-    }
+    },
 };

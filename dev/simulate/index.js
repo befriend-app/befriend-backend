@@ -1,12 +1,10 @@
-const {
-    loadScriptEnv,
-} = require('../../services/shared');
+const { loadScriptEnv } = require('../../services/shared');
 
 const yargs = require('yargs');
 let args = yargs.argv;
 let numPersons = 1000;
 
-if(args.n) {
+if (args.n) {
     numPersons = args.n;
 } else if (args._ && args._.length) {
     numPersons = args._[0];
@@ -41,7 +39,7 @@ function main() {
 
             console.log('Simulate: Devices');
             await devices.main(numPersons);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
 
@@ -50,8 +48,8 @@ function main() {
 }
 
 module.exports = {
-    main
-}
+    main,
+};
 
 if (require.main === module) {
     (async function () {

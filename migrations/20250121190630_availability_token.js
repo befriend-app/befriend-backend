@@ -1,4 +1,4 @@
-exports.up = async function(knex) {
+exports.up = async function (knex) {
     await knex.schema.alterTable('persons_filters', (table) => {
         table.string('token').notNullable().after('person_id');
 
@@ -18,7 +18,7 @@ exports.up = async function(knex) {
     });
 };
 
-exports.down = async function(knex) {
+exports.down = async function (knex) {
     await knex.schema.alterTable('persons_filters', (table) => {
         table.dropColumn('token');
     });

@@ -5,17 +5,13 @@ require('dotenv').config();
 const path = require('path');
 const { spawn } = require('child_process');
 
-const servers = [
-    'api.js',
-    'ws.js',
-    'grid.js'
-];
+const servers = ['api.js', 'ws.js', 'grid.js'];
 
 function spawnServer(scriptName) {
     const scriptPath = path.join(__dirname, scriptName);
 
     const process = spawn('node', [scriptPath], {
-        stdio: ['inherit', 'pipe', 'pipe']
+        stdio: ['inherit', 'pipe', 'pipe'],
     });
 
     const prefix = `[${scriptName}] `;
@@ -42,13 +38,13 @@ function spawnServer(scriptName) {
 }
 
 function startServers() {
-    const processes = servers.map(server => {
+    const processes = servers.map((server) => {
         console.log(`Starting ${server}...`);
         return spawnServer(server);
     });
 
     process.on('SIGINT', () => {
-        processes.forEach(proc => {
+        processes.forEach((proc) => {
             proc.kill('SIGINT');
         });
 

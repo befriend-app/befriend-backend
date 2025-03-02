@@ -62,8 +62,10 @@ async function getPersonsLogins() {
         .where('registration_network_id', self_network.id)
         .limit(num_persons);
 
-    let persons_logins = await conn('persons_login_tokens')
-        .whereIn('person_id', persons.map((item) => item.id));
+    let persons_logins = await conn('persons_login_tokens').whereIn(
+        'person_id',
+        persons.map((item) => item.id),
+    );
 
     let persons_dict = persons_logins.reduce((acc, item) => {
         acc[item.person_id] = item.login_token;
@@ -167,7 +169,7 @@ async function processAvailability() {
 }
 
 async function main(qty) {
-    if(qty) {
+    if (qty) {
         num_persons = qty;
     }
 

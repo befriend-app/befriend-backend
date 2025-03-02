@@ -16,7 +16,7 @@ module.exports = {
             // instances: '2',
             // exec_mode: 'cluster',
             cwd: home_dir,
-            node_args: '-r dotenv/config'
+            node_args: '-r dotenv/config',
         },
         {
             name: `${app_name}_ws_server`,
@@ -24,7 +24,7 @@ module.exports = {
             instances: '1',
             exec_mode: 'fork',
             cwd: home_dir,
-            node_args: '-r dotenv/config'
+            node_args: '-r dotenv/config',
         },
         {
             name: `${app_name}_grid_server`,
@@ -32,7 +32,7 @@ module.exports = {
             instances: '1',
             exec_mode: 'fork',
             cwd: home_dir,
-            node_args: '-r dotenv/config'
+            node_args: '-r dotenv/config',
         },
     ],
 };

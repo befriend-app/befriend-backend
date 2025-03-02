@@ -7,10 +7,14 @@ const {
     getURL,
     joinPaths,
     loadScriptEnv,
-    timeoutAwait
+    timeoutAwait,
 } = require('../../services/shared');
 const { getNetworkSelf, getSecretKeyToForNetwork } = require('../../services/network');
-const { keys: systemKeys, getNetworkSyncProcess, setNetworkSyncProcess } = require('../../services/system');
+const {
+    keys: systemKeys,
+    getNetworkSyncProcess,
+    setNetworkSyncProcess,
+} = require('../../services/system');
 const { batchUpdate } = require('../../services/db');
 
 const batch_process = 1000;
@@ -21,14 +25,14 @@ let debug_sync_enabled = require('../../dev/debug').sync.activities;
 let network_self;
 
 function syncActivities() {
-    console.log("Sync: activities");
+    console.log('Sync: activities');
 
     const sync_name = systemKeys.sync.network.activities;
 
     return new Promise(async (resolve, reject) => {
         try {
             network_self = await getNetworkSelf();
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
 
@@ -70,10 +74,13 @@ function syncActivities() {
                     }
 
                     let axiosInstance = axios.create({
-                        timeout: defaultTimeout
+                        timeout: defaultTimeout,
                     });
 
-                    let activities_url = getURL(network.api_domain, joinPaths('sync', 'activities'));
+                    let activities_url = getURL(
+                        network.api_domain,
+                        joinPaths('sync', 'activities'),
+                    );
 
                     let response = await axiosInstance.get(activities_url, {
                         params: {
@@ -81,7 +88,7 @@ function syncActivities() {
                             network_token: network_self.network_token,
                             data_since: timestamps.last,
                             request_sent: timeNow(),
-                        }
+                        },
                     });
 
                     if (response.status !== 202) {
@@ -103,7 +110,7 @@ function syncActivities() {
                                     pagination_updated: response.data.pagination_updated,
                                     prev_data_since: response.data.prev_data_since,
                                     request_sent: timeNow(),
-                                }
+                                },
                             });
 
                             if (response.status !== 202) {
@@ -128,14 +135,14 @@ function syncActivities() {
                             network_id: network.id,
                             last_updated: timestamps.current,
                             created: sync_qry ? sync_qry.created : timeNow(),
-                            updated: timeNow()
+                            updated: timeNow(),
                         };
 
                         await setNetworkSyncProcess(sync_name, network.id, sync_update);
                     }
 
                     console.log({
-                        process_time: timeNow() - t
+                        process_time: timeNow() - t,
                     });
                 } catch (e) {
                     console.error('Error syncing with network:', e);
@@ -161,7 +168,7 @@ function processActivities(network_id, activities) {
         }
 
         if (activities.length > 50000) {
-            console.error("Response too large, check network data");
+            console.error('Response too large, check network data');
             return resolve();
         }
 
@@ -183,7 +190,7 @@ function processActivities(network_id, activities) {
                 let idTokenMap = {};
                 let invalidActivities = {};
 
-                let batchActivityTokens = batch.map(a => a.activity_token);
+                let batchActivityTokens = batch.map((a) => a.activity_token);
 
                 let existingActivities = await conn('activities AS a')
                     .join('persons AS p', 'p.id', '=', 'a.person_id')
@@ -205,7 +212,7 @@ function processActivities(network_id, activities) {
 
                     let existingActivity = existingActivitiesDict[activity.activity_token];
 
-                    if(!existingActivity) {
+                    if (!existingActivity) {
                         invalidActivities[activity.activity_token] = true;
                         has_invalid_activities = true;
                         continue;
@@ -231,7 +238,7 @@ function processActivities(network_id, activities) {
                 if (activitiesToUpdate.length) {
                     try {
                         await batchUpdate('activities', activitiesToUpdate);
-                    } catch(e) {
+                    } catch (e) {
                         console.error(e);
                     }
 
@@ -246,14 +253,14 @@ function processActivities(network_id, activities) {
                             .whereIn('activity_id', activityIds)
                             .select('an.activity_id', 'an.person_to_id', 'p.person_token');
 
-                        for(let an of notifications) {
-                            if(!notificationsPersons[an.activity_id]) {
+                        for (let an of notifications) {
+                            if (!notificationsPersons[an.activity_id]) {
                                 notificationsPersons[an.activity_id] = [];
                             }
 
                             notificationsPersons[an.activity_id].push(an.person_token);
                         }
-                    } catch(e) {
+                    } catch (e) {
                         console.error(e);
                     }
 
@@ -261,11 +268,14 @@ function processActivities(network_id, activities) {
                     try {
                         let pipeline = cacheService.startPipeline();
 
-                        for(let activity of activitiesToUpdate) {
+                        for (let activity of activitiesToUpdate) {
                             let activity_token = idTokenMap[activity.id];
                             let data = existingActivitiesDict[activity_token];
 
-                            pipeline.hGet(cacheService.keys.activities(data.person_token), activity_token);
+                            pipeline.hGet(
+                                cacheService.keys.activities(data.person_token),
+                                activity_token,
+                            );
                         }
 
                         let results = await cacheService.execPipeline(pipeline);
@@ -274,18 +284,22 @@ function processActivities(network_id, activities) {
 
                         pipeline = cacheService.startPipeline();
 
-                        for(let activity of activitiesToUpdate) {
+                        for (let activity of activitiesToUpdate) {
                             let activity_token = idTokenMap[activity.id];
                             let data = existingActivitiesDict[activity_token];
 
                             let activityData = JSON.parse(results[idx++]);
                             activityData.is_fulfilled = activity.is_fulfilled;
 
-                            pipeline.hSet(cacheService.keys.activities(data.person_token), activity_token, JSON.stringify(activityData));
+                            pipeline.hSet(
+                                cacheService.keys.activities(data.person_token),
+                                activity_token,
+                                JSON.stringify(activityData),
+                            );
                         }
 
                         await cacheService.execPipeline(pipeline);
-                    } catch(e) {
+                    } catch (e) {
                         console.error(e);
                     }
 
@@ -293,12 +307,15 @@ function processActivities(network_id, activities) {
                     try {
                         let pipeline = cacheService.startPipeline();
 
-                        for(let activity of activitiesToUpdate) {
+                        for (let activity of activitiesToUpdate) {
                             let activity_token = idTokenMap[activity.id];
                             let persons = notificationsPersons[activity.id];
 
-                            for(let person_token of persons) {
-                                pipeline.hGet(cacheService.keys.persons_activities(person_token), activity_token);
+                            for (let person_token of persons) {
+                                pipeline.hGet(
+                                    cacheService.keys.persons_activities(person_token),
+                                    activity_token,
+                                );
                             }
                         }
 
@@ -308,24 +325,28 @@ function processActivities(network_id, activities) {
 
                         pipeline = cacheService.startPipeline();
 
-                        for(let activity of activitiesToUpdate) {
+                        for (let activity of activitiesToUpdate) {
                             let activity_token = idTokenMap[activity.id];
                             let persons = notificationsPersons[activity.id];
 
-                            for(let person_token of persons) {
+                            for (let person_token of persons) {
                                 let activityData = JSON.parse(results[idx++]);
 
-                                if(activityData) {
+                                if (activityData) {
                                     activityData.is_fulfilled = activity.is_fulfilled;
-                                    pipeline.hSet(cacheService.keys.persons_activities(person_token), activity_token, JSON.stringify(activityData));
+                                    pipeline.hSet(
+                                        cacheService.keys.persons_activities(person_token),
+                                        activity_token,
+                                        JSON.stringify(activityData),
+                                    );
 
                                     //send ws
                                     try {
                                         cacheService.publishWS('activities', person_token, {
                                             activity_token: activity_token,
-                                            is_fulfilled: activity.is_fulfilled
+                                            is_fulfilled: activity.is_fulfilled,
                                         });
-                                    } catch(e) {
+                                    } catch (e) {
                                         console.error(e);
                                     }
                                 }
@@ -333,7 +354,7 @@ function processActivities(network_id, activities) {
                         }
 
                         await cacheService.execPipeline(pipeline);
-                    } catch(e) {
+                    } catch (e) {
                         console.error(e);
                     }
                 }
@@ -354,7 +375,7 @@ function main() {
         try {
             await cacheService.init();
             await syncActivities();
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
 
@@ -364,7 +385,7 @@ function main() {
 
 module.exports = {
     main,
-}
+};
 
 if (require.main === module) {
     (async function () {

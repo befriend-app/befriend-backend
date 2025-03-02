@@ -2,8 +2,8 @@
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
-exports.up = async function(knex) {
-    await knex.schema.dropTableIfExists('persons_reviews')
+exports.up = async function (knex) {
+    await knex.schema.dropTableIfExists('persons_reviews');
 
     await knex.schema.createTable('activities_persons_reviews', (table) => {
         table.bigIncrements('id').unsigned().primary();
@@ -34,6 +34,6 @@ exports.up = async function(knex) {
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
-exports.down = async function(knex) {
-    await knex.schema.dropTableIfExists('activities_persons_reviews')
+exports.down = async function (knex) {
+    await knex.schema.dropTableIfExists('activities_persons_reviews');
 };

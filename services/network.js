@@ -20,7 +20,6 @@ const tldts = require('tldts');
 const { deleteKeys } = require('./cache');
 const encryptionService = require('./encryption');
 
-
 function init() {
     return new Promise(async (resolve, reject) => {
         let conn;
@@ -343,7 +342,7 @@ function getNetwork(network_id = null, network_token = null) {
         try {
             let networks = await getNetworksLookup();
 
-            if(network_id) {
+            if (network_id) {
                 return resolve(networks.byId[network_id]);
             }
 
@@ -365,8 +364,17 @@ function getNetworkSelf(is_frontend) {
 
             let cols = '*';
 
-            if(is_frontend) {
-                cols = ['network_token', 'network_name', 'network_logo', 'app_icon', 'base_domain', 'api_domain', 'is_verified', 'is_self'];
+            if (is_frontend) {
+                cols = [
+                    'network_token',
+                    'network_name',
+                    'network_logo',
+                    'app_icon',
+                    'base_domain',
+                    'api_domain',
+                    'is_verified',
+                    'is_self',
+                ];
             }
 
             let conn = await dbService.conn();
@@ -390,11 +398,11 @@ function getNetworksLookup() {
     return new Promise(async (resolve, reject) => {
         try {
             //all networks
-             let conn = await dbService.conn();
+            let conn = await dbService.conn();
 
-             let networks = await conn('networks');
+            let networks = await conn('networks');
 
-             let networks_lookup = networks.reduce(
+            let networks_lookup = networks.reduce(
                 (acc, network) => {
                     acc.byId[network.id] = network;
                     acc.byToken[network.network_token] = network;
@@ -403,8 +411,8 @@ function getNetworksLookup() {
                 { byId: {}, byToken: {} },
             );
 
-             resolve(networks_lookup);
-        } catch(e) {
+            resolve(networks_lookup);
+        } catch (e) {
             console.error(e);
             return reject(e);
         }
@@ -796,8 +804,7 @@ function exchangeKeysHomeFrom(body) {
 
             let secret_key_new_network = generateToken(40);
 
-            module.exports.keys.oneTime[keys_exchange_token.new_network] =
-                secret_key_new_network;
+            module.exports.keys.oneTime[keys_exchange_token.new_network] = secret_key_new_network;
 
             await axios.post(getURL(befriend_network.api_domain, `keys/home/to`), {
                 network_token: module.exports.token,
@@ -885,7 +892,7 @@ function exchangeKeysHomeTo(body) {
 
                 await cacheService.hSet(cacheService.keys.networks_secrets, network_token, {
                     from: secret_key_new_network,
-                    to: secret_key_befriend
+                    to: secret_key_befriend,
                 });
 
                 await conn('networks').where('id', network_qry.id).update({
@@ -924,8 +931,7 @@ function exchangeKeysHomeSave(body) {
             });
         }
 
-        let secret_key_new_network =
-            module.exports.keys.oneTime[keys_exchange_token.new_network];
+        let secret_key_new_network = module.exports.keys.oneTime[keys_exchange_token.new_network];
 
         if (!secret_key_new_network) {
             return reject({
@@ -962,7 +968,7 @@ function exchangeKeysHomeSave(body) {
 
             await cacheService.hSet(cacheService.keys.networks_secrets, network_token, {
                 from: secret_key_befriend,
-                to: secret_key_new_network
+                to: secret_key_new_network,
             });
 
             await conn('networks').where('id', network_qry.id).update({
@@ -1072,14 +1078,14 @@ function keysExchangeEncrypt(body) {
             );
         } catch (e) {
             console.error(e);
-            
-            return reject( {
+
+            return reject({
                 message: 'Error processing tokens for keys exchange',
             });
         }
 
         if (!encrypted_network_tokens.from || !encrypted_network_tokens.to) {
-            return reject( {
+            return reject({
                 message: 'Could not encrypt tokens',
             });
         }
@@ -1177,10 +1183,14 @@ function keysExchangeDecrypt(body) {
                     updated: timeNow(),
                 });
 
-                await cacheService.hSet(cacheService.keys.networks_secrets, from_network.network_token, {
-                    from: r.data.secret_key_from,
-                    to: secret_key_self
-                });
+                await cacheService.hSet(
+                    cacheService.keys.networks_secrets,
+                    from_network.network_token,
+                    {
+                        from: r.data.secret_key_from,
+                        to: secret_key_self,
+                    },
+                );
 
                 //set keys exchanged
                 await conn('networks').where('id', from_network.id).update({
@@ -1283,7 +1293,7 @@ function keysExchangeSave(body) {
 
             await cacheService.hSet(cacheService.keys.networks_secrets, to_network.network_token, {
                 from: secret_key_from,
-                to: secret_key_to
+                to: secret_key_to,
             });
 
             //set keys exchanged
@@ -1311,18 +1321,18 @@ function keysExchangeSave(body) {
 
 function getSecretKeyToForNetwork(network_id = null, network_token = null) {
     return new Promise(async (resolve, reject) => {
-         if(!network_id && !network_token) {
-             return reject("Network id or token required");
-         }
+        if (!network_id && !network_token) {
+            return reject('Network id or token required');
+        }
 
         try {
             let conn = await dbService.conn();
 
-            if(!network_id) {
+            if (!network_id) {
                 let networksLookup = await getNetworksLookup();
                 let network = networksLookup.byToken[network_token];
 
-                if(!network) {
+                if (!network) {
                     return resolve(null);
                 }
 
@@ -1335,7 +1345,7 @@ function getSecretKeyToForNetwork(network_id = null, network_token = null) {
                 .first();
 
             return resolve(secret_key_to_qry?.secret_key_to || null);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return reject();
         }
@@ -1379,8 +1389,8 @@ module.exports = {
     cache: {
         self: {
             backend: null,
-            frontend: null
-        }
+            frontend: null,
+        },
     },
     init,
     homeDomains,
@@ -1398,5 +1408,5 @@ module.exports = {
     keysExchangeEncrypt,
     keysExchangeDecrypt,
     keysExchangeSave,
-    getSecretKeyToForNetwork
+    getSecretKeyToForNetwork,
 };

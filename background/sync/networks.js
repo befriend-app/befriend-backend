@@ -16,7 +16,7 @@ const { homeDomains, cols, getNetworkSelf } = require('../../services/network');
 const { deleteKeys } = require('../../services/cache');
 
 function main() {
-    console.log("Sync: networks");
+    console.log('Sync: networks');
 
     loadScriptEnv();
 
@@ -234,8 +234,8 @@ function main() {
 }
 
 module.exports = {
-    main
-}
+    main,
+};
 
 if (require.main === module) {
     (async function () {

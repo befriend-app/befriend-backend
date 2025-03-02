@@ -3,8 +3,16 @@ const axios = require('axios');
 const cacheService = require('../../services/cache');
 const dbService = require('../../services/db');
 
-const { getNetworkSelf, getNetworksLookup, getSecretKeyToForNetwork } = require('../../services/network');
-const { keys: systemKeys, getNetworkSyncProcess, setNetworkSyncProcess } = require('../../services/system');
+const {
+    getNetworkSelf,
+    getNetworksLookup,
+    getSecretKeyToForNetwork,
+} = require('../../services/network');
+const {
+    keys: systemKeys,
+    getNetworkSyncProcess,
+    setNetworkSyncProcess,
+} = require('../../services/system');
 const { batchInsert, batchUpdate } = require('../../services/db');
 
 const {
@@ -24,7 +32,6 @@ let filterMapLookup = {};
 
 let debug_sync_enabled = require('../../dev/debug').sync.filters;
 
-
 function main() {
     loadScriptEnv();
 
@@ -33,7 +40,7 @@ function main() {
             await cacheService.init();
 
             await syncFilters();
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
 
@@ -42,7 +49,7 @@ function main() {
 }
 
 function syncFilters() {
-    console.log("Sync: filters");
+    console.log('Sync: filters');
 
     let sync_name = systemKeys.sync.network.persons_filters;
 
@@ -51,7 +58,7 @@ function syncFilters() {
 
         try {
             network_self = await getNetworkSelf();
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         }
 
@@ -81,14 +88,14 @@ function syncFilters() {
                     let updated_persons = {
                         filters: {},
                         availability: {},
-                        networks: {}
+                        networks: {},
                     };
 
                     let skipSaveTimestamps = false;
 
                     let timestamps = {
                         current: timeNow(),
-                        last: null
+                        last: null,
                     };
 
                     let sync_qry = await getNetworkSyncProcess(sync_name, network.network_id);
@@ -106,7 +113,7 @@ function syncFilters() {
                     }
 
                     const axiosInstance = axios.create({
-                        timeout: defaultTimeout
+                        timeout: defaultTimeout,
                     });
 
                     let response = await axiosInstance.get(sync_url, {
@@ -115,16 +122,20 @@ function syncFilters() {
                             network_token: network_self.network_token,
                             data_since: timestamps.last,
                             request_sent: timeNow(),
-                        }
+                        },
                     });
 
                     if (response.status !== 202) {
                         continue;
                     }
 
-                    let success = await processFilters(network.id, response.data.filters, updated_persons);
+                    let success = await processFilters(
+                        network.id,
+                        response.data.filters,
+                        updated_persons,
+                    );
 
-                    if(!success) {
+                    if (!success) {
                         skipSaveTimestamps = true;
                     }
 
@@ -137,16 +148,20 @@ function syncFilters() {
                                     pagination_updated: response.data.pagination_updated,
                                     prev_data_since: response.data.prev_data_since,
                                     request_sent: timeNow(),
-                                }
+                                },
                             });
 
                             if (response.status !== 202) {
                                 break;
                             }
 
-                            let success = await processFilters(network.id, response.data.filters, updated_persons);
+                            let success = await processFilters(
+                                network.id,
+                                response.data.filters,
+                                updated_persons,
+                            );
 
-                            if(!success) {
+                            if (!success) {
                                 skipSaveTimestamps = true;
                             }
                         } catch (e) {
@@ -160,15 +175,15 @@ function syncFilters() {
                     await updateCacheMain(updated_persons.filters);
 
                     //merge availability/networks for cache
-                    for(let person_token in updated_persons.filters) {
-                        for(let filter of ['availability', 'networks']) {
-                            if(person_token in updated_persons[filter]) {
+                    for (let person_token in updated_persons.filters) {
+                        for (let filter of ['availability', 'networks']) {
+                            if (person_token in updated_persons[filter]) {
                                 continue;
                             }
 
                             let person = updated_persons.filters[person_token];
 
-                            if(filter in person.filters) {
+                            if (filter in person.filters) {
                                 updated_persons[filter][person_token] = person.person_id;
                             }
                         }
@@ -186,14 +201,14 @@ function syncFilters() {
                             network_id: network.id,
                             last_updated: timestamps.current,
                             created: sync_qry ? sync_qry.created : timeNow(),
-                            updated: timeNow()
+                            updated: timeNow(),
                         };
 
                         await setNetworkSyncProcess(sync_name, network.network_id, sync_update);
                     }
 
                     console.log({
-                        process_time: timeNow() - t
+                        process_time: timeNow() - t,
                     });
                 } catch (e) {
                     console.error(e);
@@ -211,15 +226,15 @@ function processFilters(network_id, persons_filters, updated_persons) {
         let hasInvalidPersons = false;
 
         try {
-            for(let k in persons_filters) {
+            for (let k in persons_filters) {
                 let persons = persons_filters[k];
 
-                if(Object.keys(persons).length) {
+                if (Object.keys(persons).length) {
                     hasPersons = true;
                 }
             }
 
-            if(!hasPersons) {
+            if (!hasPersons) {
                 return resolve(true);
             }
 
@@ -243,7 +258,7 @@ function processFilters(network_id, persons_filters, updated_persons) {
 
             let validPersonsLookup = {};
 
-            for(let vnp of validNetworkPersons) {
+            for (let vnp of validNetworkPersons) {
                 validPersonsLookup[vnp.person_token] = true;
             }
 
@@ -258,7 +273,7 @@ function processFilters(network_id, persons_filters, updated_persons) {
                     } else {
                         hasInvalidPersons = true;
 
-                        if(!invalidPersons[person_token]) {
+                        if (!invalidPersons[person_token]) {
                             invalidPersons[person_token] = [];
                         }
 
@@ -292,12 +307,12 @@ function processFilters(network_id, persons_filters, updated_persons) {
 function processMain(persons, updated_persons_filters) {
     return new Promise(async (resolve, reject) => {
         try {
-            if(!persons || !Object.keys(persons).length) {
+            if (!persons || !Object.keys(persons).length) {
                 return resolve();
             }
 
-            if(persons.length > 50000) {
-                console.error("Response too large, check network data");
+            if (persons.length > 50000) {
+                console.error('Response too large, check network data');
                 return resolve();
             }
 
@@ -315,13 +330,13 @@ function processMain(persons, updated_persons_filters) {
 
             let filtersLookup = await getFilters();
 
-            for(let person_token in persons) {
+            for (let person_token in persons) {
                 let person = persons[person_token];
 
-                for(let token in person) {
+                for (let token in person) {
                     let item = person[token];
 
-                    if(!item.token) {
+                    if (!item.token) {
                         continue;
                     }
 
@@ -331,42 +346,48 @@ function processMain(persons, updated_persons_filters) {
 
                     let filterMapping = getMappingInfo(item.filter_token);
 
-                    if(!filterMapping) {
-                        console.warn("Filter not found");
+                    if (!filterMapping) {
+                        console.warn('Filter not found');
                         continue;
                     }
 
-                    if(!(schemaItemsLookup[item.filter_token])) {
+                    if (!schemaItemsLookup[item.filter_token]) {
                         schemaItemsLookup[item.filter_token] = {
                             byId: {},
-                            byToken: {}
+                            byToken: {},
                         };
 
                         duplicateTracker[item.filter_token] = {};
 
-                        if(filterMapping.cache) {
+                        if (filterMapping.cache) {
                             lookup_pipelines[item.filter_token] = cacheService.startPipeline();
                         } else {
                             lookup_db[item.filter_token] = {};
                         }
                     }
 
-                    if(!item_token) {
+                    if (!item_token) {
                         continue;
                     }
 
-                    if(item_token in duplicateTracker[item.filter_token]) {
+                    if (item_token in duplicateTracker[item.filter_token]) {
                         continue;
                     }
 
                     duplicateTracker[item.filter_token][item_token] = true;
 
                     //split data lookup between cache/db for large/small data sets
-                    if(filterMapping.cache) {
-                        if(filterMapping.cache.type === 'hash') {
-                            lookup_pipelines[item.filter_token].hGet(filterMapping.cache.key, item_token);
-                        } else if(filterMapping.cache.type === 'hash_token') {
-                            lookup_pipelines[item.filter_token].hGet(filterMapping.cache.key(item.hash_token), item_token);
+                    if (filterMapping.cache) {
+                        if (filterMapping.cache.type === 'hash') {
+                            lookup_pipelines[item.filter_token].hGet(
+                                filterMapping.cache.key,
+                                item_token,
+                            );
+                        } else if (filterMapping.cache.type === 'hash_token') {
+                            lookup_pipelines[item.filter_token].hGet(
+                                filterMapping.cache.key(item.hash_token),
+                                item_token,
+                            );
                         }
                     } else {
                         lookup_db[item.filter_token][item_token] = true;
@@ -374,26 +395,26 @@ function processMain(persons, updated_persons_filters) {
                 }
             }
 
-            for(let section in lookup_pipelines) {
+            for (let section in lookup_pipelines) {
                 try {
                     let results = await cacheService.execPipeline(lookup_pipelines[section]);
 
-                    for(let result of results) {
+                    for (let result of results) {
                         result = JSON.parse(result);
                         schemaItemsLookup[section].byId[result.id] = result;
                         schemaItemsLookup[section].byToken[result.token] = result;
                     }
-                } catch(e) {
+                } catch (e) {
                     console.error(e);
                 }
             }
 
             //get remaining lookup data
-            for(let filter in lookup_db) {
+            for (let filter in lookup_db) {
                 let tokens = Object.keys(lookup_db[filter]);
                 let filterMapping = getMappingInfo(filter);
 
-                if(!tokens.length || !filterMapping?.table) {
+                if (!tokens.length || !filterMapping?.table) {
                     continue;
                 }
 
@@ -401,9 +422,9 @@ function processMain(persons, updated_persons_filters) {
 
                 let options = await conn(filterMapping.table)
                     .whereIn(`${col_token}`, tokens)
-                    .select('*', `${col_token} AS token`)
+                    .select('*', `${col_token} AS token`);
 
-                for(let option of options) {
+                for (let option of options) {
                     schemaItemsLookup[filter].byId[option.id] = option;
                     schemaItemsLookup[filter].byToken[option.token] = option;
                 }
@@ -430,15 +451,15 @@ function processMain(persons, updated_persons_filters) {
 
             let existingDataLookup = {};
 
-            for(let item of existingData) {
+            for (let item of existingData) {
                 let person_token = personsIdTokenMap[item.person_id];
 
-                if(!person_token) {
-                    console.warn("No person token");
+                if (!person_token) {
+                    console.warn('No person token');
                     continue;
                 }
 
-                if(!existingDataLookup[person_token]) {
+                if (!existingDataLookup[person_token]) {
                     existingDataLookup[person_token] = {};
                 }
 
@@ -453,7 +474,7 @@ function processMain(persons, updated_persons_filters) {
                     continue;
                 }
 
-                for(let token in filters) {
+                for (let token in filters) {
                     let item = filters[token];
 
                     let filter = filtersLookup.byToken[item.filter_token];
@@ -470,7 +491,7 @@ function processMain(persons, updated_persons_filters) {
                         let lookupTable = schemaItemsLookup[item.filter_token];
 
                         if (!lookupTable || !lookupTable.byToken[item.item_token]) {
-                            console.warn("No schema item found for token:", item.item_token);
+                            console.warn('No schema item found for token:', item.item_token);
                             continue;
                         }
 
@@ -489,14 +510,24 @@ function processMain(persons, updated_persons_filters) {
                         is_active: item.is_active,
                         is_negative: item.is_negative || false,
                         is_any: item.is_any || false,
-                        filter_value: typeof item.filter_value !== 'undefined' ? item.filter_value : null,
-                        filter_value_min: typeof item.filter_value_min !== 'undefined' ? item.filter_value_min : null,
-                        filter_value_max: typeof item.filter_value_max !== 'undefined' ? item.filter_value_max : null,
+                        filter_value:
+                            typeof item.filter_value !== 'undefined' ? item.filter_value : null,
+                        filter_value_min:
+                            typeof item.filter_value_min !== 'undefined'
+                                ? item.filter_value_min
+                                : null,
+                        filter_value_max:
+                            typeof item.filter_value_max !== 'undefined'
+                                ? item.filter_value_max
+                                : null,
                         importance: typeof item.importance !== 'undefined' ? item.importance : null,
-                        secondary_level: typeof item.secondary_level !== 'undefined' ? item.secondary_level : null,
+                        secondary_level:
+                            typeof item.secondary_level !== 'undefined'
+                                ? item.secondary_level
+                                : null,
                         hash_token: typeof item.hash_token !== 'undefined' ? item.hash_token : null,
                         updated: item.updated,
-                        deleted: item.deleted || null
+                        deleted: item.deleted || null,
                     };
 
                     if (item_id) {
@@ -506,12 +537,12 @@ function processMain(persons, updated_persons_filters) {
                     if (existingItem) {
                         if (item.updated > existingItem.updated || debug_sync_enabled) {
                             //include all cols on table for batch update
-                            for(let col in schema) {
-                                if(['created'].includes(col)) {
+                            for (let col in schema) {
+                                if (['created'].includes(col)) {
                                     continue;
                                 }
 
-                                if(!(col in entry)) {
+                                if (!(col in entry)) {
                                     entry[col] = schema[col].defaultValue;
                                 }
                             }
@@ -521,23 +552,24 @@ function processMain(persons, updated_persons_filters) {
 
                             existingDataLookup[person_token][item.token] = entry;
 
-                            if(!(person_token in updated_persons_filters)) {
+                            if (!(person_token in updated_persons_filters)) {
                                 updated_persons_filters[person_token] = {
                                     person_id: entry.person_id,
-                                    filters: {}
+                                    filters: {},
                                 };
                             }
 
-                            updated_persons_filters[person_token].filters[filterMapping.token] = true;
+                            updated_persons_filters[person_token].filters[filterMapping.token] =
+                                true;
                         }
                     } else {
                         entry.created = timeNow();
                         batch_insert.push(entry);
 
-                        if(!(person_token in updated_persons_filters)) {
+                        if (!(person_token in updated_persons_filters)) {
                             updated_persons_filters[person_token] = {
                                 person_id: entry.person_id,
-                                filters: {}
+                                filters: {},
                             };
                         }
 
@@ -546,13 +578,13 @@ function processMain(persons, updated_persons_filters) {
                 }
             }
 
-            if(batch_insert.length) {
+            if (batch_insert.length) {
                 await batchInsert('persons_filters', batch_insert, true);
 
-                for(let item of batch_insert) {
+                for (let item of batch_insert) {
                     let person_token = personsIdTokenMap[item.person_id];
 
-                    if(!existingDataLookup[person_token]) {
+                    if (!existingDataLookup[person_token]) {
                         existingDataLookup[person_token] = {};
                     }
 
@@ -560,10 +592,10 @@ function processMain(persons, updated_persons_filters) {
                 }
             }
 
-            if(batch_update.length) {
+            if (batch_update.length) {
                 await batchUpdate('persons_filters', batch_update);
             }
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return reject(e);
         }
@@ -575,12 +607,12 @@ function processMain(persons, updated_persons_filters) {
 function processAvailability(persons, updated_persons_availability) {
     return new Promise(async (resolve, reject) => {
         try {
-            if(!persons || !Object.keys(persons).length) {
+            if (!persons || !Object.keys(persons).length) {
                 return resolve();
             }
 
-            if(persons.length > 50000) {
-                console.error("Response too large, check network data");
+            if (persons.length > 50000) {
+                console.error('Response too large, check network data');
                 return resolve();
             }
 
@@ -655,7 +687,7 @@ function processAvailability(persons, updated_persons_availability) {
                         is_any_time: item.is_any_time,
                         is_active: item.is_active,
                         updated: item.updated,
-                        deleted: item.deleted || null
+                        deleted: item.deleted || null,
                     };
 
                     if (existingItem) {
@@ -700,12 +732,12 @@ function processAvailability(persons, updated_persons_availability) {
 function processNetworks(persons, updated_persons_networks) {
     return new Promise(async (resolve, reject) => {
         try {
-            if(!persons || !Object.keys(persons).length) {
+            if (!persons || !Object.keys(persons).length) {
                 return resolve();
             }
 
-            if(persons.length > 50000) {
-                console.error("Response too large, check network data");
+            if (persons.length > 50000) {
+                console.error('Response too large, check network data');
                 return resolve();
             }
 
@@ -717,8 +749,8 @@ function processNetworks(persons, updated_persons_networks) {
 
             let processTokens = {};
 
-            for(let person_token in persons) {
-                for(let token in persons[person_token]) {
+            for (let person_token in persons) {
+                for (let token in persons[person_token]) {
                     processTokens[token] = true;
                 }
             }
@@ -736,40 +768,42 @@ function processNetworks(persons, updated_persons_networks) {
             let personsLookup = {};
             let personsIdTokenMap = {};
 
-            for(let person of existingPersons) {
+            for (let person of existingPersons) {
                 personsLookup[person.person_token] = person;
                 personsIdTokenMap[person.id] = person.person_token;
             }
 
             let existingDataLookup = {};
 
-            for(let item of existingData) {
+            for (let item of existingData) {
                 let person_token = personsIdTokenMap[item.person_id];
 
-                if(!person_token) {
+                if (!person_token) {
                     continue;
                 }
 
-                if(!existingDataLookup[person_token]) {
+                if (!existingDataLookup[person_token]) {
                     existingDataLookup[person_token] = {};
                 }
 
                 existingDataLookup[person_token][item.token] = item;
             }
 
-            for(let person_token in persons) {
+            for (let person_token in persons) {
                 let networkData = persons[person_token];
                 let existingPerson = personsLookup[person_token];
 
-                if(!existingPerson) {
+                if (!existingPerson) {
                     continue;
                 }
 
-                for(let token in networkData) {
+                for (let token in networkData) {
                     let item = networkData[token];
                     let existingItem = existingDataLookup[person_token]?.[item.token];
 
-                    let network_id = item.network_token ? networksLookup.byToken[item.network_token] : null;
+                    let network_id = item.network_token
+                        ? networksLookup.byToken[item.network_token]
+                        : null;
 
                     let entry = {
                         token: item.token,
@@ -779,11 +813,11 @@ function processNetworks(persons, updated_persons_networks) {
                         is_any_network: item.is_any_network || false,
                         is_active: item.is_active,
                         updated: item.updated,
-                        deleted: item.deleted || null
+                        deleted: item.deleted || null,
                     };
 
-                    if(existingItem) {
-                        if(item.updated > existingItem.updated || debug_sync_enabled) {
+                    if (existingItem) {
+                        if (item.updated > existingItem.updated || debug_sync_enabled) {
                             entry.id = existingItem.id;
                             batch_update.push(entry);
                             existingDataLookup[person_token][item.token] = entry;
@@ -794,7 +828,7 @@ function processNetworks(persons, updated_persons_networks) {
                         entry.created = timeNow();
                         batch_insert.push(entry);
 
-                        if(!existingDataLookup[person_token]) {
+                        if (!existingDataLookup[person_token]) {
                             existingDataLookup[person_token] = {};
                         }
 
@@ -805,15 +839,14 @@ function processNetworks(persons, updated_persons_networks) {
                 }
             }
 
-            if(batch_insert.length) {
+            if (batch_insert.length) {
                 await batchInsert('persons_filters_networks', batch_insert, true);
             }
 
-            if(batch_update.length) {
+            if (batch_update.length) {
                 await batchUpdate('persons_filters_networks', batch_update);
             }
-
-        } catch(e) {
+        } catch (e) {
             console.error('Error in processNetworks:', e);
             return reject(e);
         }
@@ -826,14 +859,14 @@ function updateCacheMain(persons) {
     function getParentItem(person, parent_key) {
         let section = person[parent_key];
 
-        if(!section) {
+        if (!section) {
             return null;
         }
 
-        for(let k in section) {
+        for (let k in section) {
             let item = section[k];
 
-            if(item.is_parent) {
+            if (item.is_parent) {
                 return item;
             }
         }
@@ -843,11 +876,11 @@ function updateCacheMain(persons) {
 
     return new Promise(async (resolve, reject) => {
         try {
-            if(!Object.keys(persons).length) {
+            if (!Object.keys(persons).length) {
                 return resolve();
             }
 
-            console.log("Update cache: filters");
+            console.log('Update cache: filters');
 
             let conn = await dbService.conn();
 
@@ -857,23 +890,25 @@ function updateCacheMain(persons) {
             let persons_ids = {};
             let personsIdTokenMap = {};
 
-            for(let person_token in persons) {
+            for (let person_token in persons) {
                 let p = persons[person_token];
 
                 persons_ids[p.person_id] = true;
                 personsIdTokenMap[p.person_id] = person_token;
             }
 
-            let filters_data = await conn('persons_filters')
-                .whereIn('person_id', Object.keys(persons_ids));
+            let filters_data = await conn('persons_filters').whereIn(
+                'person_id',
+                Object.keys(persons_ids),
+            );
 
             let organized_filters = {};
             let organized_update = {};
 
-            for(let row of filters_data) {
+            for (let row of filters_data) {
                 let person_token = personsIdTokenMap[row.person_id];
 
-                if(!organized_filters[person_token]) {
+                if (!organized_filters[person_token]) {
                     organized_filters[person_token] = {};
                 }
 
@@ -881,37 +916,39 @@ function updateCacheMain(persons) {
 
                 let filterMap = getFilterMapByToken(filter.token);
 
-                if(!filterMap) {
-                    console.warn("Missing filter map");
+                if (!filterMap) {
+                    console.warn('Missing filter map');
                     continue;
                 }
 
-                if(!organized_filters[person_token][filter.token]) {
+                if (!organized_filters[person_token][filter.token]) {
                     organized_filters[person_token][filter.token] = {};
                 }
 
                 organized_filters[person_token][filter.token][row.token] = row;
             }
 
-            for(let person_token in persons) {
+            for (let person_token in persons) {
                 let person = persons[person_token];
 
                 organized_update[person_token] = {};
 
-                for(let filter_token in person.filters) {
+                for (let filter_token in person.filters) {
                     //merge data from related tokens (i.e. movies and movie genres)
                     let sibling_tokens = getSiblingTokens(filter_token);
 
-                    if(organized_filters[person_token]?.[filter_token]) {
-                        organized_update[person_token][filter_token] = organized_filters[person_token][filter_token];
+                    if (organized_filters[person_token]?.[filter_token]) {
+                        organized_update[person_token][filter_token] =
+                            organized_filters[person_token][filter_token];
                     } else {
-                        console.warn("Person filter missing in existing data");
+                        console.warn('Person filter missing in existing data');
                     }
 
-                    for(let sibling_token of sibling_tokens) {
-                        if(organized_filters[person_token]?.[sibling_token]) {
-                            if(!organized_update[person_token][sibling_token]) {
-                                organized_update[person_token][sibling_token] = organized_filters[person_token][sibling_token];
+                    for (let sibling_token of sibling_tokens) {
+                        if (organized_filters[person_token]?.[sibling_token]) {
+                            if (!organized_update[person_token][sibling_token]) {
+                                organized_update[person_token][sibling_token] =
+                                    organized_filters[person_token][sibling_token];
                             }
                         }
                     }
@@ -922,32 +959,32 @@ function updateCacheMain(persons) {
             let itemsLookup = {};
             let dbLookup = {};
 
-            for(let person_token in organized_update) {
+            for (let person_token in organized_update) {
                 let filters = organized_update[person_token];
 
-                for(let filter_token in filters) {
+                for (let filter_token in filters) {
                     let rows = filters[filter_token];
 
-                    for(let token in rows) {
+                    for (let token in rows) {
                         let item = rows[token];
 
                         let filterMapping = getMappingInfo(filter_token);
 
-                        if(!filterMapping) {
-                            console.warn("Filter not found");
+                        if (!filterMapping) {
+                            console.warn('Filter not found');
                             continue;
                         }
 
                         let item_id = item[filterMapping.column];
 
-                        if(!item_id) {
+                        if (!item_id) {
                             continue;
                         }
 
-                        if(!(itemsLookup[filter_token])) {
+                        if (!itemsLookup[filter_token]) {
                             itemsLookup[filter_token] = {
                                 byId: {},
-                                byToken: {}
+                                byToken: {},
                             };
 
                             dbLookup[filter_token] = {};
@@ -958,20 +995,20 @@ function updateCacheMain(persons) {
                 }
             }
 
-            for(let filter_token in dbLookup) {
+            for (let filter_token in dbLookup) {
                 let filterMapping = getMappingInfo(filter_token);
 
-                if(filterMapping.table) {
+                if (filterMapping.table) {
                     try {
                         let cols = ['id'];
 
-                        if(filterMapping.column_token) {
+                        if (filterMapping.column_token) {
                             cols.push(`${filterMapping.column_token} AS token`);
                         } else {
                             cols.push('token');
                         }
 
-                        if(filterMapping.column_name) {
+                        if (filterMapping.column_name) {
                             cols.push(`${filterMapping.column_name} AS name`);
                         } else {
                             cols.push('name');
@@ -981,11 +1018,11 @@ function updateCacheMain(persons) {
                             .whereIn('id', Object.keys(dbLookup[filter_token]))
                             .select(cols);
 
-                        for(let item of data) {
+                        for (let item of data) {
                             itemsLookup[filter_token].byId[item.id] = item;
                             itemsLookup[filter_token].byToken[item.token] = item;
                         }
-                    } catch(e) {
+                    } catch (e) {
                         console.error(e);
                     }
                 }
@@ -995,21 +1032,21 @@ function updateCacheMain(persons) {
             let persons_parent_tracker = {};
 
             // 1st loop - parent
-            for(let person_token in organized_update) {
-                if(!persons_cache[person_token]) {
+            for (let person_token in organized_update) {
+                if (!persons_cache[person_token]) {
                     persons_cache[person_token] = {};
                 }
 
-                if(!persons_parent_tracker[person_token]) {
+                if (!persons_parent_tracker[person_token]) {
                     persons_parent_tracker[person_token] = {};
                 }
 
                 let filters = organized_update[person_token];
 
-                for(let filter_token in filters) {
+                for (let filter_token in filters) {
                     let rows = filters[filter_token];
 
-                    for(let token in rows) {
+                    for (let token in rows) {
                         let item = rows[token];
                         let parent_item = item;
 
@@ -1017,11 +1054,14 @@ function updateCacheMain(persons) {
                         let filterInfo = getMappingInfo(filter.token);
                         let filter_key = filterInfo?.parent_cache || filter.token;
 
-                        if(filterInfo?.parent_cache && filterInfo.parent_cache !== filter.token) {
-                            parent_item = getParentItem(organized_update[person_token], filterInfo.parent_cache);
+                        if (filterInfo?.parent_cache && filterInfo.parent_cache !== filter.token) {
+                            parent_item = getParentItem(
+                                organized_update[person_token],
+                                filterInfo.parent_cache,
+                            );
                         }
 
-                        if(parent_item.is_parent) {
+                        if (parent_item.is_parent) {
                             persons_parent_tracker[person_token][filter_key] = true;
 
                             persons_cache[person_token][filter_key] = {
@@ -1034,7 +1074,7 @@ function updateCacheMain(persons) {
                                 filter_value_min: parent_item.filter_value_min,
                                 filter_value_max: parent_item.filter_value_max,
                                 updated: parent_item.updated,
-                                items: {}
+                                items: {},
                             };
                         }
                     }
@@ -1042,13 +1082,13 @@ function updateCacheMain(persons) {
             }
 
             //2nd loop - parent check
-            for(let person_token in organized_update) {
+            for (let person_token in organized_update) {
                 let filters = organized_update[person_token];
 
-                for(let filter_token in filters) {
+                for (let filter_token in filters) {
                     let rows = filters[filter_token];
 
-                    for(let token in rows) {
+                    for (let token in rows) {
                         let item = rows[token];
 
                         let filter = filtersLookup.byId[item.filter_id];
@@ -1057,14 +1097,14 @@ function updateCacheMain(persons) {
                         let filter_key = filterInfo?.parent_cache || filter.token;
 
                         //missing parent setup
-                        if(!persons_parent_tracker[person_token]?.[filter_key]) {
+                        if (!persons_parent_tracker[person_token]?.[filter_key]) {
                             persons_cache[person_token][filter_key] = {
                                 id: item.id,
                                 is_active: 1,
                                 is_send: 1,
                                 is_receive: 1,
                                 updated: item.updated,
-                                items: {}
+                                items: {},
                             };
                         }
                     }
@@ -1072,13 +1112,13 @@ function updateCacheMain(persons) {
             }
 
             //3rd loop - items
-            for(let person_token in organized_update) {
+            for (let person_token in organized_update) {
                 let filters = organized_update[person_token];
 
-                for(let filter_token in filters) {
+                for (let filter_token in filters) {
                     let rows = filters[filter_token];
 
-                    for(let token in rows) {
+                    for (let token in rows) {
                         let item = rows[token];
 
                         let filter = filtersLookup.byId[item.filter_id];
@@ -1086,46 +1126,47 @@ function updateCacheMain(persons) {
 
                         let filter_key = filterInfo?.parent_cache || filter.token;
 
-                        if(!item.is_parent) {
+                        if (!item.is_parent) {
                             let items = persons_cache[person_token][filter_key].items;
 
                             let item_extra = {};
 
                             let filter_map = getFilterMapByItem(item);
 
-                            if(filter_map) {
+                            if (filter_map) {
                                 let item_data;
 
                                 try {
-                                    item_data = itemsLookup[filter_map.token].byId[item[filter_map.column]];
-                                } catch(e) {
+                                    item_data =
+                                        itemsLookup[filter_map.token].byId[item[filter_map.column]];
+                                } catch (e) {
                                     console.error(e);
                                     continue;
                                 }
 
-                                if(item_data) {
+                                if (item_data) {
                                     item_extra = {
                                         token: item_data.token,
                                         name: item_data.name,
-                                        [filter_map.column]: item[filter_map.column]
-                                    }
+                                        [filter_map.column]: item[filter_map.column],
+                                    };
 
-                                    if(filter_map.table_key) {
+                                    if (filter_map.table_key) {
                                         item_extra.table_key = filter_map.table_key;
                                     }
                                 }
                             }
 
-                            if(item.activity_type_id) {
+                            if (item.activity_type_id) {
                                 item_extra.activity_type_id = item.activity_type_id;
                             }
 
-                            if(filter.token === 'modes') {
+                            if (filter.token === 'modes') {
                                 item_extra.mode_token = item_extra.token;
                                 delete item_extra.token;
                             }
 
-                            if(filter.token === 'genders') {
+                            if (filter.token === 'genders') {
                                 item_extra.gender_token = item_extra.token;
                                 delete item_extra.token;
                             }
@@ -1135,11 +1176,13 @@ function updateCacheMain(persons) {
                                 is_active: item.is_active ? 1 : 0,
                                 is_negative: item.is_negative ? 1 : 0,
                                 importance: item.importance,
-                                secondary: item.secondary_level ? JSON.parse(item.secondary_level) : null,
+                                secondary: item.secondary_level
+                                    ? JSON.parse(item.secondary_level)
+                                    : null,
                                 updated: item.updated,
                                 deleted: item.deleted,
-                                ...item_extra
-                            }
+                                ...item_extra,
+                            };
                         }
                     }
                 }
@@ -1147,26 +1190,30 @@ function updateCacheMain(persons) {
 
             let pipeline = cacheService.startPipeline();
 
-            for(let person_token in persons_cache) {
+            for (let person_token in persons_cache) {
                 let person = persons_cache[person_token];
 
-                for(let filter_token in person) {
+                for (let filter_token in person) {
                     //skip availability as it's handled afterwards
-                    if(filter_token === 'availability') {
+                    if (filter_token === 'availability') {
                         continue;
                     }
 
                     let filter = person[filter_token];
-                    pipeline.hSet(cacheService.keys.person_filters(person_token), filter_token, JSON.stringify(filter));
+                    pipeline.hSet(
+                        cacheService.keys.person_filters(person_token),
+                        filter_token,
+                        JSON.stringify(filter),
+                    );
                 }
             }
 
             try {
                 await cacheService.execPipeline(pipeline);
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
             }
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return reject(e);
         }
@@ -1182,7 +1229,7 @@ function updateCacheAvailability(persons) {
                 return resolve();
             }
 
-            console.log("Update cache: availability");
+            console.log('Update cache: availability');
 
             let conn = await dbService.conn();
 
@@ -1219,7 +1266,7 @@ function updateCacheAvailability(persons) {
                         is_send: row.is_send ? 1 : 0,
                         is_receive: row.is_receive ? 1 : 0,
                         updated: row.updated,
-                        items: {}
+                        items: {},
                     };
                 }
             }
@@ -1233,7 +1280,7 @@ function updateCacheAvailability(persons) {
                         is_send: true,
                         is_receive: true,
                         updated: timeNow(),
-                        items: {}
+                        items: {},
                     };
                 }
 
@@ -1246,7 +1293,7 @@ function updateCacheAvailability(persons) {
                 pipeline.hSet(
                     cacheService.keys.person_filters(person_token),
                     'availability',
-                    JSON.stringify(organized_data[person_token])
+                    JSON.stringify(organized_data[person_token]),
                 );
             }
 
@@ -1271,7 +1318,7 @@ function updateCacheNetworks(persons) {
                 return resolve();
             }
 
-            console.log("Update cache: networks");
+            console.log('Update cache: networks');
 
             let conn = await dbService.conn();
 
@@ -1308,7 +1355,7 @@ function updateCacheNetworks(persons) {
                         is_send: row.is_send ? 1 : 0,
                         is_receive: row.is_receive ? 1 : 0,
                         updated: row.updated,
-                        items: {}
+                        items: {},
                     };
                 }
             }
@@ -1322,7 +1369,7 @@ function updateCacheNetworks(persons) {
                         is_send: true,
                         is_receive: true,
                         updated: timeNow(),
-                        items: {}
+                        items: {},
                     };
                 }
 
@@ -1335,17 +1382,16 @@ function updateCacheNetworks(persons) {
                 pipeline.hSet(
                     cacheService.keys.person_filters(person_token),
                     'networks',
-                    JSON.stringify(organized_data[person_token])
+                    JSON.stringify(organized_data[person_token]),
                 );
             }
 
             try {
                 await cacheService.execPipeline(pipeline);
-            } catch(e) {
+            } catch (e) {
                 console.error('Error updating networks cache:', e);
             }
-
-        } catch(e) {
+        } catch (e) {
             console.error('Error in updateCacheNetworks:', e);
             return reject(e);
         }
@@ -1356,26 +1402,26 @@ function updateCacheNetworks(persons) {
 function updateFilterGridSets(persons) {
     return new Promise(async (resolve, reject) => {
         try {
-            console.log("Update grid sets: filters");
+            console.log('Update grid sets: filters');
 
             //prepare grid set updates
             let personsGrid = {};
 
-            for(let person_token in persons) {
+            for (let person_token in persons) {
                 let person = persons[person_token];
 
-                for(let filter_token in person.filters) {
-                    if(filter_token === 'availability') {
+                for (let filter_token in person.filters) {
+                    if (filter_token === 'availability') {
                         continue;
                     }
 
-                    if(!personsGrid[person_token]) {
+                    if (!personsGrid[person_token]) {
                         personsGrid[person_token] = {
                             person: {
-                                person_token
+                                person_token,
                             },
-                            filter_tokens: []
-                        }
+                            filter_tokens: [],
+                        };
                     }
 
                     personsGrid[person_token].filter_tokens.push(filter_token);
@@ -1391,30 +1437,30 @@ function updateFilterGridSets(persons) {
                 pipeline.hmGet(cacheService.keys.person(person_token), [
                     'modes',
                     'networks',
-                    'gender_id'
+                    'gender_id',
                 ]);
             }
 
             try {
                 let results = await cacheService.execPipeline(pipeline);
 
-                for(let i = 0; i < results.length; i++) {
+                for (let i = 0; i < results.length; i++) {
                     let person_token = person_tokens[i];
 
                     try {
                         personsGrid[person_token].person.modes = JSON.parse(results[i][0]);
                         personsGrid[person_token].person.networks = JSON.parse(results[i][1]);
                         personsGrid[person_token].person.gender_id = JSON.parse(results[i][2]);
-                    } catch(e) {
+                    } catch (e) {
                         console.error(e);
                     }
                 }
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
             }
 
             await batchUpdateGridSets(personsGrid);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return reject(e);
         }
@@ -1430,11 +1476,11 @@ function getSiblingTokens(token) {
 
     let tokens = [];
 
-    for(let key in filterMappings) {
+    for (let key in filterMappings) {
         let map = filterMappings[key];
 
-        if(map.parent_cache === parentToken || map.token === parentToken) {
-            if(map.token !== token) {
+        if (map.parent_cache === parentToken || map.token === parentToken) {
+            if (map.token !== token) {
                 tokens.push(map.token);
             }
         }
@@ -1444,14 +1490,14 @@ function getSiblingTokens(token) {
 }
 
 function getMappingInfo(filter_token) {
-    if(filter_token in filterMapLookup) {
+    if (filter_token in filterMapLookup) {
         return filterMapLookup[filter_token];
     }
 
-    for(let k in filterMappings) {
+    for (let k in filterMappings) {
         let filterMapping = filterMappings[k];
 
-        if(filterMapping.token === filter_token) {
+        if (filterMapping.token === filter_token) {
             return filterMapping;
         }
     }
@@ -1460,24 +1506,24 @@ function getMappingInfo(filter_token) {
 }
 
 function getFilterMapByToken(filter_token) {
-    for(let f in filterMappings) {
-        if(filter_token === filterMappings[f].token) {
+    for (let f in filterMappings) {
+        if (filter_token === filterMappings[f].token) {
             return filterMappings[f];
         }
     }
 }
 
 function getFilterMapByItem(item) {
-    for(let k in item) {
-        if(['person_id', 'filter_id'].includes(k)) {
+    for (let k in item) {
+        if (['person_id', 'filter_id'].includes(k)) {
             continue;
         }
 
         let v = item[k];
 
-        if(k.endsWith('_id') && v) {
-            for(let f in filterMappings) {
-                if(k === filterMappings[f].column) {
+        if (k.endsWith('_id') && v) {
+            for (let f in filterMappings) {
+                if (k === filterMappings[f].column) {
                     return filterMappings[f];
                 }
             }
@@ -1488,8 +1534,8 @@ function getFilterMapByItem(item) {
 }
 
 module.exports = {
-    main
-}
+    main,
+};
 
 if (require.main === module) {
     (async function () {
