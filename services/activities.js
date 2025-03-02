@@ -525,6 +525,8 @@ function createActivity(person, activity) {
                     activity_insert.place = activity.place.data;
                     activity_insert.activity_type = activity.activity.data;
 
+                    activity_insert.is_reviewable = isReviewable(activity_insert);
+
                     let organized = {
                         ...person_activity_insert,
                         data: activity_insert,
