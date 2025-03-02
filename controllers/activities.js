@@ -1,8 +1,9 @@
-const activitiesService = require('../services/activities');
 const dbService = require('../services/db');
+const activitiesService = require('../services/activities');
 const matchingService = require('../services/matching');
+const reviewsService = require('../services/reviews');
 
-const { formatObjectTypes, timeNow, getIPAddr, isObject, isNumeric } = require('../services/shared');
+const { formatObjectTypes, timeNow, getIPAddr } = require('../services/shared');
 const { getPerson } = require('../services/persons');
 
 const { getModes } = require('../services/modes');
@@ -617,7 +618,7 @@ function putReviews(req, res) {
         let review = req.body.review;
 
         try {
-            let result = await activitiesService.updatePersonReview(activity_token, person_token, person_to_token, no_show, review);
+            let result = await reviewsService.setActivityReview(activity_token, person_token, person_to_token, no_show, review);
 
             res.json(result, 202);
         } catch (e) {
@@ -682,7 +683,7 @@ function putNetworkReviewActivity(req, res) {
         }
 
         try {
-            let result = await activitiesService.updatePersonReview(activity_token, person_token, person_to_token, no_show, review);
+            let result = await reviewsService.setActivityReview(activity_token, person_token, person_to_token, no_show, review);
 
             res.json(result, 202);
         } catch (e) {
