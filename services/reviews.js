@@ -393,6 +393,8 @@ function setActivityReview(activity_token, person_from_token, person_to_token, n
                 }
             }
 
+            await updatePersonRatings(personTo.id);
+
             resolve();
         } catch(e) {
             console.error(e);
@@ -401,20 +403,72 @@ function setActivityReview(activity_token, person_from_token, person_to_token, n
     });
 }
 
+function updatePersonRatings(person_id) {
+    return new Promise(async (resolve, reject) => {
+         try {
+            let conn = await dbService.conn();
+
+            let reviewsLookup = await getReviewsLookup();
+
+            let personReviewsQry = await conn('activities_persons_reviews')
+              .where('person_to_id', person_id)
+              .whereNotNull('rating')
+              .whereNull('deleted');
+
+            let reviewers = new Set();
+            let activities = {};
+
+            for(let item of personReviewsQry) {
+              reviewers.add(item.person_from_id);
+
+              if(!activities[item.activity_id]) {
+                  activities[item.activity_id] = {
+                      safety: null,
+                      trust: null,
+                      timeliness:  null,
+                      friendliness: null,
+                      fun: null
+                  };
+              }
+
+              let reviewData = reviewsLookup.byId[item.review_id];
+              activities[item.activity_id][reviewData.token] = item.rating;
+            }
+
+            let reviewersQry = await conn('persons')
+              .whereIn('id', Array.from(reviewers))
+              .select('id', 'person_token', 'reviews_count', 'rating_safety', 'rating_trust', 'rating_timeliness', 'rating_friendliness', 'rating_fun');
+
+            let reviewersLookup = {};
+
+            for (let reviewer of reviewersQry) {
+                reviewersLookup[reviewer.id] = reviewer;
+            }
+
+            resolve();
+         } catch(e) {
+             console.error(e);
+             return reject(e);
+         }
+    });
+}
+
 function isReviewable(activity) {
     let reviewThreshold = timeNow(true) - reviewPeriod;
+
     return timeNow(true) > activity.activity_end && activity.activity_end > reviewThreshold;
 }
 
 module.exports = {
-    reviewPeriod,
     filters: {
         default: 4.5,
     },
     data: null,
+    reviewPeriod,
     getReviewsLookup,
     getPersonReviews,
     getActivityReviews,
     setActivityReview,
+    updatePersonRatings,
     isReviewable
 };

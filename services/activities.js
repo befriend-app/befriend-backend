@@ -11,7 +11,7 @@ const { getPerson } = require('./persons');
 const { getGender } = require('./genders');
 const { getPlaceData } = require('./fsq');
 const axios = require('axios');
-const { getReviewsLookup, isReviewable, getActivityReviews } = require('./reviews');
+const { isReviewable, getActivityReviews } = require('./reviews');
 
 let debug_create_activity_enabled = require('../dev/debug').activities.create;
 
