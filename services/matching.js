@@ -8,8 +8,6 @@ let gridService = require('../services/grid');
 let reviewService = require('../services/reviews');
 let sectionsData = require('../services/sections_data');
 
-let { skipDebugFilter } = require('../dev/debug').matching;
-
 const {
     getPersonFilters,
     getInterestSections,
@@ -48,7 +46,10 @@ let interestScoreThresholds = {
     super: 100,
 };
 
+let { skipDebugFilter } = require('../dev/debug').matching;
 let debug_logs = require('../dev/debug').matching.logs;
+let debug_recent_notifications = require('../dev/debug').notifications.recent;
+
 
 function getMatches(me, params = {}, custom_filters = null, initial_person_tokens = []) {
     function skipFilter(filter_name) {
@@ -2472,6 +2473,10 @@ function filterMatches(person, activity, matches, on_send_new = false) {
     }
 
     function excludeRecentNotifications(personNotifications) {
+        if(debug_recent_notifications) {
+            return false;
+        }
+
         let most_recent_notification = null;
 
         for (let k in personNotifications) {
