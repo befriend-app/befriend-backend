@@ -399,9 +399,65 @@ function setActivityReview(activity_token, person_from_token, person_to_token, n
                 }
             }
 
-            let personReviews = await updatePersonRatings(personTo);
+            let returnData;
 
-            resolve(personReviews);
+            if (typeof no_show === 'boolean') {
+                returnData = await updatePersonNoShow(personTo);
+            } else {
+                returnData = await updatePersonRatings(personTo);
+            }
+
+            resolve(returnData);
+        } catch (e) {
+            console.error(e);
+            return reject(e);
+        }
+    });
+}
+
+function updatePersonNoShow(person) {
+    return new Promise(async (resolve, reject) => {
+        let percent = 0;
+
+        try {
+            let conn = await dbService.conn();
+
+            let personNoShowsQry = await conn('activities_persons_reviews')
+                .where('person_to_id', person.id)
+                .where('no_show', true)
+                .whereNull('deleted');
+
+            let personActivitiesArrivedQry = await conn('activities_persons')
+                .where('person_id', person.id)
+                .whereNotNull('arrived_at');
+
+
+            if(personNoShowsQry.length) {
+                if(personNoShowsQry.length >= personActivitiesArrivedQry.length) {
+                    percent = 100;
+                } else {
+                    percent = personNoShowsQry.length / personActivitiesArrivedQry.length;
+                }
+            }
+
+            await conn('persons')
+                .where('id', person.id)
+                .update({
+                    no_show_percent: percent,
+                    updated: timeNow()
+                });
+
+            let reviews = await cacheService.hGetItem(cacheService.keys.person(person.person_token), 'reviews');
+
+            if(!reviews) {
+                reviews = {};
+            }
+
+            reviews.noShowPercent = percent;
+
+            await cacheService.hSet(cacheService.keys.person(person.person_token), 'reviews', reviews);
+
+            resolve(reviews);
         } catch (e) {
             console.error(e);
             return reject(e);
@@ -524,7 +580,7 @@ function updatePersonRatings(person) {
                 .update({
                     ...ratings,
                     reviews_count: reviewsCount,
-                    updated: timeNow(true)
+                    updated: timeNow()
                 });
 
             let cacheRatings = {

@@ -445,6 +445,7 @@ module.exports = {
                     } else if (typeof data !== 'string') {
                         data = data.toString();
                     }
+
                     await module.exports.conn.hSet(key, field, data);
                 } else {
                     let preparedData = module.exports.prepareSetHash(data);

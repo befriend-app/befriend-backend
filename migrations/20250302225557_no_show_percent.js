@@ -4,7 +4,7 @@
  */
 exports.up = async function (knex) {
     await knex.schema.alterTable('persons', (table) => {
-        table.decimal('no_show_percent').defaultTo(0).after('rating_fun');
+        table.decimal('no_show_percent', 5, 2).defaultTo(0).after('rating_fun');
     });
 };
 

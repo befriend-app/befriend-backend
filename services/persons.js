@@ -4,6 +4,7 @@ const { timeNow } = require('../services/shared');
 const { updateGridSets } = require('../services/filters');
 const { getNetworksLookup } = require('./network');
 const { getGridById } = require('./grid');
+const { isNumeric } = require('./shared');
 
 module.exports = {
     minAge: 18,
@@ -140,11 +141,12 @@ module.exports = {
                 //add reviews
                 person.reviews = {
                     count: person.reviews_count || 0,
-                    safety: person.rating_safety,
-                    trust: person.rating_trust,
-                    timeliness: person.rating_timeliness,
-                    friendliness: person.rating_friendliness,
-                    fun: person.rating_fun,
+                    noShowPercent: isNumeric(person.no_show_percent) ? parseFloat(person.no_show_percent) : 0,
+                    safety: isNumeric(person.rating_safety) ? parseFloat(person.rating_safety) : null,
+                    trust: isNumeric(person.rating_trust) ? parseFloat(person.rating_trust) : null,
+                    timeliness: isNumeric(person.rating_timeliness) ? parseFloat(person.rating_timeliness) : null,
+                    friendliness: isNumeric(person.rating_friendliness) ? parseFloat(person.rating_friendliness) : null,
+                    fun: isNumeric(person.rating_fun) ? parseFloat(person.rating_fun) : null
                 };
 
                 await module.exports.savePerson(person.person_token, person);
