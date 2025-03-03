@@ -6,7 +6,7 @@ const dbService = require('../../../services/db');
 const {
     getNetworkSelf,
     getNetworksLookup,
-    getSecretKeyToForNetwork,
+    getSecretKeyToForNetwork, getSyncNetworks,
 } = require('../../../services/network');
 const {
     keys: systemKeys,
@@ -69,13 +69,7 @@ function syncFilters() {
         }
 
         try {
-            conn = await dbService.conn();
-
-            networks = await conn('networks')
-                .where('is_self', false)
-                .where('keys_exchanged', true)
-                .where('is_online', true)
-                .where('is_blocked', false);
+            networks = await getSyncNetworks();
         } catch (e) {
             console.error(e);
         }

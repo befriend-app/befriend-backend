@@ -208,7 +208,7 @@ function main() {
                                                 from: my_network.network_token,
                                                 to: network.network_token,
                                             },
-                                        },
+                                        }
                                     );
                                 }
                             }

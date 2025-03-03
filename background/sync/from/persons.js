@@ -12,7 +12,7 @@ const {
     timeNow,
 } = require('../../../services/shared');
 
-const { getNetworkSelf, getSecretKeyToForNetwork } = require('../../../services/network');
+const { getNetworkSelf, getSecretKeyToForNetwork, getSyncNetworks } = require('../../../services/network');
 const { deleteKeys } = require('../../../services/cache');
 const { getGendersLookup } = require('../../../services/genders');
 const {
@@ -688,7 +688,7 @@ function syncPersons() {
     let sync_name = systemKeys.sync.network.persons;
 
     return new Promise(async (resolve, reject) => {
-        let conn, networks, network_self;
+        let networks, network_self;
 
         try {
             network_self = await getNetworkSelf();
@@ -703,15 +703,9 @@ function syncPersons() {
         }
 
         try {
-            conn = await dbService.conn();
-
             //networks to sync data with
             //networks can be updated through the sync_networks background process
-            networks = await conn('networks')
-                .where('is_self', false)
-                .where('keys_exchanged', true)
-                .where('is_online', true)
-                .where('is_blocked', false);
+            networks = await getSyncNetworks();
         } catch (e) {
             console.error(e);
         }
@@ -841,13 +835,7 @@ function syncPersonsModes() {
         }
 
         try {
-            conn = await dbService.conn();
-
-            networks = await conn('networks')
-                .where('is_self', false)
-                .where('keys_exchanged', true)
-                .where('is_online', true)
-                .where('is_blocked', false);
+            networks = await getSyncNetworks();
 
             for (let network of networks) {
                 try {

@@ -4,7 +4,7 @@ const cacheService = require('../../../services/cache');
 const dbService = require('../../../services/db');
 const meService = require('../../../services/me');
 
-const { getNetworkSelf, getSecretKeyToForNetwork } = require('../../../services/network');
+const { getNetworkSelf, getSecretKeyToForNetwork, getSyncNetworks } = require('../../../services/network');
 const {
     keys: systemKeys,
     setNetworkSyncProcess,
@@ -611,7 +611,7 @@ function syncMe() {
     let sync_name = systemKeys.sync.network.persons_me;
 
     return new Promise(async (resolve, reject) => {
-        let conn, networks, network_self;
+        let networks, network_self;
 
         try {
             network_self = await getNetworkSelf();
@@ -626,13 +626,7 @@ function syncMe() {
         }
 
         try {
-            conn = await dbService.conn();
-
-            networks = await conn('networks')
-                .where('is_self', false)
-                .where('keys_exchanged', true)
-                .where('is_online', true)
-                .where('is_blocked', false);
+            networks = await getSyncNetworks();
         } catch (e) {
             console.error(e);
         }

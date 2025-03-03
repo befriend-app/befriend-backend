@@ -10,7 +10,7 @@ const {
     timeoutAwait,
 } = require('../../../services/shared');
 
-const { getNetworkSelf, getSecretKeyToForNetwork } = require('../../../services/network');
+const { getNetworkSelf, getSecretKeyToForNetwork, getSyncNetworks } = require('../../../services/network');
 const {
     keys: systemKeys,
     getNetworkSyncProcess,
@@ -44,13 +44,7 @@ function syncActivities() {
         }
 
         try {
-            let conn = await dbService.conn();
-
-            let networks = await conn('networks')
-                .where('is_self', false)
-                .where('keys_exchanged', true)
-                .where('is_online', true)
-                .where('is_blocked', false);
+            let networks = await getSyncNetworks();
 
             for (let network of networks) {
                 try {

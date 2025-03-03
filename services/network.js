@@ -530,6 +530,25 @@ function getNetworksForFilters() {
     });
 }
 
+function getSyncNetworks() {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let conn = await dbService.conn();
+
+            let networks = await conn('networks')
+                .where('is_self', false)
+                .where('keys_exchanged', true)
+                .where('is_online', true)
+                .where('is_blocked', false);
+
+            resolve(networks);
+        } catch(e) {
+            console.error(e);
+            return reject();
+        }
+    });
+}
+
 function addNetwork(body) {
     return new Promise(async (resolve, reject) => {
         let conn, network_self;
@@ -1397,10 +1416,11 @@ module.exports = {
     loadAltDomains,
     onSelfCreated,
     setSelfKnown,
+    getNetworksLookup,
     getNetwork,
     getNetworkSelf,
     getNetworksForFilters,
-    getNetworksLookup,
+    getSyncNetworks,
     addNetwork,
     exchangeKeysHomeFrom,
     exchangeKeysHomeTo,
