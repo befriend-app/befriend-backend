@@ -215,6 +215,7 @@ function syncPersons(inputs) {
                     'rating_timeliness',
                     'rating_friendliness',
                     'rating_fun',
+                    'no_show_percent',
                     'age',
                     'is_blocked',
                     'p.updated',

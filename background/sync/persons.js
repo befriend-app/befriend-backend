@@ -62,6 +62,7 @@ function processPersons(network_id, persons) {
         //reviews
         person_data.reviews = {
             count: person_data.reviews_count || 0,
+            noShowPercent: floatOrNull(person_data.no_show_percent) || 0,
             safety: floatOrNull(person_data.rating_safety),
             trust: floatOrNull(person_data.rating_trust),
             timeliness: floatOrNull(person_data.rating_timeliness),
@@ -237,6 +238,7 @@ function processPersons(network_id, persons) {
                             rating_timeliness: person.rating_timeliness,
                             rating_friendliness: person.rating_friendliness,
                             rating_fun: person.rating_fun,
+                            no_show_percent: person.no_show_percent,
                             age: person.age,
                             is_blocked: person.is_blocked,
                             updated: person.updated,
