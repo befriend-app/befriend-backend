@@ -1,18 +1,18 @@
 const axios = require('axios');
 
-const cacheService = require('../../services/cache');
-const dbService = require('../../services/db');
-const meService = require('../../services/me');
+const cacheService = require('../../../services/cache');
+const dbService = require('../../../services/db');
+const meService = require('../../../services/me');
 
-const { getNetworkSelf, getSecretKeyToForNetwork } = require('../../services/network');
+const { getNetworkSelf, getSecretKeyToForNetwork } = require('../../../services/network');
 const {
     keys: systemKeys,
     setNetworkSyncProcess,
     getNetworkSyncProcess,
-} = require('../../services/system');
-const { batchInsert, batchUpdate } = require('../../services/db');
-const { getAllSections } = require('../../services/me');
-const sectionsData = require('../../services/sections_data');
+} = require('../../../services/system');
+const { batchInsert, batchUpdate } = require('../../../services/db');
+const { getAllSections } = require('../../../services/me');
+const sectionsData = require('../../../services/sections_data');
 
 const {
     loadScriptEnv,
@@ -20,15 +20,15 @@ const {
     timeNow,
     getURL,
     joinPaths,
-} = require('../../services/shared');
-const { batchUpdateGridSets } = require('../../services/filters');
+} = require('../../../services/shared');
+const { batchUpdateGridSets } = require('../../../services/filters');
 
 let batch_process = 1000;
 let defaultTimeout = 20000;
 
 let tableLookup = {};
 
-let debug_sync_enabled = require('../../dev/debug').sync.me;
+let debug_sync_enabled = require('../../../dev/debug').sync.me;
 
 function getTableInfo(table_name) {
     if (table_name in tableLookup) {

@@ -1,18 +1,20 @@
-const cacheService = require('../../services/cache');
-const dbService = require('../../services/db');
+//in case your network was unable to communicate with a befriend domain on user creation,
+//this process ensures those persons are eventually known by the whole network
+
+const cacheService = require('../../../services/cache');
+const dbService = require('../../../services/db');
 const {
     timeNow,
     loadScriptEnv,
-    calculateAge,
     timeoutAwait,
     getURL,
-} = require('../../services/shared');
+} = require('../../../services/shared');
 const {
     getNetworkSelf,
     homeDomains,
     getNetworksLookup,
     getSecretKeyToForNetwork,
-} = require('../../services/network');
+} = require('../../../services/network');
 const axios = require('axios');
 
 loadScriptEnv();
@@ -21,9 +23,6 @@ const UPDATE_FREQUENCY = 60 * 10 * 1000; //runs every 10 minutes
 const BATCH_SIZE = 1000;
 
 let self_network;
-
-//in case 3rd party network was unable to communicate with a befriend->home domain on user creation,
-//this process ensures those persons are eventually known by the network
 
 function processUpdate() {
     return new Promise(async (resolve, reject) => {

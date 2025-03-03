@@ -2,8 +2,8 @@
 
 const axios = require('axios');
 
-const cacheService = require('../../services/cache');
-const dbService = require('../../services/db');
+const cacheService = require('../../../services/cache');
+const dbService = require('../../../services/db');
 
 const {
     getURL,
@@ -11,25 +11,25 @@ const {
     loadScriptEnv,
     timeoutAwait,
     timeNow,
-} = require('../../services/shared');
+} = require('../../../services/shared');
 
 const {
     getNetworkSelf,
     homeDomains,
     getNetworksLookup,
     getSecretKeyToForNetwork,
-} = require('../../services/network');
+} = require('../../../services/network');
 const {
     keys: systemKeys,
     getNetworkSyncProcess,
     setNetworkSyncProcess,
-} = require('../../services/system');
-const { batchInsert, batchUpdate } = require('../../services/db');
+} = require('../../../services/system');
+const { batchInsert, batchUpdate } = require('../../../services/db');
 
 let batch_process = 1000;
 let defaultTimeout = 20000;
 
-let debug_sync_enabled = require('../../dev/debug').sync.networks_persons;
+let debug_sync_enabled = require('../../../dev/debug').sync.networks_persons;
 
 function processNetworksPersons(persons_networks) {
     return new Promise(async (resolve, reject) => {

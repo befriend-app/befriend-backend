@@ -1,19 +1,19 @@
 const axios = require('axios');
 
-const cacheService = require('../../services/cache');
-const dbService = require('../../services/db');
+const cacheService = require('../../../services/cache');
+const dbService = require('../../../services/db');
 
 const {
     getNetworkSelf,
     getNetworksLookup,
     getSecretKeyToForNetwork,
-} = require('../../services/network');
+} = require('../../../services/network');
 const {
     keys: systemKeys,
     getNetworkSyncProcess,
     setNetworkSyncProcess,
-} = require('../../services/system');
-const { batchInsert, batchUpdate } = require('../../services/db');
+} = require('../../../services/system');
+const { batchInsert, batchUpdate } = require('../../../services/db');
 
 const {
     loadScriptEnv,
@@ -21,16 +21,16 @@ const {
     timeNow,
     getURL,
     joinPaths,
-} = require('../../services/shared');
+} = require('../../../services/shared');
 
-const { getFilters, filterMappings, batchUpdateGridSets } = require('../../services/filters');
+const { getFilters, filterMappings, batchUpdateGridSets } = require('../../../services/filters');
 
 let batch_process = 1000;
 let defaultTimeout = 20000;
 
 let filterMapLookup = {};
 
-let debug_sync_enabled = require('../../dev/debug').sync.filters;
+let debug_sync_enabled = require('../../../dev/debug').sync.filters;
 
 function main() {
     loadScriptEnv();

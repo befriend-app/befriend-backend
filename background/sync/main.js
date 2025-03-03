@@ -1,8 +1,8 @@
-const networksSync = require('./networks');
-const networksPersonsSync = require('./networks_persons');
-const personsSync = require('./persons');
-const meSync = require('./me');
-const filtersSync = require('./filters');
+const fromNetworks = require('./from/networks');
+const fromNetworksPersons = require('./from/networks_persons');
+const fromPersons = require('./from/persons');
+const fromMe = require('./from/me');
+const fromFilters = require('./from/filters');
 
 const { loadScriptEnv, timeoutAwait } = require('../../services/shared');
 
@@ -13,11 +13,11 @@ const runInterval = 60 * 30 * 1000; //every 30 minutes
 
     while (true) {
         try {
-            await networksSync.main();
-            await networksPersonsSync.main();
-            await personsSync.main();
-            await meSync.main();
-            await filtersSync.main();
+            await fromNetworks.main();
+            await fromNetworksPersons.main();
+            await fromPersons.main();
+            await fromMe.main();
+            await fromFilters.main();
         } catch (e) {
             console.error(e);
         }

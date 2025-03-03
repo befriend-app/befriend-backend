@@ -1,3 +1,6 @@
+//this process sets the status of an activity to fulfilled/unfulfilled,
+//allowing users to later create new activities during the same time periods
+
 const cacheService = require('../../services/cache');
 const dbService = require('../../services/db');
 const { timeNow, loadScriptEnv, timeoutAwait, getDateTimeStr } = require('../../services/shared');
@@ -12,8 +15,6 @@ const UPDATE_FREQUENCY = 10 * 60 * 1000; //runs every x minutes
 let self_network;
 
 let debug_enabled = require('../../dev/debug').process.activity_fulfilled;
-
-//this process sets the status of an activity to fulfilled/unfulfilled, allowing users to later create new activities during the same time periods
 
 function processUpdate() {
     let activitiesOrganized = {};

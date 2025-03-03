@@ -1,7 +1,7 @@
 const axios = require('axios');
 
-const cacheService = require('../../services/cache');
-const dbService = require('../../services/db');
+const cacheService = require('../../../services/cache');
+const dbService = require('../../../services/db');
 
 const {
     timeoutAwait,
@@ -10,10 +10,10 @@ const {
     getURL,
     timeNow,
     generateToken,
-} = require('../../services/shared');
+} = require('../../../services/shared');
 
-const { homeDomains, cols, getNetworkSelf } = require('../../services/network');
-const { deleteKeys } = require('../../services/cache');
+const { homeDomains, cols, getNetworkSelf } = require('../../../services/network');
+const { deleteKeys } = require('../../../services/cache');
 
 function main() {
     console.log('Sync: networks');
@@ -195,7 +195,7 @@ function main() {
 
                                     //encrypt self_network_token with befriend_secret_key for to_network
                                     //decrypt encrypted self_network_token on to_network,
-                                    // if value matches self_network_token, begin key exchange process
+                                    //if value matches self_network_token, begin key exchange process
 
                                     let r2 = await axios.post(
                                         getURL(

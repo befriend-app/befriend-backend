@@ -1,26 +1,27 @@
 const axios = require('axios');
 
-const cacheService = require('../../services/cache');
-const dbService = require('../../services/db');
+const cacheService = require('../../../services/cache');
+const dbService = require('../../../services/db');
 const {
     timeNow,
     getURL,
     joinPaths,
     loadScriptEnv,
     timeoutAwait,
-} = require('../../services/shared');
-const { getNetworkSelf, getSecretKeyToForNetwork } = require('../../services/network');
+} = require('../../../services/shared');
+
+const { getNetworkSelf, getSecretKeyToForNetwork } = require('../../../services/network');
 const {
     keys: systemKeys,
     getNetworkSyncProcess,
     setNetworkSyncProcess,
-} = require('../../services/system');
-const { batchUpdate } = require('../../services/db');
+} = require('../../../services/system');
+const { batchUpdate } = require('../../../services/db');
 
 const batch_process = 1000;
 const defaultTimeout = 20000;
 
-let debug_sync_enabled = require('../../dev/debug').sync.activities;
+let debug_sync_enabled = require('../../../dev/debug').sync.activities;
 
 let network_self;
 

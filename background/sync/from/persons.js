@@ -1,7 +1,7 @@
 const axios = require('axios');
 
-const cacheService = require('../../services/cache');
-const dbService = require('../../services/db');
+const cacheService = require('../../../services/cache');
+const dbService = require('../../../services/db');
 
 const {
     floatOrNull,
@@ -10,26 +10,26 @@ const {
     loadScriptEnv,
     timeoutAwait,
     timeNow,
-} = require('../../services/shared');
+} = require('../../../services/shared');
 
-const { getNetworkSelf, getSecretKeyToForNetwork } = require('../../services/network');
-const { deleteKeys } = require('../../services/cache');
-const { getGendersLookup } = require('../../services/genders');
+const { getNetworkSelf, getSecretKeyToForNetwork } = require('../../../services/network');
+const { deleteKeys } = require('../../../services/cache');
+const { getGendersLookup } = require('../../../services/genders');
 const {
     keys: systemKeys,
     getNetworkSyncProcess,
     setNetworkSyncProcess,
-} = require('../../services/system');
-const { getGridByToken, getGridById } = require('../../services/grid');
-const { batchInsert, batchUpdate } = require('../../services/db');
-const { getKidsAgeLookup } = require('../../services/modes');
-const { batchUpdateGridSets, filterTokensAll } = require('../../services/filters');
+} = require('../../../services/system');
+const { getGridByToken, getGridById } = require('../../../services/grid');
+const { batchInsert, batchUpdate } = require('../../../services/db');
+const { getKidsAgeLookup } = require('../../../services/modes');
+const { batchUpdateGridSets, filterTokensAll } = require('../../../services/filters');
 
 let persons_grid_filters = ['online', 'location', 'modes', 'reviews', 'verifications', 'genders'];
 let batch_process = 1000;
 let defaultTimeout = 20000;
 
-let debug_sync_enabled = require('../../dev/debug').sync.persons;
+let debug_sync_enabled = require('../../../dev/debug').sync.persons;
 
 function processPersons(network_id, persons) {
     function preparePersonCache(new_data, prev_data, params = {}) {
