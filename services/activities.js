@@ -1537,21 +1537,21 @@ function doesActivityOverlap(person_token, time, activitiesData = null) {
         let overlaps = false;
 
         try {
-            if(!time?.start || !time?.end) {
+            if (!time?.start || !time?.end) {
                 return resolve(false);
             }
 
-            if(!activitiesData) {
+            if (!activitiesData) {
                 let cache_key = cacheService.keys.persons_activities(person_token);
 
                 activitiesData = await cacheService.hGetAllObj(cache_key);
             }
 
-            if(!activitiesData) {
+            if (!activitiesData) {
                 return resolve(false);
             }
 
-            for(let k in activitiesData) {
+            for (let k in activitiesData) {
                 let activity = activitiesData[k];
 
                 //skip cancelled or unfulfilled activities

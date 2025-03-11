@@ -26,7 +26,7 @@ module.exports = {
     getNetworks: function (req, res) {
         return new Promise(async (resolve, reject) => {
             try {
-                let cache_key = cacheService.keys.networks;
+                let cache_key = cacheService.keys.networks_public;
                 let cache_data = await cacheService.getObj(cache_key);
 
                 if (cache_data) {

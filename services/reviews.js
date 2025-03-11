@@ -1,9 +1,12 @@
-let { timeNow, isObject, isNumeric } = require('./shared');
+let { timeNow, isObject, isNumeric, getURL } = require('./shared');
+
+let axios = require('axios');
 
 let cacheService = require('../services/cache');
 let dbService = require('../services/db');
 let personsService = require('../services/persons');
 const { updateGridSets } = require('./filters');
+const { getNetworkSelf, homeDomains, getNetworkWithSecretKeyByDomain } = require('./network');
 
 let reviewPeriod = 7 * 24 * 3600;
 
@@ -399,12 +402,46 @@ function setActivityReview(activity_token, person_from_token, person_to_token, n
                 }
             }
 
+            let networkSelf = await getNetworkSelf();
+
             let returnData;
 
-            if (typeof no_show === 'boolean') {
-                returnData = await updatePersonNoShow(personTo);
+            //update rating score directly or send to befriend
+            if (networkSelf.is_befriend) {
+                if (typeof no_show === 'boolean') {
+                    returnData = await updatePersonNoShow(personTo);
+                } else {
+                    returnData = await updatePersonRatings(personTo);
+                }
             } else {
-                returnData = await updatePersonRatings(personTo);
+                let domains = await homeDomains();
+
+                for (let domain of domains) {
+                    try {
+                        let network = await getNetworkWithSecretKeyByDomain(domain);
+
+                        if (!network) {
+                            continue;
+                        }
+
+                        const axiosInstance = axios.create({
+                            timeout: 1000,
+                        });
+
+                        let response = await axios.put(getURL(domain, `networks/reviews/save`), {
+                            secret_key: network.secret_key,
+                            network_token: network.network_token,
+
+                        });
+                        
+                        if(response.status === 202) {
+                            returnData = response.data;
+                            break;
+                        }
+                    } catch (e) {
+                        console.error(e);
+                    }
+                }
             }
 
             resolve(returnData);
@@ -431,31 +468,35 @@ function updatePersonNoShow(person) {
                 .where('person_id', person.id)
                 .whereNotNull('arrived_at');
 
-
-            if(personNoShowsQry.length) {
-                if(personNoShowsQry.length >= personActivitiesArrivedQry.length) {
+            if (personNoShowsQry.length) {
+                if (personNoShowsQry.length >= personActivitiesArrivedQry.length) {
                     percent = 100;
                 } else {
                     percent = personNoShowsQry.length / personActivitiesArrivedQry.length;
                 }
             }
 
-            await conn('persons')
-                .where('id', person.id)
-                .update({
-                    no_show_percent: percent,
-                    updated: timeNow()
-                });
+            await conn('persons').where('id', person.id).update({
+                no_show_percent: percent,
+                updated: timeNow(),
+            });
 
-            let reviews = await cacheService.hGetItem(cacheService.keys.person(person.person_token), 'reviews');
+            let reviews = await cacheService.hGetItem(
+                cacheService.keys.person(person.person_token),
+                'reviews',
+            );
 
-            if(!reviews) {
+            if (!reviews) {
                 reviews = {};
             }
 
             reviews.noShowPercent = percent;
 
-            await cacheService.hSet(cacheService.keys.person(person.person_token), 'reviews', reviews);
+            await cacheService.hSet(
+                cacheService.keys.person(person.person_token),
+                'reviews',
+                reviews,
+            );
 
             resolve(reviews);
         } catch (e) {
@@ -475,7 +516,7 @@ function updatePersonRatings(person) {
         for (let category of ratingCategories) {
             aggregated[category] = {
                 totalWeight: 0,
-                weightedSum: 0
+                weightedSum: 0,
             };
         }
 
@@ -497,7 +538,7 @@ function updatePersonRatings(person) {
                 //reviews count is by activity x person(s)
                 let person_activity_key = `${item.activity_id}_${item.person_from_id}`;
 
-                if(!person_activity_keys[person_activity_key]) {
+                if (!person_activity_keys[person_activity_key]) {
                     person_activity_keys[person_activity_key] = true;
                     reviewsCount++;
                 }
@@ -507,7 +548,7 @@ function updatePersonRatings(person) {
                 if (!activities[item.activity_id]) {
                     activities[item.activity_id] = {};
 
-                    for(let category of ratingCategories) {
+                    for (let category of ratingCategories) {
                         activities[item.activity_id][category] = null;
                     }
                 }
@@ -568,7 +609,9 @@ function updatePersonRatings(person) {
             for (let category of ratingCategories) {
                 if (aggregated[category].totalWeight > 0) {
                     ratings[`rating_${category}`] = Number(
-                        (aggregated[category].weightedSum / aggregated[category].totalWeight).toFixed(2)
+                        (
+                            aggregated[category].weightedSum / aggregated[category].totalWeight
+                        ).toFixed(2),
                     );
                 } else {
                     ratings[`rating_${category}`] = null;
@@ -580,25 +623,33 @@ function updatePersonRatings(person) {
                 .update({
                     ...ratings,
                     reviews_count: reviewsCount,
-                    updated: timeNow()
+                    updated: timeNow(),
                 });
 
             let cacheRatings = {
-                count: reviewsCount
+                count: reviewsCount,
             };
 
-            for(let key in ratings) {
+            for (let key in ratings) {
                 let rating = ratings[key];
                 let new_key = key.replace('rating_', '');
                 cacheRatings[new_key] = rating;
             }
 
-            await cacheService.hSet(cacheService.keys.person(person.person_token), 'reviews', cacheRatings);
+            await cacheService.hSet(
+                cacheService.keys.person(person.person_token),
+                'reviews',
+                cacheRatings,
+            );
 
-            await updateGridSets({
-                ...person,
-                reviews: cacheRatings
-            }, null, 'reviews');
+            await updateGridSets(
+                {
+                    ...person,
+                    reviews: cacheRatings,
+                },
+                null,
+                'reviews',
+            );
 
             resolve(cacheRatings);
         } catch (e) {
@@ -609,7 +660,7 @@ function updatePersonRatings(person) {
 }
 
 function isReviewable(activity) {
-    if(debug_enabled) {
+    if (debug_enabled) {
         return true;
     }
 

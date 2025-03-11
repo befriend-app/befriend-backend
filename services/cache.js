@@ -3,6 +3,7 @@ const { isNumeric } = require('./shared');
 
 const standardKeys = {
     networks: 'networks',
+    networks_public: 'networks:public',
     networks_filters: 'networks:filters',
     networks_secrets: `networks:secrets`,
     ws: 'ws:messages',

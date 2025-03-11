@@ -146,7 +146,7 @@ module.exports = {
                     trust: floatOrNull(person.rating_trust),
                     timeliness: floatOrNull(person.rating_timeliness),
                     friendliness: floatOrNull(person.rating_friendliness),
-                    fun: floatOrNull(person.rating_fun)
+                    fun: floatOrNull(person.rating_fun),
                 };
 
                 await module.exports.savePerson(person.person_token, person);

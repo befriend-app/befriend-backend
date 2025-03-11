@@ -1,4 +1,6 @@
 const axios = require('axios');
+const tldts = require('tldts');
+
 const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 
@@ -16,8 +18,7 @@ const {
     hasPort,
     isLocalHost,
 } = require('./shared');
-const tldts = require('tldts');
-const { deleteKeys } = require('./cache');
+
 const encryptionService = require('./encryption');
 
 function init() {
@@ -397,10 +398,14 @@ function getNetworkSelf(is_frontend) {
 function getNetworksLookup() {
     return new Promise(async (resolve, reject) => {
         try {
-            //all networks
-            let conn = await dbService.conn();
+            let cache_key = cacheService.keys.networks;
+            let networks = await cacheService.getObj(cache_key);
 
-            let networks = await conn('networks');
+            if (!networks) {
+                let conn = await dbService.conn();
+                networks = await conn('networks');
+                await cacheService.setCache(cache_key, networks);
+            }
 
             let networks_lookup = networks.reduce(
                 (acc, network) => {
@@ -542,7 +547,7 @@ function getSyncNetworks() {
                 .where('is_blocked', false);
 
             resolve(networks);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return reject();
         }
@@ -687,7 +692,11 @@ function addNetwork(body) {
             await conn('networks').insert(network_data);
 
             //delete cache after adding
-            await deleteKeys(cacheService.keys.networks);
+            await cacheService.deleteKeys([
+                cacheService.keys.networks,
+                cacheService.keys.networks_public,
+                cacheService.keys.networks_filters,
+            ]);
 
             //continue key exchange process
             let secret_key_me = generateToken(40);
@@ -1371,6 +1380,36 @@ function getSecretKeyToForNetwork(network_id = null, network_token = null) {
     });
 }
 
+function getNetworkWithSecretKeyByDomain(domain) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            if (!domain) {
+                return resolve(null);
+            }
+
+            let lookup = await getNetworksLookup();
+
+            for (let network_id in lookup) {
+                let network = lookup[network_id];
+                
+                if(network.api_domain.includes(domain) || domain.includes(network.api_domain)) {
+                    let secret_key = await getSecretKeyToForNetwork(network_id);
+                    
+                    return resolve({
+                        secret_key,
+                        network
+                    });
+                }
+            }
+
+            return resolve(null);
+        } catch (e) {
+            console.error(e);
+            return reject();
+        }
+    });
+}
+
 module.exports = {
     cols: [
         'network_token',
@@ -1429,4 +1468,5 @@ module.exports = {
     keysExchangeDecrypt,
     keysExchangeSave,
     getSecretKeyToForNetwork,
+    getNetworkWithSecretKeyByDomain,
 };

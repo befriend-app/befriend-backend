@@ -1177,15 +1177,15 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                         grid_token,
                         `reviews:match_new`,
                         'send',
-                    )
+                    ),
                 );
 
                 delKeysSet.add(
                     cacheService.keys.persons_grid_exclude_send_receive(
                         grid_token,
                         `reviews:match_new`,
-                        'receive'
-                    )
+                        'receive',
+                    ),
                 );
 
                 for (let type of reviewTypes) {
@@ -1194,7 +1194,7 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                             grid_token,
                             `reviews:${type}`,
                             'send',
-                        )
+                        ),
                     );
 
                     keysDelSorted.add(
