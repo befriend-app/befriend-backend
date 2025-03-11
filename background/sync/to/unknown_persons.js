@@ -3,12 +3,7 @@
 
 const cacheService = require('../../../services/cache');
 const dbService = require('../../../services/db');
-const {
-    timeNow,
-    loadScriptEnv,
-    timeoutAwait,
-    getURL,
-} = require('../../../services/shared');
+const { timeNow, loadScriptEnv, timeoutAwait, getURL } = require('../../../services/shared');
 const {
     getNetworkSelf,
     homeDomains,

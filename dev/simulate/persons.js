@@ -226,6 +226,7 @@ function updatePersonsCount() {
 
             await cacheService.deleteKeys([
                 cacheService.keys.networks,
+                cacheService.keys.networks_public,
                 cacheService.keys.networks_filters,
             ]);
         } catch (e) {

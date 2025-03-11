@@ -12,6 +12,12 @@ const runInterval = 60 * 30 * 1000; //every 30 minutes
 (async function () {
     loadScriptEnv();
 
+    try {
+        toUnknownPersons.main();
+    } catch (e) {
+        console.error(e);
+    }
+
     while (true) {
         try {
             await fromNetworks.main();
@@ -19,7 +25,6 @@ const runInterval = 60 * 30 * 1000; //every 30 minutes
             await fromPersons.main();
             await fromMe.main();
             await fromFilters.main();
-            await toUnknownPersons.main();
         } catch (e) {
             console.error(e);
         }

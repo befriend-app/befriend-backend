@@ -12,7 +12,11 @@ const {
     timeNow,
 } = require('../../../services/shared');
 
-const { getNetworkSelf, getSecretKeyToForNetwork, getSyncNetworks } = require('../../../services/network');
+const {
+    getNetworkSelf,
+    getSecretKeyToForNetwork,
+    getSyncNetworks,
+} = require('../../../services/network');
 const { deleteKeys } = require('../../../services/cache');
 const { getGendersLookup } = require('../../../services/genders');
 const {
@@ -673,7 +677,11 @@ function updatePersonsCount() {
                 });
             }
 
-            await deleteKeys([cacheService.keys.networks, cacheService.keys.networks_filters]);
+            await deleteKeys([
+                cacheService.keys.networks,
+                cacheService.keys.networks_public,
+                cacheService.keys.networks_filters,
+            ]);
         } catch (e) {
             console.error(e);
         }

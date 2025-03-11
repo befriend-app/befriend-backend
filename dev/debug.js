@@ -59,5 +59,5 @@ module.exports = {
     },
     reviews: {
         reviewable: isProdApp() ? false : true,
-    }
+    },
 };

@@ -4,7 +4,11 @@ const cacheService = require('../../../services/cache');
 const dbService = require('../../../services/db');
 const meService = require('../../../services/me');
 
-const { getNetworkSelf, getSecretKeyToForNetwork, getSyncNetworks } = require('../../../services/network');
+const {
+    getNetworkSelf,
+    getSecretKeyToForNetwork,
+    getSyncNetworks,
+} = require('../../../services/network');
 const {
     keys: systemKeys,
     setNetworkSyncProcess,

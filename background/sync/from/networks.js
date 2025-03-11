@@ -208,7 +208,7 @@ function main() {
                                                 from: my_network.network_token,
                                                 to: network.network_token,
                                             },
-                                        }
+                                        },
                                     );
                                 }
                             }
@@ -223,7 +223,11 @@ function main() {
 
             if (needsCacheReset) {
                 //delete networks cache data on add/update
-                await deleteKeys([cacheService.keys.networks, cacheService.keys.networks_filters]);
+                await deleteKeys([
+                    cacheService.keys.networks,
+                    cacheService.keys.networks_public,
+                    cacheService.keys.networks_filters,
+                ]);
             }
         } catch (e) {
             console.error(e);

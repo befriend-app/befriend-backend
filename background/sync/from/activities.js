@@ -10,7 +10,11 @@ const {
     timeoutAwait,
 } = require('../../../services/shared');
 
-const { getNetworkSelf, getSecretKeyToForNetwork, getSyncNetworks } = require('../../../services/network');
+const {
+    getNetworkSelf,
+    getSecretKeyToForNetwork,
+    getSyncNetworks,
+} = require('../../../services/network');
 const {
     keys: systemKeys,
     getNetworkSyncProcess,

@@ -64,7 +64,7 @@ function main() {
             }
         }
 
-        await deleteKeys([keys.networks, keys.networks_filters]);
+        await deleteKeys([keys.networks, keys.networks_public, keys.networks_filters]);
 
         resolve();
     });

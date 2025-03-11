@@ -6,7 +6,8 @@ const dbService = require('../../../services/db');
 const {
     getNetworkSelf,
     getNetworksLookup,
-    getSecretKeyToForNetwork, getSyncNetworks,
+    getSecretKeyToForNetwork,
+    getSyncNetworks,
 } = require('../../../services/network');
 const {
     keys: systemKeys,

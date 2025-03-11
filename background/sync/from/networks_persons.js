@@ -17,7 +17,8 @@ const {
     getNetworkSelf,
     homeDomains,
     getNetworksLookup,
-    getSecretKeyToForNetwork, getSyncNetworks,
+    getSecretKeyToForNetwork,
+    getSyncNetworks,
 } = require('../../../services/network');
 const {
     keys: systemKeys,
@@ -215,7 +216,8 @@ function syncNetworksPersons() {
     let sync_name = systemKeys.sync.network.networks_persons;
 
     return new Promise(async (resolve, reject) => {
-        let network_self, home_networks = [];
+        let network_self,
+            home_networks = [];
 
         try {
             network_self = await getNetworkSelf();
@@ -284,7 +286,7 @@ function syncNetworksPersons() {
                         network_token: network_self.network_token,
                         data_since: timestamps.last,
                         request_sent: timeNow(),
-                    }
+                    },
                 });
 
                 if (response.status !== 202) {
