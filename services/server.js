@@ -13,10 +13,9 @@ const networksRouter = require('../routes/networks');
 const syncRouter = require('../routes/sync');
 
 const { timeNow } = require('./shared');
+const port = require('../servers/ports').api;
 
 let httpServer;
-
-let port = normalizePort(process.env.PORT || '3000');
 
 let server = express();
 

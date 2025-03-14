@@ -21,7 +21,8 @@ const query_string = require('query-string');
 
 const WebSocket = require('ws');
 
-const port_num = process.env.WS_PORT || 8080;
+const port_num = require('../servers/ports').ws;
+
 const ws_channel_key = cacheService.keys.ws;
 
 const message_timeout = 3600; //seconds

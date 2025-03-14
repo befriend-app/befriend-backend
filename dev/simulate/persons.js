@@ -142,7 +142,7 @@ async function addPersons() {
             });
 
             if (self_network.is_befriend) {
-                return;
+                continue;
             }
 
             let home_domains = await homeDomains();

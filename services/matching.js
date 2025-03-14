@@ -50,6 +50,7 @@ let { skipDebugFilter } = require('../dev/debug').matching;
 let debug_logs = require('../dev/debug').matching.logs;
 let debug_recent_notifications = require('../dev/debug').notifications.recent;
 
+
 function getMatches(me, params = {}, custom_filters = null, initial_person_tokens = []) {
     function skipFilter(filter_name) {
         if (custom_filters && !custom_filters.includes(filter_name)) {
@@ -1931,7 +1932,7 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
                         );
                     }
 
-                    // Get excluded send/receive states
+                    //get excluded send/receive states
                     for (let option of options) {
                         if (!send_only) {
                             pipeline.sMembers(

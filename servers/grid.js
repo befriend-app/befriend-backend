@@ -13,10 +13,8 @@ loadScriptEnv();
 
 const router = express.Router();
 
-const defaultPort = 3001;
-
 const server = express();
-const port = process.env.GRID_PORT || defaultPort;
+const port = require('../servers/ports').grid;
 
 server.use(logger('dev'));
 server.use('/', router);

@@ -5,7 +5,7 @@ require('dotenv').config();
 const path = require('path');
 const { spawn } = require('child_process');
 
-const servers = ['api.js', 'ws.js', 'grid.js'];
+const servers = ['api.js', 'ws.js', 'grid.js', 'matching.js'];
 
 function spawnServer(scriptName) {
     const scriptPath = path.join(__dirname, scriptName);
