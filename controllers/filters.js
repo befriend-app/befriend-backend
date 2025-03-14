@@ -130,7 +130,7 @@ function getMatches(req, res) {
         try {
             let person = await getPerson(req.query.person_token);
 
-            let matches = await matchingService.getMatches(person, {
+            let matches = await matchingService.getMatchesServer(person, {
                 counts_only: true,
             });
 

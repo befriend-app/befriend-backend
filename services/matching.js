@@ -51,6 +51,23 @@ let debug_logs = require('../dev/debug').matching.logs;
 let debug_recent_notifications = require('../dev/debug').notifications.recent;
 
 
+function getMatchesServer(person, params = {}, custom_filters = null, initial_person_tokens = []) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let port = require('../servers/ports').matching;
+
+            let r = await axios.put(`http://localhost:${port}/matches`, {
+                person, params, custom_filters, initial_person_tokens
+            });
+
+            resolve(r.data);
+        } catch(e) {
+            console.error(e);
+            return reject(e.response.error);
+        }
+    });
+}
+
 function getMatches(me, params = {}, custom_filters = null, initial_person_tokens = []) {
     function skipFilter(filter_name) {
         if (custom_filters && !custom_filters.includes(filter_name)) {
@@ -3329,6 +3346,7 @@ function personToPersonInterests(person_1, person_2) {
 
 module.exports = {
     getMatches,
+    getMatchesServer,
     filterMatches,
     personToPersonInterests,
 };

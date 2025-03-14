@@ -17,8 +17,8 @@ const server = express();
 const port = require('../servers/ports').grid;
 
 server.use(logger('dev'));
-server.use('/', router);
 server.use(express.json());
+server.use('/', router);
 
 const TABLE_NAME = 'earth_grid';
 const COORD_PRECISION = 1000;

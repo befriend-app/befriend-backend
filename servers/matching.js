@@ -1,5 +1,6 @@
 const express = require('express');
 const logger = require('morgan');
+const matchingService = require('../services/matching');
 
 const {
     loadScriptEnv,
@@ -13,16 +14,21 @@ const server = express();
 const port = require('../servers/ports').matching;
 
 server.use(logger('dev'));
-server.use('/', router);
 server.use(express.json());
+server.use('/', router);
 
 
-router.get('/matches', async (req, res) => {
+router.put('/matches', async (req, res) => {
     try {
+        let { person, params, custom_filters, initial_person_tokens } = req.body;
 
+        let matches = await matchingService.getMatches(person, params, custom_filters, initial_person_tokens);
+
+        res.json(matches);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'Internal server error' });
+
+        res.status(400).json({ error });
     }
 });
 
@@ -37,13 +43,8 @@ async function main() {
     }
 }
 
-function getPort() {
-    return port;
-}
-
 module.exports = {
     router,
-    getPort,
     main,
 };
 

@@ -1667,7 +1667,7 @@ function getDefaultActivity() {
 function findMatches(person, activity) {
     return new Promise(async (resolve, reject) => {
         try {
-            let matches = await require('../services/matching').getMatches(person, {
+            let matches = await require('../services/matching').getMatchesServer(person, {
                 activity,
                 send_only: true,
             });

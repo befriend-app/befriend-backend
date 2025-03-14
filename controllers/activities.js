@@ -823,7 +823,7 @@ function getMatches(req, res) {
 
             activity.when = when_option;
 
-            let matches = await matchingService.getMatches(person, {
+            let matches = await matchingService.getMatchesServer(person, {
                 activity: activity,
                 send_only: true,
                 counts_only: true,

@@ -31,7 +31,7 @@ module.exports = {
                     return reject('Person not found');
                 }
 
-                let excluded = await matchingService.getMatches(
+                let excluded = await matchingService.getMatchesServer(
                     {
                         ...person_data,
                         id: person.id,
