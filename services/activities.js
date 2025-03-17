@@ -2208,7 +2208,7 @@ function getMaxFriends(person) {
                 }
             }
 
-            let max = Math.min(activities_count + 2, module.exports.friends.max.max);
+            let max = Math.min(activities_count + module.exports.friends.max.default, module.exports.friends.max.max);
 
             return resolve(max);
         } catch (e) {

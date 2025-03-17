@@ -63,7 +63,7 @@ function getMatchesServer(person, params = {}, custom_filters = null, initial_pe
             resolve(r.data);
         } catch(e) {
             console.error(e);
-            return reject(e.response.error);
+            return reject(e.response?.data?.error);
         }
     });
 }
@@ -1333,12 +1333,12 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
                         if (activity?.when?.data?.start) {
                             activityStartTime = activity.when.data.start;
                         } else if (activity?.when?.in_mins) {
-                            activityStartTime = new Date(now + activity.when.in_mins * 60);
+                            activityStartTime = now + activity.when.in_mins * 60;
                         }
 
                         if (activityStartTime) {
                             const AVERAGE_TRAVEL_SPEED_MPH = 30;
-                            const timeToActivityMins = (new Date(activityStartTime) - now) / 60;
+                            const timeToActivityMins = (activityStartTime - now) / 60;
                             const travelTimeNeededMins =
                                 (compare_distance / AVERAGE_TRAVEL_SPEED_MPH) * 60;
                             const BUFFER_MINS_LATE = 5;

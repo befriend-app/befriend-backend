@@ -12,7 +12,7 @@ module.exports = {
     },
     matching: {
         logs: isProdApp() ? false : true,
-        get_matches: isProdApp() ? false : true,
+        get_matches: isProdApp() ? false : false,
         filter_matches: isProdApp() ? false : true,
         send_count: 3,
         filters: [

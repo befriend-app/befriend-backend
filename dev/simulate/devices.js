@@ -3,7 +3,7 @@ const yargs = require('yargs');
 
 const dbService = require('../../services/db');
 const { getNetworkSelf } = require('../../services/network');
-const { loadScriptEnv, timeNow, joinPaths, shuffleFunc } = require('../../services/shared');
+const { loadScriptEnv, timeNow, joinPaths } = require('../../services/shared');
 
 loadScriptEnv();
 
@@ -14,7 +14,9 @@ let args = yargs.argv;
 let num_persons = 1000;
 let parallelCount = 30;
 
-if (args._ && args._.length) {
+if (args.n) {
+    num_persons = args.n;
+} else if (args._?.length) {
     num_persons = args._[0];
 }
 

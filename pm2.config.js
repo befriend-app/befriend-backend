@@ -34,5 +34,13 @@ module.exports = {
             cwd: home_dir,
             node_args: '-r dotenv/config',
         },
+        {
+            name: `${app_name}_matching_server`,
+            script: 'servers/matching.js',
+            instances: '1',
+            exec_mode: 'fork',
+            cwd: home_dir,
+            node_args: '-r dotenv/config',
+        },
     ],
 };
