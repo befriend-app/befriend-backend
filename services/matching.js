@@ -242,7 +242,7 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
                 }
             } else {
                 //allow receiving notifications if not excluded
-                if (!personsExclude.receive.has(person_token)) {
+                if (!send_only && !personsExclude.receive.has(person_token)) {
                     included = true;
                 }
             }

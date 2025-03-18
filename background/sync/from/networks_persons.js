@@ -32,6 +32,7 @@ let defaultTimeout = 20000;
 
 let debug_sync_enabled = require('../../../dev/debug').sync.networks_persons;
 
+
 function processNetworksPersons(persons_networks) {
     return new Promise(async (resolve, reject) => {
         if (!persons_networks || typeof persons_networks !== 'object') {
