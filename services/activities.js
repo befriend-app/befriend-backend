@@ -509,7 +509,7 @@ function createActivity(person, activity) {
             try {
                 matches = await findMatches(person, activity);
 
-                matches = await require('../services/matching').filterMatches(
+                matches = await require('./matching').filterMatches(
                     person,
                     activity,
                     matches,
@@ -1667,7 +1667,7 @@ function getDefaultActivity() {
 function findMatches(person, activity) {
     return new Promise(async (resolve, reject) => {
         try {
-            let matches = await require('../services/matching').getMatchesServer(person, {
+            let matches = await require('./matching').getMatchesServer(person, {
                 activity,
                 send_only: true,
             });
@@ -2068,7 +2068,7 @@ function getActivity(person_token, activity_token, access_token = null) {
                     ]);
 
                     matching[_person_token] =
-                        await require('../services/matching').personToPersonInterests(me, {
+                        await require('./matching').personToPersonInterests(me, {
                             person_token: _person_token,
                         });
                 } catch (e) {

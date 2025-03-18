@@ -985,6 +985,13 @@ function joinPaths() {
 }
 
 function loadScriptEnv() {
+    //change directory not supported in workers
+    //env variables passed down from parent to workers
+
+    if(process.is_worker_thread) {
+        return;
+    }
+
     let repo_root = getRepoRoot();
 
     process.chdir(repo_root);

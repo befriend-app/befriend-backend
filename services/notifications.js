@@ -997,7 +997,7 @@ function acceptNotification(person, activity_token) {
                     }
 
                     matching[_person_token] =
-                        await require('../services/matching').personToPersonInterests(
+                        await require('./matching').personToPersonInterests(
                             person_a,
                             person_b,
                         );
@@ -1272,7 +1272,7 @@ function sendNewNotifications(person, activity) {
 
             let matches = await require('../services/activities').findMatches(person, activity);
 
-            matches = await require('../services/matching').filterMatches(
+            matches = await require('./matching').filterMatches(
                 person,
                 activity,
                 matches,

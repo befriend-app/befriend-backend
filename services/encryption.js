@@ -9,8 +9,14 @@ const networkService = require('./network');
 if (!isMainThread) {
     parentPort.on(
         'message',
-        async ({ type, password, hash, rounds, key, message, encrypted_message }) => {
+        async (message) => {
+            if (message.namespace !== 'encryption') {
+                return;
+            }
+
             try {
+                const { type, password, hash, rounds, key, encrypted_message } = message.payload;
+
                 let result;
                 let processedKey;
                 let iv;
@@ -51,9 +57,9 @@ if (!isMainThread) {
                         result = decrypted;
                         break;
                 }
-                parentPort.postMessage({ success: true, result });
+                parentPort.postMessage({ namespace: 'encryption', success: true, result });
             } catch (error) {
-                parentPort.postMessage({ success: false, error: error.message });
+                parentPort.postMessage({ namespace: 'encryption', success: false, error: error.message });
             }
         },
     );
@@ -78,6 +84,10 @@ if (!isMainThread) {
 
         return new Promise((resolve, reject) => {
             const messageHandler = (response) => {
+                if (response.namespace !== 'encryption') {
+                    return;
+                }
+
                 worker.removeListener('message', messageHandler);
                 worker.removeListener('error', errorHandler);
 
@@ -96,7 +106,11 @@ if (!isMainThread) {
 
             worker.on('message', messageHandler);
             worker.on('error', errorHandler);
-            worker.postMessage(task);
+
+            worker.postMessage({
+                namespace: 'encryption',
+                payload: task
+            });
         });
     }
 
@@ -198,6 +212,7 @@ if (!isMainThread) {
             for (const worker of workers) {
                 worker.terminate();
             }
+
             workers.length = 0;
         },
     };

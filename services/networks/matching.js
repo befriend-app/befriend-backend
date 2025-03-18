@@ -1,4 +1,4 @@
-const matchingService = require('../../services/matching');
+const matchingService = require('../matching');
 const { isNumeric } = require('../shared');
 const { getPerson } = require('../persons');
 
