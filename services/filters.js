@@ -1647,10 +1647,10 @@ function updateGridSets(person, person_filters = null, filter_token, prev_grid_t
                     (item) => item.gender_token === anyToken,
                 );
 
-                let isAnySelected = anyItem?.is_active && !anyItem.is_negative && !anyItem.deleted;
+                let isAnySelected = !anyItem.is_negative && !anyItem.deleted;
 
-                //if any is selected, do not add self to excluded gender sets
-                if (!isAnySelected && genderFilter.is_active) {
+                //if filter is active and any is selected, do not add self to excluded gender sets
+                if (genderFilter.is_active && !isAnySelected) {
                     for (let gender_token in genders.byToken) {
                         let gender = genders.byToken[gender_token];
 
