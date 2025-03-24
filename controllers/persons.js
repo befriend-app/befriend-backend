@@ -98,6 +98,7 @@ module.exports = {
                             options: kidsAgeOptions,
                         },
                     },
+                    debug: require('../dev/debug')
                 });
 
                 resolve();

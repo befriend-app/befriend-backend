@@ -2,6 +2,7 @@ const networksActivitiesService = require('../../services/networks/activities');
 const networksMatchingService = require('../../services/networks/matching');
 const networksPersonsService = require('../../services/networks/persons');
 const networksNotificationsService = require('../../services/networks/notifications');
+const reviewsService = require('../../services/reviews');
 
 module.exports = {
     createPerson: function (req, res) {
@@ -223,6 +224,35 @@ module.exports = {
                     res.json(e.message, 400);
                 } else {
                     res.json('Error creating person', 400);
+                }
+            }
+        });
+    },
+    putSaveReview: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            let from_network = req.from_network;
+            let activity = req.body.activity;
+            let person_from_token = req.body.person_from_token;
+            let person_to_token = req.body.person_to_token;
+            let review = req.body.review;
+            let no_show = req.body.no_show;
+
+            try {
+                let response = await reviewsService.saveFromNetwork(
+                    from_network,
+                    activity,
+                    person_from_token,
+                    person_to_token,
+                    review,
+                    no_show
+                );
+
+                res.json(response, 202);
+            } catch (e) {
+                if (e?.message) {
+                    res.json(e.message, 400);
+                } else {
+                    res.json('Error saving review from network', 400);
                 }
             }
         });

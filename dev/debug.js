@@ -32,7 +32,7 @@ module.exports = {
             // 'life_stages',
             // 'relationships',
             // 'languages',
-            'politics',
+            // 'politics',
             // 'religion',
             // 'drinking',
             // 'smoking',
@@ -58,6 +58,6 @@ module.exports = {
         recent: isProdApp() ? false : true,
     },
     reviews: {
-        reviewable: isProdApp() ? false : false,
+        reviewable: isProdApp() ? false : true,
     },
 };
