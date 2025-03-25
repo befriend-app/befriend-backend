@@ -7,19 +7,14 @@ const toUnknownPersons = require('./to/unknown_persons');
 
 const { loadScriptEnv, timeoutAwait } = require('../../services/shared');
 
-const runInterval = 60 * 30 * 1000; //every 30 minutes
+const runInterval = 20 * 60 * 1000; //every x minutes
 
 (async function () {
     loadScriptEnv();
 
-    try {
-        toUnknownPersons.main();
-    } catch (e) {
-        console.error(e);
-    }
-
     while (true) {
         try {
+            await toUnknownPersons.main();
             await fromNetworks.main();
             await fromNetworksPersons.main();
             await fromPersons.main();
