@@ -7,7 +7,7 @@ const { getNetworkSelf } = require('../../services/network');
 
 const { timeNow } = require('../../services/shared');
 const { isNumeric, getURL, isObject } = require('../shared');
-const { getActivityType, doesActivityOverlap } = require('../activities');
+const { getActivityType, doesActivityOverlap, validateActivity } = require('../activities');
 const { getModeByToken } = require('../modes');
 const { getPerson } = require('../persons');
 
@@ -113,53 +113,7 @@ module.exports = {
                     errors.push('Invalid persons');
                 }
 
-                if (!activity?.activity_token) {
-                    errors.push('Activity token required');
-                }
-
-                if (!activity.place?.id) {
-                    errors.push('FSQ place id required');
-                }
-
-                if (!activity.activity?.token && !activity.activityType.activity_type_token) {
-                    errors.push('Activity type token required');
-                }
-
-                if (!activity.duration) {
-                    errors.push('Activity duration required');
-                }
-
-                if (!activity.when?.data?.start || activity.when.data.start < timeNow(true)) {
-                    errors.push('Invalid activity start time');
-                }
-
-                if (!activity.when?.data?.end || activity.when.data.end < timeNow(true)) {
-                    errors.push('Invalid activity end time');
-                }
-
-                if (!activity.when?.in_mins) {
-                    errors.push('In minutes required');
-                }
-
-                if (!activity.when?.data?.human?.time || !activity.when?.data?.human?.datetime) {
-                    errors.push('Human time required');
-                }
-
-                if (!activity.friends?.type || !isNumeric(activity.friends?.qty)) {
-                    errors.push('Friends type and qty required');
-                }
-
-                if (!activity.spots?.available) {
-                    errors.push('Available spots needed');
-                }
-
-                if (!activity.mode) {
-                    errors.push('Mode required');
-                }
-
-                if (!activity.person?.mode) {
-                    errors.push('Mode token required');
-                }
+                errors = errors.concat(validateActivity(activity));
 
                 if (errors.length) {
                     return reject({
@@ -311,6 +265,9 @@ module.exports = {
 
                     let [activity_id] = await conn('activities').insert(activityData);
 
+                    activityData.id = activity_id;
+                    activityData.activity_id = activity_id;
+
                     activityData.activity_type_token = activity.activity.token;
                     activityData.mode = activity.mode;
 
@@ -333,8 +290,6 @@ module.exports = {
                         activity.activity_token,
                         activityData,
                     );
-
-                    activityData.id = activity_id;
                 }
 
                 activityData.activityType = activityType;
