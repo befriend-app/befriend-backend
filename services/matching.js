@@ -458,6 +458,7 @@ function filterMatches(person, activity, matches, on_send_new = false) {
 
         if (debug_enabled) {
             let splice_from = on_send_new ? 1 : 0;
+
             filtered_matches = filtered_matches.splice(
                 splice_from,
                 require('../dev/debug').matching.send_count,
