@@ -7,6 +7,7 @@ let dbService = require('../services/db');
 let personsService = require('../services/persons');
 const { updateGridSets } = require('./filters');
 const { getNetworkSelf, homeDomains, getNetworkWithSecretKeyByDomain } = require('./network');
+const { getModeById } = require('./modes');
 
 let reviewPeriod = 7 * 24 * 3600;
 
@@ -200,9 +201,9 @@ function setActivityReview(activity_token, person_from_token, person_to_token, n
                 });
             }
 
-            let person = await personsService.getPerson(person_from_token);
+            let personFrom = await personsService.getPerson(person_from_token);
 
-            if (!person) {
+            if (!personFrom) {
                 return reject({
                     message: 'Person not found',
                     status: 401,
@@ -229,7 +230,7 @@ function setActivityReview(activity_token, person_from_token, person_to_token, n
                 personActivity = await conn('activities_persons AS ap')
                     .join('activities AS a', 'a.id', '=', 'ap.activity_id')
                     .where('activity_token', activity_token)
-                    .where('ap.person_id', person.id)
+                    .where('ap.person_id', personFrom.id)
                     .select('ap.*', 'a.person_id AS person_id_from')
                     .first();
 
@@ -313,7 +314,7 @@ function setActivityReview(activity_token, person_from_token, person_to_token, n
 
             //get existing reviews data for this activity-person
             let existingReviewsQry = await conn('activities_persons_reviews')
-                .where('person_from_id', person.id)
+                .where('person_from_id', personFrom.id)
                 .where('person_to_id', personTo.id)
                 .where('activity_id', activity.activity_id);
 
@@ -349,7 +350,7 @@ function setActivityReview(activity_token, person_from_token, person_to_token, n
                 } else {
                     //create new record
                     await conn('activities_persons_reviews').insert({
-                        person_from_id: person.id,
+                        person_from_id: personFrom.id,
                         person_to_id: personTo.id,
                         activity_id: activity.activity_id,
                         no_show,
@@ -360,7 +361,7 @@ function setActivityReview(activity_token, person_from_token, person_to_token, n
 
                 if (Object.keys(organizedExisting.ratings).length) {
                     await conn('activities_persons_reviews')
-                        .where('person_from_id', person.id)
+                        .where('person_from_id', personFrom.id)
                         .where('person_to_id', personTo.id)
                         .where('activity_id', activity.activity_id)
                         .whereNotNull('review_id')
@@ -382,23 +383,26 @@ function setActivityReview(activity_token, person_from_token, person_to_token, n
                 let existingReview = organizedExisting.ratings[review.type];
 
                 if (existingReview) {
-                    await conn('activities_persons_reviews').where('id', existingReview.id).update({
-                        rating: review.rating,
-                        updated: timeNow(),
-                        deleted: null,
-                    });
+                    await conn('activities_persons_reviews')
+                        .where('id', existingReview.id)
+                        .update({
+                            rating: review.rating,
+                            updated: timeNow(),
+                            deleted: null,
+                        });
                 } else {
                     let reviewData = reviewsLookup.byToken[review.type];
 
-                    await conn('activities_persons_reviews').insert({
-                        person_from_id: person.id,
-                        person_to_id: personTo.id,
-                        activity_id: activity.activity_id,
-                        review_id: reviewData.id,
-                        rating: review.rating,
-                        created: timeNow(),
-                        updated: timeNow(),
-                    });
+                    await conn('activities_persons_reviews')
+                        .insert({
+                            person_from_id: personFrom.id,
+                            person_to_id: personTo.id,
+                            activity_id: activity.activity_id,
+                            review_id: reviewData.id,
+                            rating: review.rating,
+                            created: timeNow(),
+                            updated: timeNow(),
+                        });
                 }
             }
 
@@ -413,7 +417,67 @@ function setActivityReview(activity_token, person_from_token, person_to_token, n
                 } else {
                     returnData = await updatePersonRatings(personTo);
                 }
-            } else {
+            } else if(networkSelf.id === activity.network_id) {
+                //organize activity before sending
+                //activity type token, mode_token, activity person_token,
+                if(!activity.activity_type_token) {
+                    let activityType = await require('./activities').getActivityType(null, activity.activity_type_id);
+                    activity.activity_type_token = activityType.activity_type_token;
+                }
+
+                if(!activity.mode_token) {
+                    if(activity.mode?.token) {
+                        activity.mode_token = activity.mode.token;
+                    } else {
+                        let mode = await getModeById(activity.mode_id);
+                        activity.mode_token = mode.token;
+                    }
+                }
+
+                if(!activity.person_token) {
+                    activity.person_token = personActivity.person_from_token;
+                }
+
+                let activity_persons = structuredClone(activity.persons);
+
+                if(!activity_persons) {
+                    activity_persons = {};
+
+                    let qry = await conn('activities_persons AS ap')
+                        .join('persons AS p', 'ap.person_id', '=', 'p.id')
+                        .where('activity_id', activity.activity_id)
+                        .select('p.person_token', 'is_creator',
+                            'accepted_at', 'arrived_at', 'cancelled_at',
+                            'ap.updated'
+                        );
+
+                    for(let row of qry) {
+                        activity_persons[row.person_token] = {
+                            is_creator: row.is_creator,
+                            accepted_at: row.accepted_at,
+                            arrived_at: row.arrived_at,
+                            cancelled_at: row.cancelled_at,
+                            updated: row.updated
+                        };
+                    }
+
+                    activity.persons = activity_persons;
+                } else {
+                    activity.persons = {};
+
+                    for(let person_token in activity_persons) {
+                        let person = activity_persons[person_token];
+
+                        activity.persons[person_token] = {
+                            is_creator: person.is_creator || false,
+                            accepted_at: person.accepted_at || null,
+                            arrived_at: person_token.arrived_at || null,
+                            cancelled_at: person.cancelled_at || null,
+                            updated: person.updated || null
+                        };
+                    }
+                }
+
                 let domains = await homeDomains();
 
                 for (let domain of domains) {
@@ -428,11 +492,23 @@ function setActivityReview(activity_token, person_from_token, person_to_token, n
                             timeout: 1000,
                         });
 
-                        let response = await axios.put(getURL(domain, `networks/reviews/save`), {
+                        let data = {
                             secret_key: network.secret_key,
-                            network_token: network.network_token,
+                            network_token: networkSelf.network_token,
+                            activity,
+                            person_from_token,
+                            person_to_token,
+                            review: review || null,
+                        };
 
-                        });
+                        if(typeof no_show === 'boolean') {
+                            data.no_show = no_show;
+                        }
+
+                        let response = await axiosInstance.put(
+                            getURL(domain, `networks/reviews/save`),
+                            data
+                        );
                         
                         if(response.status === 202) {
                             returnData = response.data;
@@ -454,6 +530,7 @@ function setActivityReview(activity_token, person_from_token, person_to_token, n
 
 function updatePersonNoShow(person) {
     return new Promise(async (resolve, reject) => {
+        //if befriend network, updated directly - otherwise aggregate data synced to 3rd party networks
         let percent = 0;
 
         try {
@@ -476,10 +553,12 @@ function updatePersonNoShow(person) {
                 }
             }
 
-            await conn('persons').where('id', person.id).update({
-                no_show_percent: percent,
-                updated: timeNow(),
-            });
+            await conn('persons')
+                .where('id', person.id)
+                .update({
+                    no_show_percent: percent,
+                    updated: timeNow(),
+                });
 
             let reviews = await cacheService.hGetItem(
                 cacheService.keys.person(person.person_token),
@@ -508,6 +587,8 @@ function updatePersonNoShow(person) {
 
 function updatePersonRatings(person) {
     return new Promise(async (resolve, reject) => {
+        //if befriend network, updated directly - otherwise aggregate data synced to 3rd party networks
+
         let reviewsCount = 0;
 
         let ratingCategories = ['safety', 'trust', 'timeliness', 'friendliness', 'fun'];
@@ -669,6 +750,64 @@ function isReviewable(activity) {
     return timeNow(true) > activity.activity_end && activity.activity_end > reviewThreshold;
 }
 
+function saveFromNetwork(from_network, activity, person_from_token, person_to_token, review, no_show) {
+    return new Promise(async (resolve, reject) => {
+        let { validateActivity } = require('./activities');
+
+        try {
+            //validate
+            let errors = [];
+
+            let my_network = await getNetworkSelf();
+
+            if(!my_network.is_befriend) {
+                errors.push('Not a Befriend network');
+            }
+
+            if(!from_network) {
+                errors.push('from_network required');
+            }
+
+            if(!person_from_token) {
+                errors.push('person_from_token required');
+            }
+
+            if(!person_to_token) {
+                errors.push('person_to_token required');
+            }
+
+            if (typeof no_show !== 'boolean' && !isObject(review)) {
+                errors.push('No show or review value required');
+            }
+
+            errors = errors.concat(validateActivity(activity, true));
+
+            if(errors.length) {
+                return reject({
+                    message: errors
+                });
+            }
+
+            let conn = await dbService.conn();
+
+            //activity: first or create
+            let activityQry = await conn('activities')
+                .where('activity_token', activity.activity_token)
+                .first();
+
+            if(!activityQry) {
+                //validate activity
+            }
+
+            debugger;
+        } catch(e) {
+            console.error(e);
+        }
+
+        resolve();
+    });
+}
+
 module.exports = {
     filters: {
         default: 4.5,
@@ -681,4 +820,5 @@ module.exports = {
     setActivityReview,
     updatePersonRatings,
     isReviewable,
+    saveFromNetwork
 };

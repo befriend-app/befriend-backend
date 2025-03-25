@@ -114,4 +114,16 @@ router.put('/activities/:activity_token/cancel', function (req, res, next) {
     });
 });
 
+router.put('/reviews/save', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await networksApiController.putSaveReview(req, res);
+        } catch (err) {
+            console.log(err);
+        }
+
+        resolve();
+    });
+});
+
 module.exports = router;
