@@ -1620,8 +1620,7 @@ function sendIOSBatch(devicesTokensPayloads, time_sensitive) {
 
             let results = await Promise.allSettled(notifications_ps);
 
-            // Process results to handle both fulfilled and rejected promises
-
+            //process results, both fulfilled and rejected promises
             results = results.map((result, index) => {
                 if (result.status === 'fulfilled') {
                     return result.value;
