@@ -1056,7 +1056,9 @@ function getActivityType(activity_type_token = null, activity_type_id = null) {
                     .where('activity_type_token', activity_type_token)
                     .first();
             } else if (activity_type_id) {
-                qry = await conn('activity_types').where('id', activity_type_id).first();
+                qry = await conn('activity_types')
+                    .where('id', activity_type_id)
+                    .first();
             }
 
             if (!qry) {
@@ -2294,6 +2296,78 @@ function filterActivityPersons(persons, my_person_token) {
     return persons;
 }
 
+function validateActivity(activity, is_on_review = false) {
+    const errors = [];
+
+    if (!activity?.activity_token) {
+        errors.push('Activity token required');
+    }
+
+    if (!activity.place?.id && !activity.fsq_place_id) {
+        errors.push('FSQ place id required');
+    }
+
+    if (!activity.activity?.token && !activity.activityType?.activity_type_token && !activity.activity_type_token) {
+        errors.push('Activity type token required');
+    }
+
+    if (!activity.duration && !activity.activity_duration_min) {
+        errors.push('Activity duration required');
+    }
+
+    if(!is_on_review) {
+        if (!activity.when?.data?.start || activity.when.data.start < timeNow(true)) {
+            errors.push('Invalid activity start time');
+        }
+
+        if (!activity.when?.data?.end || activity.when.data.end < timeNow(true)) {
+            errors.push('Invalid activity end time');
+        }
+
+        if (!activity.when?.data?.human?.time || !activity.when?.data?.human?.datetime) {
+            errors.push('Human time required');
+        }
+
+        if (!activity.friends?.type || !isNumeric(activity.friends?.qty)) {
+            errors.push('Friends type and qty required');
+        }
+
+        if (!activity.person?.mode) {
+            errors.push('Mode token required');
+        }
+    } else {
+        if(!activity.activity_start) {
+            errors.push('Activity start time required');
+        }
+
+        if(!activity.activity_end) {
+            errors.push('Activity end time required');
+        }
+
+        if(!activity.human_time || !activity.human_date) {
+            errors.push('Human time required');
+        }
+
+        if(!(activity.is_new_friends && !activity.is_existing_friends) || !isNumeric(activity.persons_qty)) {
+            errors.push('Friends type and qty required');
+        }
+    }
+
+    if (!activity.when?.in_mins && !activity.in_min) {
+        errors.push('In minutes required');
+    }
+
+    if (!activity.spots?.available && !activity.spots_available) {
+        errors.push('Available spots needed');
+    }
+
+    if (!activity.mode && !activity.mode_token) {
+        errors.push('Mode required');
+    }
+
+    return errors;
+}
+
 module.exports = {
     rules,
     types: null,
@@ -2365,7 +2439,9 @@ module.exports = {
     doesActivityOverlap,
     tooManyActivitiesCancelled,
     isActivityTypeExcluded,
+    validateActivity,
     validateKidsForActivity,
     validatePartnerForActivity,
     mergePersonsData,
+
 };
