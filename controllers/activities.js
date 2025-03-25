@@ -647,16 +647,16 @@ function putNetworkDeclineNotification(req, res) {
 function putReviews(req, res) {
     return new Promise(async (resolve, reject) => {
         let activity_token = req.params.activity_token;
-        let person_token = req.body.person_token;
+        let person_from_token = req.body.person_token;
         let person_to_token = req.body.person_to_token;
         let no_show = req.body.no_show;
         let review = req.body.review;
 
         try {
             let result = await reviewsService.setActivityReview(
-                activity_token,
-                person_token,
-                person_to_token,
+                { activity_token },
+                { person_from_token },
+                { person_to_token },
                 no_show,
                 review,
             );
@@ -679,7 +679,7 @@ function putNetworkReviewActivity(req, res) {
     return new Promise(async (resolve, reject) => {
         let access_token = req.body.access_token;
         let activity_token = req.params.activity_token;
-        let person_token = req.body.person_token;
+        let person_from_token = req.body.person_token;
         let person_to_token = req.body.person_to_token;
         let no_show = req.body.no_show;
         let review = req.body.review;
@@ -725,9 +725,9 @@ function putNetworkReviewActivity(req, res) {
 
         try {
             let result = await reviewsService.setActivityReview(
-                activity_token,
-                person_token,
-                person_to_token,
+                { activity_token },
+                { person_from_token },
+                { person_to_token },
                 no_show,
                 review,
             );
