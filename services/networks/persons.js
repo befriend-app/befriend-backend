@@ -259,7 +259,14 @@ function syncPersons(inputs) {
 
             //organize data
             for (let person of persons) {
-                let grid = await getGridById(person.grid_id);
+                let grid;
+
+                try {
+                    grid = await getGridById(person.grid_id);
+                } catch(e) {
+
+                }
+
                 let gender = genders.byId[person.gender_id];
 
                 delete person.gender_id;
