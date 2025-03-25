@@ -1389,8 +1389,8 @@ function getNetworkWithSecretKeyByDomain(domain) {
 
             let lookup = await getNetworksLookup();
 
-            for (let network_id in lookup) {
-                let network = lookup[network_id];
+            for (let network_id in lookup.byId) {
+                let network = lookup.byId[network_id];
                 
                 if(network.api_domain.includes(domain) || domain.includes(network.api_domain)) {
                     let secret_key = await getSecretKeyToForNetwork(network_id);
