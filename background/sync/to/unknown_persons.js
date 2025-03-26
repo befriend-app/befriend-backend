@@ -18,7 +18,7 @@ const BATCH_SIZE = 1000;
 
 let self_network;
 
-function processUpdate() {
+function syncUnknownPersons() {
     return new Promise(async (resolve, reject) => {
         try {
             let t = timeNow();
@@ -134,12 +134,11 @@ function main() {
                 return resolve();
             }
 
-            await processUpdate();
+            await syncUnknownPersons();
 
             resolve();
         } catch (e) {
             console.error('Error getting own network', e);
-            await timeoutAwait(5000);
             reject(e);
         }
     });

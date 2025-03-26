@@ -1,4 +1,4 @@
-//this sync process sends reviews created on your server
+//this sync process sends reviews created on 3rd party network to befriend home network
 
 const cacheService = require('../../../services/cache');
 const dbService = require('../../../services/db');
@@ -13,39 +13,37 @@ const axios = require('axios');
 
 loadScriptEnv();
 
-const UPDATE_FREQUENCY = 60 * 10 * 1000; //runs every 10 minutes
-const BATCH_SIZE = 1000;
-
 let self_network;
 
-function processUpdate() {
+function syncReviews() {
     return new Promise(async (resolve, reject) => {
         resolve();
     });
 }
 
-async function main() {
-    await cacheService.init();
+function main() {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await cacheService.init();
 
-    try {
-        self_network = await getNetworkSelf();
+            self_network = await getNetworkSelf();
 
-        if (!self_network) {
-            throw new Error();
+            if (!self_network) {
+                return reject();
+            }
+
+            if (self_network.is_befriend) {
+                return resolve();
+            }
+
+            await syncReviews();
+
+            resolve();
+        } catch (e) {
+            console.error('Error getting own network', e);
+            return reject();
         }
-
-        if (self_network.is_befriend) {
-            return;
-        }
-    } catch (e) {
-        console.error('Error getting own network', e);
-        await timeoutAwait(5000);
-        process.exit();
-    }
-
-    await processUpdate();
-
-    setInterval(processUpdate, UPDATE_FREQUENCY);
+    });
 }
 
 module.exports = {
@@ -56,6 +54,7 @@ if (require.main === module) {
     (async function () {
         try {
             await main();
+            process.exit();
         } catch (e) {
             console.error(e);
         }
