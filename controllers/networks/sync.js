@@ -118,7 +118,7 @@ module.exports = {
 
                 res.json(response, 202);
             } catch (e) {
-                if (e.message) {
+                if (e?.message) {
                     res.json(e.message, 400);
                 } else {
                     res.json('Error syncing reviews', 400);

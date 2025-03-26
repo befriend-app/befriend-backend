@@ -52,7 +52,7 @@ module.exports = {
         persons: isProdApp() ? false : false,
         me: isProdApp() ? false : false,
         filters: isProdApp() ? false : false,
-        reviews: isProdApp() ? false : false,
+        reviews: isProdApp() ? false : true,
     },
     notifications: {
         networks: isProdApp() ? false : true,

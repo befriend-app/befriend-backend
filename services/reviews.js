@@ -806,5 +806,6 @@ module.exports = {
     getActivityReviews,
     setActivityReview,
     updatePersonRatings,
+    updatePersonNoShow,
     isReviewable,
 };
