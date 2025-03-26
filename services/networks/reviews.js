@@ -247,18 +247,13 @@ function saveFromNetwork(from_network, activity, person_from_token, person_to_to
 }
 
 function syncReviews(from_network, activities) {
-    let errorsActivities = {};
-
-    function initErrorForActivity(activity_token, is_activity_error = false) {
-        errorsActivities[activity_token] = {
-            activity: is_activity_error,
-            persons: {},
-            reviews: {
-                from: {},
-                to: {}
-            }
+    let processErrors = {
+        activities: {},
+        persons: {
+            from: {},
+            to: {}
         }
-    }
+    };
 
     return new Promise(async (resolve, reject) => {
         try {
@@ -284,7 +279,7 @@ function syncReviews(from_network, activities) {
                 });
             }
 
-            // Collect all person tokens and activity tokens
+            //organize tokens
             let personTokens = new Set();
             let activityTokens = Object.keys(activities);
 
@@ -293,14 +288,14 @@ function syncReviews(from_network, activities) {
 
                 personTokens.add(activity.person_token);
 
-                // Add person tokens from activity persons
+                //add person tokens from activity persons
                 if (activity.persons) {
                     for(let person_token in activity.persons) {
                         personTokens.add(person_token);
                     }
                 }
 
-                // Add person tokens from reviews
+                //add person tokens from reviews
                 if (activity.reviews && Array.isArray(activity.reviews)) {
                     for(let review of activity.reviews) {
                         personTokens.add(review.person_from_token);
@@ -309,11 +304,7 @@ function syncReviews(from_network, activities) {
                 }
             }
 
-            // Get all persons
-            let persons = await conn('persons')
-                .whereIn('person_token', Array.from(personTokens))
-                .select('id', 'person_token', 'grid_id');
-
+            ////init lookups
             let personsLookup = {
                 byId: {},
                 byToken: {}
@@ -325,8 +316,12 @@ function syncReviews(from_network, activities) {
             };
 
             let activitiesPersonsLookup = {};
-
             let activitiesReviewsLookup = {};
+
+            //get existing persons
+            let persons = await conn('persons')
+                .whereIn('person_token', Array.from(personTokens))
+                .select('id', 'person_token', 'grid_id');
 
             //create persons lookup
             for (let person of persons) {
@@ -334,7 +329,7 @@ function syncReviews(from_network, activities) {
                 personsLookup.byToken[person.person_token] = person;
             }
 
-            // Get existing data
+            //get existing activities/persons/reviews
             let existingActivities = await conn('activities')
                 .whereIn('activity_token', activityTokens)
                 .select('id', 'activity_token', 'person_id');
@@ -439,14 +434,14 @@ function syncReviews(from_network, activities) {
                 const errors = validateActivity(activity, true);
 
                 if(errors.length) {
-                    initErrorForActivity(activity_token, true);
+                    processErrors.activities[activity_token] = true;
 
                     continue;
                 }
 
                 // Skip if no reviews to process
                 if (!activity.reviews?.length) {
-                    initErrorForActivity(activity_token, true);
+                    processErrors.activities[activity_token] = true;
 
                     continue;
                 }
@@ -462,7 +457,7 @@ function syncReviews(from_network, activities) {
                     if (!personsLookup.byToken[activity.person_token]) {
                         console.warn(`Activity creator ${activity.person_token} not found, skipping activity`);
 
-                        initErrorForActivity(activity_token, true);
+                        processErrors.activities[activity_token] = true;
 
                         continue;
                     }
@@ -474,7 +469,7 @@ function syncReviews(from_network, activities) {
                     if (!activityType || !mode) {
                         console.warn(`Activity type or mode not found for ${activity_token}, skipping`);
 
-                        initErrorForActivity(activity_token, true);
+                        processErrors.activities[activity_token] = true;
 
                         continue;
                     }
@@ -523,11 +518,6 @@ function syncReviews(from_network, activities) {
                     for (let person_token in activity.persons) {
                         // Skip if person not found
                         if (!personsLookup.byToken[person_token]) {
-                            if(!errorsActivities[activity_token]) {
-                                initErrorForActivity(activity_token, false);
-                            }
-
-                            errorsActivities[activity_token].persons[person_token] = true;
 
                             continue;
                         }
@@ -575,20 +565,18 @@ function syncReviews(from_network, activities) {
                 // Get existing reviews for this activity
                 let existingReviewsMap = activitiesReviewsLookup[activity_token];
 
-                // Process reviews
+                //process reviews
                 for (let reviewData of activity.reviews) {
                     //validate persons exist
                     if (!personsLookup.byToken[reviewData.person_from_token] ||
                         !personsLookup.byToken[reviewData.person_to_token]) {
 
-                        initErrorForActivity(activity_token, false);
-
                         if(!personsLookup.byToken[reviewData.person_from_token]) {
-                            errorsActivities[activity_token].reviews.from[reviewData.person_from_token] = true;
+                            processErrors.persons.from[reviewData.person_from_token] = true;
                         }
 
                         if(!personsLookup.byToken[reviewData.person_to_token]) {
-                            errorsActivities[activity_token].reviews.to[reviewData.person_to_token] = true;
+                            processErrors.persons.to[reviewData.person_to_token] = true;
                         }
 
                         continue;
@@ -596,21 +584,13 @@ function syncReviews(from_network, activities) {
 
                     //validate person exists on activity
                     if (!activity.persons?.[reviewData.person_from_token]) {
-                        initErrorForActivity(activity_token, false);
-
-                        if(!personsLookup.byToken[reviewData.person_from_token]) {
-                            errorsActivities[activity_token].reviews.from[reviewData.person_from_token] = true;
-                        }
+                        processErrors.persons.from[reviewData.person_from_token] = true;
 
                         continue;
                     }
 
                     if (!activity.persons?.[reviewData.person_to_token]) {
-                        initErrorForActivity(activity_token, false);
-
-                        if(!personsLookup.byToken[reviewData.person_to_token]) {
-                            errorsActivities[activity_token].reviews.to[reviewData.person_to_token] = true;
-                        }
+                        processErrors.persons.to[reviewData.person_to_token] = true;
 
                         continue;
                     }
@@ -714,10 +694,9 @@ function syncReviews(from_network, activities) {
 
             resolve({
                 success: true,
-                message: `Processed ${reviewsProcessed} reviews across ${activitiesUpdated} activities`,
                 reviewsProcessed,
                 activitiesUpdated,
-                errors: errorsActivities
+                errors: processErrors
             });
         } catch (e) {
             console.error({
