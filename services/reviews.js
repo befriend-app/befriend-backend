@@ -540,7 +540,6 @@ function setActivityReview(activityData = {}, personFromData = {}, personToData 
                         
                         if(response.status === 202) {
                             returnData = response.data;
-                            break;
                         }
                     } catch (e) {
                         console.error(e);
