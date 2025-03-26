@@ -23,7 +23,7 @@ const {
     keys: systemKeys,
     getNetworkSyncProcess,
     setNetworkSyncProcess,
-} = require('../../../services/system');
+} = require('../../../system');
 const { getGridByToken, getGridById } = require('../../../services/grid');
 const { batchInsert, batchUpdate } = require('../../../services/db');
 const { getKidsAgeLookup } = require('../../../services/modes');

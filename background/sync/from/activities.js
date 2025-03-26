@@ -19,7 +19,7 @@ const {
     keys: systemKeys,
     getNetworkSyncProcess,
     setNetworkSyncProcess,
-} = require('../../../services/system');
+} = require('../../../system');
 const { batchUpdate } = require('../../../services/db');
 
 const batch_process = 1000;

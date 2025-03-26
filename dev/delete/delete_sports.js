@@ -1,6 +1,6 @@
 const cacheService = require('../../services/cache');
 const { loadScriptEnv, isProdApp } = require('../../services/shared');
-const { keys: systemKeys } = require('../../services/system');
+const { keys: systemKeys } = require('../../system');
 const { getKeys, getKeysWithPrefix } = require('../../services/cache');
 
 loadScriptEnv();

@@ -1,13 +1,16 @@
-const cacheService = require('./cache');
-const dbService = require('./db');
-const { timeNow, isNumeric } = require('./shared');
+const cacheService = require('./services/cache');
+const dbService = require('./services/db');
+const { timeNow, isNumeric } = require('./services/shared');
+
 
 function getProcessRan(system_key) {
     return new Promise(async (resolve, reject) => {
         try {
             let conn = await dbService.conn();
 
-            let qry = await conn('system').where('system_key', system_key).first();
+            let qry = await conn('system')
+                .where('system_key', system_key)
+                .first();
 
             if (!qry || !qry.system_value) {
                 return resolve(false);
@@ -38,7 +41,9 @@ function setProcessRan(system_key) {
         try {
             let conn = await dbService.conn();
 
-            let qry = await conn('system').where('system_key', system_key).first();
+            let qry = await conn('system')
+                .where('system_key', system_key)
+                .first();
 
             if (qry) {
                 await conn('system').where('id', qry.id).update({
@@ -119,6 +124,7 @@ module.exports = {
                 persons_modes: 'sync_persons_modes',
                 persons_me: 'sync_persons_me',
                 persons_filters: 'sync_persons_filters',
+                reviews: 'sync_reviews',
             },
         },
         system: {},

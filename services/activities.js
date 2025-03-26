@@ -554,7 +554,7 @@ function createActivity(person, activity) {
 
 function checkIn(activity_token, person_token, location, access_token = null) {
     return new Promise(async (resolve, reject) => {
-        let debug_enabled = require('../dev/debug').activities.checkIn;
+        let debug_enabled = require('../dev/debug').activities.check_in;
 
         let notification_cache_key = cacheService.keys.activities_notifications(activity_token);
         let person_activity_cache_key = cacheService.keys.persons_activities(person_token);

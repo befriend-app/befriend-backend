@@ -1,6 +1,8 @@
 //in case 3rd-party network was unable to communicate with a befriend domain on user creation,
 //this process ensures those persons are eventually known by the whole network
 
+const axios = require('axios');
+
 const cacheService = require('../../../services/cache');
 const dbService = require('../../../services/db');
 const { timeNow, loadScriptEnv, timeoutAwait, getURL } = require('../../../services/shared');
@@ -10,7 +12,6 @@ const {
     getNetworksLookup,
     getSecretKeyToForNetwork,
 } = require('../../../services/network');
-const axios = require('axios');
 
 loadScriptEnv();
 

@@ -3,7 +3,7 @@ const { loadScriptEnv, timeNow, dataEndpoint } = require('../services/shared');
 const dbService = require('../services/db');
 const cacheService = require('../services/cache');
 const { batchInsert, batchUpdate } = require('../services/db');
-const { keys: systemKeys } = require('../services/system');
+const { keys: systemKeys } = require('../system');
 
 loadScriptEnv();
 

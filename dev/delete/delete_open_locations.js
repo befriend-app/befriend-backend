@@ -1,7 +1,7 @@
 const db = require('../../services/db');
 const cache = require('../../services/cache');
 const { loadScriptEnv, isProdApp } = require('../../services/shared');
-const { keys: systemKeys } = require('../../services/system');
+const { keys: systemKeys } = require('../../system');
 
 loadScriptEnv();
 

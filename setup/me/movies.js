@@ -2,7 +2,7 @@ const axios = require('axios');
 const { loadScriptEnv, timeNow, generateToken, dataEndpoint } = require('../../services/shared');
 const dbService = require('../../services/db');
 const cacheService = require('../../services/cache');
-const { keys: systemKeys } = require('../../services/system');
+const { keys: systemKeys } = require('../../system');
 
 loadScriptEnv();
 

@@ -8,7 +8,7 @@ module.exports = {
         cancel: isProdApp() ? false : false,
         create: isProdApp() ? false : true,
         accept: isProdApp() ? false : true,
-        checkIn: isProdApp() ? false : true,
+        check_in: isProdApp() ? false : true,
     },
     matching: {
         logs: isProdApp() ? false : true,
@@ -52,6 +52,7 @@ module.exports = {
         persons: isProdApp() ? false : false,
         me: isProdApp() ? false : false,
         filters: isProdApp() ? false : false,
+        reviews: isProdApp() ? false : false,
     },
     notifications: {
         networks: isProdApp() ? false : true,

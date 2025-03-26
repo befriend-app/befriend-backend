@@ -13,7 +13,7 @@ const {
     keys: systemKeys,
     setNetworkSyncProcess,
     getNetworkSyncProcess,
-} = require('../../../services/system');
+} = require('../../../system');
 const { batchInsert, batchUpdate } = require('../../../services/db');
 const { getAllSections } = require('../../../services/me');
 const sectionsData = require('../../../services/sections_data');
