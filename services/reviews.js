@@ -377,6 +377,7 @@ function setActivityReview(activityData = {}, personFromData = {}, personToData 
                         person_to_id: personTo.id,
                         activity_id: activity.activity_id,
                         no_show,
+                        is_synced: !!on_save_from_network,
                         created: timeNow(),
                         updated: timeNow(),
                     });
@@ -423,6 +424,7 @@ function setActivityReview(activityData = {}, personFromData = {}, personToData 
                             activity_id: activity.activity_id,
                             review_id: reviewData.id,
                             rating: review.rating,
+                            is_synced: !!on_save_from_network,
                             created: timeNow(),
                             updated: timeNow(),
                         });
