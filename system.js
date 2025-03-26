@@ -68,10 +68,17 @@ function setProcessRan(system_key) {
 
 function getNetworkSyncProcess(sync_name, network_id) {
     return new Promise(async (resolve, reject) => {
+        if(!network_id) {
+            return reject('No network id')
+        }
+
         try {
-            let data = await cacheService.getObj(
-                cacheService.keys.sync_networks(sync_name, network_id),
-            );
+            let conn = await dbService.conn();
+
+            let data = await conn('sync')
+                .where('sync_process', sync_name)
+                .where('network_id', network_id)
+                .first();
 
             resolve(data);
         } catch (e) {
@@ -83,7 +90,27 @@ function getNetworkSyncProcess(sync_name, network_id) {
 
 function setNetworkSyncProcess(sync_name, network_id, data) {
     return new Promise(async (resolve, reject) => {
+        if(!network_id) {
+            return reject('No network id')
+        }
+
         try {
+            let conn = await dbService.conn();
+
+            let existing = await conn('sync')
+                .where('sync_process', sync_name)
+                .where('network_id', network_id)
+                .first();
+
+            if(existing) {
+                await conn('sync')
+                    .where('id', existing.id)
+                    .update(data);
+            } else {
+                await conn('sync')
+                    .insert(data);
+            }
+
             await cacheService.setCache(
                 cacheService.keys.sync_networks(sync_name, network_id),
                 data,
