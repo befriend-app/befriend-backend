@@ -25,9 +25,7 @@ const {
 } = require('../../../services/shared');
 
 const { getFilters, filterMappings, batchUpdateGridSets } = require('../../../services/filters');
-
-let batch_process = 1000;
-let defaultTimeout = 20000;
+const { defaultTimeout } = require('../../common');
 
 let filterMapLookup = {};
 

@@ -15,9 +15,9 @@ const {
 
 loadScriptEnv();
 
-const BATCH_SIZE = 1000;
+let networkSelf;
 
-let self_network;
+const BATCH_SIZE = 1000;
 
 function syncUnknownPersons() {
     return new Promise(async (resolve, reject) => {
@@ -33,7 +33,7 @@ function syncUnknownPersons() {
                 try {
                     let persons = await conn('persons')
                         .where('is_person_known', false)
-                        .where('registration_network_id', self_network.id)
+                        .where('registration_network_id', networkSelf.id)
                         .offset(offset)
                         .limit(BATCH_SIZE)
                         .select('id', 'person_token', 'updated');
@@ -49,7 +49,7 @@ function syncUnknownPersons() {
 
                     for (let domain of home_domains) {
                         //skip notifying own domain
-                        if (self_network.api_domain.includes(domain)) {
+                        if (networkSelf.api_domain.includes(domain)) {
                             continue;
                         }
 
@@ -78,7 +78,7 @@ function syncUnknownPersons() {
                             try {
                                 let r = await axios.post(getURL(domain, 'networks/persons'), {
                                     secret_key: secret_key_to,
-                                    network_token: self_network.network_token,
+                                    network_token: networkSelf.network_token,
                                     person_token: person.person_token,
                                     updated: person.updated,
                                 });
@@ -125,13 +125,13 @@ function main() {
         try {
             await cacheService.init();
 
-            self_network = await getNetworkSelf();
+            networkSelf = await getNetworkSelf();
 
-            if (!self_network) {
+            if (!networkSelf) {
                 return reject();
             }
 
-            if (self_network.is_befriend) {
+            if (networkSelf.is_befriend) {
                 return resolve();
             }
 

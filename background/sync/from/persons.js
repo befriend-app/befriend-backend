@@ -28,10 +28,9 @@ const { getGridByToken, getGridById } = require('../../../services/grid');
 const { batchInsert, batchUpdate } = require('../../../services/db');
 const { getKidsAgeLookup } = require('../../../services/modes');
 const { batchUpdateGridSets, filterTokensAll } = require('../../../services/filters');
+const { batchQuantity, defaultTimeout } = require('../../common');
 
 let persons_grid_filters = ['online', 'location', 'modes', 'reviews', 'verifications', 'genders'];
-let batch_process = 1000;
-let defaultTimeout = 20000;
 
 let debug_sync_enabled = require('../../../dev/debug').sync.persons;
 
@@ -118,8 +117,8 @@ function processPersons(network_id, persons) {
             //batch process/insert/update
             let batches = [];
 
-            for (let i = 0; i < persons.length; i += batch_process) {
-                batches.push(persons.slice(i, i + batch_process));
+            for (let i = 0; i < persons.length; i += batchQuantity) {
+                batches.push(persons.slice(i, i + batchQuantity));
             }
 
             for (let batch of batches) {
@@ -409,8 +408,8 @@ function processPersonsModes(network_id, persons_modes) {
             let conn = await dbService.conn();
             let batches = [];
 
-            for (let i = 0; i < persons_modes.length; i += batch_process) {
-                batches.push(persons_modes.slice(i, i + batch_process));
+            for (let i = 0; i < persons_modes.length; i += batchQuantity) {
+                batches.push(persons_modes.slice(i, i + batchQuantity));
             }
 
             let [gendersLookup, agesLookup] = await Promise.all([

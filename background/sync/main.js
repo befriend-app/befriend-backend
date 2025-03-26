@@ -6,8 +6,7 @@ const fromFilters = require('./from/filters');
 const toUnknownPersons = require('./to/unknown_persons');
 
 const { loadScriptEnv, timeoutAwait } = require('../../services/shared');
-
-const runInterval = 20 * 60 * 1000; //every x minutes
+const { runInterval } = require('../common');
 
 (async function () {
     loadScriptEnv();

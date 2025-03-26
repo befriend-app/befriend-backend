@@ -26,9 +26,7 @@ const {
     setNetworkSyncProcess,
 } = require('../../../system');
 const { batchInsert, batchUpdate } = require('../../../services/db');
-
-let batch_process = 1000;
-let defaultTimeout = 20000;
+const { batchQuantity, defaultTimeout } = require('../../common');
 
 let debug_sync_enabled = require('../../../dev/debug').sync.networks_persons;
 
@@ -57,8 +55,8 @@ function processNetworksPersons(persons_networks) {
 
             let batches = [];
 
-            for (let i = 0; i < personTokens.length; i += batch_process) {
-                batches.push(personTokens.slice(i, i + batch_process));
+            for (let i = 0; i < personTokens.length; i += batchQuantity) {
+                batches.push(personTokens.slice(i, i + batchQuantity));
             }
 
             let unknown_networks = new Set();

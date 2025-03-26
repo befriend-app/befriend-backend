@@ -21,9 +21,7 @@ const {
     setNetworkSyncProcess,
 } = require('../../../system');
 const { batchUpdate } = require('../../../services/db');
-
-const batch_process = 1000;
-const defaultTimeout = 20000;
+const { batchQuantity, defaultTimeout } = require('../../common');
 
 let debug_sync_enabled = require('../../../dev/debug').sync.activities;
 
@@ -178,8 +176,8 @@ function processActivities(network_id, activities) {
 
             let batches = [];
 
-            for (let i = 0; i < activities.length; i += batch_process) {
-                batches.push(activities.slice(i, i + batch_process));
+            for (let i = 0; i < activities.length; i += batchQuantity) {
+                batches.push(activities.slice(i, i + batchQuantity));
             }
 
             for (let batch of batches) {

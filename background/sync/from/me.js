@@ -26,9 +26,7 @@ const {
     joinPaths,
 } = require('../../../services/shared');
 const { batchUpdateGridSets } = require('../../../services/filters');
-
-let batch_process = 1000;
-let defaultTimeout = 20000;
+const { batchQuantity, defaultTimeout } = require('../../common');
 
 let tableLookup = {};
 
@@ -208,8 +206,8 @@ function processMe(network_id, persons) {
             //batch process/insert/update
             let batches = [];
 
-            for (let i = 0; i < validPersons.length; i += batch_process) {
-                batches.push(validPersons.slice(i, i + batch_process));
+            for (let i = 0; i < validPersons.length; i += batchQuantity) {
+                batches.push(validPersons.slice(i, i + batchQuantity));
             }
 
             for (let batch of batches) {
