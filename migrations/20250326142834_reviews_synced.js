@@ -5,6 +5,9 @@
 exports.up = async function (knex) {
     await knex.schema.alterTable('activities_persons_reviews', (table) => {
         table.boolean('is_synced').defaultTo(0).after('rating');
+
+        table.index('is_synced');
+        table.index('updated');
     });
 };
 
@@ -14,6 +17,9 @@ exports.up = async function (knex) {
  */
 exports.down = async function (knex) {
     await knex.schema.alterTable('activities_persons_reviews', (table) => {
-        table.dropColumn('is_synced');
+       table.dropIndex('is_synced');
+       table.dropIndex('updated');
+
+       table.dropColumn('is_synced');
     });
 };
