@@ -2,6 +2,7 @@ const networksActivitiesService = require('../../services/networks/activities');
 const networksFiltersService = require('../../services/networks/filters');
 const networksMeService = require('../../services/networks/me');
 const networksPersonsService = require('../../services/networks/persons');
+const networksReviewsService = require('../../services/networks/reviews');
 
 module.exports = {
     syncActivities: function (req, res) {
@@ -104,6 +105,23 @@ module.exports = {
                     res.json(e.message, 400);
                 } else {
                     res.json('Error syncing filters', 400);
+                }
+            }
+
+            resolve();
+        });
+    },
+    syncReviews: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let response = await networksReviewsService.syncReviews(req.from_network, req.body.activities);
+
+                res.json(response, 202);
+            } catch (e) {
+                if (e.message) {
+                    res.json(e.message, 400);
+                } else {
+                    res.json('Error syncing reviews', 400);
                 }
             }
 

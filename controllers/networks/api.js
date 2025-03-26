@@ -2,7 +2,7 @@ const networksActivitiesService = require('../../services/networks/activities');
 const networksMatchingService = require('../../services/networks/matching');
 const networksPersonsService = require('../../services/networks/persons');
 const networksNotificationsService = require('../../services/networks/notifications');
-const reviewsService = require('../../services/reviews');
+const networksReviewsService = require('../../services/networks/reviews');
 
 module.exports = {
     createPerson: function (req, res) {
@@ -238,7 +238,7 @@ module.exports = {
             let no_show = req.body.no_show;
 
             try {
-                let response = await reviewsService.saveFromNetwork(
+                let response = await networksReviewsService.saveFromNetwork(
                     from_network,
                     activity,
                     person_from_token,

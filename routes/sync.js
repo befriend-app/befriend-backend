@@ -76,4 +76,16 @@ router.get('/persons/me', function (req, res, next) {
     });
 });
 
+router.put('/reviews', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await syncController.syncReviews(req, res);
+        } catch (e) {
+            console.error(e);
+        }
+
+        resolve();
+    });
+});
+
 module.exports = router;
