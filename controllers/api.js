@@ -237,6 +237,41 @@ module.exports = {
             }
         });
     },
+    doLogout: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let conn = await dbService.conn();
+                let person_token = req.body.person_token;
+                let login_token = req.body.login_token;
+
+                let person = await getPerson(person_token);
+
+                let updated = await conn('persons_login_tokens')
+                    .where('person_id', person.id)
+                    .where('login_token', login_token)
+                    .update({
+                        updated: timeNow(),
+                        deleted: timeNow()
+                    });
+
+                let cache_key = cacheService.keys.person_login_tokens(person_token);
+
+                await cacheService.removeMemberFromSet(cache_key, login_token);
+
+                res.json(
+                    {
+                        message: 'Sign Out Successful',
+                    },
+                    200,
+                );
+
+                return resolve();
+            } catch (e) {
+                res.json('Sign out failed', 400);
+                return reject(e);
+            }
+        });
+    },
     getActivityTypes: function (req, res) {
         return new Promise(async (resolve, reject) => {
             try {

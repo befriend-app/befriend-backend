@@ -114,9 +114,9 @@ function removePersonConnection(ws) {
 }
 
 function terminate(ws, logout) {
-    console.log({
-        logout: ws,
-    });
+    // console.log({
+    //     logout: ws,
+    // });
 
     if (logout) {
         ws.send(401);
