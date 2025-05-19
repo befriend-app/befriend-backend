@@ -309,4 +309,16 @@ router.post('/travel-time', function (req, res, next) {
     });
 });
 
+router.get('/sms/country-codes', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await apiController.smsCountryCodes(req, res);
+        } catch (e) {
+            console.error(e);
+        }
+
+        resolve();
+    });
+});
+
 module.exports = router;

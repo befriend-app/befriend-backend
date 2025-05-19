@@ -21,6 +21,7 @@ const { getTopTeamsBySport, sportsAutoComplete } = require('../services/sports')
 const { timeNow, generateToken, normalizeSearch } = require('../services/shared');
 const { getActivityTypes } = require('../services/activities');
 const { getPlaceData } = require('../services/fsq');
+const { country_codes } = require('../services/sms');
 
 module.exports = {
     getNetworks: function (req, res) {
@@ -1053,4 +1054,15 @@ module.exports = {
             resolve();
         });
     },
+    smsCountryCodes: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                res.json(country_codes);
+            } catch(e) {
+
+            }
+
+            resolve();
+        });
+    }
 };
