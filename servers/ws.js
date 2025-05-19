@@ -20,6 +20,7 @@ const process = require('process');
 const query_string = require('query-string');
 
 const WebSocket = require('ws');
+const { isAuthenticated } = require('../services/account');
 
 const port_num = require('../servers/ports').ws;
 
@@ -171,7 +172,7 @@ function initWS() {
             let login_token = params.login_token;
 
             try {
-                let is_authenticated = await personsService.isAuthenticated(
+                let is_authenticated = await isAuthenticated(
                     person_token,
                     login_token,
                 );

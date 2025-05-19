@@ -27,6 +27,19 @@ router.post('/login', function (req, res, next) {
     });
 });
 
+router.put('/login/exists', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        //person login
+        try {
+            await apiController.checkLoginExists(req, res);
+        } catch (e) {
+            console.error(e);
+        }
+
+        resolve();
+    });
+});
+
 router.get('/happy-connect', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         res.json({

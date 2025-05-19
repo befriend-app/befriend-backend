@@ -18,10 +18,11 @@ const { schoolAutoComplete } = require('../services/schools');
 const { getTopArtistsForGenre, musicAutoComplete } = require('../services/music');
 const { getTopTeamsBySport, sportsAutoComplete } = require('../services/sports');
 
-const { timeNow, generateToken, normalizeSearch } = require('../services/shared');
+const { timeNow, generateToken, normalizeSearch, isValidPhone, isValidEmail } = require('../services/shared');
 const { getActivityTypes } = require('../services/activities');
 const { getPlaceData } = require('../services/fsq');
 const { country_codes } = require('../services/sms');
+const { doLogin, doLogout, checkAccountExists, sendAuthCode } = require('../services/account');
 
 module.exports = {
     getNetworks: function (req, res) {
@@ -194,33 +195,7 @@ module.exports = {
                 let email = req.body.email;
                 let password = req.body.password;
 
-                let person = await getPerson(null, email);
-
-                // check if password is correct
-                let validPassword = await encryptionService.compare(password, person.password);
-
-                if (!validPassword) {
-                    res.json('Invalid login', 403);
-                    return resolve();
-                }
-
-                // generate login token return in response. Used for authentication on future requests
-                let login_token = generateToken(30);
-
-                // save to both mysql and redis
-                let conn = await dbService.conn();
-
-                await conn('persons_login_tokens').insert({
-                    person_id: person.id,
-                    login_token: login_token,
-                    expires: null,
-                    created: timeNow(),
-                    updated: timeNow(),
-                });
-
-                let cache_key = cacheService.keys.person_login_tokens(person.person_token);
-
-                await cacheService.addItemToSet(cache_key, login_token);
+                let login_token = await doLogin(email, password);
 
                 res.json(
                     {
@@ -233,7 +208,7 @@ module.exports = {
                 return resolve();
             } catch (e) {
                 // handle logic for different errors
-                res.json('Login failed', 400);
+                res.json(e?.message || 'Login failed', e?.status || 400);
                 return reject(e);
             }
         });
@@ -245,19 +220,7 @@ module.exports = {
                 let person_token = req.body.person_token;
                 let login_token = req.body.login_token;
 
-                let person = await getPerson(person_token);
-
-                let updated = await conn('persons_login_tokens')
-                    .where('person_id', person.id)
-                    .where('login_token', login_token)
-                    .update({
-                        updated: timeNow(),
-                        deleted: timeNow()
-                    });
-
-                let cache_key = cacheService.keys.person_login_tokens(person_token);
-
-                await cacheService.removeMemberFromSet(cache_key, login_token);
+                await doLogout(person_token, login_token);
 
                 res.json(
                     {
@@ -269,6 +232,27 @@ module.exports = {
                 return resolve();
             } catch (e) {
                 res.json('Sign out failed', 400);
+                return reject(e);
+            }
+        });
+    },
+    checkLoginExists: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let phoneObj = req.body.phone;
+                let email = req.body.email;
+
+                let exists = await checkAccountExists(phoneObj, email);
+
+                if(!exists){
+                    await sendAuthCode(phoneObj, email, 'signup');
+                }
+
+                res.json(exists, 200);
+
+                return resolve();
+            } catch (e) {
+                res.json(e?.message || 'Login check error', 400);
                 return reject(e);
             }
         });

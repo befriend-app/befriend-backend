@@ -1,5 +1,4 @@
-const cacheService = require('../services/cache');
-const personsService = require('../services/persons');
+const { isAuthenticated } = require('../services/account');
 
 // authentication middleware
 module.exports = function (req, res, next) {
@@ -19,7 +18,7 @@ module.exports = function (req, res, next) {
                 return resolve();
             }
 
-            let is_authenticated = await personsService.isAuthenticated(person_token, login_token);
+            let is_authenticated = await isAuthenticated(person_token, login_token);
 
             if (!is_authenticated) {
                 res.json(

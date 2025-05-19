@@ -4,29 +4,12 @@ const { timeNow } = require('../services/shared');
 const { updateGridSets } = require('../services/filters');
 const { getNetworksLookup } = require('./network');
 const { getGridById } = require('./grid');
-const { isNumeric, floatOrNull } = require('./shared');
+const { isNumeric, floatOrNull, isValidPhone, isValidEmail } = require('./shared');
+const { country_codes } = require('./sms');
 
 module.exports = {
     minAge: 18,
     maxAge: 80, //if max filter age is set at 80, we include all ages above
-    isAuthenticated: function (person_token, login_token) {
-        return new Promise(async (resolve, reject) => {
-            try {
-                if (!person_token) {
-                    return resolve(false);
-                }
-
-                let cache_key = cacheService.keys.person_login_tokens(person_token);
-
-                let is_valid_token = await cacheService.isSetMember(cache_key, login_token);
-
-                return resolve(is_valid_token);
-            } catch (e) {
-                console.error(e);
-                return reject(e);
-            }
-        });
-    },
     getPerson: function (person_token, email) {
         return new Promise(async (resolve, reject) => {
             if (!email && !person_token) {
