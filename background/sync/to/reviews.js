@@ -195,6 +195,7 @@ function syncReviews() {
                                 let review_token = reviewsLookup.byId[data.review_id]?.token || null;
 
                                 reviews.push({
+                                    id: id,
                                     person_from_token,
                                     person_to_token,
                                     activity_token,
@@ -206,12 +207,28 @@ function syncReviews() {
                                 });
                             }
 
+                            let reviewsCopy = structuredClone(reviews);
+
+                            for(let review of reviews) {
+                                delete review.id;
+                            }
+
                             activitiesOrganized[activity_token] = {
                                 ...activity,
                                 persons: personsOrganized,
-                                reviews
+                                reviews,
+                                reviewsCopy
                             };
                         }
+
+                        let activitiesSendData = structuredClone(activitiesOrganized);
+
+                        for(let at in activitiesSendData) {
+                            let activity = activitiesSendData[at];
+
+                            delete activity.reviewsCopy;
+                        }
+
 
                         const axiosInstance = axios.create({
                             timeout: defaultTimeout,
@@ -222,10 +239,41 @@ function syncReviews() {
                         let r = await axiosInstance.put(sync_url, {
                             secret_key: network.secret_key,
                             network_token: networkSelf.network_token,
-                            activities: activitiesOrganized
+                            activities: activitiesSendData
                         });
 
                         if(r.status === 202) {
+                            let saveSyncedIds = [];
+
+                            let responseData = r.data || {};
+
+                            let errors = responseData.errors || {
+                                activities: {},
+                                persons: {
+                                    from: {},
+                                    to: {}
+                                }
+                            };
+
+                            for(let activity_token in activitiesOrganized) {
+                                if(activity_token in errors.activities) {
+                                    continue;
+                                }
+
+                                let activity = activitiesOrganized[activity_token];
+
+                                let reviews = activity.reviews;
+
+                                //todo
+                            }
+
+                            if(saveSyncedIds.length) {
+                                await conn('activities_persons_reviews')
+                                    .whereIn('id', saveSyncedIds)
+                                    .update({
+                                        is_synced: true
+                                    });
+                            }
 
                         } else {
                             skipSaveTimestamps = true;
