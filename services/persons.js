@@ -22,6 +22,9 @@ module.exports = {
                 let loginToken = null;
                 let created = timeNow();
 
+                //set solo mode by default
+                let modes = ['solo'];
+
                 //insert into persons table
                 let person_insert = {
                     registration_network_id: network.id,
@@ -32,6 +35,7 @@ module.exports = {
                     phone: phoneObj?.number || null,
                     phone_country_code: phoneObj?.countryCode || null,
                     is_online: true,
+                    modes: JSON.stringify(modes),
                     created,
                     updated: created,
                 };
