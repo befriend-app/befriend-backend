@@ -8,12 +8,14 @@ exports.up = async function (knex) {
     await knex.schema.createTable('auth_codes', (table) => {
         table.bigIncrements('id').unsigned().primary();
 
+        table.string('ip_address', 60).nullable();
         table.string('phone', 30).nullable().index();
         table.string('email', 100).nullable().index();
         table.string('code', 20).index();
         table.string('action', 30).notNullable();
         table.boolean('is_used').defaultTo(false);
         table.integer('errors').defaultTo(0);
+        table.integer('expires').notNullable();
 
         table.bigInteger('created').notNullable();
         table.bigInteger('updated').notNullable();
