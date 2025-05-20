@@ -37,6 +37,13 @@ const { getPersonReviews, reviewPeriod } = require('../services/reviews');
 
 module.exports = {
     getMe: function (req, res) {
+        function removeMeFields(data) {
+            let me = structuredClone(data);
+
+            delete me.id;
+            delete me.password;
+        }
+
         return new Promise(async (resolve, reject) => {
             let person_token = req.query.person_token;
 
@@ -80,7 +87,7 @@ module.exports = {
 
                 res.json({
                     network,
-                    me,
+                    me: removeMeFields(me),
                     notifications,
                     filters,
                     genders,

@@ -330,6 +330,10 @@ function isPersonAvailable(person, filter, activity = null) {
 
     let timezone = person.timezone;
 
+    if(!timezone) {
+        return false;
+    }
+
     if (activity?.place?.data) {
         if (activity.place.data.timezone) {
             timezone = activity.place.data.timezone;
@@ -339,10 +343,6 @@ function isPersonAvailable(person, filter, activity = null) {
                 activity.place.data.location_lon,
             );
         }
-    }
-
-    if (!timezone) {
-        throw new Error('Timezone required');
     }
 
     // Convert current UTC time to person's timezone

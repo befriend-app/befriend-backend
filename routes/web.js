@@ -4,6 +4,7 @@ let router = express.Router();
 let activitiesController = require('../controllers/activities');
 let apiController = require('../controllers/api');
 
+
 router.get('/', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         res.json({
@@ -18,7 +19,7 @@ router.post('/login', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         //person login
         try {
-            await apiController.doLogin(req, res);
+            await apiController.loginEmail(req, res);
         } catch (e) {
             console.error(e);
         }
@@ -40,11 +41,40 @@ router.put('/login/exists', function (req, res, next) {
     });
 });
 
-router.get('/happy-connect', function (req, res, next) {
+router.put('/auth/code/verify', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
-        res.json({
-            happiness: 'unlimited',
-        });
+        //person login
+        try {
+            await apiController.verifyAuthCode(req, res);
+        } catch (e) {
+            console.error(e);
+        }
+
+        resolve();
+    });
+});
+
+router.put('/password/reset', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        //person login
+        try {
+            await apiController.resetPassword(req, res);
+        } catch (e) {
+            console.error(e);
+        }
+
+        resolve();
+    });
+});
+
+router.put('/password/set/code', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        //person login
+        try {
+            await apiController.setPasswordWithCode(req, res);
+        } catch (e) {
+            console.error(e);
+        }
 
         resolve();
     });
@@ -329,6 +359,16 @@ router.get('/sms/country-codes', function (req, res, next) {
         } catch (e) {
             console.error(e);
         }
+
+        resolve();
+    });
+});
+
+router.get('/happy-connect', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        res.json({
+            happiness: 'unlimited',
+        });
 
         resolve();
     });

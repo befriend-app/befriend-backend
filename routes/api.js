@@ -7,12 +7,24 @@ let personsController = require('../controllers/persons');
 
 router.use(require('../middleware/auth'));
 
-
 router.put('/logout', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         //person login
         try {
-            await apiController.doLogout(req, res);
+            await apiController.logoutUser(req, res);
+        } catch (e) {
+            console.error(e);
+        }
+
+        resolve();
+    });
+});
+
+router.put('/password/init', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        //person login
+        try {
+            await apiController.passwordInit(req, res);
         } catch (e) {
             console.error(e);
         }

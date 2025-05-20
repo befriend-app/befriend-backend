@@ -2,14 +2,80 @@ const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 const { timeNow } = require('../services/shared');
 const { updateGridSets } = require('../services/filters');
-const { getNetworksLookup } = require('./network');
+const { getNetworksLookup, getNetworkSelf, registerNewPersonHomeDomain } = require('./network');
 const { getGridById } = require('./grid');
-const { isNumeric, floatOrNull, isValidPhone, isValidEmail } = require('./shared');
-const { country_codes } = require('./sms');
+const { floatOrNull, generateToken } = require('./shared');
+const { createLoginToken } = require('./account');
 
 module.exports = {
     minAge: 18,
     maxAge: 80, //if max filter age is set at 80, we include all ages above
+    createPerson: function(phoneObj, email, autoLogin) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let conn = await dbService.conn();
+                let network = await getNetworkSelf();
+
+                //create unique person token
+                let personToken = generateToken();
+                let loginToken = null;
+                let created = timeNow();
+
+                //insert into persons table
+                let person_insert = {
+                    registration_network_id: network.id,
+                    is_person_known: network.is_befriend,
+                    is_new: true,
+                    person_token: personToken,
+                    email: email || null,
+                    phone: phoneObj?.number || null,
+                    phone_country_code: phoneObj?.countryCode || null,
+                    is_online: true,
+                    created,
+                    updated: created,
+                };
+
+                let [person_id] = await conn('persons')
+                    .insert(person_insert);
+
+                //insert into networks_persons table
+                let networkPersonInsert = {
+                    network_id: network.id,
+                    person_id: person_id,
+                    is_active: true,
+                    created,
+                    updated: created,
+                };
+
+                await conn('networks_persons').insert(
+                    networkPersonInsert
+                );
+
+                if(autoLogin) {
+                    loginToken = await createLoginToken({
+                        id: person_id,
+                        person_token: personToken
+                    });
+                }
+
+                //resolve early to finish request while registering with home domain process continues
+                resolve({
+                    person_token: personToken,
+                    login_token: loginToken
+                });
+
+                //notify home domain network of new person registration
+                await registerNewPersonHomeDomain({
+                    id: person_id,
+                    person_token: personToken,
+                    updated: created,
+                });
+            } catch(e) {
+                console.error(e);
+                return reject();
+            }
+        });
+    },
     getPerson: function (person_token, email) {
         return new Promise(async (resolve, reject) => {
             if (!email && !person_token) {
@@ -131,6 +197,11 @@ module.exports = {
                     friendliness: floatOrNull(person.rating_friendliness),
                     fun: floatOrNull(person.rating_fun),
                 };
+
+                //set custom fields
+                if(person.email && !person.password) {
+                    person.needs_password = true;
+                }
 
                 await module.exports.savePerson(person.person_token, person);
 

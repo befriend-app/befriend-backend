@@ -18,11 +18,13 @@ const { schoolAutoComplete } = require('../services/schools');
 const { getTopArtistsForGenre, musicAutoComplete } = require('../services/music');
 const { getTopTeamsBySport, sportsAutoComplete } = require('../services/sports');
 
-const { timeNow, generateToken, normalizeSearch, isValidPhone, isValidEmail } = require('../services/shared');
+const { timeNow, generateToken, normalizeSearch, isValidPhone, isValidEmail, getIPAddr } = require('../services/shared');
 const { getActivityTypes } = require('../services/activities');
 const { getPlaceData } = require('../services/fsq');
 const { country_codes } = require('../services/sms');
-const { doLogin, doLogout, checkAccountExists, sendAuthCode } = require('../services/account');
+const { loginEmail, logoutUser, checkAccountExists, sendAuthCode, verifyAuthCode, setPassword, resetPassword,
+    setPasswordWithCode
+} = require('../services/account');
 
 module.exports = {
     getNetworks: function (req, res) {
@@ -189,17 +191,18 @@ module.exports = {
             }
         });
     },
-    doLogin: function (req, res) {
+    loginEmail: function (req, res) {
         return new Promise(async (resolve, reject) => {
             try {
                 let email = req.body.email;
                 let password = req.body.password;
 
-                let login_token = await doLogin(email, password);
+                let {person_token, login_token} = await loginEmail(email, password);
 
                 res.json(
                     {
-                        login_token: login_token,
+                        person_token,
+                        login_token,
                         message: 'Login Successful',
                     },
                     200,
@@ -213,14 +216,13 @@ module.exports = {
             }
         });
     },
-    doLogout: function (req, res) {
+    logoutUser: function (req, res) {
         return new Promise(async (resolve, reject) => {
             try {
-                let conn = await dbService.conn();
                 let person_token = req.body.person_token;
                 let login_token = req.body.login_token;
 
-                await doLogout(person_token, login_token);
+                await logoutUser(person_token, login_token);
 
                 res.json(
                     {
@@ -236,6 +238,72 @@ module.exports = {
             }
         });
     },
+    passwordInit: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let person_token = req.body.person_token;
+                let password = req.body.password;
+
+                await setPassword(person_token, password, null);
+
+                res.json(
+                    {
+                        message: 'Password set successfully',
+                    },
+                    200,
+                );
+
+                return resolve();
+            } catch (e) {
+                res.json(e?.message || 'Error setting password', 400);
+                return reject(e);
+            }
+        });
+    },
+    resetPassword: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let email = req.body.email;
+
+                await resetPassword(email);
+
+                res.json(
+                    {
+                        message: 'Password reset successfully',
+                    },
+                    200,
+                );
+
+                return resolve();
+            } catch (e) {
+                res.json(e?.message || 'Error re-setting password', 400);
+                return reject(e);
+            }
+        });
+    },
+    setPasswordWithCode: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let email = req.body.email;
+                let password = req.body.password;
+                let code = req.body.code;
+
+                await setPasswordWithCode(email, password, code);
+
+                res.json(
+                    {
+                        message: 'Password set successfully',
+                    },
+                    200,
+                );
+
+                return resolve();
+            } catch (e) {
+                res.json(e?.message || 'Error setting password', 400);
+                return reject(e);
+            }
+        });
+    },
     checkLoginExists: function (req, res) {
         return new Promise(async (resolve, reject) => {
             try {
@@ -245,7 +313,7 @@ module.exports = {
                 let exists = await checkAccountExists(phoneObj, email);
 
                 if(!exists){
-                    await sendAuthCode(phoneObj, email, 'signup');
+                    await sendAuthCode(phoneObj, email, 'signup', getIPAddr(req));
                 }
 
                 res.json(exists, 200);
@@ -253,6 +321,24 @@ module.exports = {
                 return resolve();
             } catch (e) {
                 res.json(e?.message || 'Login check error', 400);
+                return reject(e);
+            }
+        });
+    },
+    verifyAuthCode: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let code = req.body.code;
+                let phoneObj = req.body.phone;
+                let email = req.body.email;
+
+                let loginData = await verifyAuthCode(code, phoneObj, email);
+
+                res.json(loginData, 200);
+
+                return resolve();
+            } catch (e) {
+                res.json(e?.message || 'Auth code verification error', e?.status || 400);
                 return reject(e);
             }
         });
