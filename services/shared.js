@@ -367,6 +367,19 @@ function formatObjectTypes(obj) {
     return result;
 }
 
+function generateOTP(length = 6) {
+    if (!Number.isInteger(length) || length <= 0) {
+        throw new Error("Length must be a positive integer");
+    }
+
+    let otp = "";
+    for (let i = 0; i < length; i++) {
+        otp += Math.floor(Math.random() * 10);
+    }
+
+    return otp;
+}
+
 function generateToken(length) {
     if (!length) {
         length = 16;
@@ -1302,6 +1315,7 @@ module.exports = {
     floatOrNull,
     formatNumberLength,
     formatObjectTypes,
+    generateOTP,
     generateToken,
     getBicyclingTime,
     getCityState,

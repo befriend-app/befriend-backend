@@ -1,11 +1,18 @@
 const cacheService = require('./cache');
 const dbService = require('./db');
-const { country_codes } = require('./sms');
-const { isValidPhone, isValidEmail, generateToken, timeNow } = require('./shared');
+const { country_codes, sendCode } = require('./sms');
+const { isValidPhone, isValidEmail, generateToken, timeNow, generateOTP, sendEmail } = require('./shared');
 const { getPerson } = require('./persons');
 const encryptionService = require('./encryption');
 
 module.exports = {
+    authCodes: {
+        expiration: 30 * 60 * 1000, //ms
+        threshold: {
+            sms: 20000, //ms,
+            email: 5000 //ms
+        }
+    },
     doLogin: function (email, password) {
         return new Promise(async (resolve, reject) => {
             try {
@@ -180,9 +187,83 @@ module.exports = {
                 });
             }
 
-            //data already validated in checkAccountExists
-            if(phoneObj){
+            try {
+                let conn = await dbService.conn();
 
+                //data already validated in checkAccountExists
+                if(phoneObj){
+                    let phoneStr = `${phoneObj.countryCode}${phoneObj.number}`;
+
+                    //prevent sending too often
+                    let mostRecent = await conn('auth_codes')
+                        .where('phone', phoneStr)
+                        .orderBy('id', 'desc')
+                        .first();
+
+                    if(mostRecent && timeNow() - mostRecent.created < module.exports.authCodes.threshold.sms) {
+                        let ms = module.exports.authCodes.threshold.sms - (timeNow() - mostRecent.created);
+                        let sec = (ms / 1000).toFixed(0);
+
+                        return reject({
+                            message: `Please wait ${sec} sec${sec > 1 ? 's': ''} before requesting a new code`
+                        });
+                    }
+
+                    let code = generateOTP(6);
+
+                    await sendCode(phoneStr, code);
+
+                    await conn('auth_codes')
+                        .insert({
+                            phone: phoneStr,
+                            code,
+                            action,
+                            created: timeNow(),
+                            updated: timeNow()
+                        });
+
+                    return resolve();
+                } else if(email) {
+                    //prevent sending too often
+                    let mostRecent = await conn('auth_codes')
+                        .where('email', email)
+                        .orderBy('id', 'desc')
+                        .first();
+
+                    if(mostRecent && timeNow() - mostRecent.created < module.exports.authCodes.threshold.email) {
+                        let ms = module.exports.authCodes.threshold.email - (timeNow() - mostRecent.created);
+                        let sec = (ms / 1000).toFixed(0);
+
+                        return reject({
+                            message: `Please wait ${sec} sec${sec > 1 ? 's': ''} before requesting a new code`
+                        });
+                    }
+
+                    let code = generateOTP(6);
+
+                    let action_str = action === 'signup' ? 'sign up' : action;
+
+                    let html = `<div style="font-size: 13px;">Enter the following code to ${action_str} ${action === 'signup' ? 'for' : 'to'} ${process.env.NETWORK_NAME}:</div>
+                                <div style="font-size: 18px; margin-top: 20px;">${code}</div>`;
+
+                    await sendEmail(`Your ${action === 'signup' ? 'sign-up' : action} code is ${code}`, html, email);
+
+                    await conn('auth_codes')
+                        .insert({
+                            email: email,
+                            code,
+                            action,
+                            created: timeNow(),
+                            updated: timeNow()
+                        });
+                }
+
+                resolve();
+            } catch(e) {
+                console.error(e);
+                return reject({
+                    message: 'Error sending code'
+                });
             }
         });
     },
