@@ -492,13 +492,17 @@ module.exports = {
     setPasswordWithCode: function (email, password, code) {
         return new Promise(async (resolve, reject) => {
             try {
-                await module.exports.verifyAuthCode(code, null, email);
+                if(typeof password !== 'string' || password.length < module.exports.password.minChars) {
+                    return reject({
+                        message: `Password must be a minimum of ${module.exports.password.minChars} characters`
+                    })
+                }
 
+                let output = await module.exports.verifyAuthCode(code, null, email);
 
-                resolve();
+                resolve(output);
             } catch(e) {
-                console.error(e);
-                return reject();
+                return reject(e);
             }
         });
     },

@@ -289,14 +289,9 @@ module.exports = {
                 let password = req.body.password;
                 let code = req.body.code;
 
-                await setPasswordWithCode(email, password, code);
+                let loginData = await setPasswordWithCode(email, password, code);
 
-                res.json(
-                    {
-                        message: 'Password set successfully',
-                    },
-                    200,
-                );
+                res.json(loginData, 200);
 
                 return resolve();
             } catch (e) {
