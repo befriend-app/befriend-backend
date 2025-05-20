@@ -25,6 +25,7 @@ const { country_codes } = require('../services/sms');
 const { loginEmail, logoutUser, checkAccountExists, sendAuthCode, verifyAuthCode, setPassword, resetPassword,
     setPasswordWithCode
 } = require('../services/account');
+const { getGenders } = require('../services/me');
 
 module.exports = {
     getNetworks: function (req, res) {
@@ -1133,6 +1134,18 @@ module.exports = {
             }
 
             resolve();
+        });
+    },
+    getGenders: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let genders = await getGenders(true);
+
+                res.json(genders);
+            } catch(e) {
+                console.error(e);
+                return reject();
+            }
         });
     }
 };

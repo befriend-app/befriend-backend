@@ -292,6 +292,18 @@ router.put('/activities/networks/reviews/:activity_token', function (req, res, n
     });
 });
 
+router.get('/genders', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await apiController.getGenders(req, res);
+        } catch (e) {
+            console.error(e);
+        }
+
+        resolve();
+    });
+});
+
 router.get('/mapbox/token', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {
