@@ -6,6 +6,7 @@ const { getNetworksLookup, getNetworkSelf, registerNewPersonHomeDomain } = requi
 const { getGridById } = require('./grid');
 const { floatOrNull, generateToken } = require('./shared');
 const { createLoginToken } = require('./account');
+const { getCountryByCode } = require('./locations');
 
 module.exports = {
     minAge: 18,
@@ -199,6 +200,8 @@ module.exports = {
                 };
 
                 //set custom fields
+                person.country = null;
+
                 if(person.email && !person.password) {
                     person.needs_password = true;
                 }
