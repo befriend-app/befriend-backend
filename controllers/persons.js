@@ -42,6 +42,8 @@ module.exports = {
 
             delete me.id;
             delete me.password;
+
+            return me;
         }
 
         return new Promise(async (resolve, reject) => {
