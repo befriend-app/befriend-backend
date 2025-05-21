@@ -30,6 +30,18 @@ router.post('/persons', function (req, res, next) {
     });
 });
 
+router.post('/persons/picture', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await networksApiController.storePersonPicture(req, res);
+        } catch (e) {
+            console.error(e);
+        }
+
+        resolve();
+    });
+});
+
 router.post('/activities/notifications', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
         try {

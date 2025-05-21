@@ -1,10 +1,11 @@
 const dbService = require('../db');
 const { getNetworkSelf, getNetworksLookup } = require('../network');
-const { timeNow, isNumeric } = require('../shared');
+const { timeNow, isNumeric, uploadS3Key, isValidBase64Image, joinPaths } = require('../shared');
 const { getGendersLookup } = require('../genders');
 const { getKidsAgeLookup } = require('../modes');
 const { results_limit, data_since_ms_extra } = require('./common');
 const { getGridById } = require('../grid');
+const process = require('process');
 
 function createPerson(network, inputs) {
     return new Promise(async (resolve, reject) => {
@@ -44,6 +45,55 @@ function createPerson(network, inputs) {
             });
 
             resolve();
+        } catch (e) {
+            console.error(e);
+            return reject(e);
+        }
+    });
+}
+
+function storePersonPicture(network, inputs) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            if (typeof inputs.person_token !== 'string') {
+                return reject({
+                    message: 'Person token field required',
+                });
+            }
+
+            if(!isValidBase64Image(inputs.picture)) {
+                return reject({
+                    message: 'Invalid picture format provided',
+                });
+            }
+
+            let conn = await dbService.conn();
+
+            let person_check = await conn('persons')
+                .where('person_token', inputs.person_token)
+                .first();
+
+            if (!person_check) {
+                return reject({
+                    message: 'Invalid person token',
+                });
+            }
+
+            let base64Data = inputs.picture.replace(/^data:image\/\w+;base64,/, '');
+            let buffer = Buffer.from(base64Data, 'base64');
+
+            let subDir = network.network_token;
+            let baseName = inputs.person_token;
+
+            let s3Key = `profiles/${subDir}/${baseName}.jpg`;
+
+            await uploadS3Key(process.env.S3_BUCKET, s3Key, null, buffer, 'image/jpeg');
+
+            let image_url = joinPaths(process.env.S3_URL, s3Key);
+
+            resolve({
+                image_url
+            });
         } catch (e) {
             console.error(e);
             return reject(e);
@@ -458,6 +508,7 @@ function syncModes(inputs) {
 
 module.exports = {
     createPerson,
+    storePersonPicture,
     syncNetworksPersons,
     syncPersons,
     syncModes,

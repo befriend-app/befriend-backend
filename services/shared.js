@@ -1,4 +1,5 @@
 const axios = require('axios');
+const AWS = require("aws-sdk");
 const dayjs = require('dayjs');
 const fs = require('fs');
 const process = require('process');
@@ -944,6 +945,71 @@ function isProdApp() {
     return process.env.APP_ENV && process.env.APP_ENV.includes('prod');
 }
 
+function isValidBase64Image(base64String, allowPrefixed = true) {
+    // Handle empty or non-string inputs
+    if (!base64String || typeof base64String !== 'string') {
+        return false;
+    }
+
+    // Extract the base64 data if it includes the data URI prefix
+    let rawBase64 = base64String;
+    
+    if (base64String.startsWith('data:image')) {
+        if (!allowPrefixed) {
+            return false; // Prefix not allowed
+        }
+
+        // Extract the base64 part after the comma
+        let commaIndex = base64String.indexOf(',');
+        if (commaIndex === -1) {
+            return false; // Malformed data URI
+        }
+
+        rawBase64 = base64String.substring(commaIndex + 1);
+    }
+
+    // Check if it's a valid base64 string
+    try {
+        // Verify the base64 string structure
+        if (!/^[A-Za-z0-9+/=]+$/.test(rawBase64)) {
+            return false; // Contains invalid characters
+        }
+
+        // Check if the length is valid
+        // Base64 length should be a multiple of 4
+        if (rawBase64.length % 4 !== 0) {
+            return false;
+        }
+
+        // Attempt to decode it
+        let decoded = atob(rawBase64);
+
+        // Additional validation for JPG format
+        if (isJPEGImage(decoded)) {
+            return true;
+        }
+
+        return false;
+    } catch (error) {
+        console.error('Error validating base64 image:', error);
+        return false;
+    }
+}
+
+function isJPEGImage(decodedString) {
+    // JPEG files start with the bytes: FF D8 FF
+    // In the decoded string, these will be the characters with char codes 255, 216, 255
+    if (decodedString.length < 3) {
+        return false;
+    }
+
+    let byte1 = decodedString.charCodeAt(0);
+    let byte2 = decodedString.charCodeAt(1);
+    let byte3 = decodedString.charCodeAt(2);
+
+    return byte1 === 0xFF && byte2 === 0xD8 && byte3 === 0xFF;
+}
+
 function isValidEmail(email) {
     let re =
         /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
@@ -1257,6 +1323,63 @@ function timeoutAwait(ms, f) {
     });
 }
 
+function getContentType (content_type) {
+    if(!content_type) {
+        return null;
+    }
+
+    try {
+        content_type = content_type.toLowerCase();
+    } catch(e) {
+        return null;
+    }
+
+    if(content_type.indexOf('.jpg') > -1) {
+        return 'image/jpeg';
+    }
+
+    if(content_type.indexOf('.jpeg') > -1) {
+        return 'image/jpeg';
+    }
+
+    if(content_type.indexOf('.png') > -1) {
+        return 'image/png';
+    }
+
+    return null;
+}
+
+function uploadS3Key(bucket, key, local_output, buffer, mime) {
+    return new Promise((resolve, reject) => {
+        let s3 = new AWS.S3();
+        let file_stream;
+
+        if(local_output) {
+            file_stream = fs.createReadStream(local_output);
+        } else if(buffer) {
+            file_stream = buffer;
+        }
+
+        const params = {
+            Bucket: bucket,
+            Key: key,
+            Body: file_stream,
+            ACL: 'public-read',
+            ContentType: mime ? mime : getContentType(local_output)
+        };
+
+        var options = {partSize: 10 * 1024 * 1024, queueSize: 5};
+
+        s3.upload(params, options, function (err, data) {
+            if (err) {
+                return reject(err);
+            }
+
+            return resolve();
+        });
+    });
+}
+
 function useKM() {
     let value = process.env.DISPLAY_KM;
 
@@ -1349,6 +1472,7 @@ module.exports = {
     isProdApp,
     isIPAddress,
     isObject,
+    isValidBase64Image,
     isValidEmail,
     isValidPhone,
     isValidUserName,
@@ -1371,6 +1495,7 @@ module.exports = {
     stringDistance,
     timeNow,
     timeoutAwait,
+    uploadS3Key,
     useKM,
     writeFile,
 };

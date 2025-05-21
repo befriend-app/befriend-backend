@@ -9,7 +9,7 @@ const {
     isLatValid,
     isLonValid,
 } = require('../services/shared');
-const { getPerson, updatePerson, savePerson } = require('../services/persons');
+const { getPerson, updatePerson, savePerson, setInitProfile } = require('../services/persons');
 const { getCountryByCode } = require('../services/locations');
 const { getPersonFilters, updateGridSets } = require('../services/filters');
 
@@ -34,6 +34,7 @@ const { rules, getPersonActivities } = require('../services/activities');
 const { getPersonNotifications } = require('../services/notifications');
 const { getNetworkSelf } = require('../services/network');
 const { getPersonReviews, reviewPeriod } = require('../services/reviews');
+const { getGendersLookup } = require('../services/genders');
 
 module.exports = {
     getMe: function (req, res) {
@@ -115,6 +116,27 @@ module.exports = {
                 console.error(e);
                 res.json('Error getting person', 400);
             }
+        });
+    },
+    putProfile: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+
+            try {
+                let person_token = req.body.person_token;
+                let picture = req.body.picture;
+                let first_name = req.body.first_name;
+                let last_name = req.body.last_name;
+                let gender_token = req.body.gender_token;
+                let birthday = req.body.birthday;
+
+                let output = await setInitProfile(person_token, picture, first_name, last_name, gender_token, birthday);
+
+                res.json(output);
+            } catch(e) {
+                res.json(e?.message || 'Error saving profile', 400)
+            }
+
+            resolve();
         });
     },
     putOnline: function (req, res) {
@@ -499,7 +521,7 @@ module.exports = {
     addDevice: function (req, res) {
         return new Promise(async (resolve, reject) => {
             try {
-                const { person_token, device_token, platform } = req.body;
+                let { person_token, device_token, platform } = req.body;
 
                 // Validate required fields
                 if (!device_token || !platform) {
@@ -508,7 +530,7 @@ module.exports = {
                 }
 
                 // Validate platform
-                const normalizedPlatform = platform.toLowerCase();
+                let normalizedPlatform = platform.toLowerCase();
 
                 if (!['ios', 'android'].includes(normalizedPlatform)) {
                     res.status(400).json({ message: 'Invalid platform' });
@@ -516,22 +538,22 @@ module.exports = {
                 }
 
                 // Get person
-                const person = await getPerson(person_token);
+                let person = await getPerson(person_token);
 
                 if (!person) {
                     res.status(400).json({ message: 'Person token not found' });
                     return resolve();
                 }
 
-                const conn = await dbService.conn();
-                const timestamp = timeNow();
+                let conn = await dbService.conn();
+                let timestamp = timeNow();
 
                 // Get existing devices
-                const personDevices = await conn('persons_devices').where('person_id', person.id);
+                let personDevices = await conn('persons_devices').where('person_id', person.id);
 
                 // Handle new device registration
                 if (!personDevices.length) {
-                    const newDevice = {
+                    let newDevice = {
                         person_id: person.id,
                         token: device_token,
                         platform: normalizedPlatform,
@@ -541,7 +563,7 @@ module.exports = {
                         updated: timestamp,
                     };
 
-                    const [id] = await conn('persons_devices').insert(newDevice);
+                    let [id] = await conn('persons_devices').insert(newDevice);
                     newDevice.id = id;
 
                     await cacheService.hSet(cacheService.keys.person(person_token), 'devices', [
@@ -553,7 +575,7 @@ module.exports = {
                 }
 
                 // Handle existing devices
-                const existingDevice = personDevices.find((d) => d.platform === normalizedPlatform);
+                let existingDevice = personDevices.find((d) => d.platform === normalizedPlatform);
 
                 if (!existingDevice) {
                     res.status(400).json({
@@ -562,7 +584,7 @@ module.exports = {
                     return resolve();
                 }
 
-                const needsUpdate =
+                let needsUpdate =
                     existingDevice.token !== device_token || !existingDevice.is_current;
 
                 if (!needsUpdate) {
@@ -588,7 +610,7 @@ module.exports = {
                 });
 
                 // Update cache
-                const updatedDevices = personDevices.map((device) => ({
+                let updatedDevices = personDevices.map((device) => ({
                     ...device,
                     is_current: device.id === existingDevice.id,
                     token: device.id === existingDevice.id ? device_token : device.token,
@@ -610,4 +632,5 @@ module.exports = {
             }
         });
     },
+
 };

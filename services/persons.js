@@ -2,15 +2,24 @@ const cacheService = require('../services/cache');
 const dbService = require('../services/db');
 const { timeNow } = require('../services/shared');
 const { updateGridSets } = require('../services/filters');
-const { getNetworksLookup, getNetworkSelf, registerNewPersonHomeDomain } = require('./network');
+const { getNetworksLookup, getNetworkSelf, registerNewPersonHomeDomain, storeProfilePictureHomeDomain } = require('./network');
 const { getGridById } = require('./grid');
-const { floatOrNull, generateToken } = require('./shared');
+const { floatOrNull, generateToken, isValidBase64Image, uploadS3Key, joinPaths } = require('./shared');
 const { createLoginToken } = require('./account');
-const { getCountryByCode } = require('./locations');
+const { getGendersLookup } = require('./genders');
+const process = require('process');
 
 module.exports = {
     minAge: 18,
     maxAge: 80, //if max filter age is set at 80, we include all ages above
+    validation: {
+        firstName: {
+            maxLength: 50
+        },
+        lastName: {
+            maxLength: 50
+        },
+    },
     createPerson: function(phoneObj, email, autoLogin) {
         return new Promise(async (resolve, reject) => {
             try {
@@ -455,4 +464,212 @@ module.exports = {
             }
         });
     },
+    setInitProfile: function (person_token, picture, first_name, last_name, gender_token, birthday) {
+        return new Promise(async (resolve, reject) => {
+            let errors = [];
+
+            try {
+                //validation
+
+                //picture (required)
+                //currently any photo will pass
+                //possible todo, face recognition
+                //would require user notice on screen to accept use of face recognition
+
+                if(!picture || typeof picture !== 'string') {
+                    errors.push('Picture required');
+                } else if(!isValidBase64Image(picture)) {
+                    errors.push('Invalid picture format provided');
+                }
+
+                //first_name (required)
+                if(!first_name || typeof first_name !== 'string') {
+                    errors.push('First name required');
+                }
+
+                if(first_name.length > module.exports.validation.firstName.maxLength) {
+                    errors.push(`First name character limit: ${module.exports.validation.firstName.maxLength} characters`);
+                }
+
+                //last_name (optional)
+                if(last_name && typeof last_name !== 'string') {
+                    errors.push('Invalid last name');
+                }
+
+                if(last_name.length > module.exports.validation.lastName.maxLength) {
+                    errors.push(`Last name character limit: ${module.exports.validation.lastName.maxLength} characters`);
+                }
+
+                //gender_token (required)
+                let gendersDict = await getGendersLookup();
+
+                if(!gendersDict.byToken[gender_token]) {
+                    errors.push('Gender required');
+                }
+
+                //birthday (required)
+                //must be 18 or older
+                let birthdayValidation = module.exports.validateMinimumAge(birthday);
+
+                if(!birthdayValidation.isValid) {
+                    errors.push(birthdayValidation.error);
+                }
+
+                if(errors.length) {
+                    return reject({
+                        message: errors.join(', ')
+                    });
+                }
+
+                //return properties
+                //image_url, first_name, last_name, gender_id, birth_date (formatted), age
+                let image_url = null;
+
+                let network = await getNetworkSelf();
+
+                //image
+                //if aws keys and s3_url set, use own storage
+                //otherwise send to befriend for storage and return of url
+
+                if(network.is_befriend ||
+                    (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY && process.env.S3_BUCKET)) {
+                    let base64Data = picture.replace(/^data:image\/\w+;base64,/, '');
+                    let buffer = Buffer.from(base64Data, 'base64');
+
+                    let subDir = network.network_token;
+                    let baseName = person_token;
+
+                    let s3Key = `profiles/${subDir}/${baseName}.jpg`;
+
+                    await uploadS3Key(process.env.S3_BUCKET, s3Key, null, buffer, 'image/jpeg');
+
+                    image_url = joinPaths(process.env.S3_URL, s3Key);
+                } else {
+                    try {
+                        image_url = await storeProfilePictureHomeDomain(person_token, picture);
+                    } catch(e) {
+                        console.error(e);
+                    }
+                }
+
+                let gender = gendersDict.byToken[gender_token];
+                let birth_date_str = birthdayValidation.date.format('YYYY-MM-DD');
+                let age = birthdayValidation.age;
+
+                let updateData = {
+                    image_url,
+                    first_name,
+                    last_name: last_name || null,
+                    gender_id: gender.id,
+                    birth_date: birth_date_str,
+                    age,
+                    updated: timeNow()
+                };
+
+                try {
+                     let conn = await dbService.conn();
+
+                     await conn('persons')
+                         .where('person_token', person_token)
+                         .update(updateData);
+                } catch(e) {
+                    console.error(e);
+                }
+
+                resolve(updateData);
+            } catch(e) {
+                console.error(e);
+
+                return reject({
+                    message: 'Unknown error saving profile'
+                });
+            }
+        });
+    },
+    calculateAge: function (birthday) {
+        let dayjs = require('dayjs');
+
+        let result = {
+            isValid: false,
+            age: null,
+            error: null
+        };
+
+        // Validate birthday input
+        if (!birthday?.month || !birthday?.day || !birthday?.year) {
+            result.error = 'Invalid birthday provided';
+            return result;
+        }
+
+        try {
+            let birthDate = dayjs(`${birthday.year}-${birthday.month}-${birthday.day}`);
+
+            // Check if the date is valid
+            if (!birthDate.isValid()) {
+                result.error = 'Invalid date created from birthday';
+                return result;
+            }
+
+            // Get current date
+            let today = dayjs();
+
+            // Calculate age
+            let age = today.year() - birthDate.year();
+
+            // Adjust age if birthday hasn't occurred yet this year
+            let hasBirthdayOccurredThisYear =
+                today.month() + 1 > birthDate.month() ||
+                (today.month() + 1 === birthDate.month() && today.date() >= birthDate.date());
+
+            if (!hasBirthdayOccurredThisYear) {
+                age--;
+            }
+
+            // Ensure age is not negative
+            if (age < 0) {
+                result.error = 'Birthday is in the future';
+                return result;
+            }
+
+            // Set success result
+            result.isValid = true;
+            result.age = age;
+            result.date = birthDate;
+
+            return result;
+        } catch (error) {
+            result.error = error.message || 'Error calculating age';
+            return result;
+        }
+    },
+    validateMinimumAge: function(birthday) {
+        let minimumAge = module.exports.minAge;
+
+        // Get age calculation result
+        let ageResult = module.exports.calculateAge(birthday);
+
+        // Initialize result
+        let result = {
+            isValid: ageResult.isValid,
+            meetsMinimumAge: false,
+            age: ageResult.age,
+            date: ageResult.date,
+            error: ageResult.error
+        };
+
+        // Check if age calculation was successful
+        if (!ageResult.isValid) {
+            return result;
+        }
+
+        // Check if user meets minimum age requirement
+        result.meetsMinimumAge = ageResult.age >= minimumAge;
+
+        // Add specific error for minimum age requirement
+        if (!result.meetsMinimumAge) {
+            result.error = `User must be at least ${minimumAge} years old`;
+        }
+
+        return result;
+    }
 };

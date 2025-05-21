@@ -26,6 +26,27 @@ module.exports = {
             resolve();
         });
     },
+    storePersonPicture: function (req, res) {
+        return new Promise(async (resolve, reject) => {
+            //received on befriend->home domain
+            try {
+                let response = await networksPersonsService.storePersonPicture(
+                    req.from_network,
+                    req.body,
+                );
+
+                res.json(response, 201);
+            } catch (e) {
+                if (e?.message) {
+                    res.json(e.message, 400);
+                } else {
+                    res.json('Error creating person', 400);
+                }
+            }
+
+            resolve();
+        });
+    },
     activityMatchingExclude: function (req, res) {
         return new Promise(async (resolve, reject) => {
             //received on my network from 3rd-party network->person that is creating activity

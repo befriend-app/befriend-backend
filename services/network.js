@@ -1483,6 +1483,76 @@ function registerNewPersonHomeDomain(person) {
     });
 }
 
+function storeProfilePictureHomeDomain(person_token, imageData) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let networkSelf = await getNetworkSelf();
+
+            if (networkSelf.is_befriend) {
+                return resolve();
+            }
+
+            let home_domains = await homeDomains();
+            let networksLookup = await getNetworksLookup();
+
+            for (let domain of home_domains) {
+                //do not notify own domain
+                if (networkSelf.api_domain.includes(domain)) {
+                    continue;
+                }
+
+                let network_to = null;
+
+                for (let network of Object.values(networksLookup.byToken)) {
+                    if (network.api_domain.includes(domain)) {
+                        network_to = network;
+                    }
+                }
+
+                if (!network_to) {
+                    continue;
+                }
+
+                //security_key
+                let secret_key_to = await getSecretKeyToForNetwork(network_to.id);
+
+                if (!secret_key_to) {
+                    continue;
+                }
+
+                let has_error = false;
+
+                try {
+                    let r = await axios.post(getURL(domain, 'networks/persons/picture'), {
+                        secret_key: secret_key_to,
+                        network_token: networkSelf.network_token,
+                        person_token: person_token,
+                        picture: imageData
+                    });
+
+                    if (r.status === 201) {
+                        return resolve(r.data?.image_url)
+                    } else {
+                        has_error = true;
+                    }
+                } catch (e) {
+                    has_error = true;
+                    console.error(e);
+                }
+
+                if (!has_error) {
+                    break;
+                }
+            }
+        } catch(e) {
+            console.error(e);
+            return reject();
+        }
+
+        return reject('Profile picture not saved');
+    });
+}
+
 module.exports = {
     cols: [
         'network_token',
@@ -1542,5 +1612,6 @@ module.exports = {
     keysExchangeSave,
     getSecretKeyToForNetwork,
     getNetworkWithSecretKeyByDomain,
-    registerNewPersonHomeDomain
+    registerNewPersonHomeDomain,
+    storeProfilePictureHomeDomain
 };
