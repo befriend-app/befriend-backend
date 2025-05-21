@@ -3,7 +3,7 @@
     "productName": "Befriend Backend",
     "version": "alpha",
     "description": "Backend for Befriend",
-    "license": "MIT",
+    "license": "LGPL-3.0-or-later",
     "repository": "befriend-app/befriend-backend",
     "homepage": "https://befriend.app",
     "contributors": [
