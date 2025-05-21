@@ -21,6 +21,7 @@
         "@sendgrid/mail": "^8.1.3",
         "adm-zip": "^0.5.16",
         "api": "^6.1.2",
+        "aws-sdk": "^2.1692.0",
         "bcryptjs": "^2.4.3",
         "cookie-parser": "^1.4.6",
         "cors": "^2.8.5",
