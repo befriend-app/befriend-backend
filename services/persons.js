@@ -32,7 +32,7 @@ module.exports = {
                 let created = timeNow();
 
                 //set solo mode by default
-                let modes = ['solo'];
+                let modes = ['mode-solo'];
 
                 //insert into persons table
                 let person_insert = {
@@ -516,8 +516,12 @@ module.exports = {
                 }
 
                 if(errors.length) {
+                    let errors_str = errors.join(', ');
+                    errors_str = errors_str.toLowerCase();
+                    errors_str = errors_str.capitalize();
+
                     return reject({
-                        message: errors.join(', ')
+                        message: errors_str
                     });
                 }
 
