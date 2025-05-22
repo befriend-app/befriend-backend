@@ -3,6 +3,7 @@ let router = express.Router();
 
 let activitiesController = require('../controllers/activities');
 let apiController = require('../controllers/api');
+let oauthController = require('../controllers/oauth');
 
 
 router.get('/', function (req, res, next) {
@@ -53,6 +54,50 @@ router.put('/auth/code/verify', function (req, res, next) {
         resolve();
     });
 });
+
+router.get('/oauth/clients', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await oauthController.getClients(req, res, next);
+        } catch (e) {
+            console.error(e);
+        }
+        resolve();
+    });
+});
+
+router.post('/oauth/google/success', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await oauthController.googleAuthSuccess(req, res, next);
+        } catch (e) {
+            return res.json("Error with Google authentication", 400);
+        }
+        resolve();
+    });
+});
+
+// router.get('/oauth/apple', function (req, res, next) {
+//     return new Promise(async (resolve, reject) => {
+//         try {
+//             await oauthController.appleAuth(req, res);
+//         } catch (e) {
+//             return res.json("Error with Apple authentication", 400);
+//         }
+//         resolve();
+//     });
+// });
+//
+// router.post('/oauth/apple/callback', function (req, res, next) {
+//     return new Promise(async (resolve, reject) => {
+//         try {
+//             await oauthController.appleCallback(req, res);
+//         } catch (e) {
+//             return res.json("Error with Apple callback", 400);
+//         }
+//         resolve();
+//     });
+// });
 
 router.put('/password/reset', function (req, res, next) {
     return new Promise(async (resolve, reject) => {
