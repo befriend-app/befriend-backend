@@ -13,9 +13,10 @@ exports.up = function(knex) {
         table.string('last_name', 255).nullable().after('first_name').alter();
         table.string('email', 255).nullable().after('last_name').alter();
         table.string('password', 255).nullable().after('email').alter();
-        table.string('phone', 255).nullable().after('password').alter();
-        table.string('phone_country_code', 255).nullable().after('phone').alter();
-        table.string('country_code', 10).nullable().after('phone_country_code').alter();
+        table.string('phone_country_code', 255).nullable().after('password').alter();
+        table.string('phone_number', 255).nullable().after('phone_country_code').alter();
+
+        table.string('country_code', 10).nullable().after('phone_number').alter();
         table.integer('gender_id').unsigned().nullable().after('country_code').alter();
         table.date('birth_date').nullable().after('gender_id').alter();
         table.integer('age').nullable().after('birth_date').alter();
