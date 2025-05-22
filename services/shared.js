@@ -754,6 +754,18 @@ function getRepoRoot() {
     return path_split_slice.join(slash);
 }
 
+function getReverseClientURLScheme(client) {
+    if(!client) {
+        throw new Error('No client id provided');
+    }
+
+    let clientSplit = client.split('.');
+
+    clientSplit.reverse();
+
+    return clientSplit.join('.');
+}
+
 function getStatesList() {
     return {
         AL: 'Alabama',
@@ -1458,6 +1470,7 @@ module.exports = {
     getOptionDateTime,
     getRandomInRange,
     getRepoRoot,
+    getReverseClientURLScheme,
     getStatesList,
     getTimeFromSeconds,
     getTimeZoneFromCoords,
