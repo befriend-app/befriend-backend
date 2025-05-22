@@ -20,7 +20,7 @@ module.exports = {
             maxLength: 50
         },
     },
-    createPerson: function(phoneObj, email, autoLogin) {
+    createPerson: function(phoneObj, email, personData = {}, autoLogin, accountConfirmed = false) {
         return new Promise(async (resolve, reject) => {
             try {
                 let conn = await dbService.conn();
@@ -37,6 +37,7 @@ module.exports = {
                 //insert into persons table
                 let person_insert = {
                     registration_network_id: network.id,
+                    is_account_confirmed: accountConfirmed,
                     is_person_known: network.is_befriend,
                     is_new: true,
                     person_token: personToken,
@@ -47,6 +48,7 @@ module.exports = {
                     modes: JSON.stringify(modes),
                     created,
                     updated: created,
+                    ...personData
                 };
 
                 let [person_id] = await conn('persons')
@@ -74,6 +76,7 @@ module.exports = {
 
                 //resolve early to finish request while registering with home domain process continues
                 resolve({
+                    id: person_id,
                     person_token: personToken,
                     login_token: loginToken
                 });
