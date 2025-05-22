@@ -153,6 +153,11 @@ module.exports = {
             throw new Error('Invalid email');
         }
 
+        //strip non-numeric values from phone number for standardized formatting
+        if(phoneObj) {
+            phoneObj.number = phoneObj.number.replace(/\D/g, '');
+        }
+
         return true;
     },
     checkAccountExists: function (phoneObj, email) {
@@ -169,10 +174,8 @@ module.exports = {
                 let conn = await dbService.conn();
 
                 if(phoneObj) {
-                    let phone = phoneObj.number.replace(/\D/g, '');
-
                     let qry = await conn('persons')
-                        .where('phone', phone)
+                        .where('phone_number', phoneObj.number)
                         .where('phone_country_code', phoneObj.countryCode)
                         .first();
 
@@ -227,7 +230,7 @@ module.exports = {
                         if(phoneObj) {
                             phoneStr = `${phoneObj.countryCode}${phoneObj.number}`;
 
-                            this.where('phone', phoneStr);
+                            this.where('phone_number', phoneStr);
                         } else if(email) {
                             this.where('email', email);
                         }
@@ -325,7 +328,7 @@ module.exports = {
                     .where('code', code)
                     .where(function() {
                         if(phone_str){
-                            this.where('phone', phone_str)
+                            this.where('phone_number', phone_str)
                         } else if(email) {
                             this.where('email', email);
                         }
@@ -352,19 +355,18 @@ module.exports = {
                     });
                 }
 
-                //valid verification
-                if(authQry) {
+                if(authQry) { //code verified successfully
                     //signup action
                     let output = {};
 
                     if(authQry.action === 'signup') {
                         //create new account, return person/login tokens
-                        output = await require('./persons').createPerson(phoneObj, email, true);
+                        output = await require('./persons').createPerson(phoneObj, email, null,true, true);
                     } else if(['login', 'password'].includes(authQry.action)) { //login action
                         let person = await conn('persons')
                             .where(function() {
                                 if(phoneObj){
-                                    this.where('phone', phoneObj.number)
+                                    this.where('phone_number', phoneObj.number)
                                         .where('phone_country_code', phoneObj.countryCode)
                                 } else {
                                     this.where('email', email)
@@ -378,7 +380,15 @@ module.exports = {
                             })
                         }
 
-                        output.login_token = await module.exports.createLoginToken(person)
+                        //set account confirmed
+                        await conn('persons')
+                            .where('id', person.id)
+                            .update({
+                                is_account_confirmed: true,
+                                updated: timeNow()
+                            });
+
+                        output.login_token = await module.exports.createLoginToken(person);
 
                         output.person_token = person.person_token;
                     }
@@ -399,7 +409,7 @@ module.exports = {
                     .where('created', '>', timeNow() - module.exports.authCodes.expiration * 1000)
                     .where(function() {
                         if(phone_str){
-                            this.where('phone', phone_str)
+                            this.where('phone_number', phone_str)
                         } else if(email) {
                             this.where('email', email);
                         }
