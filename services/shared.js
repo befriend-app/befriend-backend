@@ -1,9 +1,10 @@
 const axios = require('axios');
-const AWS = require("aws-sdk");
 const dayjs = require('dayjs');
 const fs = require('fs');
 const process = require('process');
 const tldts = require('tldts');
+
+const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
@@ -1362,13 +1363,16 @@ function getContentType (content_type) {
 }
 
 function uploadS3Key(bucket, key, local_output, buffer, mime) {
-    return new Promise((resolve, reject) => {
-        let s3 = new AWS.S3();
+    return new Promise(async (resolve, reject) => {
+        const s3Client = new S3Client({
+            region: process.env.AWS_REGION || 'us-east-1'
+        });
+
         let file_stream;
 
-        if(local_output) {
+        if (local_output) {
             file_stream = fs.createReadStream(local_output);
-        } else if(buffer) {
+        } else if (buffer) {
             file_stream = buffer;
         }
 
@@ -1380,15 +1384,13 @@ function uploadS3Key(bucket, key, local_output, buffer, mime) {
             ContentType: mime ? mime : getContentType(local_output)
         };
 
-        var options = {partSize: 10 * 1024 * 1024, queueSize: 5};
-
-        s3.upload(params, options, function (err, data) {
-            if (err) {
-                return reject(err);
-            }
-
-            return resolve();
-        });
+        try {
+            const command = new PutObjectCommand(params);
+            await s3Client.send(command);
+            resolve();
+        } catch (err) {
+            reject(err);
+        }
     });
 }
 
