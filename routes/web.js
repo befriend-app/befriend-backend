@@ -77,27 +77,16 @@ router.post('/oauth/google/success', function (req, res, next) {
     });
 });
 
-// router.get('/oauth/apple', function (req, res, next) {
-//     return new Promise(async (resolve, reject) => {
-//         try {
-//             await oauthController.appleAuth(req, res);
-//         } catch (e) {
-//             return res.json("Error with Apple authentication", 400);
-//         }
-//         resolve();
-//     });
-// });
-//
-// router.post('/oauth/apple/callback', function (req, res, next) {
-//     return new Promise(async (resolve, reject) => {
-//         try {
-//             await oauthController.appleCallback(req, res);
-//         } catch (e) {
-//             return res.json("Error with Apple callback", 400);
-//         }
-//         resolve();
-//     });
-// });
+router.post('/oauth/apple/success', function (req, res, next) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await oauthController.appleAuthSuccess(req, res, next);
+        } catch (e) {
+            return res.json("Error with Google authentication", 400);
+        }
+        resolve();
+    });
+});
 
 router.put('/password/reset', function (req, res, next) {
     return new Promise(async (resolve, reject) => {

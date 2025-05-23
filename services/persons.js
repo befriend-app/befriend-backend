@@ -42,7 +42,7 @@ module.exports = {
                     is_new: true,
                     person_token: personToken,
                     email: email || null,
-                    phone: phoneObj?.number || null,
+                    phone_number: phoneObj?.number || null,
                     phone_country_code: phoneObj?.countryCode || null,
                     is_online: true,
                     modes: JSON.stringify(modes),
