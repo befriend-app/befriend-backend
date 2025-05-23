@@ -114,7 +114,7 @@ exports.up = async function (knex) {
             table.integer('gender_id').unsigned().nullable();
             table.string('email', 255).nullable();
             table.string('password', 255).nullable();
-            table.string('phone', 255).nullable();
+            table.string('phone_number', 255).nullable();
             table.boolean('is_online').notNullable().defaultTo(false);
             table.string('image_url', 255).nullable();
             table.decimal('location_lat', 10, 7).nullable();
