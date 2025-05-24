@@ -13,7 +13,7 @@ module.exports = {
     matching: {
         logs: isProdApp() ? false : true,
         get_matches: isProdApp() ? false : true,
-        filter_matches: isProdApp() ? false : true,
+        filter_matches: isProdApp() ? false : false,
         send_count: 3,
         filters: [
             //notifications
