@@ -296,7 +296,7 @@ function onSelfCreated(network_data) {
                 } else {
                 }
             } catch (e) {
-                console.error(e);
+                // console.error(e);
             }
         }
 

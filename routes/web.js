@@ -131,7 +131,7 @@ router.post('/network-add', function (req, res, next) {
         try {
             await apiController.addNetwork(req, res);
         } catch (e) {
-            console.error(e);
+            // console.error(e);
         }
 
         resolve();
