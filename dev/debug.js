@@ -14,6 +14,7 @@ module.exports = {
         logs: isProdApp() ? false : true,
         get_matches: isProdApp() ? false : true,
         filter_matches: isProdApp() ? false : false,
+        activity_overlap: isProdApp() ? false : true,
         send_count: 3,
         filters: [
             //notifications

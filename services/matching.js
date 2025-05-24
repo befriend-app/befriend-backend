@@ -82,12 +82,15 @@ function getMatches(me, params = {}, custom_filters = null, initial_person_token
  */
 
 function filterMatches(person, activity, matches, on_send_new = false) {
+    let debugFilterMatchesEnabled = require('../dev/debug').matching.filter_matches;
+    let debugActivityOverlapEnabled = require('../dev/debug').matching.activity_overlap;
+
     let filtered_matches = [];
     let organized_matches = new Map();
     let filter_networks_persons = new Map();
     let persons_excluded = new Set();
 
-    let debug_enabled = require('../dev/debug').matching.filter_matches;
+
 
     let conn, payload, my_network, networksLookup;
 
@@ -384,7 +387,7 @@ function filterMatches(person, activity, matches, on_send_new = false) {
                 }
 
                 //exclude if this activity overlaps with existing activities
-                if (Object.keys(personActivities).length && !debug_enabled) {
+                if (Object.keys(personActivities).length && !debugFilterMatchesEnabled) {
                     const activityStart = activity.when?.data?.start;
                     const activityEnd = activity.when?.data?.end;
 
@@ -397,7 +400,7 @@ function filterMatches(person, activity, matches, on_send_new = false) {
                         personActivities,
                     );
 
-                    if (activity_overlaps) {
+                    if (activity_overlaps && !debugActivityOverlapEnabled) {
                         persons_excluded.add(match.person_token);
                         continue;
                     }
@@ -456,7 +459,7 @@ function filterMatches(person, activity, matches, on_send_new = false) {
             filtered_matches.push(match);
         }
 
-        if (debug_enabled) {
+        if (debugFilterMatchesEnabled) {
             let splice_from = on_send_new ? 1 : 0;
 
             filtered_matches = filtered_matches.splice(
