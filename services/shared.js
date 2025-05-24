@@ -84,6 +84,82 @@ function checkSinglePolygon(lat, lon, polygonCoords) {
     return inside;
 }
 
+function checkIfPathExists(p) {
+    return new Promise((resolve, reject) => {
+        require('fs').exists(p, function (exists) {
+            let bool = exists ? true : false;
+            return resolve(bool);
+        });
+    });
+}
+
+function makeDirectory(d) {
+    return new Promise(async (resolve, reject) => {
+        require('fs').mkdir(d, function (err) {
+            if(err) {
+                return reject(err);
+            }
+
+            resolve();
+        });
+    });
+}
+
+function createDirectoryIfNotExistsRecursive(dirname) {
+    return new Promise(async (resolve, reject) => {
+        var slash = '/';
+        let directories_backwards = [dirname];
+        let minimize_dir = dirname;
+        let directories_needed = [];
+        let directories_forwards = [];
+
+        // backward slashes for windows
+        // if(getIsWindows()) {
+        //     slash = '\\';
+        // }
+
+        while (minimize_dir = minimize_dir.substring(0, minimize_dir.lastIndexOf(slash))) {
+            directories_backwards.push(minimize_dir);
+        }
+
+        //stop on first directory found
+        for(const d in directories_backwards) {
+            let dir = directories_backwards[d];
+            let exists = await checkIfPathExists(dir);
+            if(!exists) {
+                directories_needed.push(dir);
+            } else {
+                break;
+            }
+        }
+
+        //no directories missing
+        if(!directories_needed.length) {
+            return resolve();
+        }
+
+        // make all directories in ascending order
+        directories_forwards = directories_needed.reverse();
+
+        for(const d in directories_forwards) {
+            try {
+                let dir = directories_forwards[d];
+
+                try {
+                    await makeDirectory(dir);
+                } catch (e) {
+                    console.error(e);
+                }
+            } catch(e) {
+                console.error(e);
+            }
+        }
+
+        return resolve();
+    });
+}
+
+
 function pointInPolygon(lat, lon, coordinates) {
     if (!coordinates || !coordinates.length) return false;
 
@@ -1245,6 +1321,26 @@ function readFile(p, json) {
     });
 }
 
+function saveFile(filePath, data) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let dirName = require('path').dirname(filePath);
+            await createDirectoryIfNotExistsRecursive(dirName);
+        } catch(e) {
+            console.error(e);
+            return reject(e);
+        }
+
+        fs.writeFile(filePath, data, (err) => {
+            if (err) {
+                return reject(err);
+            } else {
+                resolve();
+            }
+        });
+    });
+}
+
 function sendEmail(subject, html, email, from, cc, attachment_alt) {
     return new Promise(async (resolve, reject) => {
         if (!from) {
@@ -1504,6 +1600,7 @@ module.exports = {
     range,
     readFile,
     removeArrItem,
+    saveFile,
     sendEmail,
     shuffleFunc,
     slugName,
