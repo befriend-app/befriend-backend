@@ -274,6 +274,8 @@ function notifyMatches(me, activity, matches, on_send_new = false) {
 
                 let results = await sendIOSBatch(ios.tokens, true);
 
+                let devices_failed = [];
+
                 //2. add to db/cache
                 for (let result of results) {
                     let is_success = false;
@@ -288,6 +290,8 @@ function notifyMatches(me, activity, matches, on_send_new = false) {
                         if (sent.status === 'success') {
                             is_success = true;
                         }
+                    } else if(failed) {
+                        devices_failed.push(failed);
                     }
 
                     if (failed) {
@@ -352,6 +356,12 @@ function notifyMatches(me, activity, matches, on_send_new = false) {
                     }
 
                     await cacheService.execPipeline(pipeline);
+                }
+
+                if(devices_failed.length) {
+                    console.error({
+                        notifications_failed: devices_failed
+                    });
                 }
 
                 resolve();
