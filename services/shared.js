@@ -1321,6 +1321,19 @@ function readFile(p, json) {
     });
 }
 
+function sanitizePrivateKey(keyString) {
+    if (!keyString) {
+        return '';
+    }
+
+    return keyString
+        .split('\n')
+        .map(line => {
+            return line.trim();
+        })
+        .join('\n');
+}
+
 function saveFile(filePath, data) {
     return new Promise(async (resolve, reject) => {
         try {
@@ -1600,6 +1613,7 @@ module.exports = {
     range,
     readFile,
     removeArrItem,
+    sanitizePrivateKey,
     saveFile,
     sendEmail,
     shuffleFunc,

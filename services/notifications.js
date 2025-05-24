@@ -2,7 +2,7 @@ const axios = require('axios');
 const http2 = require('http2');
 const jwt = require('jsonwebtoken');
 
-const { timeNow, generateToken, getURL, isNumeric } = require('./shared');
+const { timeNow, generateToken, getURL, isNumeric, sanitizePrivateKey } = require('./shared');
 
 const activitiesService = require('./activities');
 const cacheService = require('./cache');
@@ -1587,7 +1587,7 @@ function sendIOSBatch(devicesTokensPayloads, time_sensitive) {
     return new Promise(async (resolve, reject) => {
         const options = {
             token: {
-                key: process.env.APPLE_PRIVATE_KEY,
+                key: sanitizePrivateKey(process.env.APPLE_PRIVATE_KEY),
                 keyId: process.env.APPLE_KEY_ID,
                 teamId: process.env.APPLE_TEAM_ID,
             },
