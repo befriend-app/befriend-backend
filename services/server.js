@@ -21,10 +21,7 @@ let server = express();
 
 // server.set('view engine', 'ejs');
 server.set('trust proxy', true);
-
 server.disable('x-powered-by');
-
-server.use(cors());
 
 server.use(
     cors({

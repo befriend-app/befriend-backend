@@ -4,7 +4,7 @@ const { timeNow } = require('../services/shared');
 const { updateGridSets } = require('../services/filters');
 const { getNetworksLookup, getNetworkSelf, registerNewPersonHomeDomain, storeProfilePictureHomeDomain } = require('./network');
 const { getGridById } = require('./grid');
-const { floatOrNull, generateToken, isValidBase64Image, uploadS3Key, joinPaths } = require('./shared');
+const { floatOrNull, generateToken, isValidBase64Image, uploadS3Key, joinPaths, getRepoRoot, saveFile } = require('./shared');
 const { createLoginToken } = require('./account');
 const { getGendersLookup } = require('./genders');
 const process = require('process');
@@ -538,8 +538,9 @@ module.exports = {
                 //if aws keys and s3_url set, use own storage
                 //otherwise send to befriend for storage and return of url
 
-                if(network.is_befriend ||
-                    (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY && process.env.S3_BUCKET)) {
+                let isS3Setup = process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY && process.env.AWS_REGION && process.env.S3_BUCKET;
+
+                if(network.is_befriend || isS3Setup) {
                     let base64Data = picture.replace(/^data:image\/\w+;base64,/, '');
                     let buffer = Buffer.from(base64Data, 'base64');
 
@@ -555,7 +556,27 @@ module.exports = {
                     try {
                         image_url = await storeProfilePictureHomeDomain(person_token, picture);
                     } catch(e) {
-                        console.error(e);
+                        //home server is offline, save picture locally
+                        let base64Data = picture.replace(/^data:image\/\w+;base64,/, '');
+                        let buffer = Buffer.from(base64Data, 'base64');
+
+                        let baseName = person_token;
+
+                        let subDir = 'profiles';
+
+                        let fileDir = joinPaths(getRepoRoot(), 'public', subDir);
+                        let fileName = `${baseName}.jpg`;
+                        let filePath = joinPaths(fileDir, fileName)
+
+                        try {
+                            await saveFile(filePath, buffer);
+
+                            image_url = joinPaths(process.env.APP_URL, subDir, fileName);
+                        } catch(e) {
+                            return reject({
+                                message:'Picture not saved'
+                            });
+                        }
                     }
                 }
 
