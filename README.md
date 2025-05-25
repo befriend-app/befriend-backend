@@ -25,8 +25,8 @@ The best human experience designed for meeting new and existing friends in perso
     - [9. Running backend & app](#9-running-backend--app)
     - [10. Sending/receiving invitations](#10-sendingreceiving-invitations)
     - [OAuth setup](#oauth-setup)
-      - [Signin with Apple](#signin-with-apple)
-      - [Signin with Google](#signin-with-google)
+      - [Sign in with Apple](#sign-in-with-apple)
+      - [Sign in with Google](#sign-in-with-google)
       
 - [Support us](#support-us)
 
@@ -355,7 +355,7 @@ e. Signup User 2
 
 ### OAuth Setup
 
-### [Signin with Apple](./setup/docs/11-signin-with-apple.md)
+### [Sign in with Apple](./setup/docs/11-signin-with-apple.md)
 
 Sign in with Apple allows users to sign up and log into your app using their existing Apple ID.
 
@@ -385,7 +385,7 @@ b. Test the Sign in with Apple flow
 
 c. Verify user authentication and account creation
 
-### [Signin with Google](./setup/docs/12-signin-with-google.md)
+### [Sign in with Google](./setup/docs/12-signin-with-google.md)
 
 Sign in with Google allows users to sign up and log into your app using their existing Google account.
 
