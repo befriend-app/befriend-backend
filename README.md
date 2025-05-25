@@ -186,38 +186,57 @@ Set this key to the address used to create your sender identity.
 
 Used for sending notifications to users on iOS devices.
 
-a. Login at [developer.apple.com](developer.apple.com)
+#### a. Enable Push Notifications Capability
 
-b. Enable Capability
-  - Navigate to Identifiers
-  - Create identifier
-  - Open identifier
-  - Enable push notifications 
+1. Login at [developer.apple.com](https://developer.apple.com)
 
-c. Create Private Key
-- Click + next to Keys
-- Create Key Name
-- Check Apple Push Notifications service
-- Click Configure
-- Select Sandbox & Production
-- Click Save
-- Click Continue
-- Click Register
-- Click Download
+2. Navigate to **Identifiers**
 
-d. Setting environment variables
+3. Create a new identifier (or select existing)
 
-`APPLE_APP_ID=`
-- Use your app's Bundle Identifier
+4. Open your app identifier
 
-`APPLE_KEY_ID=`
-- Key ID from your Push Notifications certificate
+5. Enable **Push Notifications** capability
 
-`APPLE_TEAM_ID=`
-- Your 10-character Apple Team ID
+#### b. Create Private Key
 
-`APPLE_PRIVATE_KEY=""`
-- Paste your downloaded private key content between quotes
+1. Click the **+** button next to **Keys**
+
+2. Create a key name
+
+3. Check **Apple Push Notifications service**
+
+4. Click **Configure**
+
+5. Select **Sandbox & Production**
+
+6. Click **Save**
+
+7. Click **Continue**
+
+8. Click **Register**
+
+9. Click **Download** to save the private key file
+
+#### c. Configure Environment Variables
+
+Set the following environment variables in your `.env` file:
+
+```
+APPLE_APP_ID=
+APPLE_KEY_ID=
+APPLE_TEAM_ID=
+APPLE_PRIVATE_KEY=""
+```
+
+
+#### Variable Descriptions
+
+- **APPLE_APP_ID**: Your app's Bundle Identifier (e.g., com.yourcompany.yourapp)
+- **APPLE_KEY_ID**: The Key ID from your Push Notifications certificate
+- **APPLE_TEAM_ID**: Your 10-character Apple Team ID
+- **APPLE_PRIVATE_KEY**: The complete content of your downloaded private key file (paste between quotes)
+
 
 ### 8. [Frontend setup](./setup/docs/frontend-setup.md)
 
