@@ -43,7 +43,7 @@ Ensure you have the following installed on your machine:
 
 ## Installation Steps
 
-### 1.[ Backend setup](./setup/docs/backend-setup.md)
+### 1.[ Backend setup](./setup/docs/1-backend-setup.md)
 
 **Note**: Initial setup takes 8-12 minutes to complete and requires approximately 2.2GB of memory.
 
@@ -73,7 +73,7 @@ g. Run the setup
 `node setup`
 
 
-### 2. [Network information](./setup/docs/network-information.md)
+### 2. [Network information](./setup/docs/2-network-information.md)
 
 These keys are used for identifying your network. A unique network token is automatically generated when your server runs for the first time.
 
@@ -86,7 +86,7 @@ NETWORK_LOGO=<YOUR_LOGO_URL>
 NETWORK_APP_ICON=<YOUR_APP_ICON_URL>
 ```
 
-### 3. [Foursquare API key](./setup/docs/foursquare.md)
+### 3. [Foursquare API key](./setup/docs/3-foursquare.md)
 
 Befriend uses Foursquare for displaying places and maps activity types to Foursquare categories to power our activity creation user experience.
 
@@ -108,7 +108,7 @@ h. Set environment variable:
 
 `FSQ_KEY=`
 
-### 4. [Mapbox API key](./setup/docs/mapbox.md)
+### 4. [Mapbox API key](./setup/docs/4-mapbox.md)
 
 Mapbox is used for rendering maps and calculating travel estimates in Befriend to ensure users can arrive on time to selected places.
 
@@ -136,7 +136,7 @@ i. Set environment variables:
 `MAPBOX_SECRET_KEY=`
 
 
-### 5. [Sendgrid API key](./setup/docs/sendgrid.md)
+### 5. [Sendgrid API key](./setup/docs/5-sendgrid.md)
 
 SendGrid is used for sending email verification codes during the signup and login process.
 
@@ -174,13 +174,14 @@ j. Set environment variables:
 `SENDGRID_KEY=`
 
 
-### 6. [Email from](./setup/docs/email-from.md)
+### 6. [Email from](./setup/docs/6-email-from.md)
 
 Set this key to the address used to create your sender identity.
 
 `EMAIL_FROM='Your App Name <hello@your-friends-app.com>'`
 
-### 7. [Apple Push Notifications](./setup/docs/apple-push-notifications.md)
+
+### 7. [Apple Push Notifications](./setup/docs/7-apple-push-notifications.md)
 
 **Note**: Apple Developer account required.
 
@@ -238,7 +239,7 @@ APPLE_PRIVATE_KEY=""
 - **APPLE_PRIVATE_KEY**: The complete content of your downloaded private key file (paste between quotes)
 
 
-### 8. [Frontend setup](./setup/docs/frontend-setup.md)
+### 8. [Frontend setup](./setup/docs/8-frontend-setup.md)
 
 a. Clone repository
 
@@ -304,7 +305,7 @@ h. Open Platform Project
 - Android
   - Coming soon
 
-### 9. [Running backend & app](./setup/docs/running-backend-and-app.md)
+### 9. [Running backend & app](./setup/docs/9-running-backend-and-app.md)
 
 #### Backend
 
@@ -335,7 +336,7 @@ e. Signup User 2
 
 *Create the second test user account on device 2.*
 
-### 10. [Sending/receiving invitations](./setup/docs/sending-receiving-invitations.md)
+### 10. [Sending/receiving invitations](./setup/docs/10-sending-receiving-invitations.md)
 
 #### Sender
 
