@@ -2,8 +2,7 @@
 
 Sign in with Google allows users to sign up and log into your app using their existing Google account.
 
-https://github.com/user-attachments/assets/5e778cf6-e1ce-4569-a7e7-617457b25155
-
+https://github.com/user-attachments/assets/63b10919-d63b-4f23-a357-38c9693d3ff0
 
 ### Prerequisites
 
