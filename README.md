@@ -355,7 +355,7 @@ e. Signup User 2
 
 ### OAuth Setup
 
-### [Sign in with Apple](./setup/docs/11-signin-with-apple.md)
+### [Sign in with Apple](./setup/docs/11-sign-in-with-apple.md)
 
 Sign in with Apple allows users to sign up and log into your app using their existing Apple ID.
 
@@ -385,7 +385,7 @@ b. Test the Sign in with Apple flow
 
 c. Verify user authentication and account creation
 
-### [Sign in with Google](./setup/docs/12-signin-with-google.md)
+### [Sign in with Google](./setup/docs/12-sign-in-with-google.md)
 
 Sign in with Google allows users to sign up and log into your app using their existing Google account.
 
