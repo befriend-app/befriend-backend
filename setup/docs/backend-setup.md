@@ -2,6 +2,8 @@
 
 **Note**: Initial setup takes 8-12 minutes to complete and requires approximately 2.2GB of memory.
 
+[![Befriend Backend Setup](https://img.youtube.com/vi/YTrRLzxwqdg/0.jpg)](https://www.youtube.com/watch?v=YTrRLzxwqdg)
+
 ## Installation Steps
 
 1. Clone the repository:
