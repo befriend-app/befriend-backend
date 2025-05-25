@@ -18,11 +18,9 @@ c. Click **Identifiers**
 
 d. Select your app identifier (or create a new one)
 
-e. Scroll down to **Capabilities** section
+e. Enable **Sign In with Apple** capability
 
-f. Enable **Sign In with Apple** capability
-
-g. Click **Save**
+f. Click **Save**
 
 ### 2. Test Implementation
 

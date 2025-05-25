@@ -373,8 +373,6 @@ Sign in with Apple allows users to sign up and log into your app using their exi
 
 - Select your app identifier (or create a new one)
 
-- Scroll down to **Capabilities** section
-
 - Enable **Sign In with Apple** capability
 
 - Click **Save**
