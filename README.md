@@ -385,7 +385,7 @@ b. Test the Sign in with Apple flow
 
 c. Verify user authentication and account creation
 
-### [Signin with Google](./setup/docs/11-signin-with-google.md)
+### [Signin with Google](./setup/docs/12-signin-with-google.md)
 
 Sign in with Google allows users to sign up and log into your app using their existing Google account.
 
