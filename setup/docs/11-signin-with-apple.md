@@ -2,6 +2,8 @@
 
 Sign in with Apple allows users to sign up and log into your app using their existing Apple ID.
 
+https://github.com/user-attachments/assets/f2f71b6a-0ef2-4848-902e-60cf9b2e4046
+
 ## Prerequisites
 
 - Apple Developer Account (paid membership required)
