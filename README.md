@@ -356,10 +356,10 @@ e. Signup User 2
 ### OAuth Setup
 
 ### [Sign in with Apple](./setup/docs/11-sign-in-with-apple.md)
-Enable users to authenticate using their Apple ID.
+Enable users to sign up and log in using their Apple ID.
 
 ### [Sign in with Google](./setup/docs/12-sign-in-with-google.md)
-Enable users to authenticate using their Google account.
+Enable users to sign up and log in using their Google account.
 
 ## Support us
 
