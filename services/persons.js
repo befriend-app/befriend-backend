@@ -480,7 +480,7 @@ module.exports = {
                 //would require user notice on screen to accept use of face recognition
 
                 if(!picture || typeof picture !== 'string') {
-                    errors.push('Picture required');
+                    errors.push('Profile picture required');
                 } else if(!isValidBase64Image(picture)) {
                     errors.push('Invalid picture format provided');
                 }
