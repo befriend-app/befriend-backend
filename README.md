@@ -4,7 +4,7 @@
 
 # Befriend App (Backend)
 
-The best human experience designed for meeting new and existing friends in person.
+A real-time experience for meeting new and existing friends in person.
 
 - Repositories
   - [Frontend](https://github.com/befriend-app/befriend-app)
